@@ -18,3 +18,4 @@ udp_bridge/remotes:
           control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
           cross_track_error: {source: /izzy/navigator/cross_track_error}
           crab_angle: {source: /izzy/navigator/crab_angle}
+          nmea_position: {source: mavros/global_position/nmea, period: 1.0}

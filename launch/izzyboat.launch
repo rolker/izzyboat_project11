@@ -11,6 +11,11 @@
 
 
   <remap from="/$(arg namespace)/sensors/mbes/soundings" to="/$(arg namespace)/sensors/deltat/soundings"/>
+  <remap from="/$(arg namespace)/sensors/ntrip/rtcm" to="/$(arg namespace)/mavros/gps_rtk/send_rtcm"/>
+
+  <!-- <include file="$(find izzyboat_project11)/launch/ntrip.launch">
+    <arg name="namespace" value="$(arg namespace)"/>
+  </include> -->
 
   <include file="$(find echoboat_project11)/launch/echo.launch">
     <arg name="namespace" value="$(arg namespace)"/>
@@ -47,8 +52,8 @@
       <node pkg="topic_tools" type="throttle" name="throttle_forward" args="messages camera_forward/image_raw/compressed .5"/>
 
 
-      <include file="$(find depthai_ros_driver)/launch/pointcloud.launch">
-      </include>
+      <!-- <include file="$(find depthai_ros_driver)/launch/pointcloud.launch">
+      </include> -->
 
       <node pkg="topic_tools" type="throttle" name="throttle_oak" args="messages oak/rgb/image_raw/compressed .5"/>
 
@@ -69,6 +74,7 @@
     <group ns="mavros/global_position">
       <node pkg="marine_tools" type="navsatfix_to_nmea" name="navsatfix_to_nmea">
         <remap from="input" to="raw/fix"/>
+        <remap from="satellites" to="raw/satellites"/>
       </node>
       <node pkg="marine_tools" type="nmea_to_udp.py" name="gga_to_udp">
         <param name="address" value="blaze"/>
@@ -113,10 +119,12 @@
 
 
 
-    <node pkg="rosbag" type="record" name="logger"  ns="$(arg namespace)" args="-o $(arg logDirectory)/izzyboat --split --duration=15m --repeat-latched --lz4 -a -x  &quot;(.*)image(.*)|(.*)lidar(.*)|(.*)points(.*)&quot;
+    <node pkg="rosbag" type="record" name="logger"  ns="$(arg namespace)" args="-o $(arg logDirectory)/izzyboat --split --duration=15m --repeat-latched --lz4 -a -x  &quot;(.*)image(.*)|(.*)lidar(.*)|(.*)points(.*)|(.*)s57_grids(.*)|(.*)octomap(.*)|(.*)projected_map(.*)|(.*)occupied_cells_vis_array(.*)&quot;
 "   />
 
     <node pkg="rosbag" type="record" name="video_logger"  ns="$(arg namespace)" args="-o $(arg logDirectory)/izzyboat_video --split --duration=15m --repeat-latched --lz4 /izzy/sensors/cameras/camera_forward/camera_info /izzy/sensors/cameras/camera_forward/image_raw/compressed_throttle /izzy/sensors/cameras/oak/rgb/camera_info /izzy/sensors/cameras/oak/rgb/image_raw/compressed_throttle"   />
+
+    <node pkg="rosbag" type="record" name="sonar_logger"  ns="$(arg namespace)" args="-o $(arg logDirectory)/izzyboat_sonar --split --duration=15m --repeat-latched --lz4 /izzy/sensors/deltat/soundings"   />
 
 
     <rosparam command="load" file="$(find izzyboat_project11)/config/izzyboat.yaml"/>
@@ -126,9 +134,5 @@
 
   </group>
 
-  <remap from="/$(arg namespace)/sensors/ntrip/rtcm" to="/$(arg namespace)/mavros/gps_rtk/send_rtcm"/>
-  <include file="$(find izzyboat_project11)/launch/ntrip.launch">
-    <arg name="namespace" value="$(arg namespace)"/>
-  </include>
 
 </launch>
