@@ -4,6 +4,10 @@ s57_grids:
   robot:
     frame_id: izzy/base_link
 
+navigator:
+  robot:
+    turn_radius: 2.0
+
 udp_bridge/remotes:
   operator:
     connections:
