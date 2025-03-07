@@ -23,7 +23,7 @@ def generate_launch_description():
     )
 
     gcs_url_arg = DeclareLaunchArgument(
-      "gcu_url", default_value=TextSubstitution(text="")
+      "gcs_url", default_value=TextSubstitution(text="")
     )
 
 
@@ -31,7 +31,7 @@ def generate_launch_description():
 
 
 
-    return LaunchDescription(
+    return LaunchDescription([
       namespace_arg,
       fcu_url_arg,
       gcs_url_arg,
@@ -50,7 +50,7 @@ def generate_launch_description():
         }.items()
       ),
 
-    )
+    ])
 
 
 
