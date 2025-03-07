@@ -1,11 +1,14 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.18.2)
 project(izzyboat_project11)
 
-find_package(catkin REQUIRED
+find_package(ament_cmake REQUIRED)
+find_package(xacro REQUIRED)
+
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY urdf DESTINATION share/${PROJECT_NAME})
+
+ament_export_dependencies(
+  xacro
 )
 
-catkin_package(
-)
-
-install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-install(DIRECTORY config/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
+ament_package()

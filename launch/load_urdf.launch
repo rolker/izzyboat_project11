@@ -1,6 +1,0 @@
-<launch>
-  <arg name="namespace" default="izzy"/>
-  <arg name="model" default="$(find izzyboat_project11)/urdf/izzyboat.urdf"/>
-
-  <param name="$(arg namespace)/robot_description" command="$(find xacro)/xacro $(arg model) namespace:=$(arg namespace)"/>
-</launch>
