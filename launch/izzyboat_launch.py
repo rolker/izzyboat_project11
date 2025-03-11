@@ -1,10 +1,13 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
+from launch_ros.actions import Node
+from launch_ros.actions import PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
@@ -50,6 +53,41 @@ def generate_launch_description():
         }.items()
       ),
 
+      GroupAction(
+          actions=[
+            PushRosNamespace(namespace),
+            GroupAction(
+              actions=[
+                PushRosNamespace('sensors/cameras/'),
+                IncludeLaunchDescription(
+                  PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                      FindPackageShare('depthai_ros_driver'),
+                      'launch',
+                      'camera.launch.py'
+                    ])
+                  ),
+                  launch_arguments={
+                    'namespace': 'front'
+                  }.items()
+                ),
+                Node(
+                    package="topic_tools",
+                    executable="throttle",
+                    name="throttle_oak",
+                    arguments=['message',],
+                    parameters=[{
+                        'input_topic':'front/oak/rgb/image_raw/compressed',
+                        'output_topic': 'front/oak/rgb/image_raw/throttled/compressed',
+                        'throttle_type': 'messages',
+                        'msgs_per_sec': 0.5
+                    }]
+                    
+                )
+              ]
+            )
+          ]
+      )
     ])
 
 

@@ -13,11 +13,14 @@
 
 
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
+  <exec_depend>depthai_ros_driver</exec_depend>
   <depend>joint_state_publisher</depend>
   <exec_depend>mavros</exec_depend>
+  <depend>ntrip_client</depend>
   <exec_depend>project11</exec_depend>
   <depend>robot_state_publisher</depend>
   <exec_depend>octomap</exec_depend>
+  <exec_depend>topic_tools</exec_depend>
   <exec_depend>usb_cam</exec_depend>
   <depend>xacro</depend>
 
