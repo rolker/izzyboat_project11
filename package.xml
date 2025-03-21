@@ -16,6 +16,7 @@
   <exec_depend>depthai_ros_driver</exec_depend>
   <depend>joint_state_publisher</depend>
   <exec_depend>mavros</exec_depend>
+  <exec_depend>mavros_extras</exec_depend>
   <depend>ntrip_client</depend>
   <exec_depend>project11</exec_depend>
   <depend>robot_state_publisher</depend>
