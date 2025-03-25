@@ -19,13 +19,13 @@ echo "#############################################"
 echo ""
 echo "Logs:"
 
-source /opt/ros/noetic/setup.bash
-source /home/field/project11/catkin_ws/devel/setup.bash
+source /opt/ros/jazzy/setup.bash
+source /home/field/project11/jazzy_ws/install/setup.bash
 
 set -v
 
-export ROS_WORKSPACE=/home/field/project11/catkin_ws
-export ROS_IP=192.168.12.5
+export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
 #wait for dora to be pingable by self
 while ! ping -c 1 -W 1 dora; do
@@ -36,9 +36,7 @@ done
 echo "Wait 5 seconds before launching ROS..."
 sleep 5
 
-/usr/bin/tmux new -d -s roscore roscore
-
 /usr/bin/tmux new -d -s project11 
-/usr/bin/tmux send-keys "rosrun rosmon rosmon --name=rosmon_izzyboat izzyboat_project11 izzyboat.launch logDirectory:=${LOGDIR} operator_host:=salmon_ib fcu_url:=/dev/ttyACM0:115200" C-m
+/usr/bin/tmux send-keys "ros2 launch izzyboat_project11 izzyboat_launch.py logDirectory:=${LOGDIR}" C-m
 
 } >> "${LOG_FILE}" 2>&1

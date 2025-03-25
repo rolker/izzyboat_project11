@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
@@ -88,7 +89,27 @@ def generate_launch_description():
               ]
             )
           ]
-      )
+      ),
+
+      IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+          PathJoinSubstitution([
+            FindPackageShare('izzyboat_project11'),
+            'launch',
+            'ntrip_launch.py'
+          ])
+        ),
+      ),
+          
+      IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+          PathJoinSubstitution([
+            FindPackageShare('foxglove_bridge'),
+            'launch',
+            'foxglove_bridge_launch.xml'
+          ])
+        ),
+      ),
     ])
 
 
