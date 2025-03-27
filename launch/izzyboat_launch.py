@@ -18,6 +18,12 @@ def generate_launch_description():
       "namespace", default_value=TextSubstitution(text="izzy")
     )
 
+    frame_prefix = LaunchConfiguration('frame_prefix')
+
+    frame_prefix_arg = DeclareLaunchArgument(
+        "frame_prefix", default_value="izzy/"
+    )
+
 
     fcu_url = LaunchConfiguration('fcu_url')
     gcs_url = LaunchConfiguration('gcs_url')
@@ -38,6 +44,7 @@ def generate_launch_description():
 
     return LaunchDescription([
       namespace_arg,
+      frame_prefix_arg,
       fcu_url_arg,
       gcs_url_arg,
       IncludeLaunchDescription(
@@ -50,6 +57,7 @@ def generate_launch_description():
         ),
         launch_arguments={
           'namespace': namespace,
+          'frame_prefix': frame_prefix,
           'fcu_url': fcu_url,
           'gcs_url': gcs_url,
         }.items()
