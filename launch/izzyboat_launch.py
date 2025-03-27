@@ -60,6 +60,20 @@ def generate_launch_description():
             PushRosNamespace(namespace),
             GroupAction(
               actions=[
+                  PushRosNamespace('sensors/posmv'),
+                  IncludeLaunchDescription(
+                      PythonLaunchDescriptionSource(
+                          PathJoinSubstitution([
+                              FindPackageShare('posmv'),
+                              'launch',
+                              'posmv_launch.py'
+                          ])
+                      )
+                  )
+              ]      
+            ),
+            GroupAction(
+              actions=[
                 PushRosNamespace('sensors/cameras/'),
                 IncludeLaunchDescription(
                   PythonLaunchDescriptionSource(
