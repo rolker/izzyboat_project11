@@ -9,6 +9,7 @@ from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import SetParametersFromFile
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
@@ -47,6 +48,18 @@ def generate_launch_description():
       frame_prefix_arg,
       fcu_url_arg,
       gcs_url_arg,
+      GroupAction(
+          actions=[
+            PushRosNamespace(namespace),
+            SetParametersFromFile(
+              filename=PathJoinSubstitution([
+                  FindPackageShare('izzyboat_project11'),
+                  'config',
+                  'izzyboat.yaml'
+              ])                
+            ),
+          ]
+      ),
       IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
           PathJoinSubstitution([
@@ -66,6 +79,13 @@ def generate_launch_description():
       GroupAction(
           actions=[
             PushRosNamespace(namespace),
+            # SetParametersFromFile(
+            #   filename=PathJoinSubstitution([
+            #       FindPackageShare('izzyboat_project11'),
+            #       'config',
+            #       'izzyboat.yaml'
+            #   ])                
+            # ),
             GroupAction(
               actions=[
                   PushRosNamespace('sensors/posmv'),

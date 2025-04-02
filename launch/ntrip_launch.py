@@ -28,7 +28,8 @@ def generate_launch_description():
         IncludeLaunchDescription(
           PythonLaunchDescriptionSource(
             PathJoinSubstitution([
-              FindPackageShare('ntrip_client'),
+              FindPackageShare('izzyboat_project11'),
+              'launch',
               'ntrip_client_launch.py'
             ])
           ),

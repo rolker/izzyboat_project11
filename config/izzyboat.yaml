@@ -1,25 +1,44 @@
-s57_grids:
-  map_frame: izzy/map
+/**/platform_sender:
+  ros__parameters:
+    width: 0.8
+    length: 1.75
+    reference_x: -.225
+    reference_y: 0.05
+    color:
+      red: 1.0
+      green: 1.0
+      blue: 0.0
 
-  robot:
-    frame_id: izzy/base_link
+    nav:
+      source_names:
+        - mru
+        - posmv
+      sources:
+        mru:
+          topics:
+            orientation: "mavros/imu/data"
+            position: "mavros/global_position/raw/fix"
+            velocity: "mavros/global_position/raw/gps_vel"
+        posmv:
+          topics:
+            orientation: "sensors/posmv/orientation"
+            position: "sensors/posmv/position"
+            velocity: "sensors/posmv/orientation"
 
-navigator:
-  robot:
-    turn_radius: 2.0
 
-udp_bridge/remotes:
-  operator:
-    connections:
-      default:
-        topics:
-          front_camera: {source: sensors/cameras/camera_forward/image_raw/compressed_throttle}
-          oak_rgb: {source: sensors/cameras/oak/rgb/image_raw/compressed, period: 0.25}
-          oak_rgb_info: {source: sensors/cameras/oak/rgb/camera_info}
-          deltat: {source: sensors/deltat/soundings}
-          deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
-          battery: {source: /izzy/mavros/battery}
-          control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
-          cross_track_error: {source: /izzy/navigator/cross_track_error}
-          crab_angle: {source: /izzy/navigator/crab_angle}
-          nmea_position: {source: mavros/global_position/nmea, period: 1.0}
+/**/udp_bridge/remotes:
+  ros__parameters:
+    operator:
+      connections:
+        default:
+          topics:
+            front_camera: {source: sensors/cameras/camera_forward/image_raw/compressed_throttle}
+            oak_rgb: {source: sensors/cameras/oak/rgb/image_raw/compressed, period: 0.25}
+            oak_rgb_info: {source: sensors/cameras/oak/rgb/camera_info}
+            deltat: {source: sensors/deltat/soundings}
+            deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
+            battery: {source: /izzy/mavros/battery}
+            control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
+            cross_track_error: {source: /izzy/navigator/cross_track_error}
+            crab_angle: {source: /izzy/navigator/crab_angle}
+            nmea_position: {source: mavros/global_position/nmea, period: 1.0}
