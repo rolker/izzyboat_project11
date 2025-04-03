@@ -50,6 +50,25 @@ def generate_launch_description():
       gcs_url_arg,
       GroupAction(
           actions=[
+            IncludeLaunchDescription(
+              PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                  FindPackageShare('echoboat_project11'),
+                  'launch',
+                  'echo_launch.py'
+                ])
+              ),
+              launch_arguments={
+                'namespace': namespace,
+                'frame_prefix': frame_prefix,
+                'fcu_url': fcu_url,
+                'gcs_url': gcs_url,
+              }.items()
+            ),
+          ]
+      ),
+      GroupAction(
+          actions=[
             PushRosNamespace(namespace),
             SetParametersFromFile(
               filename=PathJoinSubstitution([
@@ -58,34 +77,15 @@ def generate_launch_description():
                   'izzyboat.yaml'
               ])                
             ),
-          ]
-      ),
-      IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-          PathJoinSubstitution([
-            FindPackageShare('echoboat_project11'),
-            'launch',
-            'echo_launch.py'
-          ])
-        ),
-        launch_arguments={
-          'namespace': namespace,
-          'frame_prefix': frame_prefix,
-          'fcu_url': fcu_url,
-          'gcs_url': gcs_url,
-        }.items()
-      ),
-
-      GroupAction(
-          actions=[
-            PushRosNamespace(namespace),
-            # SetParametersFromFile(
-            #   filename=PathJoinSubstitution([
-            #       FindPackageShare('izzyboat_project11'),
-            #       'config',
-            #       'izzyboat.yaml'
-            #   ])                
-            # ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                        FindPackageShare('udp_bridge'),
+                        'launch',
+                        'udp_bridge_launch.py'
+                    ])
+                )
+            ),
             GroupAction(
               actions=[
                   PushRosNamespace('sensors/posmv'),
@@ -143,15 +143,15 @@ def generate_launch_description():
         ),
       ),
           
-      IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(
-          PathJoinSubstitution([
-            FindPackageShare('foxglove_bridge'),
-            'launch',
-            'foxglove_bridge_launch.xml'
-          ])
-        ),
-      ),
+      # IncludeLaunchDescription(
+      #   AnyLaunchDescriptionSource(
+      #     PathJoinSubstitution([
+      #       FindPackageShare('foxglove_bridge'),
+      #       'launch',
+      #       'foxglove_bridge_launch.xml'
+      #     ])
+      #   ),
+      # ),
     ])
 
 

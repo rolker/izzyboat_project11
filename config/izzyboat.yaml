@@ -26,19 +26,24 @@
             velocity: "sensors/posmv/orientation"
 
 
-/**/udp_bridge/remotes:
+/**/udp_bridge:
   ros__parameters:
-    operator:
-      connections:
-        default:
-          topics:
-            front_camera: {source: sensors/cameras/camera_forward/image_raw/compressed_throttle}
-            oak_rgb: {source: sensors/cameras/oak/rgb/image_raw/compressed, period: 0.25}
-            oak_rgb_info: {source: sensors/cameras/oak/rgb/camera_info}
-            deltat: {source: sensors/deltat/soundings}
-            deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
-            battery: {source: /izzy/mavros/battery}
-            control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
-            cross_track_error: {source: /izzy/navigator/cross_track_error}
-            crab_angle: {source: /izzy/navigator/crab_angle}
-            nmea_position: {source: mavros/global_position/nmea, period: 1.0}
+    name: izzy
+    port: 4200
+    maximum_packet_size: 1000
+    remotes_list:
+      - operator
+    remotes:
+      operator:
+        connections_list:
+          - wifi
+        connections:
+          wifi:
+            topics:
+              front_camera: {source: sensors/cameras/camera_forward/image_raw/compressed_throttle}
+              oak_rgb: {source: sensors/cameras/oak/rgb/image_raw/compressed, period: 0.25}
+              oak_rgb_info: {source: sensors/cameras/oak/rgb/camera_info}
+              deltat: {source: sensors/deltat/soundings}
+              deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
+              battery: {source: /izzy/mavros/battery}
+              control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
