@@ -1,0 +1,16 @@
+/**/udp_bridge:
+  ros__parameters:
+    name: operator
+    maximum_packet_size: 1000
+    remotes_list:
+      - izzy
+    remotes:
+      izzy:
+        connections_list:
+          - wifi
+        connections:
+          wifi:
+            host: dora
+            port: 4200
+            return_host: salmon_ib
+            return_port: 4200
