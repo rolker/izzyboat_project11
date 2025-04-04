@@ -26,6 +26,7 @@
             velocity: "sensors/posmv/orientation"
 
 
+
 /**/udp_bridge:
   ros__parameters:
     name: izzy
@@ -39,11 +40,29 @@
           - wifi
         connections:
           wifi:
+            topics_list:
+            - front_camera
+            - oak_rgb
+            - oak_rgb_info
+            - deltat
+            - battery
+            - platform
+            - mavros_gps_status
+            - mavros_position
+            - mavros_orientation
+            - mavros_velocity
+            - diagnostics
             topics:
               front_camera: {source: sensors/cameras/camera_forward/image_raw/compressed_throttle}
-              oak_rgb: {source: sensors/cameras/oak/rgb/image_raw/compressed, period: 0.25}
-              oak_rgb_info: {source: sensors/cameras/oak/rgb/camera_info}
+              oak_rgb: {source: sensors/cameras/front/oak/rgb/image_raw/compressed, period: 0.25}
+              oak_rgb_info: {source: sensors/cameras/front/oak/rgb/camera_info}
               deltat: {source: sensors/deltat/soundings}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
               battery: {source: /izzy/mavros/battery}
               control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
+              platform: {source: /project11/platform}
+              mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
+              mavros_orientation: {source: mavros/imu/data}
+              mavros_position: {source: mavros/global_position/raw/fix}
+              mavros_velocity: {source: mavros/global_position/raw/gps_vel}
+              diagnostics: {source: /diagnostics}
