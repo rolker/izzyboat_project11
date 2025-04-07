@@ -40,6 +40,7 @@
           - wifi
         connections:
           wifi:
+            maximum_bytes_per_second: 500000
             topics_list:
             - front_camera
             - oak_rgb

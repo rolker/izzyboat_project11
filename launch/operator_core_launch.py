@@ -3,6 +3,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
 from launch.conditions import IfCondition
+from launch.launch_description_sources import AnyLaunchDescriptionSource
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
@@ -70,7 +71,17 @@ def generate_launch_description():
             'enable_bridge': 'false',
             'operator_joystick': 'true'
             }.items()
-        )
+        ),
+        IncludeLaunchDescription(
+        AnyLaunchDescriptionSource(
+          PathJoinSubstitution([
+            FindPackageShare('foxglove_bridge'),
+            'launch',
+            'foxglove_bridge_launch.xml'
+          ])
+        ),
+      ),
+
 
     ])
 

@@ -14,3 +14,8 @@
             port: 4200
             return_host: salmon_ib
             return_port: 4200
+          topics_list:
+          - joystick_helm
+          topics:
+            joystick_helm: {source: 'piloting_mode/manual/helm'}
+
