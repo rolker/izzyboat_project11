@@ -5,9 +5,10 @@
 
 DAY=$(date "+%Y-%m-%d")
 NOW=$(date "+%Y-%m-%dT%H.%M.%S.%N")
-LOGDIR="/home/field/project11/logs"
+LOGDIR="/home/field/project11/logs/izzyboat"
 mkdir -p "$LOGDIR"
 LOG_FILE="${LOGDIR}/autostart_${NOW}.txt"
+LOGDIR_BAG="${LOGDIR}/${NOW}"
 
 {
 
@@ -50,6 +51,6 @@ echo "Wait 5 seconds before launching ROS..."
 sleep 5
 
 /usr/bin/tmux new -d -s project11 
-/usr/bin/tmux send-keys "DISPLAY=:0 ros2 launch -g izzyboat_project11 izzyboat_launch.py logDirectory:=${LOGDIR}" C-m
+/usr/bin/tmux send-keys "DISPLAY=:0 ros2 launch -g izzyboat_project11 izzyboat_launch.py log_directory:=${LOGDIR_BAG}" C-m
 
 } >> "${LOG_FILE}" 2>&1

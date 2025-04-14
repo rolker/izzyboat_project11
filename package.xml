@@ -18,9 +18,10 @@
   <exec_depend>mavros</exec_depend>
   <exec_depend>mavros_extras</exec_depend>
   <depend>ntrip_client</depend>
+  <exec_depend>octomap_server</exec_depend>
   <exec_depend>project11</exec_depend>
   <depend>robot_state_publisher</depend>
-  <exec_depend>octomap</exec_depend>
+  <depend>rosbag2_transport</depend>
   <exec_depend>topic_tools</exec_depend>
   <exec_depend>usb_cam</exec_depend>
   <depend>xacro</depend>

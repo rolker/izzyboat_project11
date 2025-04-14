@@ -9,6 +9,7 @@ from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
+from launch_ros.actions import SetParameter
 from launch_ros.actions import SetParametersFromFile
 from launch_ros.substitutions import FindPackageShare
 
@@ -35,11 +36,15 @@ def generate_launch_description():
     )
 
     gcs_url_arg = DeclareLaunchArgument(
-      "gcs_url", default_value=TextSubstitution(text="udp://@192.168.13.142")
+      "gcs_url", default_value=TextSubstitution(text="udp://@192.168.12.8")
     )
 
+    log_directory = LaunchConfiguration('log_directory')
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    log_directory_arg = DeclareLaunchArgument('log_directory')
+
+
+    remappings = [('/tf', '/izzy/tf'), ('/tf_static', '/izzy/tf_static')]
 
 
 
@@ -48,6 +53,7 @@ def generate_launch_description():
       frame_prefix_arg,
       fcu_url_arg,
       gcs_url_arg,
+      log_directory_arg,
       GroupAction(
           actions=[
             IncludeLaunchDescription(
@@ -65,6 +71,18 @@ def generate_launch_description():
                 'gcs_url': gcs_url,
               }.items()
             ),
+            IncludeLaunchDescription(
+              PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                  FindPackageShare('izzyboat_project11'),
+                  'launch',
+                  'publish_state_launch.py'
+                ])
+              ),
+              launch_arguments={
+                'namespace': namespace
+              }.items()
+            )
           ]
       ),
       GroupAction(
@@ -85,6 +103,33 @@ def generate_launch_description():
                         'udp_bridge_launch.py'
                     ])
                 )
+            ),
+            GroupAction(
+                actions=[
+                  PushRosNamespace('sensors/deltat'),
+                  IncludeLaunchDescription(
+                      PythonLaunchDescriptionSource(
+                          PathJoinSubstitution([
+                              FindPackageShare('imagenex_deltat'),
+                              'launch',
+                              'deltat_launch.py'
+                          ])
+                      )
+                  ),
+                  Node(
+                    package = "octomap_server",
+                    executable = "octomap_server_node",
+                    name = "octomap_server",
+                    parameters=[{
+                        'resolution': 0.25,
+                        'frame_id': 'izzy/map'
+                    }],
+                    remappings = remappings + [('cloud_in', 'soundings'),]
+
+
+                  )
+                    
+                ]
             ),
             GroupAction(
               actions=[
@@ -127,9 +172,43 @@ def generate_launch_description():
                         'msgs_per_sec': 0.5
                     }]
                     
+                ),
+                GroupAction(
+                  actions=[
+                      PushRosNamespace('front/usb/'),
+                      Node(
+                          package="usb_cam",
+                          executable="usb_cam_node_exe",
+                          name="camera_forward",
+                          parameters=[{
+                              'camera_name': 'camera_forward',
+                              'framerate': 30.0,
+                              'image_width': 1920,
+                              'image_height': 1080,
+                              'frame_id': 'izzy/camera_forward_optical',
+                              'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
+                              'pixel_format': 'yuyv2rgb',
+                        
+                          }]
+                      )
+                  ]
                 )
               ]
+            ),
+            Node(
+              package='rosbag2_transport',
+              executable='recorder',
+              name='logger',
+              parameters=[
+                PathJoinSubstitution([
+                  FindPackageShare('izzyboat_project11'),
+                  'config',
+                  'izzyboat.yaml'
+                ]),
+                {'storage.uri': log_directory}                     
+              ]
             )
+
           ]
       ),
 
@@ -143,15 +222,7 @@ def generate_launch_description():
         ),
       ),
           
-      # IncludeLaunchDescription(
-      #   AnyLaunchDescriptionSource(
-      #     PathJoinSubstitution([
-      #       FindPackageShare('foxglove_bridge'),
-      #       'launch',
-      #       'foxglove_bridge_launch.xml'
-      #     ])
-      #   ),
-      # ),
+
     ])
 
 
