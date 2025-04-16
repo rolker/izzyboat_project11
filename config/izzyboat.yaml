@@ -29,6 +29,11 @@
   ros__parameters:
     frame_id: izzy/deltat
 
+/**/cube_bathymetry:
+  ros__parameters:
+    map_frame: izzy/map
+    cell_size: 0.5
+
 /**/udp_bridge:
   ros__parameters:
     name: izzy
@@ -43,12 +48,13 @@
           - vpn
         connections:
           wifi:
-            maximum_bytes_per_second: 500000
+            maximum_bytes_per_second: 650000
             topics_list:
             - battery
             - command_response
             - deltat
             - deltat_octomap
+            - deltat_grid
             - diagnostics
             - heartbeat
             - heartbeat_nav
@@ -78,9 +84,10 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_rgb: {source: sensors/cameras/front/oak/rgb/image_raw/compressed, period: 0.5}
+              oak_rgb: {source: sensors/cameras/front/oak/rgb/image_raw/compressed, period: 1.0}
               oak_rgb_info: {source: sensors/cameras/front/oak/rgb/camera_info}
               deltat: {source: sensors/deltat/soundings}
+              deltat_grid: {source: sensors/deltat/grid}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
               battery: {source: /izzy/mavros/battery}
               control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
@@ -163,6 +170,9 @@
       - /izzy/project11/heartbeat
       - /izzy/project11/status/mission_manager
       - /izzy/robot_description
+      - /izzy/sensors/cameras/front/oak/rgb/camera_info
+      - /izzy/sensors/cameras/front/oak/rgb/image_raw/throttled/compressed
+      - /izzy/sensors/deltat/grid
       - /izzy/sensors/deltat/soundings
       - /izzy/sensors/posmv/position
       - /izzy/sensors/posmv/orientation
@@ -177,5 +187,5 @@
       - /tf_static
     storage:
       uri: /home/field/project11/logs/izzyboat
-      max_bagfile_duration: 900
+      max_bagfile_duration: 120
 

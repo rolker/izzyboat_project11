@@ -11,6 +11,7 @@ from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParameter
 from launch_ros.actions import SetParametersFromFile
+from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
@@ -95,6 +96,14 @@ def generate_launch_description():
                   'izzyboat.yaml'
               ])                
             ),
+            SetRemap(
+              src = '/tf',
+              dst = ['/', namespace, '/tf']
+            ),
+            SetRemap(
+              src = '/tf_static',
+              dst = ['/', namespace, '/tf_static']
+            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
@@ -116,18 +125,26 @@ def generate_launch_description():
                           ])
                       )
                   ),
-                  Node(
-                    package = "octomap_server",
-                    executable = "octomap_server_node",
-                    name = "octomap_server",
-                    parameters=[{
-                        'resolution': 0.25,
-                        'frame_id': 'izzy/map'
-                    }],
-                    remappings = remappings + [('cloud_in', 'soundings'),]
+                  IncludeLaunchDescription(
+                      PythonLaunchDescriptionSource(
+                          PathJoinSubstitution([
+                              FindPackageShare('cube_bathymetry'),
+                              'launch',
+                              'cube_bathymetry_launch.py'
+                          ])
+                      )
+                  ),
 
-
-                  )
+                  # Node(
+                  #   package = "octomap_server",
+                  #   executable = "octomap_server_node",
+                  #   name = "octomap_server",
+                  #   parameters=[{
+                  #       'resolution': 0.25,
+                  #       'frame_id': 'izzy/map'
+                  #   }],
+                  #   remappings = remappings + [('cloud_in', 'soundings'),]
+                  # )
                     
                 ]
             ),
@@ -169,7 +186,7 @@ def generate_launch_description():
                         'input_topic':'front/oak/rgb/image_raw/compressed',
                         'output_topic': 'front/oak/rgb/image_raw/throttled/compressed',
                         'throttle_type': 'messages',
-                        'msgs_per_sec': 0.5
+                        'msgs_per_sec': 0.2
                     }]
                     
                 ),

@@ -9,7 +9,6 @@ LOGDIR="/home/field/project11/logs/izzyboat"
 mkdir -p "$LOGDIR"
 LOG_FILE="${LOGDIR}/autostart_${NOW}.txt"
 LOGDIR_BAG="${LOGDIR}/${NOW}"
-
 {
 
 echo ""
