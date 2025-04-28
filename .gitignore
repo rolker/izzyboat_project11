@@ -1,1 +1,2 @@
 config/camera_calibration/
+config/nn/ewasr_resnet18.blob

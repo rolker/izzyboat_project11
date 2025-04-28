@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    camera:
+      i_enable_imu: false
+      i_enable_ir: true
+      i_nn_type: rgb
+      i_pipeline_type: rgb
+    rgb.i_low_bandwidth: true
+    rgb.i_low_bandwidth_quality: 80
+    nn:
+      i_nn_config_path: /home/field/project11/jazzy_ws/install/izzyboat_project11/share/izzyboat_project11/config/nn/ewasr.json
+      i_enable_passthrough: true

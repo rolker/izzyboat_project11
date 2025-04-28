@@ -1,0 +1,35 @@
+{
+    "model": {
+        "model_name": "/home/field/project11/jazzy_ws/install/izzyboat_project11/share/izzyboat_project11/config/nn/ewasr_resnet18.blob",
+        "zoo": "path"
+    },
+    "nn_config": {
+        "NN_family": "segmentation",
+        "confidence_threshold": 0.5
+    },
+    "mappings": {
+        "labels": [
+            "background",
+            "aeroplane",
+            "bicycle",
+            "bird",
+            "boat",
+            "bottle",
+            "bus",
+            "car",
+            "cat",
+            "chair",
+            "cow",
+            "diningtable",
+            "dog",
+            "horse",
+            "motorbike",
+            "person",
+            "pottedplant",
+            "sheep",
+            "sofa",
+            "train",
+            "tvmonitor"
+        ]
+    }
+}

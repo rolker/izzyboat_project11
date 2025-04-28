@@ -33,22 +33,6 @@ while ! ping -c 1 -W 1 dora; do
     sleep 1
 done
 
-
-
-# start virtual framebuffer
-
-/usr/bin/tmux new -d -s xvfb
-/usr/bin/tmux send-keys "Xvfb :0 -screen 0  1920x1080x24" C-m
-
-/usr/bin/tmux new -d -s fluxbox
-/usr/bin/tmux send-keys "DISPLAY=:0 fluxbox" C-m
-
-/usr/bin/tmux new -d -s x11vnc
-/usr/bin/tmux send-keys "x11vnc -nopw -display :0 -forever" C-m
-
-echo "Wait 5 seconds before launching ROS..."
-sleep 5
-
 /usr/bin/tmux new -d -s project11 
 /usr/bin/tmux send-keys "DISPLAY=:0 ros2 launch -g izzyboat_project11 izzyboat_launch.py log_directory:=${LOGDIR_BAG}" C-m
 

@@ -168,9 +168,9 @@ def generate_launch_description():
                 IncludeLaunchDescription(
                   PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
-                      FindPackageShare('depthai_ros_driver'),
+                      FindPackageShare('izzyboat_project11'),
                       'launch',
-                      'camera.launch.py'
+                      'oak1_launch.py'
                     ])
                   ),
                   launch_arguments={
@@ -207,7 +207,21 @@ def generate_launch_description():
                               'pixel_format': 'yuyv2rgb',
                         
                           }]
-                      )
+                      ),
+                      Node(
+                        package="topic_tools",
+                        executable="throttle",
+                        name="throttle_usb",
+                        arguments=['message',],
+                        parameters=[{
+                            'input_topic':'image_raw/compressed',
+                            'output_topic': 'image_raw/throttled/compressed',
+                            'throttle_type': 'messages',
+                            'msgs_per_sec': 0.2
+                        }]
+                        
+                    ),
+
                   ]
                 )
               ]
