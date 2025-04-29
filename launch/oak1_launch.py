@@ -7,6 +7,7 @@ from launch.actions import OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -14,25 +15,18 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
 
     return LaunchDescription([
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([
-                    FindPackageShare('depthai_ros_driver'),
-                    'launch',
-                    'camera.launch.py'
-                ])
-            ),
-            launch_arguments={
-                'namespace': 'front',
-                'params_file': PathJoinSubstitution([
-                    FindPackageShare('izzyboat_project11'),
+        Node(
+            package = "sea_surface_segmentation",
+            executable = "sea_surface_segmentation",
+            name = "sea_surface_segmentation",
+            parameters = [{
+                'neural_network': PathJoinSubstitution([
+                    FindPackageShare('sea_surface_segmentation'),
                     'config',
-                    'oak1.yaml'
+                    'ewasr_resnet18.blob'
                 ]),
-                'enable_depth': 'false',
-
-
-            }.items()
+            }]
         )
-           
     ])
+
+

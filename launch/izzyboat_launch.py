@@ -164,7 +164,7 @@ def generate_launch_description():
             ),
             GroupAction(
               actions=[
-                PushRosNamespace('sensors/cameras/'),
+                PushRosNamespace('sensors/cameras/front'),
                 IncludeLaunchDescription(
                   PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
@@ -173,9 +173,6 @@ def generate_launch_description():
                       'oak1_launch.py'
                     ])
                   ),
-                  launch_arguments={
-                    'namespace': 'front'
-                  }.items()
                 ),
                 Node(
                     package="topic_tools",
@@ -183,26 +180,26 @@ def generate_launch_description():
                     name="throttle_oak",
                     arguments=['message',],
                     parameters=[{
-                        'input_topic':'front/oak/rgb/image_raw/compressed',
-                        'output_topic': 'front/oak/rgb/image_raw/throttled/compressed',
+                        'input_topic':'oak/image_raw/compressed',
+                        'output_topic': 'oak/image_raw/throttled/compressed',
                         'throttle_type': 'messages',
-                        'msgs_per_sec': 0.2
+                        'msgs_per_sec': 1.0
                     }]
                     
                 ),
                 GroupAction(
                   actions=[
-                      PushRosNamespace('front/usb/'),
+                      PushRosNamespace('usb/'),
                       Node(
                           package="usb_cam",
                           executable="usb_cam_node_exe",
-                          name="camera_forward",
+                          name="usb_camera_forward",
                           parameters=[{
-                              'camera_name': 'camera_forward',
+                              'camera_name': 'usb_camera_forward',
                               'framerate': 30.0,
                               'image_width': 1920,
                               'image_height': 1080,
-                              'frame_id': 'izzy/camera_forward_optical',
+                              'frame_id': 'izzy/usb_camera_forward_optical',
                               'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
                               'pixel_format': 'yuyv2rgb',
                         

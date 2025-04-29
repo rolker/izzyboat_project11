@@ -65,6 +65,7 @@
             - local_costmap_footprint
             - oak_rgb
             - oak_rgb_info
+            - oak_rgb_raw
             - odom
             - plan
             - platforms
@@ -86,8 +87,9 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_rgb: {source: sensors/cameras/front/oak/rgb/image_raw/compressed, period: 2.0}
-              oak_rgb_info: {source: sensors/cameras/front/oak/rgb/camera_info}
+              oak_rgb_raw: {source: sensors/cameras/front/oak/image_raw, period: -1.0} # subscribe to raw to make compressed work
+              oak_rgb: {source: sensors/cameras/front/oak/image_raw/compressed}
+              oak_rgb_info: {source: sensors/cameras/front/oak/camera_info}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
@@ -172,8 +174,8 @@
       - /izzy/project11/heartbeat
       - /izzy/project11/status/mission_manager
       - /izzy/robot_description
-      - /izzy/sensors/cameras/front/oak/rgb/camera_info
-      - /izzy/sensors/cameras/front/oak/rgb/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/oak/camera_info
+      - /izzy/sensors/cameras/front/oak/image_raw/throttled/compressed
       - /izzy/sensors/cameras/front/usb/camera_info
       - /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
       - /izzy/sensors/deltat/grid
