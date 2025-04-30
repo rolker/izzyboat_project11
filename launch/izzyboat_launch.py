@@ -135,17 +135,6 @@ def generate_launch_description():
                       )
                   ),
 
-                  # Node(
-                  #   package = "octomap_server",
-                  #   executable = "octomap_server_node",
-                  #   name = "octomap_server",
-                  #   parameters=[{
-                  #       'resolution': 0.25,
-                  #       'frame_id': 'izzy/map'
-                  #   }],
-                  #   remappings = remappings + [('cloud_in', 'soundings'),]
-                  # )
-                    
                 ]
             ),
             GroupAction(
@@ -174,6 +163,15 @@ def generate_launch_description():
                     ])
                   ),
                 ),
+                # IncludeLaunchDescription(
+                #   PythonLaunchDescriptionSource(
+                #     PathJoinSubstitution([
+                #       FindPackageShare('izzyboat_project11'),
+                #       'launch',
+                #       'jolo_launch.py'
+                #     ])
+                #   ),
+                # ),
                 Node(
                     package="topic_tools",
                     executable="throttle",

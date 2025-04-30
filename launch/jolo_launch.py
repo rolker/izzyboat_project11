@@ -10,26 +10,29 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
+# Jenna's Only Look Once (JOLO)
 
 
 def generate_launch_description():
 
     return LaunchDescription([
-        Node(
-            package = "sea_surface_segmentation",
-            executable = "sea_surface_segmentation",
-            name = "sea_surface_segmentation",
-            parameters = [{
-                'neural_network': PathJoinSubstitution([
-                    FindPackageShare('sea_surface_segmentation'),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('depthai_ros_driver'),
+                    'launch',
+                    'camera.launch.py'
+                ])
+            ),
+            launch_arguments={
+                'name': "jolo",
+                'params_file': PathJoinSubstitution([
+                    FindPackageShare('izzyboat_project11'),
                     'config',
-                    'ewasr_resnet18.blob'
-                ]),
-                'frame_id': 'izzy/forward_oak_camera_optical_frame'
-            }],
-            respawn = True,
-            respawn_delay = 5
-        )
+                    'jolo.yaml'
+                ])
+            }.items()
+        ),
     ])
 
 
