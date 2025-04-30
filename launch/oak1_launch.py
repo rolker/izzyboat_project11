@@ -25,7 +25,9 @@ def generate_launch_description():
                     'config',
                     'ewasr_resnet18.blob'
                 ]),
-            }]
+            }],
+            respawn = True,
+            respawn_delay = 5
         )
     ])
 

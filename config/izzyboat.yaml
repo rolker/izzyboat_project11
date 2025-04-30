@@ -66,6 +66,7 @@
             - oak_rgb
             - oak_rgb_info
             - oak_rgb_raw
+            - oak_segmentation
             - odom
             - plan
             - platforms
@@ -90,6 +91,7 @@
               oak_rgb_raw: {source: sensors/cameras/front/oak/image_raw, period: -1.0} # subscribe to raw to make compressed work
               oak_rgb: {source: sensors/cameras/front/oak/image_raw/compressed}
               oak_rgb_info: {source: sensors/cameras/front/oak/camera_info}
+              oak_segmentation: {source: sensors/cameras/front/oak/segmentation_raw}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
@@ -176,6 +178,7 @@
       - /izzy/robot_description
       - /izzy/sensors/cameras/front/oak/camera_info
       - /izzy/sensors/cameras/front/oak/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/oak/segmentation_raw
       - /izzy/sensors/cameras/front/usb/camera_info
       - /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
       - /izzy/sensors/deltat/grid
