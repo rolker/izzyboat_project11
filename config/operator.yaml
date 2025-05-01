@@ -8,14 +8,28 @@
       izzy:
         connections_list:
           - wifi
+          - vpn
         connections:
           wifi:
             host: dora
             port: 4200
             return_host: salmon_ib
             return_port: 4200
-          topics_list:
-          - joystick_helm
-          topics:
-            joystick_helm: {source: 'piloting_mode/manual/helm'}
+            topics_list:
+            - command
+            - joystick_helm
+            topics:
+              command: {source: /izzy/project11/command}
+              joystick_helm: {source: /izzy/piloting_mode/manual/helm}
 
+          vpn:
+            host: dora_v
+            port: 4200
+            return_host: salmon_v
+            return_port: 4200
+            topics_list:
+            - command
+            - joystick_helm
+            topics:
+              command: {source: /izzy/project11/command}
+              joystick_helm: {source: /izzy/piloting_mode/manual/helm}
