@@ -181,6 +181,10 @@
       - /izzy/sensors/cameras/front/oak/camera_info
       - /izzy/sensors/cameras/front/oak/image_raw/throttled/compressed
       - /izzy/sensors/cameras/front/oak/segmentation_raw/compressed
+      - /izzy/sensors/cameras/front/izzy/jolo/nn/passthrough/camera_info
+      - /izzy/sensors/cameras/front/izzy/jolo/nn/passthrough/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/izzy/jolo/nn/detections
+      - /izzy/sensors/cameras/front/izzy/jolo/nn/detections/image_raw/throttled/image_raw
       - /izzy/sensors/cameras/front/usb/camera_info
       - /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
       - /izzy/sensors/deltat/grid

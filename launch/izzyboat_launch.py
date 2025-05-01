@@ -154,24 +154,24 @@ def generate_launch_description():
             GroupAction(
               actions=[
                 PushRosNamespace('sensors/cameras/front'),
-                IncludeLaunchDescription(
-                  PythonLaunchDescriptionSource(
-                    PathJoinSubstitution([
-                      FindPackageShare('izzyboat_project11'),
-                      'launch',
-                      'oak1_launch.py'
-                    ])
-                  ),
-                ),
                 # IncludeLaunchDescription(
                 #   PythonLaunchDescriptionSource(
                 #     PathJoinSubstitution([
                 #       FindPackageShare('izzyboat_project11'),
                 #       'launch',
-                #       'jolo_launch.py'
+                #       'oak1_launch.py'
                 #     ])
                 #   ),
                 # ),
+                IncludeLaunchDescription(
+                  PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                      FindPackageShare('izzyboat_project11'),
+                      'launch',
+                      'jolo_launch.py'
+                    ])
+                  ),
+                ),
                 Node(
                     package="topic_tools",
                     executable="throttle",
@@ -215,8 +215,7 @@ def generate_launch_description():
                             'msgs_per_sec': 0.2
                         }]
                         
-                    ),
-
+                      ),
                   ]
                 )
               ]
