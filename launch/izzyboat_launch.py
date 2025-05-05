@@ -45,10 +45,6 @@ def generate_launch_description():
     log_directory_arg = DeclareLaunchArgument('log_directory')
 
 
-    remappings = [('/tf', '/izzy/tf'), ('/tf_static', '/izzy/tf_static')]
-
-
-
     return LaunchDescription([
       namespace_arg,
       frame_prefix_arg,

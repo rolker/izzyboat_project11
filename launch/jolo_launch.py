@@ -29,9 +29,22 @@ def generate_launch_description():
                 'params_file': PathJoinSubstitution([
                     FindPackageShare('izzyboat_project11'),
                     'config',
-                    'jolo.yaml'
+                    'jolo_hd.yaml'
                 ])
             }.items()
+        ),
+        Node(
+            package='buoy_projector',
+            executable='buoy_projector',
+            name='buoy_projector',
+            remappings=[
+                ('input_detections', 'izzy/jolo/nn/detections'),
+                ('camera_info', 'jolo/nn/passthrough/camera_info'),
+                ('output_detections', 'izzy/jolo/nn/detections_3d')
+            ],
+            parameters=[{
+                'map_frame': 'izzy/map_tide'
+            }]
         ),
         Node(
             package = 'detection_visualizer',
@@ -43,6 +56,18 @@ def generate_launch_description():
                 ('detection_visualizer/dbg_images', 'izzy/jolo/nn/detections/image_raw'),
 
             ]
+        ),
+        Node(
+            package="image_transport",
+            executable="republish",
+            name="detection_visualizer_compressor",
+            remappings=[
+                ('in', 'izzy/jolo/nn/detections/image_raw'),
+                ('out/compressed', 'izzy/jolo/nn/detections/image_raw/compressed'),
+            ],
+            parameters=[{
+                'out_transport': "compressed"
+            }]
         ),
         Node(
             package="topic_tools",
