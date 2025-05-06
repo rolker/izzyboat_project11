@@ -1,13 +1,13 @@
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
+from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
-from launch.actions import OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.actions import SetParameter
+from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
 
 # Jenna's Only Look Once (JOLO)
@@ -25,7 +25,7 @@ def generate_launch_description():
                 ])
             ),
             launch_arguments={
-                'name': "jolo",
+                'name': "forward_oak",
                 'params_file': PathJoinSubstitution([
                     FindPackageShare('izzyboat_project11'),
                     'config',
@@ -33,27 +33,43 @@ def generate_launch_description():
                 ])
             }.items()
         ),
-        Node(
-            package='buoy_projector',
-            executable='buoy_projector',
-            name='buoy_projector',
-            remappings=[
-                ('input_detections', 'izzy/jolo/nn/detections'),
-                ('camera_info', 'jolo/nn/passthrough/camera_info'),
-                ('output_detections', 'izzy/jolo/nn/detections_3d')
-            ],
-            parameters=[{
-                'map_frame': 'izzy/map_tide'
-            }]
+        GroupAction(
+            actions = [
+                SetParameter(
+                    name = 'map_frame',
+                    value = 'izzy/map_tide'
+                ),
+                SetRemap(
+                    src = 'input_detections',
+                    dst = 'izzy/forward_oak/nn/detections'
+                ),
+                SetRemap(
+                    src = 'camera_info',
+                    dst = 'izzy/forward_oak/nn/passthrough/camera_info'
+                ),
+                SetRemap(
+                    src = 'output_detections',
+                    dst = 'izzy/forward_oak/nn/detections_3d'
+                ),    
+                IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                    FindPackageShare('buoy_projector'),
+                    'launch',
+                    'buoy_projector_launch.py'
+                    ])
+                ),
+                )
+            ]
         ),
         Node(
             package = 'detection_visualizer',
             executable = 'detection_visualizer',
             name = 'detection_visualizer',
             remappings = [
-                ('detection_visualizer/detections', 'izzy/jolo/nn/detections'),
-                ('detection_visualizer/images', 'izzy/jolo/nn/passthrough/image_raw'),
-                ('detection_visualizer/dbg_images', 'izzy/jolo/nn/detections/image_raw'),
+                ('detection_visualizer/detections', 'izzy/forward_oak/nn/detections'),
+                ('detection_visualizer/images', 'izzy/forward_oak/nn/passthrough/image_raw'),
+                ('detection_visualizer/dbg_images', 'izzy/forward_oak/nn/detections/image_raw'),
 
             ]
         ),
@@ -62,8 +78,8 @@ def generate_launch_description():
             executable="republish",
             name="detection_visualizer_compressor",
             remappings=[
-                ('in', 'izzy/jolo/nn/detections/image_raw'),
-                ('out/compressed', 'izzy/jolo/nn/detections/image_raw/compressed'),
+                ('in', 'izzy/forward_oak/nn/detections/image_raw'),
+                ('out/compressed', 'izzy/forward_oak/nn/detections/image_raw/compressed'),
             ],
             parameters=[{
                 'out_transport': "compressed"
@@ -75,10 +91,10 @@ def generate_launch_description():
             name="throttle_jolo",
             arguments=['message',],
             parameters=[{
-                'input_topic':'izzy/jolo/nn/passthrough/image_raw/compressed',
-                'output_topic': 'izzy/jolo/nn/passthrough/image_raw/throttled/compressed',
+                'input_topic':'izzy/forward_oak/nn/passthrough/image_raw/compressed',
+                'output_topic': 'izzy/forward_oak/nn/passthrough/image_raw/throttled/compressed',
                 'throttle_type': 'messages',
-                'msgs_per_sec': 1.0
+                'msgs_per_sec': 0.5
             }]
         ),
         Node(
@@ -87,10 +103,10 @@ def generate_launch_description():
             name="throttle_jolo_detection_images",
             arguments=['message',],
             parameters=[{
-                'input_topic':'izzy/jolo/nn/detections/image_raw',
-                'output_topic': 'izzy/jolo/nn/detections/image_raw/throttled/image_raw',
+                'input_topic':'izzy/forward_oak/nn/detections/image_raw/compressed',
+                'output_topic': 'izzy/forward_oak/nn/detections/image_raw/throttled/compressed',
                 'throttle_type': 'messages',
-                'msgs_per_sec': 1.0
+                'msgs_per_sec': 0.5
             }]
         ),
 
