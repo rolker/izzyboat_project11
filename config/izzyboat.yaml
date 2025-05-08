@@ -69,6 +69,7 @@
             - oak_segmentation
             - oak_segmentation_raw
             - oak_jolo_detections
+            - oak_jolo_camera_info
             - odom
             - plan
             - platforms
@@ -96,6 +97,8 @@
               oak_segmentation: {source: sensors/cameras/front/oak/segmentation_raw/compressed}
               oak_segmentation_raw: {source: sensors/cameras/front/oak/segmentation_raw, period: -1.0}
               oak_jolo_detections: {source: sensors/cameras/front/izzy/forward_oak/nn/detections/image_raw/compressed}
+              oak_jolo_camera_info: {source: sensors/cameras/front/izzy/forward_oak/nn/rgb/camera_info}
+              odom: {source: odom}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
@@ -116,7 +119,7 @@
               usb_camera_info: {source: sensors/cameras/front/usb/camera_info}
 
           vpn:
-            maximum_bytes_per_second: 1500000
+            maximum_bytes_per_second: 1000000
             topics_list:
             - battery
             - command_response
