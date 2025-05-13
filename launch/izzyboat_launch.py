@@ -183,36 +183,14 @@ def generate_launch_description():
                       ),
                   ]
                 ),
-                # IncludeLaunchDescription(
-                #   PythonLaunchDescriptionSource(
-                #     PathJoinSubstitution([
-                #       FindPackageShare('izzyboat_project11'),
-                #       'launch',
-                #       'oak1_launch.py'
-                #     ])
-                #   ),
-                # ),
                 IncludeLaunchDescription(
                   PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
                       FindPackageShare('izzyboat_project11'),
                       'launch',
-                      'jolo_launch.py'
+                      'oak1_launch.py'
                     ])
                   ),
-                ),
-                Node(
-                    package="topic_tools",
-                    executable="throttle",
-                    name="throttle_oak",
-                    arguments=['message',],
-                    parameters=[{
-                        'input_topic':'oak/image_raw/compressed',
-                        'output_topic': 'oak/image_raw/throttled/compressed',
-                        'throttle_type': 'messages',
-                        'msgs_per_sec': 1.0
-                    }]
-                    
                 ),
               ]
             ),
