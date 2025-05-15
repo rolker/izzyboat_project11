@@ -65,11 +65,10 @@
             - local_costmap_footprint
             - oak_rgb
             - oak_rgb_info
-            - oak_rgb_raw
             - oak_segmentation
             - oak_segmentation_raw
+            - oak_segmentation_info
             - oak_jolo_detections
-            - oak_jolo_camera_info
             - odom
             - plan
             - platforms
@@ -91,13 +90,12 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_rgb_raw: {source: sensors/cameras/front/oak/image_raw, period: -1.0} # subscribe to raw to make compressed work
-              oak_rgb: {source: sensors/cameras/front/oak/image_raw/compressed}
-              oak_rgb_info: {source: sensors/cameras/front/oak/camera_info}
-              oak_segmentation: {source: sensors/cameras/front/oak/segmentation_raw/compressed}
-              oak_segmentation_raw: {source: sensors/cameras/front/oak/segmentation_raw, period: -1.0}
-              oak_jolo_detections: {source: sensors/cameras/front/izzy/forward_oak/nn/detections/image_raw/compressed}
-              oak_jolo_camera_info: {source: sensors/cameras/front/izzy/forward_oak/nn/rgb/camera_info}
+              oak_rgb: {source: sensors/cameras/front/oak/detections/passthrough/image_raw/throttled/compressed}
+              oak_rgb_info: {source: sensors/cameras/front/oak/detections/passthrough/camera_info}
+              oak_segmentation: {source: sensors/cameras/front/oak/segmentation/compressed}
+              oak_segmentation_raw: {source: sensors/cameras/front/oak/segmentation, period: -1.0}
+              oak_segmentation_info: {source: sensors/cameras/front/oak/segmentation/camera_info}
+              oak_jolo_detections: {source: sensors/cameras/front/oak/detections/image_raw/compressed, period: 1.0}
               odom: {source: odom}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
@@ -151,7 +149,7 @@
               odom: {source: odom}
               battery: {source: /izzy/mavros/battery}
               control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
-              oak_jolo_detections: {source: sensors/cameras/front/izzy/forward_oak/nn/detections/image_raw/compressed}
+              oak_jolo_detections: {source: sensors/cameras/front/oak/detections/image_raw/compressed}
               plan: {source: plan}
               platforms: {source: /project11/platforms}
               posmv_position: {source: sensors/posmv/position, period: 0.1}
@@ -185,13 +183,12 @@
       - /izzy/project11/heartbeat
       - /izzy/project11/status/mission_manager
       - /izzy/robot_description
-      - /izzy/sensors/cameras/front/oak/camera_info
-      - /izzy/sensors/cameras/front/oak/image_raw/throttled/compressed
-      - /izzy/sensors/cameras/front/oak/segmentation_raw/compressed
-      - /izzy/sensors/cameras/front/izzy/forward_oak/nn/passthrough/camera_info
-      - /izzy/sensors/cameras/front/izzy/forward_oak/nn/passthrough/image_raw/throttled/compressed
-      - /izzy/sensors/cameras/front/izzy/forward_oak/nn/detections
-      - /izzy/sensors/cameras/front/izzy/forward_oak/nn/detections/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/oak/detections/passthrough/camera_info
+      - /izzy/sensors/cameras/front/oak/detections/passthrough/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/oak/detections/image_raw/throttled/compressed
+      - /izzy/sensors/cameras/front/oak/segmentation/camera_info
+      - /izzy/sensors/cameras/front/oak/segmentation/compressed
+      - /izzy/sensors/cameras/front/detections
       - /izzy/sensors/cameras/front/usb/camera_info
       - /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
       - /izzy/sensors/deltat/grid
