@@ -113,8 +113,8 @@
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
-              tf: {source: tf}
-              tf_static: {source: tf_static}
+              tf: {source: /tf}
+              tf_static: {source: /tf_static}
               usb_camera: {source: sensors/cameras/front/usb/image_raw/compressed, period: 2.0}
               usb_camera_info: {source: sensors/cameras/front/usb/camera_info}
 
@@ -161,8 +161,8 @@
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
-              tf: {source: tf}
-              tf_static: {source: tf_static}
+              tf: {source: /tf}
+              tf_static: {source: /tf_static}
               usb_camera: {source: sensors/cameras/front/usb/image_raw/compressed, period: 1.0}
               usb_camera_info: {source: sensors/cameras/front/usb/camera_info}
 

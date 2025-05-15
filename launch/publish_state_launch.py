@@ -14,7 +14,7 @@ def generate_launch_description():
       "namespace", default_value=TextSubstitution(text="izzy")
     )
 
-    remappings = [('/tf', 'tf'), ('/tf_static', 'tf_static')]
+    remappings = []#('/tf', 'tf'), ('/tf_static', 'tf_static')]
     
     path_to_urdf = get_package_share_path('izzyboat_project11') / 'urdf' / 'izzyboat.urdf'
     robot_state_publisher_node = Node(
