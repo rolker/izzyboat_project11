@@ -45,10 +45,6 @@ def generate_launch_description():
     log_directory_arg = DeclareLaunchArgument('log_directory')
 
 
-    remappings = [('/tf', '/izzy/tf'), ('/tf_static', '/izzy/tf_static')]
-
-
-
     return LaunchDescription([
       namespace_arg,
       frame_prefix_arg,
@@ -96,14 +92,6 @@ def generate_launch_description():
                   'izzyboat.yaml'
               ])                
             ),
-            SetRemap(
-              src = '/tf',
-              dst = ['/', namespace, '/tf']
-            ),
-            SetRemap(
-              src = '/tf_static',
-              dst = ['/', namespace, '/tf_static']
-            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
@@ -135,17 +123,6 @@ def generate_launch_description():
                       )
                   ),
 
-                  # Node(
-                  #   package = "octomap_server",
-                  #   executable = "octomap_server_node",
-                  #   name = "octomap_server",
-                  #   parameters=[{
-                  #       'resolution': 0.25,
-                  #       'frame_id': 'izzy/map'
-                  #   }],
-                  #   remappings = remappings + [('cloud_in', 'soundings'),]
-                  # )
-                    
                 ]
             ),
             GroupAction(
@@ -165,28 +142,6 @@ def generate_launch_description():
             GroupAction(
               actions=[
                 PushRosNamespace('sensors/cameras/front'),
-                IncludeLaunchDescription(
-                  PythonLaunchDescriptionSource(
-                    PathJoinSubstitution([
-                      FindPackageShare('izzyboat_project11'),
-                      'launch',
-                      'oak1_launch.py'
-                    ])
-                  ),
-                ),
-                Node(
-                    package="topic_tools",
-                    executable="throttle",
-                    name="throttle_oak",
-                    arguments=['message',],
-                    parameters=[{
-                        'input_topic':'oak/image_raw/compressed',
-                        'output_topic': 'oak/image_raw/throttled/compressed',
-                        'throttle_type': 'messages',
-                        'msgs_per_sec': 1.0
-                    }]
-                    
-                ),
                 GroupAction(
                   actions=[
                       PushRosNamespace('usb/'),
@@ -217,10 +172,18 @@ def generate_launch_description():
                             'msgs_per_sec': 0.2
                         }]
                         
-                    ),
-
+                      ),
                   ]
-                )
+                ),
+                IncludeLaunchDescription(
+                  PythonLaunchDescriptionSource(
+                    PathJoinSubstitution([
+                      FindPackageShare('izzyboat_project11'),
+                      'launch',
+                      'oak1_launch.py'
+                    ])
+                  ),
+                ),
               ]
             ),
             Node(

@@ -65,10 +65,10 @@
     </visual>
   </link>
 
-  <link name="izzy/sensors/cameras/oak_rgb_camera_optical_frame"/>
+  <link name="forward_oak_rgb_camera_optical_frame"/>
   <joint name="forward_optical_to_oak_optical" type="fixed">
     <parent link="izzy/camera_forward_optical"/>
-    <child link="izzy/sensors/cameras/oak_rgb_camera_optical_frame"/>
+    <child link="forward_oak_rgb_camera_optical_frame"/>
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </joint>
 
