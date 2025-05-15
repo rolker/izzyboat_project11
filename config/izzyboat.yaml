@@ -63,13 +63,16 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            - oak_rgb
-            - oak_rgb_info
-            - oak_segmentation
-            - oak_segmentation_raw
-            - oak_segmentation_info
             - oak_jolo_detections
+            - oak_jolo_info
+            - oak_segmentation
+            - oak_segmentation_info
+            - oak_segmentation_passthrough
+            - oak_segmentation_passthrough_info
+            - oak_segmentation_passthrough_raw
+            - oak_segmentation_raw
             - odom
+            - path_follower_visualization
             - plan
             - platforms
             - posmv_position
@@ -90,13 +93,16 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_rgb: {source: sensors/cameras/front/oak/detections/passthrough/image_raw/throttled/compressed}
-              oak_rgb_info: {source: sensors/cameras/front/oak/detections/passthrough/camera_info}
-              oak_segmentation: {source: sensors/cameras/front/oak/segmentation/compressed}
-              oak_segmentation_raw: {source: sensors/cameras/front/oak/segmentation, period: -1.0}
-              oak_segmentation_info: {source: sensors/cameras/front/oak/segmentation/camera_info}
-              oak_jolo_detections: {source: sensors/cameras/front/oak/detections/image_raw/compressed, period: 1.0}
+              oak_jolo_detections:               {source: sensors/cameras/front/oak/detections/image_raw/compressed, period: 2.0}
+              oak_jolo_info:                     {source: sensors/cameras/front/oak/detections/passthrough/camera_info}
+              oak_segmentation:                  {source: sensors/cameras/front/oak/segmentation/compressed}
+              oak_segmentation_info:             {source: sensors/cameras/front/oak/segmentation/camera_info}
+              oak_segmentation_passthrough:      {source: sensors/cameras/front/oak/segmentation/passthrough/image_raw/compressed}
+              oak_segmentation_passthrough_info: {source: sensors/cameras/front/oak/segmentation/passthrough/camera_info}
+              oak_segmentation_passthrough_raw:  {source: sensors/cameras/front/oak/segmentation/passthrough/image_raw, period: -1.0}
+              oak_segmentation_raw:              {source: sensors/cameras/front/oak/segmentation, period: -1.0}
               odom: {source: odom}
+              path_follower_visualization: {source: path_follower_visualization}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
               deltat_octomap: {source: /izzy/sensors/deltat/occupied_cells_vis_array, period: 2.0}
@@ -126,6 +132,10 @@
             - heartbeat_nav
             - hover_viz
             - oak_jolo_detections
+            - oak_segmentation
+            - oak_segmentation_info
+            - oak_segmentation_passthrough
+            - oak_segmentation_passthrough_info
             - odom
             - plan
             - platforms
@@ -149,7 +159,11 @@
               odom: {source: odom}
               battery: {source: /izzy/mavros/battery}
               control_cmd_vel: {source: /izzy/project11/control/cmd_vel}
-              oak_jolo_detections: {source: sensors/cameras/front/oak/detections/image_raw/compressed}
+              oak_jolo_detections:               {source: sensors/cameras/front/oak/detections/image_raw/compressed, period: 2.0}
+              oak_segmentation:                  {source: sensors/cameras/front/oak/segmentation/compressed}
+              oak_segmentation_info:             {source: sensors/cameras/front/oak/segmentation/camera_info}
+              oak_segmentation_passthrough:      {source: sensors/cameras/front/oak/segmentation/passthrough/image_raw/compressed}
+              oak_segmentation_passthrough_info: {source: sensors/cameras/front/oak/segmentation/passthrough/camera_info}
               plan: {source: plan}
               platforms: {source: /project11/platforms}
               posmv_position: {source: sensors/posmv/position, period: 0.1}
@@ -196,8 +210,6 @@
       - /izzy/sensors/posmv/position
       - /izzy/sensors/posmv/orientation
       - /izzy/sensors/posmv/velocity
-      - /izzy/tf
-      - /izzy/tf_static
       - /izzy/udp_bridge/bridge_info
       - /izzy/udp_bridge/topic_statistics
       - /project11/platforms

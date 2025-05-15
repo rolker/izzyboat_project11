@@ -92,14 +92,6 @@ def generate_launch_description():
                   'izzyboat.yaml'
               ])                
             ),
-            SetRemap(
-              src = '/tf',
-              dst = ['/', namespace, '/tf']
-            ),
-            SetRemap(
-              src = '/tf_static',
-              dst = ['/', namespace, '/tf_static']
-            ),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     PathJoinSubstitution([
