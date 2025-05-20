@@ -65,12 +65,6 @@
     </visual>
   </link>
 
-  <link name="forward_oak_rgb_camera_optical_frame"/>
-  <joint name="forward_optical_to_oak_optical" type="fixed">
-    <parent link="izzy/camera_forward_optical"/>
-    <child link="forward_oak_rgb_camera_optical_frame"/>
-    <origin xyz="0 0 0" rpy="0 0 0"/>
-  </joint>
 
   <joint name="base_to_camera_forward" type="fixed">
     <parent link="izzy/base_link"/>
@@ -83,6 +77,42 @@
     <child link="izzy/camera_forward_optical"/>
     <origin xyz="0 0 0" rpy="-1.57075 0 -1.57075"/>
   </joint>
+
+
+  <link name="izzy/forward_oak_camera">
+     <visual>
+      <geometry>
+        <cylinder length="0.07" radius="0.05"/>
+      </geometry>
+      <origin rpy="0 1.57075 0" xyz="-0.015 0 0"/>
+      <material name="oak_camera">
+        <color rgba="0.2 0.2 0.3 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+
+  <link name="izzy/forward_oak_camera_optical_frame"/>
+
+  <joint name="forward_optical_to_oak_optical" type="fixed">
+    <parent link="izzy/camera_forward_optical"/>
+    <child link="izzy/forward_oak_camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <joint name="oak_forward_to_oak_forward_optical" type="fixed">
+    <parent link="izzy/forward_oak_camera"/>
+    <child link="izzy/forward_oak_camera_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.57075 0 -1.57075"/>
+  </joint>
+
+  <joint name="base_to_oak_forward" type="fixed">
+    <parent link="izzy/base_link"/>
+    <child link="izzy/forward_oak_camera"/>
+    <origin xyz="0 0 0.5" rpy="0 0 0"/>
+    <!-- todo! adjust offest -->
+  </joint>
+
 
   <link name="izzy/deltat">
     <visual>

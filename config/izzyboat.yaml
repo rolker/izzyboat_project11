@@ -63,8 +63,8 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            - oak_jolo_detections
-            - oak_jolo_info
+            #- oak_jolo_detections
+            #- oak_jolo_info
             - oak_segmentation
             - oak_segmentation_info
             - oak_segmentation_passthrough
@@ -131,11 +131,11 @@
             - heartbeat
             - heartbeat_nav
             - hover_viz
-            - oak_jolo_detections
-            - oak_segmentation
-            - oak_segmentation_info
-            - oak_segmentation_passthrough
-            - oak_segmentation_passthrough_info
+            #- oak_jolo_detections
+            #- oak_segmentation
+            #- oak_segmentation_info
+            #- oak_segmentation_passthrough
+            #- oak_segmentation_passthrough_info
             - odom
             - plan
             - platforms
