@@ -36,6 +36,8 @@
     startup_settings:
     - "set_power 1"
     - "set_range 1 100 1 50"
+    - "set_trigger_mode 0"
+    - "set_rate 1.0"
 
     
     
