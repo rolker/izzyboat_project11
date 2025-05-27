@@ -101,15 +101,39 @@ def generate_launch_description():
                     ])
                 )
             ),
+            # GroupAction(
+            #     actions=[
+            #       PushRosNamespace('sensors/deltat'),
+            #       IncludeLaunchDescription(
+            #           PythonLaunchDescriptionSource(
+            #               PathJoinSubstitution([
+            #                   FindPackageShare('imagenex_deltat'),
+            #                   'launch',
+            #                   'deltat_launch.py'
+            #               ])
+            #           )
+            #       ),
+            #       IncludeLaunchDescription(
+            #           PythonLaunchDescriptionSource(
+            #               PathJoinSubstitution([
+            #                   FindPackageShare('cube_bathymetry'),
+            #                   'launch',
+            #                   'cube_bathymetry_launch.py'
+            #               ])
+            #           )
+            #       ),
+
+            #     ]
+            # ),
             GroupAction(
                 actions=[
-                  PushRosNamespace('sensors/deltat'),
+                  PushRosNamespace('sensors/norbit'),
                   IncludeLaunchDescription(
                       PythonLaunchDescriptionSource(
                           PathJoinSubstitution([
-                              FindPackageShare('imagenex_deltat'),
+                              FindPackageShare('norbit_driver'),
                               'launch',
-                              'deltat_launch.py'
+                              'norbit_launch.py'
                           ])
                       )
                   ),
@@ -122,7 +146,6 @@ def generate_launch_description():
                           ])
                       )
                   ),
-
                 ]
             ),
             GroupAction(

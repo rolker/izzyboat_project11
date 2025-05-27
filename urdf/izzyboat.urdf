@@ -132,4 +132,22 @@
   </joint>
 
 
+  <link name="izzy/norbit">
+    <visual>
+      <geometry>
+        <box size="0.15 0.15 0.1"/>
+      </geometry>
+      <origin xyz="0 0 0"/>
+      <material name="norbit">
+        <color rgba="0.5 0.5 0.75 1.0"/>
+      </material>
+    </visual>
+  </link>
+  <joint name="base_to_norbit" type="fixed">
+    <parent link="izzy/base_link"/>
+    <child link="izzy/norbit"/>
+    <origin xyz="0 0 -0.18" rpy="3.14159 0.0 0.0"/>
+  </joint>
+
+
 </robot>

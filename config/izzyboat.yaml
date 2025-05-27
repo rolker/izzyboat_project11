@@ -29,6 +29,17 @@
   ros__parameters:
     frame_id: izzy/deltat
 
+/**/norbit:
+  ros__parameters:
+    sensor_frame: izzy/norbit
+    ip:           192.168.53.34
+    startup_settings:
+    - "set_power 1"
+    - "set_range 1 100 1 50"
+
+    
+    
+
 /**/cube_bathymetry:
   ros__parameters:
     map_frame: izzy/map
