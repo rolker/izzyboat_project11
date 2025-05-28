@@ -11,8 +11,8 @@
 
     nav:
       source_names:
-        - mru
         - posmv
+        - mru
       sources:
         mru:
           topics:
@@ -32,12 +32,11 @@
 /**/norbit:
   ros__parameters:
     sensor_frame: izzy/norbit
-    ip:           192.168.53.34
+    sonar_ip:     192.168.53.34
     startup_settings:
-    - "set_power 1"
     - "set_range 1 100 1 50"
-    - "set_trigger_mode 0"
-    - "set_rate 1.0"
+    - "set_trigger_mode 6"
+    - "set_power 1"
 
     
     
@@ -63,7 +62,7 @@
           - vpn
         connections:
           wifi:
-            maximum_bytes_per_second: 500000
+            maximum_bytes_per_second: 550000
             topics_list:
             - battery
             - command_response
@@ -76,8 +75,9 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            #- oak_jolo_detections
-            #- oak_jolo_info
+            - norbit_soundings
+            - oak_jolo_detections
+            - oak_jolo_info
             - oak_segmentation
             - oak_segmentation_info
             - oak_segmentation_passthrough
@@ -105,6 +105,7 @@
               hover_viz: {source: hover_visualization}
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
+              norbit_soundings: {source: sensors/norbit/soundings}
               odom: {source: odom}
               oak_jolo_detections:               {source: sensors/cameras/front/oak/detections/image_raw/compressed, period: 2.0}
               oak_jolo_info:                     {source: sensors/cameras/front/oak/detections/passthrough/camera_info}
@@ -161,8 +162,8 @@
             - mavros_velocity
             - tf
             - tf_static
-            - usb_camera
-            - usb_camera_info
+            #- usb_camera
+            #- usb_camera_info
             topics:
               command_response: {source: project11/response}
               diagnostics: {source: /diagnostics}
@@ -197,7 +198,6 @@
   ros__parameters:
     record:
       all_topics: false
-      comptession_format: zstd
       topics:
       - /diagnostics
       - /izzy/mavros/battery
@@ -211,15 +211,17 @@
       - /izzy/project11/status/mission_manager
       - /izzy/robot_description
       - /izzy/sensors/cameras/front/oak/detections/passthrough/camera_info
-      - /izzy/sensors/cameras/front/oak/detections/passthrough/image_raw/throttled/compressed
-      - /izzy/sensors/cameras/front/oak/detections/image_raw/throttled/compressed
-      - /izzy/sensors/cameras/front/oak/segmentation/camera_info
-      - /izzy/sensors/cameras/front/oak/segmentation/compressed
-      - /izzy/sensors/cameras/front/detections
-      - /izzy/sensors/cameras/front/usb/camera_info
-      - /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
-      - /izzy/sensors/deltat/grid
-      - /izzy/sensors/deltat/soundings
+      #- /izzy/sensors/cameras/front/oak/detections/passthrough/image_raw/throttled/compressed
+      #- /izzy/sensors/cameras/front/oak/detections/image_raw/throttled/compressed
+      #- /izzy/sensors/cameras/front/oak/segmentation/camera_info
+      #- /izzy/sensors/cameras/front/oak/segmentation/compressed
+      - /izzy/sensors/cameras/front/oak/segmentation/passthrough/camera_info
+      - /izzy/sensors/cameras/front/oak/segmentation/passthrough/image_raw/throttled/compressed
+      #- /izzy/sensors/cameras/front/usb/camera_info
+      #- /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
+      #- /izzy/sensors/deltat/grid
+      #- /izzy/sensors/deltat/soundings
+      - /izzy/sensors/norbit/soundings
       - /izzy/sensors/posmv/position
       - /izzy/sensors/posmv/orientation
       - /izzy/sensors/posmv/velocity
@@ -232,4 +234,24 @@
     storage:
       uri: /home/field/project11/logs/izzyboat
       max_bagfile_duration: 300
+      storage_preset_profile: zstd_fast
 
+/**/sonar_logger:
+  ros__parameters:
+    record:
+      all_topics: false
+      topics:
+      - /diagnostics
+      - /izzy/odom
+      - /izzy/robot_description
+      - /izzy/sensors/deltat/soundings
+      - /izzy/sensors/norbit/soundings
+      - /izzy/sensors/posmv/position
+      - /izzy/sensors/posmv/orientation
+      - /izzy/sensors/posmv/velocity
+      - /tf
+      - /tf_static
+    storage:
+      uri: /home/field/project11/logs/izzyboat_sonar
+      max_bagfile_duration: 300
+      storage_preset_profile: zstd_fast

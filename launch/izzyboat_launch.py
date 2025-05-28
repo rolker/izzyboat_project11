@@ -14,6 +14,8 @@ from launch_ros.actions import SetParametersFromFile
 from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
 
+import datetime
+
 def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
 
@@ -44,6 +46,17 @@ def generate_launch_description():
 
     log_directory_arg = DeclareLaunchArgument('log_directory')
 
+    sonar_log_directory = LaunchConfiguration('sonar_log_directory')
+    sonar_log_directory_arg = DeclareLaunchArgument(
+        'sonar_log_directory',
+        default_value=TextSubstitution(text='/home/field/project11/logs/izzyboat_sonar')
+    )
+
+    datetime_str = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds').replace(':', '-')
+    sonar_log_subdirectory = LaunchConfiguration('sonar_log_subdirectory')
+
+    sonar_log_subdirectory_arg = DeclareLaunchArgument( 'sonar_log_subdirectory', 
+    default_value=TextSubstitution(text=datetime_str))
 
     return LaunchDescription([
       namespace_arg,
@@ -51,6 +64,8 @@ def generate_launch_description():
       fcu_url_arg,
       gcs_url_arg,
       log_directory_arg,
+      sonar_log_directory_arg,
+      sonar_log_subdirectory_arg,
       GroupAction(
           actions=[
             IncludeLaunchDescription(
@@ -183,19 +198,19 @@ def generate_launch_description():
                         
                           }]
                       ),
-                      Node(
-                        package="topic_tools",
-                        executable="throttle",
-                        name="throttle_usb",
-                        arguments=['message',],
-                        parameters=[{
-                            'input_topic':'image_raw/compressed',
-                            'output_topic': 'image_raw/throttled/compressed',
-                            'throttle_type': 'messages',
-                            'msgs_per_sec': 0.2
-                        }]
+                      # Node(
+                      #   package="topic_tools",
+                      #   executable="throttle",
+                      #   name="throttle_usb",
+                      #   arguments=['message',],
+                      #   parameters=[{
+                      #       'input_topic':'image_raw/compressed',
+                      #       'output_topic': 'image_raw/throttled/compressed',
+                      #       'throttle_type': 'messages',
+                      #       'msgs_per_sec': 0.2
+                      #   }]
                         
-                      ),
+                      # ),
                   ]
                 ),
                 IncludeLaunchDescription(
@@ -221,7 +236,23 @@ def generate_launch_description():
                 ]),
                 {'storage.uri': log_directory}                     
               ]
-            )
+            ),
+            Node(
+              package='rosbag2_transport',
+              executable='recorder',
+              name='sonar_logger',
+              parameters=[
+                PathJoinSubstitution([
+                  FindPackageShare('izzyboat_project11'),
+                  'config',
+                  'izzyboat.yaml'
+                ]),
+                {'storage.uri': PathJoinSubstitution([
+                  sonar_log_directory,
+                  sonar_log_subdirectory
+                ])},
+              ]
+            ),
 
           ]
       ),

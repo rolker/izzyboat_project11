@@ -48,6 +48,18 @@ def generate_launch_description():
             respawn = True,
             respawn_delay = 5
         ),
+        Node(
+            package="topic_tools",
+            executable="throttle",
+            name="throttle_jolo",
+            arguments=['message',],
+            parameters=[{
+                'input_topic':'oak/segmentation/passthrough/image_raw/compressed',
+                'output_topic': 'oak/segmentation/passthrough/image_raw/throttled/compressed',
+                'throttle_type': 'messages',
+                'msgs_per_sec': 0.5
+            }]
+        ),
         GroupAction(
             actions = [
                 SetParameter(
@@ -77,53 +89,53 @@ def generate_launch_description():
                 )
             ]
         ),
-        Node(
-            package = 'detection_visualizer',
-            executable = 'detection_visualizer',
-            name = 'detection_visualizer',
-            remappings = [
-                ('detection_visualizer/detections', 'oak/detections'),
-                ('detection_visualizer/images', 'oak/detections/passthrough/image_raw'),
-                ('detection_visualizer/dbg_images', 'oak/detections/image_raw'),
+        # Node(
+        #     package = 'detection_visualizer',
+        #     executable = 'detection_visualizer',
+        #     name = 'detection_visualizer',
+        #     remappings = [
+        #         ('detection_visualizer/detections', 'oak/detections'),
+        #         ('detection_visualizer/images', 'oak/detections/passthrough/image_raw'),
+        #         ('detection_visualizer/dbg_images', 'oak/detections/image_raw'),
 
-            ]
-        ),
-        Node(
-            package="image_transport",
-            executable="republish",
-            name="detection_visualizer_compressor",
-            remappings=[
-                ('in', 'oak/detections/image_raw'),
-                ('out/compressed', 'oak/detections/image_raw/compressed'),
-            ],
-            parameters=[{
-                'out_transport': "compressed"
-            }]
-        ),
-        Node(
-            package="topic_tools",
-            executable="throttle",
-            name="throttle_jolo",
-            arguments=['message',],
-            parameters=[{
-                'input_topic':'oak/detections/passthrough/image_raw/compressed',
-                'output_topic': 'oak/detections/passthrough/image_raw/throttled/compressed',
-                'throttle_type': 'messages',
-                'msgs_per_sec': 0.5
-            }]
-        ),
-        Node(
-            package="topic_tools",
-            executable="throttle",
-            name="throttle_jolo_detection_images",
-            arguments=['message',],
-            parameters=[{
-                'input_topic':'oak/detections/image_raw/compressed',
-                'output_topic': 'oak/detections/image_raw/throttled/compressed',
-                'throttle_type': 'messages',
-                'msgs_per_sec': 0.5
-            }]
-        ),
+        #     ]
+        # ),
+        # Node(
+        #     package="image_transport",
+        #     executable="republish",
+        #     name="detection_visualizer_compressor",
+        #     remappings=[
+        #         ('in', 'oak/detections/image_raw'),
+        #         ('out/compressed', 'oak/detections/image_raw/compressed'),
+        #     ],
+        #     parameters=[{
+        #         'out_transport': "compressed"
+        #     }]
+        # ),
+        # Node(
+        #     package="topic_tools",
+        #     executable="throttle",
+        #     name="throttle_jolo",
+        #     arguments=['message',],
+        #     parameters=[{
+        #         'input_topic':'oak/detections/passthrough/image_raw/compressed',
+        #         'output_topic': 'oak/detections/passthrough/image_raw/throttled/compressed',
+        #         'throttle_type': 'messages',
+        #         'msgs_per_sec': 0.5
+        #     }]
+        # ),
+        # Node(
+        #     package="topic_tools",
+        #     executable="throttle",
+        #     name="throttle_jolo_detection_images",
+        #     arguments=['message',],
+        #     parameters=[{
+        #         'input_topic':'oak/detections/image_raw/compressed',
+        #         'output_topic': 'oak/detections/image_raw/throttled/compressed',
+        #         'throttle_type': 'messages',
+        #         'msgs_per_sec': 0.5
+        #     }]
+        # ),
 
     ])
 
