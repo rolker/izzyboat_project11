@@ -33,6 +33,8 @@
   ros__parameters:
     sensor_frame: izzy/norbit
     sonar_ip:     192.168.53.34
+    publish_detections: true
+    publish_pointcloud: false
     startup_settings:
     - "set_range 1 100 1 50"
     - "set_trigger_mode 6"
@@ -148,8 +150,8 @@
             #- oak_jolo_detections
             #- oak_segmentation
             #- oak_segmentation_info
-            #- oak_segmentation_passthrough
-            #- oak_segmentation_passthrough_info
+            - oak_segmentation_passthrough
+            - oak_segmentation_passthrough_info
             - odom
             - plan
             - platforms
@@ -221,6 +223,7 @@
       #- /izzy/sensors/cameras/front/usb/image_raw/throttled/compressed
       #- /izzy/sensors/deltat/grid
       #- /izzy/sensors/deltat/soundings
+      - /izzy/sensors/norbit/detections
       - /izzy/sensors/norbit/soundings
       - /izzy/sensors/posmv/position
       - /izzy/sensors/posmv/orientation
@@ -245,6 +248,7 @@
       - /izzy/odom
       - /izzy/robot_description
       - /izzy/sensors/deltat/soundings
+      - /izzy/sensors/norbit/detections
       - /izzy/sensors/norbit/soundings
       - /izzy/sensors/posmv/position
       - /izzy/sensors/posmv/orientation

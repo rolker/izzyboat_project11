@@ -152,6 +152,40 @@ def generate_launch_description():
                           ])
                       )
                   ),
+                  GroupAction(
+                      actions=[
+                        SetRemap(
+                          src='position',
+                          dst=PathJoinSubstitution([
+                              namespace,
+                              'sensors/posmv/position'
+                          ])
+                        ),
+                        SetRemap(
+                            src='orientation',
+                            dst=PathJoinSubstitution([
+                                namespace,
+                                'sensors/posmv/orientation'
+                            ])
+                        ),
+                        SetRemap(
+                            src='velocity',
+                            dst=PathJoinSubstitution([
+                                namespace,
+                                'sensors/posmv/velocity'
+                            ])
+                        ),
+                        IncludeLaunchDescription(
+                            PythonLaunchDescriptionSource(
+                                PathJoinSubstitution([
+                                    FindPackageShare('cube_bathymetry'),
+                                    'launch',
+                                    'detections_to_pointcloud_launch.py'
+                                ])
+                            )
+                        ),
+                      ]
+                  ),
                   IncludeLaunchDescription(
                       PythonLaunchDescriptionSource(
                           PathJoinSubstitution([
