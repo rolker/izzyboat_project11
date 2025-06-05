@@ -143,15 +143,15 @@ def generate_launch_description():
             GroupAction(
                 actions=[
                   PushRosNamespace('sensors/norbit'),
-                  IncludeLaunchDescription(
-                      PythonLaunchDescriptionSource(
-                          PathJoinSubstitution([
-                              FindPackageShare('norbit_driver'),
-                              'launch',
-                              'norbit_launch.py'
-                          ])
-                      )
-                  ),
+                  # IncludeLaunchDescription(
+                  #     PythonLaunchDescriptionSource(
+                  #         PathJoinSubstitution([
+                  #             FindPackageShare('norbit_driver'),
+                  #             'launch',
+                  #             'norbit_launch.py'
+                  #         ])
+                  #     )
+                  # ),
                   GroupAction(
                       actions=[
                         SetRemap(
