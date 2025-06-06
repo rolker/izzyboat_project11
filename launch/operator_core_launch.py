@@ -81,6 +81,18 @@ def generate_launch_description():
           ])
         ),
       ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('izzyboat_project11'),
+                    'launch',
+                    'publish_state_launch.py'
+                ])
+            ),
+            launch_arguments={
+            'namespace': robot_namespace,
+            }.items()
+        ),
 
 
     ])

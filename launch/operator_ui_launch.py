@@ -42,7 +42,9 @@ def generate_launch_description():
         FindPackageShare('izzyboat_project11'),
         'config',
         'izzyboat.rviz'
-      ])
+      ]),
+      'rqt': 'true',
+      'rqt_perspective': 'izzyboat'
     }.items()
   )
 
