@@ -116,75 +116,17 @@ def generate_launch_description():
                     ])
                 )
             ),
-            # GroupAction(
-            #     actions=[
-            #       PushRosNamespace('sensors/deltat'),
-            #       IncludeLaunchDescription(
-            #           PythonLaunchDescriptionSource(
-            #               PathJoinSubstitution([
-            #                   FindPackageShare('imagenex_deltat'),
-            #                   'launch',
-            #                   'deltat_launch.py'
-            #               ])
-            #           )
-            #       ),
-            #       IncludeLaunchDescription(
-            #           PythonLaunchDescriptionSource(
-            #               PathJoinSubstitution([
-            #                   FindPackageShare('cube_bathymetry'),
-            #                   'launch',
-            #                   'cube_bathymetry_launch.py'
-            #               ])
-            #           )
-            #       ),
-
-            #     ]
-            # ),
             GroupAction(
                 actions=[
-                  PushRosNamespace('sensors/norbit'),
-                  # IncludeLaunchDescription(
-                  #     PythonLaunchDescriptionSource(
-                  #         PathJoinSubstitution([
-                  #             FindPackageShare('norbit_driver'),
-                  #             'launch',
-                  #             'norbit_launch.py'
-                  #         ])
-                  #     )
-                  # ),
-                  GroupAction(
-                      actions=[
-                        SetRemap(
-                          src='position',
-                          dst=PathJoinSubstitution([
-                              namespace,
-                              'sensors/posmv/position'
+                  PushRosNamespace('sensors/deltat'),
+                  IncludeLaunchDescription(
+                      PythonLaunchDescriptionSource(
+                          PathJoinSubstitution([
+                              FindPackageShare('imagenex_deltat'),
+                              'launch',
+                              'deltat_launch.py'
                           ])
-                        ),
-                        SetRemap(
-                            src='orientation',
-                            dst=PathJoinSubstitution([
-                                namespace,
-                                'sensors/posmv/orientation'
-                            ])
-                        ),
-                        SetRemap(
-                            src='velocity',
-                            dst=PathJoinSubstitution([
-                                namespace,
-                                'sensors/posmv/velocity'
-                            ])
-                        ),
-                        IncludeLaunchDescription(
-                            PythonLaunchDescriptionSource(
-                                PathJoinSubstitution([
-                                    FindPackageShare('cube_bathymetry'),
-                                    'launch',
-                                    'detections_to_pointcloud_launch.py'
-                                ])
-                            )
-                        ),
-                      ]
+                      )
                   ),
                   IncludeLaunchDescription(
                       PythonLaunchDescriptionSource(
@@ -195,8 +137,66 @@ def generate_launch_description():
                           ])
                       )
                   ),
+
                 ]
             ),
+            # GroupAction(
+            #     actions=[
+            #       PushRosNamespace('sensors/norbit'),
+            #       # IncludeLaunchDescription(
+            #       #     PythonLaunchDescriptionSource(
+            #       #         PathJoinSubstitution([
+            #       #             FindPackageShare('norbit_driver'),
+            #       #             'launch',
+            #       #             'norbit_launch.py'
+            #       #         ])
+            #       #     )
+            #       # ),
+            #       GroupAction(
+            #           actions=[
+            #             SetRemap(
+            #               src='position',
+            #               dst=PathJoinSubstitution([
+            #                   namespace,
+            #                   'sensors/posmv/position'
+            #               ])
+            #             ),
+            #             SetRemap(
+            #                 src='orientation',
+            #                 dst=PathJoinSubstitution([
+            #                     namespace,
+            #                     'sensors/posmv/orientation'
+            #                 ])
+            #             ),
+            #             SetRemap(
+            #                 src='velocity',
+            #                 dst=PathJoinSubstitution([
+            #                     namespace,
+            #                     'sensors/posmv/velocity'
+            #                 ])
+            #             ),
+            #             IncludeLaunchDescription(
+            #                 PythonLaunchDescriptionSource(
+            #                     PathJoinSubstitution([
+            #                         FindPackageShare('cube_bathymetry'),
+            #                         'launch',
+            #                         'detections_to_pointcloud_launch.py'
+            #                     ])
+            #                 )
+            #             ),
+            #           ]
+            #       ),
+            #       IncludeLaunchDescription(
+            #           PythonLaunchDescriptionSource(
+            #               PathJoinSubstitution([
+            #                   FindPackageShare('cube_bathymetry'),
+            #                   'launch',
+            #                   'cube_bathymetry_launch.py'
+            #               ])
+            #           )
+            #       ),
+            #     ]
+            # ),
             GroupAction(
               actions=[
                   PushRosNamespace('sensors/posmv'),

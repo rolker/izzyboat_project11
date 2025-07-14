@@ -9,6 +9,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch_ros.actions import Node
+from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParameter
 from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
@@ -59,6 +60,25 @@ def generate_launch_description():
                 'throttle_type': 'messages',
                 'msgs_per_sec': 0.5
             }]
+        ),
+        GroupAction(
+            actions = [
+                PushRosNamespace("oak"),
+                SetParameter(
+                    name = 'map_frame',
+                    value = 'izzy/map_tide'
+                ),
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('sea_surface_segmentation'),
+                            'launch',
+                            'segments_to_pointcloud_launch.py'
+                        ])
+                    ),
+                )
+
+            ]
         ),
         GroupAction(
             actions = [
