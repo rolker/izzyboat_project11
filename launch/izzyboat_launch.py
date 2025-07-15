@@ -217,21 +217,21 @@ def generate_launch_description():
                 GroupAction(
                   actions=[
                       PushRosNamespace('usb/'),
-                      Node(
-                          package="usb_cam",
-                          executable="usb_cam_node_exe",
-                          name="usb_camera_forward",
-                          parameters=[{
-                              'camera_name': 'usb_camera_forward',
-                              'framerate': 30.0,
-                              'image_width': 1920,
-                              'image_height': 1080,
-                              'frame_id': 'izzy/usb_camera_forward_optical',
-                              'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
-                              'pixel_format': 'yuyv2rgb',
+                      # Node(
+                      #     package="usb_cam",
+                      #     executable="usb_cam_node_exe",
+                      #     name="usb_camera_forward",
+                      #     parameters=[{
+                      #         'camera_name': 'usb_camera_forward',
+                      #         'framerate': 30.0,
+                      #         'image_width': 1920,
+                      #         'image_height': 1080,
+                      #         'frame_id': 'izzy/usb_camera_forward_optical',
+                      #         'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
+                      #         'pixel_format': 'yuyv2rgb',
                         
-                          }]
-                      ),
+                      #     }]
+                      # ),
                       # Node(
                       #   package="topic_tools",
                       #   executable="throttle",
