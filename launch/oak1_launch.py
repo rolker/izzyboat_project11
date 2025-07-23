@@ -80,35 +80,35 @@ def generate_launch_description():
 
             ]
         ),
-        GroupAction(
-            actions = [
-                SetParameter(
-                    name = 'map_frame',
-                    value = 'izzy/map_tide'
-                ),
-                SetRemap(
-                    src = 'input_detections',
-                    dst = 'oak/detections'
-                ),
-                SetRemap(
-                    src = 'camera_info',
-                    dst = 'oak/detections/passthrough/camera_info'
-                ),
-                SetRemap(
-                    src = 'output_detections',
-                    dst = 'oak/detections_3d'
-                ),    
-                IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(
-                        PathJoinSubstitution([
-                            FindPackageShare('buoy_projector'),
-                            'launch',
-                            'buoy_projector_launch.py'
-                        ])
-                    ),
-                )
-            ]
-        ),
+        # GroupAction(
+        #     actions = [
+        #         SetParameter(
+        #             name = 'map_frame',
+        #             value = 'izzy/map_tide'
+        #         ),
+        #         SetRemap(
+        #             src = 'input_detections',
+        #             dst = 'oak/detections'
+        #         ),
+        #         SetRemap(
+        #             src = 'camera_info',
+        #             dst = 'oak/detections/passthrough/camera_info'
+        #         ),
+        #         SetRemap(
+        #             src = 'output_detections',
+        #             dst = 'oak/detections_3d'
+        #         ),    
+        #         IncludeLaunchDescription(
+        #             PythonLaunchDescriptionSource(
+        #                 PathJoinSubstitution([
+        #                     FindPackageShare('buoy_projector'),
+        #                     'launch',
+        #                     'buoy_projector_launch.py'
+        #                 ])
+        #             ),
+        #         )
+        #     ]
+        # ),
         # Node(
         #     package = 'detection_visualizer',
         #     executable = 'detection_visualizer',
