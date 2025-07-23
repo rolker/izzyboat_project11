@@ -94,6 +94,7 @@
             - posmv_position
             - posmv_orientation
             - posmv_velocity
+            - segmentation_pointcloud
             - mavros_gps_status
             - mavros_position
             - mavros_orientation
@@ -131,6 +132,7 @@
               posmv_position: {source: sensors/posmv/position, period: 0.1}
               posmv_orientation: {source: sensors/posmv/orientation, perioid: 0.1}
               posmv_velocity: {source: sensors/posmv/velocity, period: 0.1}
+              segmentation_pointcloud: {source: sensors/cameras/front/oak/segmentation/pointcloud, period: 1.0}
               mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
