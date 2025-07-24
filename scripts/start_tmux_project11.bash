@@ -28,10 +28,10 @@ export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
 export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
 #wait for dora to be pingable by self
-while ! ping -c 1 -W 1 dora; do
-    echo "Waiting for ping to dora..."
-    sleep 1
-done
+# while ! ping -c 1 -W 1 dora; do
+#     echo "Waiting for ping to dora..."
+#     sleep 1
+# done
 
 /usr/bin/tmux new -d -s project11 
 /usr/bin/tmux send-keys "DISPLAY=:0 ros2 launch -g izzyboat_project11 izzyboat_launch.py log_directory:=${LOGDIR_BAG}" C-m
