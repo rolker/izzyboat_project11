@@ -29,7 +29,7 @@ def generate_launch_description():
                     'config',
                     'ewasr_resnet18.blob'
                 ]),
-                'frame_id': 'izzy/forward_oak_camera_optical_frame',
+                'frame_id': 'izzy/forward_oak_camera_optical',
                 'yolo_blob_path': PathJoinSubstitution([
                     FindPackageShare('sea_surface_segmentation'),
                     'config',

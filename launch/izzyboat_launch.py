@@ -212,51 +212,77 @@ def generate_launch_description():
             #   ]      
             # ),
             GroupAction(
-              actions=[
-                PushRosNamespace('sensors/cameras/front'),
-                GroupAction(
-                  actions=[
-                      PushRosNamespace('usb/'),
-                      # Node(
-                      #     package="usb_cam",
-                      #     executable="usb_cam_node_exe",
-                      #     name="usb_camera_forward",
-                      #     parameters=[{
-                      #         'camera_name': 'usb_camera_forward',
-                      #         'framerate': 30.0,
-                      #         'image_width': 1920,
-                      #         'image_height': 1080,
-                      #         'frame_id': 'izzy/usb_camera_forward_optical',
-                      #         'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
-                      #         'pixel_format': 'yuyv2rgb',
-                        
-                      #     }]
-                      # ),
-                      # Node(
-                      #   package="topic_tools",
-                      #   executable="throttle",
-                      #   name="throttle_usb",
-                      #   arguments=['message',],
-                      #   parameters=[{
-                      #       'input_topic':'image_raw/compressed',
-                      #       'output_topic': 'image_raw/throttled/compressed',
-                      #       'throttle_type': 'messages',
-                      #       'msgs_per_sec': 0.2
-                      #   }]
-                        
-                      # ),
-                  ]
-                ),
-                IncludeLaunchDescription(
-                  PythonLaunchDescriptionSource(
-                    PathJoinSubstitution([
-                      FindPackageShare('izzyboat_project11'),
-                      'launch',
-                      'oak1_launch.py'
-                    ])
-                  ),
-                ),
-              ]
+                actions=[
+                    PushRosNamespace('sensors/cameras'),
+                    GroupAction(
+                        actions=[
+                            PushRosNamespace('top/'),
+                            Node(
+                                package="usb_cam",
+                                executable="usb_cam_node_exe",
+                                name="top_camera",
+                                parameters=[{
+                                    'camera_name': 'top_camera',
+                                    'framerate': 30.0,
+                                    'image_width': 1920,
+                                    'image_height': 1080,
+                                    'frame_id': 'izzy/top_camera_optical',
+                                    #'camera_info_url': 'package://izzyboat_project11/config/top_camera.yaml',
+                                    'pixel_format': 'yuyv2rgb',
+                                    #'pixel_format': 'mjpeg2rgb',
+                                
+                                }]
+                            ),
+                        ]
+                    ),
+                    GroupAction(
+                        actions=[
+                            PushRosNamespace('front'),
+                            GroupAction(
+                                actions=[
+                                    PushRosNamespace('usb/'),
+                                    # Node(
+                                    #     package="usb_cam",
+                                    #     executable="usb_cam_node_exe",
+                                    #     name="usb_camera_forward",
+                                    #     parameters=[{
+                                    #         'camera_name': 'usb_camera_forward',
+                                    #         'framerate': 30.0,
+                                    #         'image_width': 1920,
+                                    #         'image_height': 1080,
+                                    #         'frame_id': 'izzy/usb_camera_forward_optical',
+                                    #         'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
+                                    #         'pixel_format': 'yuyv2rgb',
+                                        
+                                    #     }]
+                                    # ),
+                                    # Node(
+                                    #   package="topic_tools",
+                                    #   executable="throttle",
+                                    #   name="throttle_usb",
+                                    #   arguments=['message',],
+                                    #   parameters=[{
+                                    #       'input_topic':'image_raw/compressed',
+                                    #       'output_topic': 'image_raw/throttled/compressed',
+                                    #       'throttle_type': 'messages',
+                                    #       'msgs_per_sec': 0.2
+                                    #   }]
+                                        
+                                    # ),
+                                ]
+                            ),
+                            IncludeLaunchDescription(
+                                PythonLaunchDescriptionSource(
+                                    PathJoinSubstitution([
+                                        FindPackageShare('izzyboat_project11'),
+                                        'launch',
+                                        'oak1_launch.py'
+                                    ])
+                                ),
+                            ),
+                        ]
+                    ),
+                ]
             ),
             Node(
               package='rosbag2_transport',
