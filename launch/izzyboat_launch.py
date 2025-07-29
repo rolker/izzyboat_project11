@@ -223,14 +223,11 @@ def generate_launch_description():
                                 name="top_camera",
                                 parameters=[{
                                     'camera_name': 'top_camera',
-                                    'framerate': 30.0,
-                                    'image_width': 1920,
-                                    'image_height': 1080,
+                                    'framerate': 5.0,
+                                    'image_width': 640,
+                                    'image_height': 360,
                                     'frame_id': 'izzy/top_camera_optical',
-                                    #'camera_info_url': 'package://izzyboat_project11/config/top_camera.yaml',
-                                    'pixel_format': 'yuyv2rgb',
-                                    #'pixel_format': 'mjpeg2rgb',
-                                
+                                    'pixel_format': 'mjpeg2rgb',
                                 }]
                             ),
                         ]
@@ -238,39 +235,40 @@ def generate_launch_description():
                     GroupAction(
                         actions=[
                             PushRosNamespace('front'),
-                            GroupAction(
-                                actions=[
-                                    PushRosNamespace('usb/'),
-                                    # Node(
-                                    #     package="usb_cam",
-                                    #     executable="usb_cam_node_exe",
-                                    #     name="usb_camera_forward",
-                                    #     parameters=[{
-                                    #         'camera_name': 'usb_camera_forward',
-                                    #         'framerate': 30.0,
-                                    #         'image_width': 1920,
-                                    #         'image_height': 1080,
-                                    #         'frame_id': 'izzy/usb_camera_forward_optical',
-                                    #         'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
-                                    #         'pixel_format': 'yuyv2rgb',
+                            # GroupAction(
+                            #     actions=[
+                            #         PushRosNamespace('usb/'),
+                            #         Node(
+                            #             package="usb_cam",
+                            #             executable="usb_cam_node_exe",
+                            #             name="usb_camera_forward",
+                            #             parameters=[{
+                            #                 'camera_name': 'usb_camera_forward',
+                            #                 'framerate': 5.0,
+                            #                 'image_width': 640,
+                            #                 'image_height': 480,
+                            #                 'frame_id': 'izzy/usb_camera_forward_optical',
+                            #                 'camera_info_url': 'package://izzyboat_project11/config/camera_forward.yaml',
+                            #                 'pixel_format': 'mjpeg2rgb',
+                            #                 #'av_device_format': "MJPEG"
                                         
-                                    #     }]
-                                    # ),
-                                    # Node(
-                                    #   package="topic_tools",
-                                    #   executable="throttle",
-                                    #   name="throttle_usb",
-                                    #   arguments=['message',],
-                                    #   parameters=[{
-                                    #       'input_topic':'image_raw/compressed',
-                                    #       'output_topic': 'image_raw/throttled/compressed',
-                                    #       'throttle_type': 'messages',
-                                    #       'msgs_per_sec': 0.2
-                                    #   }]
+                            #             }]
+                            #         ),
+                            #         Node(
+                            #           package="topic_tools",
+                            #           executable="throttle",
+                            #           name="throttle_usb",
+                            #           arguments=['message',],
+                            #           parameters=[{
+                            #               'input_topic':'image_raw/compressed',
+                            #               'output_topic': 'image_raw/throttled/compressed',
+                            #               'throttle_type': 'messages',
+                            #               'msgs_per_sec': 0.2
+                            #           }]
                                         
-                                    # ),
-                                ]
-                            ),
+                            #         ),
+                            #     ]
+                            # ),
                             IncludeLaunchDescription(
                                 PythonLaunchDescriptionSource(
                                     PathJoinSubstitution([

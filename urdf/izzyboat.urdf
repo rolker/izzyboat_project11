@@ -103,7 +103,7 @@
   <joint name="base_to_oak_forward" type="fixed">
     <parent link="izzy/base_link"/>
     <child link="izzy/forward_oak_camera"/>
-    <origin xyz="0.378 0 1.241" rpy="0 -0.04 0"/>
+    <origin xyz="0.378 0 1.241" rpy="-0.01 0.04 0"/>
   </joint>
 
 

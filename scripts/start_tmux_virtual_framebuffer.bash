@@ -28,6 +28,9 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 /usr/bin/tmux new -d -s xvfb
 /usr/bin/tmux send-keys "Xvfb :0 -screen 0  1920x1080x24" C-m
 
+echo "Wait 5 seconds before launching fluxbox..."
+sleep 5
+
 /usr/bin/tmux new -d -s fluxbox
 /usr/bin/tmux send-keys "DISPLAY=:0 fluxbox" C-m
 
