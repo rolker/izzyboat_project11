@@ -11,7 +11,7 @@
           - vpn
         connections:
           wifi:
-            host: dora
+            host: mystique_ib
             port: 4200
             return_host: salmon_ib
             return_port: 4200
@@ -23,7 +23,7 @@
               joystick_helm: {source: /izzy/piloting_mode/manual/helm}
 
           vpn:
-            host: dora_v
+            host: mystique_v
             port: 4200
             return_host: salmon_v
             return_port: 4200

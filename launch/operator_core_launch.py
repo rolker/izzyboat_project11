@@ -93,6 +93,15 @@ def generate_launch_description():
             'namespace': robot_namespace,
             }.items()
         ),
+        IncludeLaunchDescription(
+            AnyLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('ros_tcp_endpoint'),
+                'launch',
+                'endpoint.py'
+            ])
+            ),
+        ),
 
 
     ])

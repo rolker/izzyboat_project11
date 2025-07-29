@@ -42,7 +42,10 @@ def generate_launch_description():
                             'launch',
                             'mobile_lab_launch.py'
                         ])
-                    )
+                    ),
+                    launch_arguments={
+                        'heading': '65.0',
+                    }.items()
                 ),
             ]
         )
