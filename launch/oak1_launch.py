@@ -47,7 +47,8 @@ def generate_launch_description():
                 'yolo_iou_threshold': 0.5,
             }],
             respawn = True,
-            respawn_delay = 5
+            respawn_delay = 5,
+            emulate_tty = True
         ),
         Node(
             package="topic_tools",
@@ -59,7 +60,8 @@ def generate_launch_description():
                 'output_topic': 'oak/segmentation/passthrough/image_raw/throttled/compressed',
                 'throttle_type': 'messages',
                 'msgs_per_sec': 0.5
-            }]
+            }],
+            emulate_tty=True
         ),
         GroupAction(
             actions = [

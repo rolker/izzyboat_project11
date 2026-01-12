@@ -37,13 +37,14 @@ def generate_launch_description():
         executable='joint_state_publisher',
         name='joint_state_publisher',
         namespace=namespace,
-        remappings=remappings
+        remappings=remappings,
+        emulate_tty=True
     )
 
     return LaunchDescription([
         namespace_arg,
         robot_state_publisher_node,
-        joint_state_publisher_node
+        joint_state_publisher_node,
     ])
 
 

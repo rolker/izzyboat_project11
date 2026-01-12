@@ -36,6 +36,7 @@ def generate_launch_description():
                 executable='ntrip_ros.py',
                 respawn=True,
                 respawn_delay=5,
+                emulate_tty=True,
                 parameters=[
                   {
                     # Required parameters used to connect to the NTRIP server

@@ -228,7 +228,8 @@ def generate_launch_description():
                                     'image_height': 360,
                                     'frame_id': 'izzy/top_camera_optical',
                                     'pixel_format': 'mjpeg2rgb',
-                                }]
+                                }],
+                                emulate_tty=True
                             ),
                         ]
                     ),
@@ -293,7 +294,8 @@ def generate_launch_description():
                   'izzyboat.yaml'
                 ]),
                 {'storage.uri': log_directory}                     
-              ]
+              ],
+              emulate_tty=True
             ),
             Node(
               package='rosbag2_transport',
@@ -309,7 +311,8 @@ def generate_launch_description():
                   sonar_log_directory,
                   sonar_log_subdirectory
                 ])},
-              ]
+              ],
+              emulate_tty=True
             ),
 
           ]
