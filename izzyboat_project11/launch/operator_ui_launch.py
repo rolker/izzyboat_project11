@@ -28,7 +28,7 @@ def generate_launch_description():
   launch_operator_ui_include = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
       PathJoinSubstitution([
-        FindPackageShare('project11'),
+        FindPackageShare('marine_autonomy'),
         'launch',
         'operator_ui_launch.py'
       ])
