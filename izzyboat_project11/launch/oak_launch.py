@@ -14,10 +14,10 @@ def launch_setup(context, *args, **kwargs):
     # 4 -> 174
     
     cameras = {
-        '1': {'name': 'camera_171', 'mx_id': '194430106121872D00', 'ip': '192.168.50.171'},
-        '2': {'name': 'camera_172', 'mx_id': '19443010D117872D00', 'ip': '192.168.50.172'},
-        '3': {'name': 'camera_173', 'mx_id': '19443010E11A872D00', 'ip': '192.168.50.173'},
-        '4': {'name': 'camera_174', 'mx_id': '14442C10917D8DD700', 'ip': '192.168.50.174'}
+        '1': {'name': 'camera_171', 'mx_id': '194430106121872D00'},
+        '2': {'name': 'camera_172', 'mx_id': '19443010D117872D00'},
+        '3': {'name': 'camera_173', 'mx_id': '19443010E11A872D00'},
+        '4': {'name': 'camera_174', 'mx_id': '14442C10917D8DD700'}
     }
 
     if camera_id not in cameras:

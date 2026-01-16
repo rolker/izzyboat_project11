@@ -1,7 +1,6 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
-from launch.substitutions import PathJoinSubstitution, LaunchConfiguration
-from launch_ros.substitutions import FindPackageShare
+from launch.substitutions import LaunchConfiguration
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from ament_index_python.packages import get_package_share_directory
 import os
@@ -65,13 +64,15 @@ def launch_setup(context, *args, **kwargs):
     # Ideally we prioritize active_cameras if valid.
     if active_cameras_str and active_cameras_str.strip():
         try:
-            # Parse commas string "1,3" -> [1, 3]
+            # Parse comma-separated string "1,3" -> [1, 3]
             parts = active_cameras_str.split(',')
             for p in parts:
                 val = int(p.strip())
                 if 1 <= val <= 4:
                     active_indices.append(val - 1) # Convert 1-based ID to 0-based index
         except ValueError:
+            # If any value is not an integer, ignore the parsing error here;
+            # the fallback logic below (using num_cameras) will handle this case.
             pass
     
     # Fallback to num_cameras if active_cameras yielded nothing (or user didn't set it and wants legacy behavior)
@@ -87,7 +88,7 @@ def launch_setup(context, *args, **kwargs):
            cnt = int(num_cameras_str)
            for i in range(cnt):
                if i < 4: active_indices.append(i)
-       except:
+       except ValueError:
            active_indices = [0,1,2,3]
 
     if not active_indices:
@@ -111,21 +112,11 @@ def launch_setup(context, *args, **kwargs):
     camera_ids = [all_camera_ids[i] for i in active_indices if i < 4]
     camera_names = [all_camera_names[i] for i in active_indices if i < 4]
     
-    # Sort just in case steps are out of order
-    # (Not strictly connecting to sorting, but good practice if indices were random)
-
     blob_path = os.path.join(
         get_package_share_directory('sea_surface_segmentation'),
         'config',
         'ewasr_resnet18.blob'
     )
-    # The user provided a duplicate blob_path definition, keeping the new one and removing the old one.
-    # The original blob_path definition was:
-    # blob_path = PathJoinSubstitution([
-    #     FindPackageShare('sea_surface_segmentation'),
-    #     'config',
-    #     'ewasr_resnet18.blob'
-    # ])
 
     fps = LaunchConfiguration('fps')
     preview_width = LaunchConfiguration('preview_width')
