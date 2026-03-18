@@ -7,12 +7,14 @@ Intended as the basis for designing BizzyBoat (EchoBoat 240) networking.
 
 ![IzzyBoat network diagram](izzyboat_network.svg)
 
-The diagram shows the operator network (left) and boat onboard network (right)
-connected via a direct WiFi backhaul link and a VPN path through the internet.
+The diagram shows the operator network and boat onboard network connected via
+a direct WiFi backhaul link and a VPN path through the internet.
 The VPN uses NETMAP address translation for path selection: reach boat devices
 at `192.168.14.x` and operator devices at `192.168.15.x` over the VPN.
+Sensor subnets (DeltaT `192.168.0.0/24`, Norbit) are intentionally omitted —
+they are local to the boat and not routed between operator and boat.
 The `.dot` source for the diagram is `docs/izzyboat_network.dot`; regenerate
-with `dot -Tsvg izzyboat_network.dot -o izzyboat_network.svg`.
+with `dot -Tsvg docs/izzyboat_network.dot -o docs/izzyboat_network.svg`.
 
 ## Device Inventory
 
