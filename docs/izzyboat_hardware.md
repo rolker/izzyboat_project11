@@ -70,9 +70,9 @@ Non-default FCU parameters observed 2026-03-17. Full parameter dump:
 
 | Parameter | Value | Default | Notes |
 |-----------|-------|---------|-------|
-| `SERIAL3_BAUD` | 57 (57600) | 230 | GPS1 serial baud (DroneCAN via USB) |
-| `SERIAL4_BAUD` | 57 (57600) | 230 | GPS2 serial baud |
-| `SERIAL4_PROTOCOL` | 1 (MAVLink1) | 5 | Serial4 protocol |
+| `SERIAL3_BAUD` | 57 (57600) | 230 | GPS1 serial baud (`SERIAL3_PROTOCOL=5`, GPS) |
+| `SERIAL4_BAUD` | 57 (57600) | 230 | Serial4 baud (MAVLink1) |
+| `SERIAL4_PROTOCOL` | 1 (MAVLink1) | 5 | Serial4 protocol (MAVLink1, not GPS) |
 | `SERIAL5_PROTOCOL` | 1 (MAVLink1) | 0 | Serial5 protocol enabled |
 | `SERIAL6_PROTOCOL` | -1 (disabled) | 0 | Serial6 disabled |
 | `SERIAL_PASS1` | 0 | -1 | Serial passthrough disabled |
@@ -91,7 +91,7 @@ Non-default FCU parameters observed 2026-03-17. Full parameter dump:
 | `EK3_SRC1_VELXY` | 3 (GPS) | 3 | Primary XY velocity source |
 | `EK3_SRC1_YAW` | 2 (GPS) | 2 | Primary yaw source (GPS moving baseline) |
 | `EK3_SRC_OPTIONS` | 1 | 0 | Source options (fuse all velocities) |
-| `AHRS_COMP_BETA` | 0.001 | 0.1 | AHRS complimentary filter beta |
+| `AHRS_COMP_BETA` | 0.001 | 0.1 | AHRS complementary filter beta |
 | `AHRS_GPS_MINSATS` | 2 | 6 | Minimum sats for GPS use |
 | `AHRS_TRIM_X` | 0.02959 rad | 0 | Accelerometer trim (calibrated) |
 | `AHRS_TRIM_Y` | -0.00477 rad | 0 | Accelerometer trim (calibrated) |
@@ -281,7 +281,7 @@ to respawn on failure (5-second delay).
 - `local_position.tf.send`: false
 - `setpoint_velocity.mav_frame`: BODY_NED
 
-**Plugin configs** (from `mavros/launch/apm_pluginlists.yaml` and `apm_config.yaml`):
+**Plugin configs** (from `mavros/launch/apm_pluginlists.yaml` and `apm_config.yaml` in the `mavros` ROS package — external, not in this repo):
 standard ArduPilot plugin set.
 
 ### Navigation Sources
@@ -308,7 +308,7 @@ The `platform_sender` node (from `izzyboat.yaml`) accepts two navigation sources
 
 ## Vehicle Parameters
 
-From `echoboat_project11/config/echo.yaml`:
+Physical dimensions from `izzyboat_project11/config/platform.yaml`; navigation speed/tuning parameters from an earlier project11 configuration layout (no longer present as a single file in this repo):
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|

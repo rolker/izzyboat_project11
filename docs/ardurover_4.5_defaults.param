@@ -89,6 +89,7 @@ ATC_STR_RAT_D=0.00
 ATC_STR_RAT_FF=0.20
 ATC_STR_RAT_FILT=10.0
 ATC_STR_RAT_IMAX=1.0
+# NOTE: live FCU uses ATC_STR_ANG_P (not ATC_ANG_P); may reflect a parameter rename between ArduRover versions
 ATC_ANG_P=2.0
 ATC_ACCEL_MAX=1.0
 ATC_BRAKE=1
@@ -100,6 +101,7 @@ ATC_BAL_PIT_FF=0.4
 ATC_TURN_MAX_G=0.6
 ATC_BAL_LIM_TC=0.5
 ATC_BAL_LIM_THR=0.60
+# NOTE: live FCU uses ATC_SPEED_* (not ATC_SPD_*); may reflect a parameter rename between ArduRover versions
 ATC_SPD_P=0.20
 ATC_SPD_I=0.20
 ATC_SPD_D=0.00
@@ -335,8 +337,8 @@ GPS_COM_PORT2=1
 GPS_PRIMARY=0
 GPS_CAN_NODEID1=0
 GPS_CAN_NODEID2=0
-GPS_1_CAN_OVRIDE=0
-GPS_2_CAN_OVRIDE=0
+GPS1_CAN_OVRIDE=0
+GPS2_CAN_OVRIDE=0
 
 # ============================================================
 # INS PARAMETERS (libraries/AP_InertialSensor/AP_InertialSensor.cpp)
