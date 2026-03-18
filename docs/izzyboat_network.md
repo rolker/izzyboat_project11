@@ -3,6 +3,17 @@
 Reference documentation for IzzyBoat (EchoBoat 160) network configuration.
 Intended as the basis for designing BizzyBoat (EchoBoat 240) networking.
 
+## Network Diagram
+
+![IzzyBoat network diagram](izzyboat_network.svg)
+
+The diagram shows the operator network (left) and boat onboard network (right)
+connected via a direct WiFi backhaul link and a VPN path through the internet.
+The VPN uses NETMAP address translation for path selection: reach boat devices
+at `192.168.14.x` and operator devices at `192.168.15.x` over the VPN.
+The `.dot` source for the diagram is `docs/izzyboat_network.dot`; regenerate
+with `dot -Tsvg izzyboat_network.dot -o izzyboat_network.svg`.
+
 ## Device Inventory
 
 | Device | Hostname | Role | Notes |
