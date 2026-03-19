@@ -128,9 +128,17 @@ _MAC addresses and IP assignments are in the private `ccomjhc_project11` repo
 - Verified: gabby boots and receives 192.168.20.5, SSH works from laptop on
   BizzyBoat WiFi
 
+### DNS Configuration
+
+- Router inherited DNS from multiple WAN sources; Starlink (down) was providing
+  stale `192.168.1.1` which caused DNS failures for LAN clients
+- Added static DNS servers: `1.1.1.1` (Cloudflare), `8.8.8.8` (Google)
+- Verified: LAN clients can now resolve hostnames via the router
+
 ### Remaining Router Configuration
 
 - [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
 - [ ] Firewall / routing between LAN1 and LAN2
 - [ ] NETMAP rules (when VPN is configured)
+- [ ] WireGuard VPN to BenCloud
 - [ ] Disable IPv6 globally
