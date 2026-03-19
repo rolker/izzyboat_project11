@@ -112,6 +112,23 @@ _MAC addresses and IP assignments are in the private `ccomjhc_project11` repo
   unavailable (indoor setup, no Starlink signal)
 - Internet restored through router's WiFi WAN uplink
 
+### Firmware Update
+
+- Factory firmware: `RUTX_R_00.07.11.3` (2024-12-13), kernel 5.10.226
+- Modem firmware: `EG06ALAR04A01M4G_01.004.01.004` (already newest)
+- Updated to: `RUTX_R_00.07.20.3` (via OTA from router's firmware page)
+- Note: firmware update may reset some wizard settings; re-check LAN IP,
+  WiFi AP SSID, and 5 GHz WAN client after reboot
+
+### Settings to Re-verify After Firmware Update
+
+- LAN IP: 192.168.20.1
+- WiFi 2.4 GHz AP: SSID `BizzyBoat`, password set
+- WiFi 5 GHz: WAN client connected to lab network (failover)
+- Timezone: UTC
+- DHCPv6: disabled
+- RMS / Proxy: off
+
 ### Remaining Router Configuration
 
 - [ ] DHCP pool: 192.168.20.200–249
