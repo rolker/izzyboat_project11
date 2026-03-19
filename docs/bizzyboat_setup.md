@@ -55,11 +55,14 @@ From #8:
 
 6 ethernet ports detected, all with sequential MACs:
 
-| Interface | MAC | Notes |
-|-----------|-----|-------|
-| `enp0s31f6` | `78:d0:04:37:4d:61` | |
-| `enp3s0` | `78:d0:04:37:4d:62` | |
-| `enp4s0` | `78:d0:04:37:4d:63` | |
-| `enp5s0` | `78:d0:04:37:4d:64` | |
-| `enp6s0` | `78:d0:04:37:4d:65` | |
-| `enp7s0` | `78:d0:04:37:4d:66` | Leftmost physical port; used for install (laptop shared connection) |
+| Interface | Notes |
+|-----------|-------|
+| `enp0s31f6` | |
+| `enp3s0` | |
+| `enp4s0` | |
+| `enp5s0` | |
+| `enp6s0` | |
+| `enp7s0` | Leftmost physical port; used for install (laptop shared connection) |
+
+_MAC addresses and IP assignments are in the private `ccomjhc_project11` repo
+(`configuration/bizzyboat_network.yaml`)._
