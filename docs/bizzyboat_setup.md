@@ -117,22 +117,19 @@ _MAC addresses and IP assignments are in the private `ccomjhc_project11` repo
 - Factory firmware: `RUTX_R_00.07.11.3` (2024-12-13), kernel 5.10.226
 - Modem firmware: `EG06ALAR04A01M4G_01.004.01.004` (already newest)
 - Updated to: `RUTX_R_00.07.20.3` (via OTA from router's firmware page)
-- Note: firmware update may reset some wizard settings; re-check LAN IP,
-  WiFi AP SSID, and 5 GHz WAN client after reboot
+- Settings survived update; verified LAN IP, WiFi AP, timezone all intact
+- Updated again to: `RUTX_R_00.07.21.2` (2026-03-05), kernel 6.6.119
+- Includes fix for edge-case network hang after reboot
 
-### Settings to Re-verify After Firmware Update
+### DHCP Configuration
 
-- LAN IP: 192.168.20.1
-- WiFi 2.4 GHz AP: SSID `BizzyBoat`, password set
-- WiFi 5 GHz: WAN client connected to lab network (failover)
-- Timezone: UTC
-- DHCPv6: disabled
-- RMS / Proxy: off
+- DHCP pool: 192.168.20.200–249 (150 addresses reserved for static below .200)
+- Static lease: `gabby` → 192.168.20.5 (enp7s0 via PoE switch)
+- Verified: gabby boots and receives 192.168.20.5, SSH works from laptop on
+  BizzyBoat WiFi
 
 ### Remaining Router Configuration
 
-- [ ] DHCP pool: 192.168.20.200–249
-- [ ] Static lease: gabby (192.168.20.5)
 - [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
 - [ ] Firewall / routing between LAN1 and LAN2
 - [ ] NETMAP rules (when VPN is configured)
