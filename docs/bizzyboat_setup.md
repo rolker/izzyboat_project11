@@ -66,3 +66,57 @@ From #8:
 
 _MAC addresses and IP assignments are in the private `ccomjhc_project11` repo
 (`configuration/bizzyboat_network.yaml`)._
+
+## Physical Connections
+
+| Device | Port | Connected To |
+|--------|------|-------------|
+| gabby | `enp7s0` (leftmost) | PoE switch (onboard LAN) |
+| Teltonika RUTX11 | WAN | Starlink |
+| Teltonika RUTX11 | LAN1 | PoE switch (onboard LAN) |
+| Teltonika RUTX11 | LAN2 | OmniTIK 5 ac (WiFi bridge) |
+| PoE switch (TI-PG80B) | Ports 1–2 | Router (via PoE adapter) + gabby (data only) |
+| PoE switch (TI-PG80B) | Ports 3–6 | OAK-1 cameras ×4 (802.3af PoE) |
+| OmniTIK 5 ac | Ethernet | Teltonika LAN2 (direct cable, powered by 24V adapter) |
+
+## Router Configuration (Teltonika RUTX11)
+
+### Initial Setup Wizard (Advanced Mode)
+
+1. Connected laptop to PoE switch (same switch as router LAN1); got DHCP lease
+   on default 192.168.1.0/24 subnet
+2. Opened web UI at `https://192.168.1.1`, logged in with default credentials
+   (printed on device label), changed password immediately
+3. Wizard settings:
+   - **Configuration mode**: Advanced
+   - **Time**: synced with browser, timezone set to **UTC**
+   - **LAN IP**: changed from 192.168.1.1 to **192.168.20.1**
+   - **DHCPv4**: enabled (pool to be configured post-wizard)
+   - **DHCPv6**: disabled
+   - **Mobile**: SIM detected, Verizon connected, data status disconnected;
+     left auto APN on (APN: `nw01.vzwstatic`)
+   - **Wireless 2.4 GHz**: enabled as AP, SSID `BizzyBoat`
+   - **Wireless 5 GHz**: disabled for now (reserved for future WiFi WAN client)
+   - **RMS**: off
+   - **Proxy**: off
+4. Clicked finish; router rebooted with new LAN IP
+5. Unplugged/replugged ethernet to get new DHCP lease on 192.168.20.0/24
+6. Logged in at `https://192.168.20.1`
+
+### Post-Wizard: Internet via WiFi WAN
+
+- The new LAN IP caused the router to become the default gateway, breaking
+  internet access on the laptop (lab network unreachable)
+- Used the 5 GHz radio to scan and connect to the lab WiFi network as a WAN client
+- Enabled failover so the router uses WiFi WAN for internet when Starlink is
+  unavailable (indoor setup, no Starlink signal)
+- Internet restored through router's WiFi WAN uplink
+
+### Remaining Router Configuration
+
+- [ ] DHCP pool: 192.168.20.200–249
+- [ ] Static lease: gabby (192.168.20.5)
+- [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
+- [ ] Firewall / routing between LAN1 and LAN2
+- [ ] NETMAP rules (when VPN is configured)
+- [ ] Disable IPv6 globally
