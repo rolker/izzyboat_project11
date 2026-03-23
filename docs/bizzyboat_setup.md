@@ -369,30 +369,44 @@ add address=192.168.1.21/24 interface=ether1 network=192.168.1.0
 
 ### WiFi Bridge Reconfiguration
 
-#### OmniTIK 5 ac (boat side) — partial, lost access
+#### OmniTIK 5 ac (boat side) — configured (2026-03-23)
 
+Previous session (2026-03-20):
 - Removed ether2-5 from bridge (kept ether1 + wlan1) via web UI
-- **Lost access**: the device's IP (192.168.1.20) was on ether2, which was
-  just removed from the bridge. With ether2 no longer bridged, the IP is
-  unreachable via the WiFi path (wlan1 → bridge → ether2). Need to access
-  from boat side (BizzyBoat router LAN2 → OmniTIK ether1) to finish config.
-- Still needed: add management IP 172.16.20.3/24 on ether2, remove old
-  192.168.1.20 IP, change SSID to `bizzy_bridge`, set WiFi security,
-  set frequency
+- Lost access: the device's IP (192.168.1.20) became unreachable after
+  removing ether2 from the bridge
+
+Recovery and configuration (2026-03-23):
+- Could not reach OmniTIK at 192.168.1.20 from BizzyBoat router eth0.3
+  (VLAN 3) — ARP and ping both failed despite link being up
+- SXTsq could not connect to OmniTIK: SXTsq radio (AR9300) is a/n only,
+  OmniTIK (AR9888) was broadcasting in ac mode after firmware upgrade
+- Connected deadpool WiFi directly to OmniTIK's `Boatside` SSID (ac works
+  from a laptop, just not from the a/n-only SXTsq)
+- Could not reach OmniTIK at any IP via WiFi — bridge IP was disabled
+- Factory reset the OmniTIK (hold reset button while powering on)
+- Reconnected deadpool to factory default SSID, set new admin password
+- Changed SSID from `MikroTik-90724C` to `bizzy_bridge`
+- Band left at `5ghz-a/n/ac` (mixed mode works — SXTsq connects at a/n)
+- Security: WPA2-PSK with temporary password `Seafloor`
+- Set bridge IP to `172.16.20.3/24` (enabled, replacing disabled factory
+  default `192.168.88.1/24`)
+- Mode: `ap-bridge` (factory default, correct for boat/AP side)
+- Wireless protocol: 802.11
+- Still TODO: set final WiFi password, clean up bridge ports (remove
+  unused ether2-5 from bridge)
 
 #### SXTsq Lite5 (shore side) — configured
 
 - Changed SSID from `Boatside` to `bizzy_bridge`
 - Security profile (`default`): mode `dynamic-keys`, authentication
-  `wpa2-psk`, password set (WPA1 removed)
+  `wpa2-psk`, temporary password `Seafloor`
 - Mode: `station-bridge` (unchanged, correct for shore/client side)
 - Band: 5GHz a/n, channel width 20/40MHz Ce, frequency auto
 - Wireless protocol: 802.11 (plain, not nv2/nstreme — avoids protocol
   mismatch issue seen on IzzyBoat)
-- Added IP `172.16.20.4/24` on ether1 (kept old `192.168.1.21/24`
-  temporarily for access during operator router reconfiguration)
-- WiFi link to OmniTIK currently down (SSID mismatch — OmniTIK still
-  on old `Boatside` SSID, will be fixed from boat side later)
+- IP: `172.16.20.4/24` on ether1
+- WiFi link to OmniTIK: **connected** (2026-03-23), signal -39dBm
 
 #### Operator Router
 
@@ -467,11 +481,42 @@ for background and the boot-order race condition fix.
 5. Confirmed **Package Restore** is already enabled (ensures the package is
    reinstalled automatically after firmware upgrades with "keep settings")
 
+## BizzyBoat Router — VLAN and WiFi Bridge Interface (2026-03-23)
+
+### Switch VLAN Configuration
+
+Separated LAN2 (switch port 3, OmniTIK) into its own VLAN for the WiFi bridge:
+
+| Physical Label | Switch Port | VLAN | Purpose |
+|---|---|---|---|
+| LAN1 | 2 | 1 | Onboard LAN (br-lan, 192.168.20.0/24) |
+| LAN2 | 3 | 3 | WiFi bridge (eth0.3, 172.16.20.0/24) |
+| LAN3 | 4 | 1 | Onboard LAN (unused) |
+| WAN | 5 | 2 | Internet (Starlink) |
+
+- Removed port 3 from VLAN 1 via Network → VLAN → Port Based
+- Created VLAN 3 with port 3 (untagged) and CPU port 0 (tagged)
+
+### wifi_bridge Interface
+
+- Created interface `wifi_bridge` on device `eth0.3` (VLAN 3)
+- Protocol: static, IP `172.16.20.1/24`
+- No bridge, no DHCP
+- WAN interface disabled to avoid IP range conflict with wifi_bridge
+
+### Verification
+
+- Ping from boat router to OmniTIK (172.16.20.3): **0.6ms avg**
+- Ping from boat router to SXTsq (172.16.20.4): **1.2ms avg**
+- SSH from operator side through WiFi bridge to boat router: **working**
+
 ### Remaining BizzyBoat Router Configuration
 
-- [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
-- [ ] Firewall / routing between LAN1 and LAN2
+- [x] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
+- [ ] Firewall / routing between LAN1 and wifi_bridge
 - [ ] NETMAP rules (192.168.20.0/24 ↔ 192.168.21.0/24 on wg0)
 - [ ] WireGuard configuration
 - [ ] Disable IPv6 globally
-- [ ] Operator router NETMAP — resolve missing xt_NETMAP / nft_nat on FW 00.07.21.2
+- [ ] Re-enable WAN interface (disabled due to subnet conflict)
+- [ ] Set final WiFi password on both MikroTik devices
+- [ ] Operator router NETMAP — install "IPtables NAT extra" package
