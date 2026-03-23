@@ -453,6 +453,20 @@ The cellular connection (Verizon) has not been working reliably — last week it
 was connecting to the network but not obtaining an IP address or internet access.
 Not investigating further today; noting for future troubleshooting.
 
+## NETMAP Restore (2026-03-23)
+
+The `xt_NETMAP` kernel module was removed from base firmware starting with
+RutOS 7.13 and must be installed as an optional package. See
+[unh_echoboats_project11#10](https://github.com/rolker/unh_echoboats_project11/issues/10)
+for background and the boot-order race condition fix.
+
+1. Navigated to **System → Package Manager** in the BizzyBoat router web UI
+2. Found **"IPtables NAT extra"** (status: Available), clicked **Install**
+3. Status changed to **Installed**
+4. Verified via SSH: `lsmod | grep xt_NETMAP` — module loaded (12288 bytes)
+5. Confirmed **Package Restore** is already enabled (ensures the package is
+   reinstalled automatically after firmware upgrades with "keep settings")
+
 ### Remaining BizzyBoat Router Configuration
 
 - [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
