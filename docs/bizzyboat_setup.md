@@ -432,6 +432,27 @@ add address=192.168.1.21/24 interface=ether1 network=192.168.1.0
   it, the operator station can reach boat networks via WiFi or VPN but not
   with translated source addresses. This affects IzzyBoat too (same router).
 
+## MultiWAN / Cellular Connectivity (2026-03-23)
+
+On first connecting deadpool to the BizzyBoat router this morning, internet
+worked briefly then stopped after a few minutes. The Teltonika web UI status
+overview showed the MultiWAN priorities in this order:
+
+1. **wan** — offline
+2. **mob1a1a1** — offline
+3. **wifi1** — standby
+
+Moved **wifi1** to the top of the priority list in the MultiWAN configuration
+page, which restored internet. After the change, the status overview showed:
+
+1. **wifi1** — online
+2. **wan** — offline
+3. **mob121a1** — standby
+
+The cellular connection (Verizon) has not been working reliably — last week it
+was connecting to the network but not obtaining an IP address or internet access.
+Not investigating further today; noting for future troubleshooting.
+
 ### Remaining BizzyBoat Router Configuration
 
 - [ ] LAN2 as separate interface for WiFi bridge (172.16.20.1/24)
