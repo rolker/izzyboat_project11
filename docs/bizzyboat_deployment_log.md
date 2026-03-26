@@ -11,10 +11,10 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 | # | Task | Status | Notes |
 |---|------|--------|-------|
 | [ros2_agent_workspace#422](https://github.com/rolker/ros2_agent_workspace/issues/422) | Sync repos to secondary git server | **repos pushed** | All repos manually pushed; script plan in PR [#424](https://github.com/rolker/ros2_agent_workspace/pull/424) |
-| [unh_echoboats_project11#15](https://github.com/rolker/unh_echoboats_project11/issues/15) | Boat manifest with gitcloud URLs | not started | |
+| [unh_echoboats_project11#15](https://github.com/rolker/unh_echoboats_project11/issues/15) | Boat manifest with gitcloud URLs | **done** | PR [#21](https://github.com/rolker/unh_echoboats_project11/pull/21) merged |
 | [CCOMJHC/ccomjhc_project11#5](https://github.com/CCOMJHC/ccomjhc_project11/issues/5) | Connect gabby to VPN/gitcloud | **done** | PR [#8](https://github.com/CCOMJHC/ccomjhc_project11/pull/8) merged |
-| [unh_echoboats_project11#16](https://github.com/rolker/unh_echoboats_project11/issues/16) | Install ROS 2 Jazzy on gabby | not started | |
-| [unh_echoboats_project11#17](https://github.com/rolker/unh_echoboats_project11/issues/17) | Bootstrap and build on gabby | not started | |
+| [unh_echoboats_project11#16](https://github.com/rolker/unh_echoboats_project11/issues/16) | Install ROS 2 Jazzy on gabby | **done** | PR [#20](https://github.com/rolker/unh_echoboats_project11/pull/20) merged |
+| [unh_echoboats_project11#17](https://github.com/rolker/unh_echoboats_project11/issues/17) | Bootstrap and build on gabby | **blocked** | Gitcloud raw file URL for bootstrap.yaml returns 404. PR [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) |
 
 ### Parallel Work
 
@@ -29,7 +29,7 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| [CCOMJHC/ccomjhc_project11#3](https://github.com/CCOMJHC/ccomjhc_project11/issues/3) | Hierarchical DNS | **deployed** | Both routers configured, gabby + deadpool verified. PR [#7](https://github.com/CCOMJHC/ccomjhc_project11/pull/7). Domain: `.p11.lan` (not `.local`) |
+| [CCOMJHC/ccomjhc_project11#3](https://github.com/CCOMJHC/ccomjhc_project11/issues/3) | Hierarchical DNS | **done** | PR [#7](https://github.com/CCOMJHC/ccomjhc_project11/pull/7) merged. Domain: `.p11.lan` (not `.local`) |
 
 ---
 
@@ -89,4 +89,14 @@ gabby couldn't reach operator network (192.168.13.0/24) via WiFi bridge. Root ca
 - **DNS**: `.p11.lan` working on both routers, verified on gabby and deadpool
 - **Routing**: gabby can reach operator network via both WiFi bridge (direct, ~2ms) and VPN (~37ms)
 - **gitcloud**: All workspace repos pushed; gabby on ZeroTier and can reach gitcloud
-- **Next**: Boat manifest (#15), install ROS 2 Jazzy (#16), then bootstrap (#17)
+- **Next**: Bootstrap and build on gabby (#17) — all prerequisites now met
+- **Deferred**: DeltaT sonar driver not yet in workspace — tracked as [unh_marine_autonomy#111](https://github.com/rolker/unh_marine_autonomy/issues/111). Will add to boat manifest once integrated.
+- **Gitcloud sync**: Pushed latest `unh_echoboats_project11` and `ccomjhc_project11` to gitcloud before bootstrap. Manual push still needed until #422 automation lands.
+- **Gotcha**: Default branch on gitcloud for `unh_echoboats_project11` was not set to `jazzy` — config files weren't visible. Fixing via agent.
+
+#### Bootstrap attempt (#17)
+
+- Workspace cloned on gabby from gitcloud, git identity configured
+- **Blocked**: Bootstrap process fetches `bootstrap.yaml` via a raw file URL from gitcloud, which returns 404. Likely a Forgejo raw URL format issue or repo name mismatch. Also identified gap: no env var or CLI flag to override the manifest URL (hardcoded to `configs/project_bootstrap.url`).
+- PR [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) open with progress log.
+- **Session paused** — will resume later.
