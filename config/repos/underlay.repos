@@ -1,0 +1,17 @@
+repositories:
+  ros2launch_gui:
+    type: git
+    url: git@gitcloud:field/ros2launch_gui.git
+    version: jazzy
+  ros2launch_session:
+    type: git
+    url: git@gitcloud:field/ros2launch_session.git
+    version: jazzy
+  geographic_info:
+    type: git
+    url: git@gitcloud:field/geographic_info.git
+    version: ros2
+  nmea_navsat_driver:
+    type: git
+    url: git@gitcloud:field/nmea_navsat_driver.git
+    version: add_pashr
