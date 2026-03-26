@@ -1,0 +1,13 @@
+repositories:
+  unh_echoboats_project11:
+    type: git
+    url: git@gitcloud:field/unh_echoboats_project11.git
+    version: jazzy
+  mru_transform:
+    type: git
+    url: git@gitcloud:field/mru_transform.git
+    version: jazzy
+  seafloor_echoboat_project11:
+    type: git
+    url: git@gitcloud:field/seafloor_echoboat_project11.git
+    version: jazzy
