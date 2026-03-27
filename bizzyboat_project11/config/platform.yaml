@@ -1,0 +1,9 @@
+# EchoBoat 240 hull dimensions — placeholder until URDF sub-issue #25
+width: 1.0
+length: 2.4
+reference_x: 0.0
+reference_y: 0.0
+color:
+  red: 0.0
+  green: 0.5
+  blue: 1.0

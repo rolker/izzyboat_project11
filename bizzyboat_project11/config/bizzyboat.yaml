@@ -1,0 +1,195 @@
+/**/platform_sender:
+  ros__parameters:
+    width: 1.0
+    length: 2.4
+    reference_x: 0.0
+    reference_y: 0.0
+    color:
+      red: 0.0
+      green: 0.5
+      blue: 1.0
+
+    nav:
+      source_names:
+        - mru
+      sources:
+        mru:
+          topics:
+            orientation: "mavros/imu/data"
+            position: "mavros/global_position/raw/fix"
+            velocity: "mavros/global_position/raw/gps_vel"
+
+/**/deltat:
+  ros__parameters:
+    frame_id: bizzy/deltat
+
+/**/cube_bathymetry:
+  ros__parameters:
+    map_frame: bizzy/map
+    cell_size: 0.5
+
+/**/udp_bridge:
+  ros__parameters:
+    name: bizzy
+    port: 4200
+    maximum_packet_size: 1000
+    remotes_list:
+      - operator
+    remotes:
+      operator:
+        connections_list:
+          - wifi
+          - vpn
+        connections:
+          wifi:
+            maximum_bytes_per_second: 1500000
+            topics_list:
+            - battery
+            - command_response
+            - deltat
+            - deltat_grid
+            - diagnostics
+            - heartbeat
+            - heartbeat_nav
+            - hover_viz
+            - local_costmap
+            - local_costmap_footprint
+            - global_costmap
+            - oak_forward
+            - oak_forward_info
+            - oak_starboard
+            - oak_starboard_info
+            - oak_aft
+            - oak_aft_info
+            - oak_port
+            - oak_port_info
+            - odom
+            - path_follower_visualization
+            - plan
+            - platforms
+            - mavros_gps_status
+            - mavros_position
+            - mavros_orientation
+            - mavros_velocity
+            - tf
+            - tf_static
+            - usb_camera
+            - usb_camera_info
+            topics:
+              command_response: {source: project11/response}
+              diagnostics: {source: /diagnostics}
+              global_costmap: {source: global_costmap/costmap, period: 3.0}
+              heartbeat: {source: project11/heartbeat}
+              heartbeat_nav: {source: project11/status/mission_manager}
+              hover_viz: {source: hover_visualization}
+              local_costmap: {source: local_costmap/costmap, period: 3.0}
+              local_costmap_footprint: {source: local_costmap/published_footprint}
+              odom: {source: odom}
+              oak_forward:      {source: sensors/cameras/oak_forward/rgb/image_raw/compressed, period: 2.0}
+              oak_forward_info: {source: sensors/cameras/oak_forward/rgb/camera_info}
+              oak_starboard:      {source: sensors/cameras/oak_starboard/rgb/image_raw/compressed, period: 2.0}
+              oak_starboard_info: {source: sensors/cameras/oak_starboard/rgb/camera_info}
+              oak_aft:      {source: sensors/cameras/oak_aft/rgb/image_raw/compressed, period: 2.0}
+              oak_aft_info: {source: sensors/cameras/oak_aft/rgb/camera_info}
+              oak_port:      {source: sensors/cameras/oak_port/rgb/image_raw/compressed, period: 2.0}
+              oak_port_info: {source: sensors/cameras/oak_port/rgb/camera_info}
+              path_follower_visualization: {source: path_follower_visualization}
+              deltat: {source: sensors/deltat/soundings}
+              deltat_grid: {source: sensors/deltat/grid}
+              battery: {source: /bizzy/mavros/battery}
+              plan: {source: plan}
+              platforms: {source: /project11/platforms}
+              mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
+              mavros_orientation: {source: mavros/imu/data}
+              mavros_position: {source: mavros/global_position/raw/fix}
+              mavros_velocity: {source: mavros/global_position/raw/gps_vel}
+              tf: {source: /tf, queue_size: 25}
+              tf_static: {source: /tf_static}
+              usb_camera: {source: sensors/cameras/usb/image_raw/compressed}
+              usb_camera_info: {source: sensors/cameras/usb/camera_info}
+
+          vpn:
+            maximum_bytes_per_second: 1000000
+            topics_list:
+            - battery
+            - command_response
+            - diagnostics
+            - heartbeat
+            - heartbeat_nav
+            - hover_viz
+            - odom
+            - plan
+            - platforms
+            - mavros_gps_status
+            - mavros_position
+            - mavros_orientation
+            - mavros_velocity
+            - tf
+            - tf_static
+            topics:
+              command_response: {source: project11/response}
+              diagnostics: {source: /diagnostics}
+              heartbeat: {source: project11/heartbeat}
+              heartbeat_nav: {source: project11/status/mission_manager}
+              hover_viz: {source: hover_visualization}
+              odom: {source: odom}
+              battery: {source: /bizzy/mavros/battery}
+              plan: {source: plan}
+              platforms: {source: /project11/platforms}
+              mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
+              mavros_orientation: {source: mavros/imu/data}
+              mavros_position: {source: mavros/global_position/raw/fix}
+              mavros_velocity: {source: mavros/global_position/raw/gps_vel}
+              tf: {source: /tf}
+              tf_static: {source: /tf_static}
+
+/**/logger:
+  ros__parameters:
+    record:
+      all_topics: false
+      topics:
+      - /diagnostics
+      - /bizzy/mavros/battery
+      - /bizzy/mavros/global_position/raw/fix
+      - /bizzy/mavros/global_position/raw/gps_vel
+      - /bizzy/mavros/gpsstatus/gps1/raw
+      - /bizzy/mavros/imu/data
+      - /bizzy/mavros/state
+      - /bizzy/odom
+      - /bizzy/project11/heartbeat
+      - /bizzy/project11/status/mission_manager
+      - /bizzy/robot_description
+      - /bizzy/sensors/cameras/oak_forward/rgb/camera_info
+      - /bizzy/sensors/cameras/oak_forward/rgb/image_raw/compressed
+      - /bizzy/sensors/cameras/oak_starboard/rgb/camera_info
+      - /bizzy/sensors/cameras/oak_starboard/rgb/image_raw/compressed
+      - /bizzy/sensors/cameras/oak_aft/rgb/camera_info
+      - /bizzy/sensors/cameras/oak_aft/rgb/image_raw/compressed
+      - /bizzy/sensors/cameras/oak_port/rgb/camera_info
+      - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
+      - /bizzy/udp_bridge/bridge_info
+      - /bizzy/udp_bridge/topic_statistics
+      - /project11/platforms
+      - /rosout
+      - /tf
+      - /tf_static
+    storage:
+      uri: /home/field/project11/logs/bizzyboat
+      max_bagfile_duration: 300
+      storage_preset_profile: zstd_fast
+
+/**/sonar_logger:
+  ros__parameters:
+    record:
+      all_topics: false
+      topics:
+      - /diagnostics
+      - /bizzy/odom
+      - /bizzy/robot_description
+      - /bizzy/sensors/deltat/soundings
+      - /tf
+      - /tf_static
+    storage:
+      uri: /home/field/project11/logs/bizzyboat_sonar
+      max_bagfile_duration: 300
+      storage_preset_profile: zstd_fast

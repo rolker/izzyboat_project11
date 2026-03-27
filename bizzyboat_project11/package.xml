@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>bizzyboat_project11</name>
+  <version>0.0.0</version>
+  <description>
+    Launch files and configuration for UNH-CCOM's Seafloor Systems EchoBoat 240 ASV (BizzyBoat).
+  </description>
+
+  <author email="roland@ccom.unh.edu">Roland Arsenault</author>
+  <maintainer email="roland@ccom.unh.edu">Roland Arsenault</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake_ros</buildtool_depend>
+  <exec_depend>depthai_ros_driver</exec_depend>
+  <depend>joint_state_publisher</depend>
+  <exec_depend>mavros</exec_depend>
+  <exec_depend>mavros_extras</exec_depend>
+  <depend>ntrip_client</depend>
+  <depend>robot_state_publisher</depend>
+  <depend>rosbag2_transport</depend>
+  <exec_depend>topic_tools</exec_depend>
+  <exec_depend>usb_cam</exec_depend>
+  <depend>xacro</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+
+</package>
