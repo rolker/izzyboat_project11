@@ -6,8 +6,8 @@ and blunt stern. Dimensions are from the EchoBoat 240 manual:
   Length: 2.40m, Beam: 0.90m, Hull depth: 0.30m
 
 The mesh origin is at the base_link reference point (center screw
-hole in the hull floor), so the hull extends forward and aft from
-the origin, and the bottom of the hull is at z=0.
+hole in the hull floor, z=0 at deck surface). The hull bottom is
+at z=-depth and the deck is at z=0.
 
 Usage:
     python3 generate_hull_mesh.py [output_path]
@@ -72,10 +72,10 @@ def generate_hull():
     vertices = []
     for x, hb in zip(stations, half_beams):
         vertices.extend([
-            [x, hb, 0.0],         # port bottom
-            [x, -hb, 0.0],        # starboard bottom
-            [x, -hb, depth],      # starboard top (deck)
-            [x, hb, depth],       # port top (deck)
+            [x, hb, -depth],      # port bottom
+            [x, -hb, -depth],     # starboard bottom
+            [x, -hb, 0.0],       # starboard top (deck, z=0)
+            [x, hb, 0.0],        # port top (deck, z=0)
         ])
 
     # Also add bottom vertices with slight V-shape for realism

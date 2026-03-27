@@ -107,7 +107,7 @@
   <!-- ========== Factory USB Camera ========== -->
   <!-- On the crossbar rail, toward the bow. -->
 
-  <link name="bizzy/camera_usb">
+  <link name="bizzy/usb_camera">
     <visual>
       <geometry>
         <cylinder length="0.05" radius="0.03"/>
@@ -117,17 +117,17 @@
     </visual>
   </link>
 
-  <joint name="base_to_camera_usb" type="fixed">
+  <joint name="base_to_usb_camera" type="fixed">
     <parent link="bizzy/base_link"/>
-    <child link="bizzy/camera_usb"/>
+    <child link="bizzy/usb_camera"/>
     <origin xyz="0.55 0.0 1.15" rpy="0 0 0"/>
   </joint>
 
-  <link name="bizzy/camera_usb_optical"/>
+  <link name="bizzy/usb_camera_optical"/>
 
-  <joint name="camera_usb_to_camera_usb_optical" type="fixed">
-    <parent link="bizzy/camera_usb"/>
-    <child link="bizzy/camera_usb_optical"/>
+  <joint name="usb_camera_to_usb_camera_optical" type="fixed">
+    <parent link="bizzy/usb_camera"/>
+    <child link="bizzy/usb_camera_optical"/>
     <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
   </joint>
 

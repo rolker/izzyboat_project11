@@ -63,7 +63,7 @@ Package builds successfully in `platforms_ws`.
 - `launch/ntrip_launch.py` — NTRIP client for RTK corrections
 - `launch/operator_core_launch.py` — operator-side bridge + autonomy + foxglove
 - `scripts/start_tmux_project11.bash` — tmux startup (3 panes: core, perception, nav)
-- `urdf/bizzyboat.urdf` — placeholder (tracked by #25)
+- `urdf/bizzyboat.urdf.xacro` — modular xacro URDF with sensor frames (#25)
 
 **Key design decisions**:
 - Did not use `echo_launch.py` wholesale — pulled individual components into modular launches
