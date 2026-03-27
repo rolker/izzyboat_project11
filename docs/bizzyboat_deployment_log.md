@@ -14,14 +14,16 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 | [unh_echoboats_project11#15](https://github.com/rolker/unh_echoboats_project11/issues/15) | Boat manifest with gitcloud URLs | **done** | PR [#21](https://github.com/rolker/unh_echoboats_project11/pull/21) merged |
 | [CCOMJHC/ccomjhc_project11#5](https://github.com/CCOMJHC/ccomjhc_project11/issues/5) | Connect gabby to VPN/gitcloud | **done** | PR [#8](https://github.com/CCOMJHC/ccomjhc_project11/pull/8) merged |
 | [unh_echoboats_project11#16](https://github.com/rolker/unh_echoboats_project11/issues/16) | Install ROS 2 Jazzy on gabby | **done** | PR [#20](https://github.com/rolker/unh_echoboats_project11/pull/20) merged |
-| [unh_echoboats_project11#17](https://github.com/rolker/unh_echoboats_project11/issues/17) | Bootstrap and build on gabby | **blocked** | Gitcloud raw file URL for bootstrap.yaml returns 404. PR [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) |
+| [unh_echoboats_project11#17](https://github.com/rolker/unh_echoboats_project11/issues/17) | Bootstrap and build on gabby | **done** | PR [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) merged |
 
 ### Parallel Work
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | not started | |
+| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Agent assigned. Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs) |
 | [CCOMJHC/ccomjhc_project11#6](https://github.com/CCOMJHC/ccomjhc_project11/issues/6) | Site-specific config | not started | |
+| [unh_echoboats_project11#23](https://github.com/rolker/unh_echoboats_project11/issues/23) | Sensors layer (OAK + DeltaT) | **done** | PR [#24](https://github.com/rolker/unh_echoboats_project11/pull/24) merged |
+| [CCOMJHC/ccomjhc_project11#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) | Operator station manifest (salmon) | **in progress** | Agent assigned, tmux session to salmon |
 | [ros2_agent_workspace#423](https://github.com/rolker/ros2_agent_workspace/issues/423) | Git-bug/offline agent workflow | not started | |
 | [unh_echoboats_project11#18](https://github.com/rolker/unh_echoboats_project11/issues/18) | Deployment guide | not started | |
 
@@ -100,3 +102,72 @@ gabby couldn't reach operator network (192.168.13.0/24) via WiFi bridge. Root ca
 - **Blocked**: Bootstrap process fetches `bootstrap.yaml` via a raw file URL from gitcloud, which returns 404. Likely a Forgejo raw URL format issue or repo name mismatch. Also identified gap: no env var or CLI flag to override the manifest URL (hardcoded to `configs/project_bootstrap.url`).
 - PR [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) open with progress log.
 - **Session paused** — will resume later.
+
+### 2026-03-27
+
+#### Resuming deployment
+
+- Fresh reboot of operator machine and BizzyBoat
+- Tmux session `gabby` recreated with SSH to gabby
+- Bootstrap blocker from 2026-03-26 has been fixed in the workspace repo:
+  - PR [#426](https://github.com/rolker/ros2_agent_workspace/pull/426) merged — `BOOTSTRAP_URL` env var / `--bootstrap-url` CLI flag for alternate manifests
+  - Additional hardening: whitespace rejection, recursive make fix for layer list
+- **Next**: Agent resuming #17 — pull updated workspace on gabby, retry bootstrap with `BOOTSTRAP_URL`
+
+#### Bootstrap issues discovered (#17 agent)
+
+1. ~~**Site layer not created**~~ — False alarm; site_ws was there, just missed initially.
+
+2. **rosdep not run automatically**: After layers were created and repos imported, `rosdep install` was not triggered by `make build`. There is no rosdep target in the Makefile — it's entirely manual. Opened [ros2_agent_workspace#429](https://github.com/rolker/ros2_agent_workspace/issues/429) to track.
+
+3. **Stale `project11` package references**: Running `rosdep` manually surfaced unresolvable dependency on `project11` — the old package name for `marine_autonomy`. Found in `izzyboat_project11/package.xml` and `lr30_project11/package.xml`. Being handled by #17 agent.
+
+4. **Gazebo pulled in by rosdep on robot computer**: `rosdep install` on gabby resolved a dependency chain that pulled in Gazebo via `nav2_bringup` — completely inappropriate for a field robot. Root cause: `nav2_bringup` is a dependency in `ben_project11` and possibly another echoboat-related package. Issues opened on the affected repos. This highlights the need for a **manifest lint** tool — see [ros2_agent_workspace#430](https://github.com/rolker/ros2_agent_workspace/issues/430).
+
+5. **Power management check on gabby** (after Gazebo install):
+   - No display manager (gdm3/lightdm/sddm) installed or running ✓
+   - `logind.conf` is stock defaults, no custom power settings ✓
+   - Sleep/suspend/hibernate targets all `static` and `inactive` ✓
+   - No `power-profiles-daemon`, no GNOME power settings, no `acpid` ✓
+   - **`upower.service` is running** — pulled in by Gazebo deps. However it sees no battery, no lid, no real power supply — effectively inert on this hardware.
+   - Sleep targets not masked (masking can cause log noise per past experience). Low risk given no triggers present.
+
+#### Continuing build
+
+- Dependencies fully installed on gabby (including unwanted Gazebo — will clean up later)
+- Build proceeding with all current layers
+- Roland adding sensors layer manually to test Luxonis OAK cameras — not waiting for #23 PR
+- **Build successful** on gabby with all layers including sensors. First successful full build on the robot computer.
+- **OAK camera test successful** — Luxonis OAK cameras verified working on gabby with `depthai_marine` from sensors layer.
+- PRs [#22](https://github.com/rolker/unh_echoboats_project11/pull/22) (#17) and [#24](https://github.com/rolker/unh_echoboats_project11/pull/24) (#23) merged.
+- Agent assigned to #13 (bizzyboat_project11 package) — launch files, config, URDF for BizzyBoat hardware.
+- Agent on #422 (repo sync) still working — reverted unauthorized lint change, fixing code.
+- Agent on #25 (URDF) opened plan PR [#27](https://github.com/rolker/unh_echoboats_project11/pull/27), then retasked to CCOMJHC#11.
+- Agent on #13 (bizzyboat_project11) paused after initial package creation.
+- Agent on CCOMJHC#11 (operator manifest) found missing platform repo `molab_hardware` — opened [unh_marine_autonomy#112](https://github.com/rolker/unh_marine_autonomy/issues/112).
+- Created sub-issues for #13: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF), [#26](https://github.com/rolker/unh_echoboats_project11/issues/26) (udev rules), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (DHCP reservations).
+- Created [CCOMJHC#10](https://github.com/CCOMJHC/ccomjhc_project11/issues/10) for NTRIP credential migration to private repo.
+- Created [ros2_agent_workspace#429](https://github.com/rolker/ros2_agent_workspace/issues/429) for missing rosdep step in `make build`.
+- Created [ros2_agent_workspace#430](https://github.com/rolker/ros2_agent_workspace/issues/430) for manifest lint tool.
+
+#### Hardware enumeration on gabby
+
+Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
+
+| Device | USB Port | Serial Port | Vendor:Product | Purpose |
+|--------|----------|-------------|----------------|---------|
+| HD USB Camera | 1-1 | — (UVC) | `32e4:9230` | Factory-provided USB camera (in addition to 4x OAK PoE cameras installed separately) |
+| CubeOrange FCU | 1-8 | `ttyACM0`, `ttyACM1` | `2dae:1016` | ArduRover autopilot (serial `43001E000A51323237373236`) |
+| Arduino | 1-5 | `ttyACM2` | `2341:0043` | CTD winch controller (serial `342343139313512040B1`) |
+
+**Notes**:
+- `nouveau` driver spamming GSP errors on Nvidia GPU (`0000:01:00.0`) — needs `nvidia-driver` install or `nouveau` blacklist
+- ModemManager probed the Arduino — may need udev rule to exclude serial devices from ModemManager if it interferes with comms
+- 4x OAK cameras are PoE (networked, not USB) — already tested successfully. Need static IP assignments on the BizzyBoat network.
+
+#### Electronics bay layout (from photos)
+
+- **Portable rack** (black frame, loose, will be screwed down): contains router + 2x PoE switches
+- **Finned enclosures**: gabby (Linux, Neousys Nuvo 9160GC) on right, Windows machine on left
+- Reference point sticker placed on hull for URDF measurements
+- Photos saved in `~/Downloads/2026-03-27_BizzyBoat*.jpg` (7 photos total)
