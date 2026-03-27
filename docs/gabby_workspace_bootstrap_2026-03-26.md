@@ -156,6 +156,19 @@ All workspace packages confirmed available, including:
 Workspace bootstrap and build on gabby complete. All 5 layers (39 packages) built
 successfully from gitcloud sources using the echoboats boat manifest.
 
+## Step 6: OAK camera verification
+
+Ran `ros2 run depthai_marine list_devices` — 4 OAK cameras detected via PoE (TCP/IP):
+
+| IP | MXID | Platform |
+|----|------|----------|
+| 192.168.20.227 | 19443010E11A872D00 | Myriad X |
+| 192.168.20.238 | 14442C10917D8DD700 | Myriad X |
+| 192.168.20.217 | 194430106121872D00 | Myriad X |
+| 192.168.20.242 | 19443010D117872D00 | Myriad X |
+
+All in bootloader state, connected via X_LINK_TCP_IP.
+
 ### Issues found during bootstrap
 1. **Missing rosdep step** — `make build` doesn't run `rosdep install` between layer setup and build
 2. **Obsolete `project11` dependency** in `izzyboat_project11/package.xml` — fixed (cherry-picked)
