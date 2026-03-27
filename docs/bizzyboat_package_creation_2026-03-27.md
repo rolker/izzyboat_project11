@@ -71,3 +71,50 @@ Package builds successfully in `platforms_ws`.
 - OAK camera IPs assigned to names as placeholders — need to verify which IP is which camera on gabby
 
 **Open**: Camera IP-to-position mapping, NTRIP credentials (reused izzyboat's for now)
+
+### Step 3: Testing core_launch on gabby
+
+Pushed branch to gitcloud, checked out on gabby, built successfully.
+
+**Issue 1: Double namespace** — `publish_state_launch.py` was included inside a
+`GroupAction` that already pushed the `bizzy` namespace, but the launch file also
+sets namespace on nodes directly → `/bizzy/bizzy`. Fixed by moving the include
+outside the namespace group.
+
+**Issue 2: Serial port permissions** — `/dev/ttyACM0` (CubeOrange FCU) is owned by
+`root:dialout` but `field` user was not in the `dialout` group. Fixed:
+```bash
+sudo usermod -aG dialout field
+newgrp dialout
+```
+
+**Issue 3: GeographicLib dataset missing** — mavros aborts immediately (SIGABRT)
+because the EGM96 geoid model is not installed:
+```
+UAS: GeographicLib exception: File not readable /usr/share/GeographicLib/geoids/egm96-5.pgm
+```
+Fix: `sudo /opt/ros/jazzy/lib/mavros/install_geographiclib_datasets.sh`
+
+**USB devices confirmed on gabby**:
+- CubeOrange (Hex/ProfiCNC) → ttyACM0, ttyACM1
+- Arduino (CTD winch) → ttyACM2
+
+**Issue 4: NTRIP launch file missing** — `ntrip_launch.py` referenced
+`ntrip_client_launch.py` from the `ntrip_client` package, but that package
+doesn't ship a launch file. The launch file lives in `izzyboat_project11`.
+Copied it into `bizzyboat_project11` and fixed the reference.
+
+This was the root cause of the immediate shutdown — the launch exception from
+the missing file triggered SIGINT to all nodes before mavros finished loading.
+
+**Mavros standalone test (after fixes)**: Connected successfully.
+- FCU: ArduRover V4.5.7 (52bed8d5)
+- ChibiOS: 6a85082c
+- Board: CubeOrange 001E0043 3232510A 36323737
+- IOMCU: 420 1001 411FC231
+- PWM outputs: 1-14
+- 3× IMU, fast sampling (8-9 kHz)
+- VID/PID: 2dae:1016
+- Heartbeat received, RC channels detected, parameters list received
+- Mission: 2 waypoints loaded (one near 43.136°N 70.939°W — likely UNH area)
+- Capabilities: 0x00000000f1ef
