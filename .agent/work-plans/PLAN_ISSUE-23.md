@@ -27,11 +27,6 @@ The boat manifest uses `git@gitcloud:field/` URLs (not `https://github.com/rolke
    (underlay → core → platforms → sensors → site). The sensors layer depends
    on core packages and should be built before site.
 
-3. **Verify gitcloud repos exist and have `jazzy` branches** — this is a
-   prerequisite noted in the issue; both repos are reported as already pushed.
-   The plan includes a verification step but this may need to be done on
-   gabby or a machine with gitcloud access.
-
 ## Files to Change
 
 | File | Change |
@@ -60,13 +55,15 @@ The boat manifest uses `git@gitcloud:field/` URLs (not `https://github.com/rolke
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
 | `config/layers.txt` adds sensors | `config/repos/sensors.repos` must exist | Yes |
-| sensors layer added | `depthai` / `depthai_bridge` dependencies needed at build time | No — noted as follow-up (rosdep or manual install on gabby) |
+| sensors layer added | `depthai` / `depthai_bridge` dependencies needed at build time | Yes — rosdep handles these |
 
 ## Open Questions
 
-- **Gitcloud default branches**: Are `jazzy` branches set as default on gitcloud for both `unh_marine_perception` and `imagenex_deltat`? (Issue says repos are pushed but doesn't confirm default branch.)
-- **External dependencies**: `depthai` and `depthai_bridge` are not ROS packages — how should they be installed on gabby? Separate issue for rosdep keys or manual install?
-- **Optional layer?**: Should `sensors` be added to `config/optional_layers.txt` so setup doesn't fail on machines without gitcloud access, similar to `site`?
+All resolved:
+
+- ~~Gitcloud default branches~~: Doesn't matter — `.repos` specifies `version: jazzy` explicitly.
+- ~~External dependencies~~: `rosdep` picks up `depthai` / `depthai_bridge`.
+- ~~Optional layer?~~: No — `sensors` stays required.
 
 ## Estimated Scope
 
