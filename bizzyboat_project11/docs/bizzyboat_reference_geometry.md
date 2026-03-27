@@ -92,15 +92,17 @@ receiver near amidships.
 
 ### Factory USB Camera
 
-Mounted on the mast structure. Position estimated from the manual overview
-diagram (Figure 1) which shows the USB camera on the bow mast arm.
+Mounted on the horizontal crossbar (the same rail the GNSS antennas are on),
+toward the forward end. Positioned at roughly the same height as the GNSS
+pucks.
 
 | Sensor | x | y | z | Status |
 |--------|---|---|---|--------|
-| USB camera | 0.50 | 0.0 | 0.80 | [EST] |
+| USB camera | 0.55 | 0.0 | 1.15 | [EST] |
 
 **Notes**:
-- Position is rough — needs confirmation on BizzyBoat's specific mounting.
+- On the crossbar rail, forward of the GNSS antennas, pointing forward.
+- Height matches the crossbar (~1.15m above hull floor).
 
 ## Coordinate Frame Conventions
 
@@ -124,6 +126,6 @@ is computed from the baseline vector between `bizzy/gnss_port` and
 | GNSS baseline | 0.80m [EST] | Measure center-to-center between pucks |
 | GNSS height (z) | 1.15m [EST] | Tape measure from hull floor to puck top |
 | DeltaT position (x, z) | -0.15, -0.15 [EST] | Measure from screw hole; depth below hull |
-| USB camera position | 0.50, 0, 0.80 [EST] | Measure from base_link reference |
+| USB camera position | 0.55, 0, 1.15 [EST] | Measure from base_link reference along crossbar |
 | base_link to bow distance | ~1.2m [EST] | Measure from screw hole to bow tip |
 | base_link to stern distance | ~1.2m [EST] | Measure from screw hole to transom |
