@@ -1,4 +1,5 @@
 underlay
 core
 platforms
+sensors
 site

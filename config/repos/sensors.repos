@@ -1,0 +1,9 @@
+repositories:
+  unh_marine_perception:
+    type: git
+    url: git@gitcloud:field/unh_marine_perception.git
+    version: jazzy
+  imagenex_deltat:
+    type: git
+    url: git@gitcloud:field/imagenex_deltat.git
+    version: jazzy
