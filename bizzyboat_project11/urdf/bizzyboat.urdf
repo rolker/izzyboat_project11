@@ -1,6 +1,0 @@
-<?xml version="1.0"?>
-<!-- Placeholder URDF for BizzyBoat (EchoBoat 240) -->
-<!-- Sensor frame positions tracked by sub-issue #25 -->
-<robot name="bizzyboat" xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <link name="bizzy/base_link"/>
-</robot>

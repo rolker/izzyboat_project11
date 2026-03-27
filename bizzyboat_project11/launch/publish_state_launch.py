@@ -14,7 +14,7 @@ def generate_launch_description():
       'namespace', default_value=TextSubstitution(text='bizzy')
     )
 
-    path_to_urdf = get_package_share_path('bizzyboat_project11') / 'urdf' / 'bizzyboat.urdf'
+    path_to_urdf = get_package_share_path('bizzyboat_project11') / 'urdf' / 'bizzyboat.urdf.xacro'
     robot_state_publisher_node = Node(
        package='robot_state_publisher',
        executable='robot_state_publisher',
