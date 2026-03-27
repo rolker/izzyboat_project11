@@ -107,6 +107,27 @@ Copied it into `bizzyboat_project11` and fixed the reference.
 This was the root cause of the immediate shutdown — the launch exception from
 the missing file triggered SIGINT to all nodes before mavros finished loading.
 
+**Core launch success** — after all fixes, core_launch.py runs stable:
+- mavros connected to CubeOrange (ArduRover V4.5.7)
+- mru_transform, sea_surface_estimator, UDP bridge, robot_state_publisher all running
+- NTRIP disabled (placeholder credentials, 401 Unauthorized)
+
+### Status / Next steps
+
+**Done**:
+- Package skeleton, configs, 3 modular launches, operator launch, startup script
+- Core launch tested on gabby — stable
+
+**Blocked**:
+- OAK camera testing — waiting on static DHCP assignments (CCOMJHC/ccomjhc_project11#9)
+- NTRIP — needs correct credentials
+
+**Untested**:
+- `perception_launch.py` (cameras, DeltaT, loggers)
+- `nav_launch.py` (marine_autonomy, echo_helm, s57, nav2)
+- `operator_core_launch.py` (operator-side bridge)
+- Platform dimensions placeholder until URDF (#25)
+
 **Mavros standalone test (after fixes)**: Connected successfully.
 - FCU: ArduRover V4.5.7 (52bed8d5)
 - ChibiOS: 6a85082c
