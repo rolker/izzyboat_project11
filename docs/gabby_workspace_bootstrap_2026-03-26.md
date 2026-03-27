@@ -93,4 +93,70 @@ and build. On a fresh machine this means the first build will always fail if any
 repo has system dependencies not already installed. Should open a workspace issue
 to add a `rosdep install` step after layer setup completes.
 
-**Status**: Running `rosdep install` manually, then will retry build...
+Ran `rosdep install` manually from `layers/main/`:
+```bash
+rosdep install -i --from-paths underlay_ws/src/ core_ws/src/ platforms_ws/src/ site_ws/src/
+```
+
+Installed ~244 system packages including ros-jazzy-angles, python3-pyproj, mavros,
+nav2 stack, OpenCV, PCL, DepthAI, and (unnecessarily) Gazebo.
+
+**Issue found**: `nav2_bringup` dependency in `ben_project11` and
+`echoboat_project11` pulls in the full Gazebo stack (~900 MB). Filed:
+- [rolker/ben_project11#12](https://github.com/rolker/ben_project11/issues/12)
+- [rolker/seafloor_echoboat_project11#4](https://github.com/rolker/seafloor_echoboat_project11/issues/4)
+
+Also fixed `izzyboat_project11/package.xml` — removed obsolete `<exec_depend>project11</exec_depend>`
+(cherry-picked to gabby's jazzy branch).
+
+### Build retry (success)
+
+```bash
+NONINTERACTIVE=1 make build BOOTSTRAP_URL='http://gitcloud/field/unh_echoboats_project11/raw/branch/jazzy/config/bootstrap.yaml'
+```
+
+All layers built successfully:
+
+| Layer | Packages | Status |
+|-------|----------|--------|
+| underlay | 6/6 | ✅ |
+| core | 24/24 | ✅ |
+| platforms | 5/5 | ✅ |
+| site | 1/1 | ✅ |
+
+Compiler warnings only (no errors): geodesy parentheses, unused params in
+marine_nav_crabbing_path_follower and mru_transform, CMake variable warnings.
+
+### Sensors layer added
+
+Pulled new sensors layer (rolker/unh_echoboats_project11#23, merged as PR #24) from
+GitHub to gitcloud, then pulled on gabby. Re-ran `make build` (no `BOOTSTRAP_URL`
+needed after initial setup). New layer built successfully:
+
+| Layer | Packages | Status |
+|-------|----------|--------|
+| sensors | 3/3 | ✅ (depthai_marine, imagenex_deltat, sea_surface_segmentation) |
+
+## Step 5: Verification
+
+```bash
+source layers/main/site_ws/install/setup.bash
+ros2 pkg list | wc -l   # 394 packages
+```
+
+All workspace packages confirmed available, including:
+- **underlay**: geodesy, geographic_info, ros2launch_gui, ros2launch_session, nmea_navsat_driver
+- **core**: marine_autonomy, marine_nav_*, mission_manager, udp_bridge, marine_ais_*, s57_*, marine_charts
+- **platforms**: echoboat_project11, izzyboat_project11, echo_helm, mru_transform
+- **sensors**: depthai_marine, imagenex_deltat, sea_surface_segmentation
+- **site**: ccomjhc_project11
+
+## Summary
+
+Workspace bootstrap and build on gabby complete. All 5 layers (39 packages) built
+successfully from gitcloud sources using the echoboats boat manifest.
+
+### Issues found during bootstrap
+1. **Missing rosdep step** — `make build` doesn't run `rosdep install` between layer setup and build
+2. **Obsolete `project11` dependency** in `izzyboat_project11/package.xml` — fixed (cherry-picked)
+3. **`nav2_bringup` pulls in Gazebo** (~900 MB) — filed issues on ben_project11 and seafloor_echoboat_project11
