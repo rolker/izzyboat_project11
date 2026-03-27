@@ -149,14 +149,14 @@ def generate_launch_description():
             }.items()
         ),
 
-        # NTRIP (outside namespace group — matches izzyboat pattern)
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(
-                PathJoinSubstitution([
-                    FindPackageShare('bizzyboat_project11'),
-                    'launch',
-                    'ntrip_launch.py'
-                ])
-            ),
-        ),
+        # NTRIP — disabled until credentials are configured
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         PathJoinSubstitution([
+        #             FindPackageShare('bizzyboat_project11'),
+        #             'launch',
+        #             'ntrip_launch.py'
+        #         ])
+        #     ),
+        # ),
     ])
