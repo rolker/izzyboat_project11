@@ -22,10 +22,11 @@ The `base_link` origin is the **center screw hole in the hull floor**, located
 approximately amidships. This point was chosen because it is close to the
 center of gravity.
 
-- **Location**: Center of hull interior floor, roughly amidships
+- **Location**: Center screw hole in hull interior floor, roughly amidships.
+  Marked with an L-shaped sticker showing X and Y axes.
 - **Orientation**: x-axis points forward (bow), y-axis points port, z-axis points up
 - **z = 0**: At the hull floor (deck surface level)
-- **Source**: Physical observation (screw hole in hull floor)
+- **Source**: Physical observation — screw hole with axis sticker on hull floor
 
 ## Estimated Sensor Positions
 
