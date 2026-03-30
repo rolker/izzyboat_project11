@@ -40,28 +40,32 @@
       <material name="bumper_black"/>
     </visual>
 
-    <!-- Mast uprights (two vertical stainless steel tubes) -->
+    <!-- Mast uprights (two vertical stainless steel tubes).
+         Port upright extends to camera bracket at top (~z=1.41).
+         Starboard upright extends to center rail height (~z=0.89). -->
     <visual name="mast_port">
       <geometry>
-        <box size="0.04 0.04 0.95"/>
+        <box size="0.04 0.04 1.11"/>
       </geometry>
-      <origin xyz="0.15 0.35 0.775"/>
+      <origin xyz="0.15 0.35 0.855"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="mast_starboard">
       <geometry>
-        <box size="0.04 0.04 0.95"/>
+        <box size="0.04 0.04 0.59"/>
       </geometry>
-      <origin xyz="0.15 -0.35 0.775"/>
+      <origin xyz="0.15 -0.35 0.595"/>
       <material name="metal_gray"/>
     </visual>
 
-    <!-- Horizontal crossbar connecting mast uprights -->
-    <visual name="crossbar">
+    <!-- Fore-aft center rail along y=0, supported by the two uprights.
+         GNSS antennas mount at the forward and aft ends; USB camera
+         and other equipment mount between them. -->
+    <visual name="center_rail">
       <geometry>
-        <box size="0.04 0.80 0.04"/>
+        <box size="1.67 0.04 0.04"/>
       </geometry>
-      <origin xyz="0.15 0.0 1.15"/>
+      <origin xyz="0.0 0.0 0.89"/>
       <material name="metal_gray"/>
     </visual>
   </link>
@@ -72,8 +76,8 @@
        All tilted ~10deg downward (pitch = -0.17 rad).
        Positions are estimated [EST] — refine with measurements. -->
 
-  <xacro:property name="cam_x" value="0.15"/>
-  <xacro:property name="cam_z" value="1.25"/>
+  <xacro:property name="cam_x" value="0.31"/>
+  <xacro:property name="cam_z" value="1.41"/>
   <xacro:property name="cam_tilt" value="-0.17"/>
 
   <xacro:oak_camera parent="bizzy/base_link" name="oak_forward"
@@ -94,14 +98,14 @@
 
 
   <!-- ========== GNSS Antennas (2x CUAV C-RTK 2HP) ========== -->
-  <!-- Black pucks in white brackets on crossbar ends.
-       Baseline ~0.80m. Positions are estimated [EST]. -->
+  <!-- Black pucks fore and aft. Baseline ~1.67m.
+       Measured from base_link (center screw hole). -->
 
-  <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_port"
-    x="0.15" y="0.40" z="1.15"/>
+  <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_forward"
+    x="0.835" y="0.0" z="0.89"/>
 
-  <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_starboard"
-    x="0.15" y="-0.40" z="1.15"/>
+  <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_aft"
+    x="-0.835" y="0.0" z="0.89"/>
 
 
   <!-- ========== Factory USB Camera ========== -->
@@ -120,7 +124,7 @@
   <joint name="base_to_usb_camera" type="fixed">
     <parent link="bizzy/base_link"/>
     <child link="bizzy/usb_camera"/>
-    <origin xyz="0.55 0.0 1.15" rpy="0 0 0"/>
+    <origin xyz="0.55 0.0 0.89" rpy="0 0 0"/>
   </joint>
 
   <link name="bizzy/usb_camera_optical"/>
@@ -132,11 +136,42 @@
   </joint>
 
 
+  <!-- ========== AutoNav Box (contains Cube Orange FCU + IMU) ========== -->
+  <!-- Front bottom of box at (-0.875, 0, -0.01) from base_link.
+       Box dimensions ~0.20 x 0.15 x 0.15 estimated from photos.
+       IMU is inside the Cube Orange, position within box is approximate. -->
+
+  <link name="bizzy/autonav_box">
+    <visual>
+      <geometry>
+        <box size="0.20 0.15 0.15"/>
+      </geometry>
+      <origin xyz="-0.10 0 0.075"/>
+      <material name="bumper_black"/>
+    </visual>
+  </link>
+
+  <joint name="base_to_autonav_box" type="fixed">
+    <parent link="bizzy/base_link"/>
+    <child link="bizzy/autonav_box"/>
+    <origin xyz="-0.875 0.0 -0.01" rpy="0 0 0"/>
+  </joint>
+
+  <!-- IMU frame at estimated center of Cube Orange inside the box -->
+  <link name="bizzy/imu"/>
+
+  <joint name="autonav_box_to_imu" type="fixed">
+    <parent link="bizzy/autonav_box"/>
+    <child link="bizzy/imu"/>
+    <origin xyz="-0.10 0.0 0.075" rpy="0 0 0"/>
+  </joint>
+
+
   <!-- ========== Imagenex DeltaT Sonar ========== -->
   <!-- Below hull, approximate position from manual diagram.
        Exact mount position TBD. -->
 
   <xacro:deltat_sonar parent="bizzy/base_link" name="deltat"
-    x="-0.15" y="0.0" z="-0.15"/>
+    x="-0.23" y="0.0" z="-0.18"/>
 
 </robot>

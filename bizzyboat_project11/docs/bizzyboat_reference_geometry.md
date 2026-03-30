@@ -49,9 +49,8 @@ Estimated mast height is ~1.1m above the hull floor (based on air draft of
 Visible in: Manual Figures 1 (System Overview, p9), 3 (Front View, p11),
 4 (Side View, p12), 139 (Top View Diagram, p115).
 
-**URDF correction needed**: The current URDF models the crossbar as a lateral
-(port-to-starboard) box. It should be a fore-aft rail along y=0, spanning
-roughly from the forward GNSS antenna to the aft GNSS antenna (~1.67m long).
+The URDF models this as a fore-aft box along y=0, spanning ~1.67m from the
+forward GNSS antenna to the aft GNSS antenna.
 
 ### 4x OAK-1 PoE Cameras
 
@@ -109,11 +108,11 @@ pucks.
 
 | Sensor | x | y | z | Status |
 |--------|---|---|---|--------|
-| USB camera | 0.55 | 0.0 | 1.15 | [EST] |
+| USB camera | 0.55 | 0.0 | 0.89 | [EST] |
 
 **Notes**:
 - On the center fore-aft rail, forward of the GNSS antennas, pointing forward.
-- Height matches the rail (~1.15m above hull floor).
+- Height matches the rail (~0.89m above hull floor).
 
 ### AutoNav Box (Cube Orange FCU + IMU)
 
@@ -168,15 +167,10 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 
 ### URDF Corrections Identified from Diagrams
 
-1. **Mast crossbar orientation**: The current URDF has a lateral (port-to-starboard)
-   crossbar. The actual boat has a **fore-aft center rail** along y=0. The GNSS
-   antennas mount at the fore and aft ends of this rail. The two vertical uprights
-   on port and starboard sides are correct, but they support the center rail rather
-   than a lateral crossbar.
+1. ~~**Mast crossbar orientation**~~: Fixed — URDF now has a fore-aft center rail
+   along y=0, spanning ~1.67m between the GNSS antennas.
 
-2. **Center rail length**: The rail spans roughly from the forward GNSS antenna
-   (x≈0.835) to the aft GNSS antenna (x≈-0.835), approximately 1.67m long.
-   The USB camera and other equipment mount between the antennas on this rail.
+2. ~~**Center rail length**~~: Fixed — rail modeled as 1.67m box along x-axis.
 
 3. **Sonar placement**: Bottom view (Fig 2) confirms sonar projector and receiver
    are near amidships on the hull bottom, consistent with current DeltaT position.
@@ -198,6 +192,6 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 | AutoNav box dimensions | ~0.20 x 0.15 x 0.15 [EST] | Measure box length, width, height |
 | IMU position within AutoNav box | center [EST] | Locate Cube Orange inside box, measure offset from front-bottom |
 | IMU orientation | identity [EST] | Verify Cube Orange axes align with boat frame |
-| USB camera position | 0.55, 0, 1.15 [EST] | Measure from base_link reference along crossbar |
+| USB camera position | 0.55, 0, 0.89 [EST] | Measure from base_link reference along center rail |
 | base_link to bow distance | ~1.2m [EST] | Measure from screw hole to bow tip |
 | base_link to stern distance | ~1.2m [EST] | Measure from screw hole to transom |
