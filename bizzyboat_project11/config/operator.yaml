@@ -11,9 +11,9 @@
           - vpn
         connections:
           wifi:
-            host: gabby_bb
+            host: gabby.bizzy.p11.lan
             port: 4200
-            return_host: salmon_bb
+            return_host: salmon.op.p11.lan
             return_port: 4200
             topics_list:
             - command
@@ -23,9 +23,9 @@
               joystick_helm: {source: /bizzy/piloting_mode/manual/helm}
 
           vpn:
-            host: gabby_v
+            host: gabby.vpn.bizzy.p11.lan
             port: 4200
-            return_host: salmon_bv
+            return_host: salmon.vpn.bizzy.p11.lan
             return_port: 4200
             topics_list:
             - command
