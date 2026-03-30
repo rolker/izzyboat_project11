@@ -5,6 +5,6 @@
       i_enable_ir: true
       i_nn_type: none
       i_pipeline_type: rgb
-      i_ip: 192.168.20.9
+      i_ip: 192.168.20.10
     rgb.i_low_bandwidth: true
     rgb.i_low_bandwidth_quality: 80
