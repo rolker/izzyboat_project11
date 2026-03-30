@@ -190,3 +190,36 @@ Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
 #### Operator station manifest complete
 
 - [CCOMJHC#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) closed — PRs [#13](https://github.com/CCOMJHC/ccomjhc_project11/pull/13) (manifest) and [#14](https://github.com/CCOMJHC/ccomjhc_project11/pull/14) (docs) merged on 2026-03-27
+
+#### OAK camera verification via UDP bridge
+
+**Goal**: Display OAK camera images on salmon (operator station) via ROS 2 UDP bridge from gabby (BizzyBoat).
+
+**Prerequisites**:
+- [x] `feature/issue-13` branch pushed to gitcloud (as `jazzy` branch)
+- [x] gabby: switched to `jazzy` branch, rebased, built `bizzyboat_project11` (commit 07354f7, 0.47s)
+- [x] salmon: pull and build `bizzyboat_project11` — fast-forward to 07354f7, built in 1.29s
+- [x] DNS: `gabby_bb` resolves from salmon (192.168.20.5, 1.97ms via WiFi bridge route)
+- [x] gabby: core launch (UDP bridge) running
+- [x] gabby: oak_cameras_launch.py running — all 4 cameras publishing
+- [x] salmon: operator bridge running — rqt UDP bridge plugin confirms connection
+- [x] salmon: all 4 OAK camera images verified via rqt — correct position labels confirmed
+
+**Salmon readiness check** (via remote Claude Code agent on salmon):
+- DNS `gabby_bb` → 192.168.20.5, 1.97ms — correct. Operator network routes to 192.168.20.0/24 via WiFi bridge by default.
+- `udp_bridge` — built in `core_ws/install/`
+- `bizzyboat_project11` — **not built** on salmon. Package lives on `feature/issue-13` (unmerged). Need to get this branch checked out and built on salmon.
+
+**Fixes applied during testing**:
+- `operator.yaml`: replaced legacy hostnames (`gabby_bb`, `salmon_bb`, etc.) with hierarchical DNS names (`gabby.bizzy.p11.lan`, `salmon.op.p11.lan`, etc.)
+- OAK camera IPs: updated from placeholder IPs to DHCP-assigned IPs (`.9`–`.12`)
+- OAK camera position mapping: identified correct IP-to-position by viewing images via UDP bridge
+
+| Camera | IP | MXID |
+|--------|-----|------|
+| oak_forward | 192.168.20.10 | 19443010D117872D00 |
+| oak_starboard | 192.168.20.12 | 19443010E11A872D00 |
+| oak_aft | 192.168.20.9 | 14442C10917D8DD700 |
+| oak_port | 192.168.20.11 | 194430106121872D00 |
+
+**End-to-end verified**: 4 OAK cameras on gabby → UDP bridge over WiFi bridge → rqt on salmon. All images display correctly with correct position labels.
