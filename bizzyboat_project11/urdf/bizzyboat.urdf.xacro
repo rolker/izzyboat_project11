@@ -41,42 +41,45 @@
     </visual>
 
     <!-- ── Mast frame ──
-         Rectangular cage visible in photos: four uprights at hull
-         corners, lateral crossbars fore and aft, fore-aft side rails,
-         risers to center rail, and a camera mast extension.
+         A-frame cage visible in photos: four slanted uprights lean
+         inward from hull sides (y≈±0.38) to frame top (y≈±0.18),
+         lateral crossbars fore and aft, fore-aft side rails, risers
+         to center rail, and the factory WiFi tower extended for cameras.
          Uprights rise from hull gunwale (~z=0.30) to crossbar
-         height (z=0.77, from measurement sketch). -->
+         height (z=0.77, from measurement sketch).
+         Roll angle: atan2(0.20, 0.47) ≈ 0.40 rad (~23 deg). -->
 
-    <!-- Four uprights (hull gunwale to crossbar height) -->
+    <!-- Four slanted uprights (hull gunwale to crossbar height).
+         Lean inward: bottom at y≈±0.38, top at y≈±0.18. -->
     <visual name="mast_fwd_port">
-      <geometry><box size="0.04 0.04 0.47"/></geometry>
-      <origin xyz="0.30 0.35 0.535"/>
+      <geometry><box size="0.04 0.04 0.51"/></geometry>
+      <origin xyz="0.30 0.28 0.535" rpy="0.40 0 0"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="mast_fwd_stbd">
-      <geometry><box size="0.04 0.04 0.47"/></geometry>
-      <origin xyz="0.30 -0.35 0.535"/>
+      <geometry><box size="0.04 0.04 0.51"/></geometry>
+      <origin xyz="0.30 -0.28 0.535" rpy="-0.40 0 0"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="mast_aft_port">
-      <geometry><box size="0.04 0.04 0.47"/></geometry>
-      <origin xyz="-0.40 0.35 0.535"/>
+      <geometry><box size="0.04 0.04 0.51"/></geometry>
+      <origin xyz="-0.40 0.28 0.535" rpy="0.40 0 0"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="mast_aft_stbd">
-      <geometry><box size="0.04 0.04 0.47"/></geometry>
-      <origin xyz="-0.40 -0.35 0.535"/>
+      <geometry><box size="0.04 0.04 0.51"/></geometry>
+      <origin xyz="-0.40 -0.28 0.535" rpy="-0.40 0 0"/>
       <material name="metal_gray"/>
     </visual>
 
     <!-- Lateral crossbars (port-to-starboard at top of uprights) -->
     <visual name="crossbar_fwd">
-      <geometry><box size="0.04 0.70 0.04"/></geometry>
+      <geometry><box size="0.04 0.36 0.04"/></geometry>
       <origin xyz="0.30 0.0 0.77"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="crossbar_aft">
-      <geometry><box size="0.04 0.70 0.04"/></geometry>
+      <geometry><box size="0.04 0.36 0.04"/></geometry>
       <origin xyz="-0.40 0.0 0.77"/>
       <material name="metal_gray"/>
     </visual>
@@ -84,12 +87,12 @@
     <!-- Fore-aft side rails (connecting forward and aft bents) -->
     <visual name="rail_port">
       <geometry><box size="0.70 0.04 0.04"/></geometry>
-      <origin xyz="-0.05 0.35 0.77"/>
+      <origin xyz="-0.05 0.18 0.77"/>
       <material name="metal_gray"/>
     </visual>
     <visual name="rail_stbd">
       <geometry><box size="0.70 0.04 0.04"/></geometry>
-      <origin xyz="-0.05 -0.35 0.77"/>
+      <origin xyz="-0.05 -0.18 0.77"/>
       <material name="metal_gray"/>
     </visual>
 
@@ -106,20 +109,21 @@
     </visual>
 
     <!-- Fore-aft center rail along y=0 (z=0.89).
-         GNSS antennas mount at the forward and aft ends; USB camera
-         and other equipment mount between them. Overhangs the frame
-         to reach the GNSS positions at x=±0.835. -->
+         Runs nearly the full length of the boat (top view diagram,
+         Fig 139). GNSS antennas and USB camera mount along it;
+         the rail extends well past the antennas on both ends. -->
     <visual name="center_rail">
-      <geometry><box size="1.67 0.04 0.04"/></geometry>
+      <geometry><box size="2.10 0.04 0.04"/></geometry>
       <origin xyz="0.0 0.0 0.89"/>
       <material name="metal_gray"/>
     </visual>
 
-    <!-- Camera mast (vertical extension above forward-port upright
-         to camera bracket at z=1.41) -->
-    <visual name="camera_mast">
-      <geometry><box size="0.04 0.04 0.64"/></geometry>
-      <origin xyz="0.31 0.35 1.09"/>
+    <!-- Factory WiFi tower, extended for 4x OAK camera bracket.
+         Single vertical tube on centerline, rising from center rail
+         to camera bracket height. -->
+    <visual name="camera_tower">
+      <geometry><box size="0.04 0.04 0.52"/></geometry>
+      <origin xyz="0.31 0.0 1.15"/>
       <material name="metal_gray"/>
     </visual>
   </link>
@@ -127,12 +131,12 @@
 
   <!-- ========== Cameras (4x OAK-1 PoE) ========== -->
   <!-- Mounted at top of mast on 3D-printed bracket, 90deg apart.
-       All tilted ~10deg downward (pitch = -0.17 rad).
+       All tilted ~5deg downward (pitch = +0.09 rad in URDF convention).
        Positions are estimated [EST] — refine with measurements. -->
 
   <xacro:property name="cam_x" value="0.31"/>
   <xacro:property name="cam_z" value="1.41"/>
-  <xacro:property name="cam_tilt" value="-0.17"/>
+  <xacro:property name="cam_tilt" value="0.09"/>
 
   <xacro:oak_camera parent="bizzy/base_link" name="oak_forward"
     x="${cam_x}" y="0" z="${cam_z}"
@@ -163,7 +167,7 @@
 
 
   <!-- ========== Factory USB Camera ========== -->
-  <!-- On the crossbar rail, toward the bow. -->
+  <!-- On the center rail, forward of the bow GNSS antenna. -->
 
   <link name="bizzy/usb_camera">
     <visual>
@@ -178,7 +182,7 @@
   <joint name="base_to_usb_camera" type="fixed">
     <parent link="bizzy/base_link"/>
     <child link="bizzy/usb_camera"/>
-    <origin xyz="0.55 0.0 0.89" rpy="0 0 0"/>
+    <origin xyz="1.05 0.0 0.89" rpy="0 0 0"/>
   </joint>
 
   <link name="bizzy/usb_camera_optical"/>

@@ -133,22 +133,30 @@ def generate_hull():
         (9, 0),  # outer port below deck
     ]
 
+    # The perimeter is CW in the YZ plane, so winding must be
+    # (A, C, B) and (A, D, C) for outward-facing normals.
     for i in range(n_stations - 1):
         b = i * vpn
         nb = (i + 1) * vpn
         for e0, e1 in perimeter_edges:
-            faces.append([b + e0, b + e1, nb + e1])
-            faces.append([b + e0, nb + e1, nb + e0])
+            faces.append([b + e0, nb + e1, b + e1])
+            faces.append([b + e0, nb + e0, nb + e1])
 
     # End caps: stern and bow are solid walls (outer rectangle only).
-    # Stern transom (facing -x)
+    # Double-sided so they're visible from both inside and outside.
+
+    # Stern transom
     b = 0
-    faces.append([b + 0, b + 8, b + 1])
+    faces.append([b + 0, b + 1, b + 8])  # outward (-x)
+    faces.append([b + 1, b + 3, b + 8])
+    faces.append([b + 0, b + 8, b + 1])  # inward (+x)
     faces.append([b + 1, b + 8, b + 3])
 
-    # Bow tip (facing +x)
+    # Bow tip
     b = (n_stations - 1) * vpn
-    faces.append([b + 0, b + 1, b + 8])
+    faces.append([b + 0, b + 8, b + 1])  # outward (+x)
+    faces.append([b + 1, b + 8, b + 3])
+    faces.append([b + 0, b + 1, b + 8])  # inward (-x)
     faces.append([b + 1, b + 3, b + 8])
 
     faces = np.array(faces)
