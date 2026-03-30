@@ -41,22 +41,24 @@ lateral crossbars, fore-aft side rails, and a fore-aft center rail on top.
 
 | Component | x | y | z | Size (x,y,z) | Status |
 |-----------|---|---|---|--------------|--------|
-| Fwd-port upright | 0.30 | 0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
-| Fwd-stbd upright | 0.30 | -0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
-| Aft-port upright | -0.40 | 0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
-| Aft-stbd upright | -0.40 | -0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
-| Fwd lateral crossbar | 0.30 | 0 | 0.77 | 0.04 x 0.70 x 0.04 | [EST] |
-| Aft lateral crossbar | -0.40 | 0 | 0.77 | 0.04 x 0.70 x 0.04 | [EST] |
-| Port side rail | -0.05 | 0.35 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
-| Stbd side rail | -0.05 | -0.35 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
-| Center rail | 0 | 0 | 0.89 | 1.67 x 0.04 x 0.04 | [MEAS] rough |
-| Camera mast | 0.31 | 0.35 | 0.77→1.41 | 0.04 x 0.04 x 0.64 | [EST] |
+| Fwd-port upright | 0.30 | 0.38→0.18 | 0.30→0.77 | 0.04 x 0.04 x 0.51 | [EST] |
+| Fwd-stbd upright | 0.30 | -0.38→-0.18 | 0.30→0.77 | 0.04 x 0.04 x 0.51 | [EST] |
+| Aft-port upright | -0.40 | 0.38→0.18 | 0.30→0.77 | 0.04 x 0.04 x 0.51 | [EST] |
+| Aft-stbd upright | -0.40 | -0.38→-0.18 | 0.30→0.77 | 0.04 x 0.04 x 0.51 | [EST] |
+| Fwd lateral crossbar | 0.30 | 0 | 0.77 | 0.04 x 0.36 x 0.04 | [EST] |
+| Aft lateral crossbar | -0.40 | 0 | 0.77 | 0.04 x 0.36 x 0.04 | [EST] |
+| Port side rail | -0.05 | 0.18 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
+| Stbd side rail | -0.05 | -0.18 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
+| Center rail | 0 | 0 | 0.89 | 2.10 x 0.04 x 0.04 | [EST] |
+| Camera tower | 0.31 | 0.0 | 0.89→1.41 | 0.04 x 0.04 x 0.52 | [EST] |
 
-The z=0.77 crossbar height is from the measurement sketch. Uprights rise from
-the hull gunwale (~z=0.30) to this height. Short risers at x=0.30 and x=-0.40
-connect the crossbars to the center rail at z=0.89. The center rail overhangs
-the frame fore and aft, extending to x=±0.835 where the GNSS antennas mount.
-The camera mast extends above the forward-port upright to the camera bracket
+Uprights are **slanted inward** (~23°, roll=±0.40 rad): bottom at hull sides
+(y≈±0.38), top at y≈±0.18. The z=0.77 crossbar height is from the measurement
+sketch. Short risers at x=0.30 and x=-0.40 connect the crossbars to the center
+rail at z=0.89. The center rail runs nearly the full length of the boat (~2.1m,
+x=-1.05 to x=+1.05), extending well past the GNSS antennas (x=±0.835) on both
+ends — visible in the top view diagram (Fig 139). The camera tower is the factory
+WiFi mast on the centerline (y=0), extended upward for the OAK camera bracket
 at z=1.41.
 
 Visible in: Manual Figures 1 (System Overview, p9), 3 (Front View, p11),
@@ -65,22 +67,23 @@ Photos: BizzyBoat3.jpg, BizzyBoat6.jpg.
 
 ### 4x OAK-1 PoE Cameras
 
-Mounted at the top of the port-side mast upright on a 3D-printed bracket.
+Mounted at the top of the factory WiFi tower (extended) on a 3D-printed bracket.
 The four cameras are oriented at 90-degree intervals (forward, port,
-starboard, aft). All cameras are tilted ~10 degrees downward from horizontal.
+starboard, aft). All cameras are tilted ~5 degrees downward from horizontal.
 
 | Camera | x | y | z | yaw (rad) | pitch (rad) | Status |
 |--------|---|---|---|-----------|-------------|--------|
-| Forward | 0.31 | 0.0 | 1.41 | 0 | -0.17 | [MEAS] rough |
-| Port | 0.31 | 0.0 | 1.41 | 1.571 | -0.17 | [MEAS] rough |
-| Starboard | 0.31 | 0.0 | 1.41 | -1.571 | -0.17 | [MEAS] rough |
-| Aft | 0.31 | 0.0 | 1.41 | 3.142 | -0.17 | [MEAS] rough |
+| Forward | 0.31 | 0.0 | 1.41 | 0 | +0.09 | [MEAS] rough |
+| Port | 0.31 | 0.0 | 1.41 | 1.571 | +0.09 | [MEAS] rough |
+| Starboard | 0.31 | 0.0 | 1.41 | -1.571 | +0.09 | [MEAS] rough |
+| Aft | 0.31 | 0.0 | 1.41 | 3.142 | +0.09 | [MEAS] rough |
 
 **Notes**:
 - All four cameras share the same origin (center of the 3D-printed bracket)
   with different yaw orientations.
-- Down-tilt is ~10 degrees (0.17 rad) — exact angle TBD.
-- The bracket is at the top of the mast, slightly forward of amidships.
+- Down-tilt is ~5 degrees (+0.09 rad in URDF convention where positive
+  pitch = downward). Exact angle TBD.
+- The bracket is at the top of the WiFi tower on the centerline.
 
 ### 2x CUAV C-RTK 2HP GNSS Antennas
 
@@ -113,16 +116,14 @@ receiver near amidships.
 
 ### Factory USB Camera
 
-Mounted on the horizontal crossbar (the same rail the GNSS antennas are on),
-toward the forward end. Positioned at roughly the same height as the GNSS
-pucks.
+Mounted at the forward end of the center rail, ahead of the bow GNSS antenna.
 
 | Sensor | x | y | z | Status |
 |--------|---|---|---|--------|
-| USB camera | 0.55 | 0.0 | 0.89 | [EST] |
+| USB camera | 1.05 | 0.0 | 0.89 | [EST] |
 
 **Notes**:
-- On the center fore-aft rail, forward of the GNSS antennas, pointing forward.
+- At the forward end of the center rail, pointing forward.
 - Height matches the rail (~0.89m above hull floor).
 
 ### AutoNav Box (Cube Orange FCU + IMU)
@@ -181,7 +182,8 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 1. ~~**Mast crossbar orientation**~~: Fixed — URDF now models full rectangular
    cage frame with four uprights, lateral crossbars, side rails, and center rail.
 
-2. ~~**Center rail length**~~: Fixed — rail modeled as 1.67m box along x-axis.
+2. ~~**Center rail length**~~: Fixed — rail modeled as 2.10m box along x-axis,
+   extending well past GNSS antennas per top view diagram (Fig 139).
 
 3. **Sonar placement**: Bottom view (Fig 2) confirms sonar projector and receiver
    are near amidships on the hull bottom, consistent with current DeltaT position.
@@ -198,7 +200,7 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 |------|---------------|----------------|
 | Camera bracket height (z) | 1.41m [MEAS] rough | Refine with tape measure from hull floor to bracket center |
 | Camera bracket fore-aft (x) | 0.31m [MEAS] rough | Refine from base_link screw hole to bracket |
-| Camera down-tilt angle | 10 deg [EST] | Inclinometer on camera face, or CAD angle |
+| Camera down-tilt angle | 5 deg [EST] | Inclinometer on camera face, or CAD angle |
 | GNSS baseline | 1.67m [MEAS] rough | Refine center-to-center between pucks |
 | GNSS height (z) | 0.89m [MEAS] rough | Refine with tape measure from hull floor to puck top |
 | GNSS fore-aft (x) | ±0.835m [MEAS] rough | Refine from base_link screw hole to each puck |
@@ -206,7 +208,7 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 | AutoNav box dimensions | ~0.20 x 0.15 x 0.15 [EST] | Measure box length, width, height |
 | IMU position within AutoNav box | center [EST] | Locate Cube Orange inside box, measure offset from front-bottom |
 | IMU orientation | identity [EST] | Verify Cube Orange axes align with boat frame |
-| USB camera position | 0.55, 0, 0.89 [EST] | Measure from base_link reference along center rail |
+| USB camera position | 1.05, 0, 0.89 [EST] | At forward end of center rail — refine with measurement |
 | Frame upright fwd x | 0.30 [EST] | Measure from base_link to forward upright pair |
 | Frame upright aft x | -0.40 [EST] | Measure from base_link to aft upright pair |
 | Frame crossbar height (z) | 0.77 [EST] | Measure from hull floor to top of lateral crossbars |
