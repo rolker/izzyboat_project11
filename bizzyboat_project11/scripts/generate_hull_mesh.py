@@ -1,13 +1,27 @@
 #!/usr/bin/env python3
 """Generate an approximate EchoBoat 240 hull mesh as STL.
 
-The hull is modeled as a flat-bottomed monohull with a tapered bow
-and blunt stern. Dimensions are from the EchoBoat 240 manual:
+The hull is modeled as a flat-bottomed monohull with a tapered bow,
+blunt stern, and gunwale walls above the deck. Dimensions are from
+the EchoBoat 240 manual:
   Length: 2.40m, Beam: 0.90m, Hull depth: 0.30m
 
 The mesh origin is at the base_link reference point (center screw
 hole in the hull floor, z=0 at deck surface). The hull bottom is
-at z=-depth and the deck is at z=0.
+at z=-depth, the deck (interior floor) is at z=0, and the gunwale
+tops rise from ~0.25m amidships to ~0.35m at the bow (bow rake).
+
+Cross-section at each station is a U-shape (bathtub profile):
+
+    8---------3       outer gunwale (z=gwh)
+    |         |
+    7--     --4       inner gunwale (z=gwh)
+       |   |
+       6---5          inner deck (z=0)
+       |   |
+    9---------2       outer deck level (z=0)
+       |   |
+    0---------1       outer bottom (z=-depth)
 
 Usage:
     python3 generate_hull_mesh.py [output_path]
@@ -23,150 +37,126 @@ import trimesh
 
 
 def generate_hull():
-    """Create an approximate EchoBoat 240 hull mesh."""
+    """Create an approximate EchoBoat 240 hull mesh with gunwales."""
     # Hull dimensions (meters)
-    length = 2.40
     beam = 0.90
-    depth = 0.30
+    depth = 0.30        # hull below deck
+    wall = 0.04         # hull wall thickness
+    half_beam = beam / 2.0
 
     # base_link is roughly amidships — estimated 1.2m from bow, 1.2m from stern
-    bow_fwd = 1.20   # distance from origin to bow tip
-    stern_aft = 1.20  # distance from origin to transom
+    bow_fwd = 1.20
+    stern_aft = 1.20
 
     # Bow taper starts about 0.6m before the bow tip
     bow_taper_start = bow_fwd - 0.60
-    half_beam = beam / 2.0
-
-    # Build hull as a set of cross-sections (waterlines), then loft
-    # We'll use a simpler approach: construct the hull from vertices
-    # defining the outline at several stations along the length
 
     # Stations from stern to bow (x coordinates)
-    stations = [
-        -stern_aft,        # transom (stern)
-        -stern_aft + 0.10, # just forward of transom
-        -0.30,             # aft of amidships
-        0.0,               # amidships (origin)
-        0.30,              # forward of amidships
-        bow_taper_start,   # bow taper begins
-        bow_fwd - 0.30,    # mid-taper
-        bow_fwd - 0.10,    # near bow
-        bow_fwd,           # bow tip
+    stations_x = [
+        -stern_aft,         # transom (stern)
+        -stern_aft + 0.10,  # just forward of transom
+        -0.30,              # aft of amidships
+        0.0,                # amidships (origin)
+        0.30,               # forward of amidships
+        bow_taper_start,    # bow taper begins
+        bow_fwd - 0.30,     # mid-taper
+        bow_fwd - 0.10,     # near bow
+        bow_fwd,            # bow tip
     ]
 
     # Half-beam at each station (hull narrows toward bow)
     half_beams = [
-        half_beam * 0.95,  # stern is slightly narrower
+        half_beam * 0.95,   # stern is slightly narrower
         half_beam,
         half_beam,
         half_beam,
         half_beam,
-        half_beam,         # taper starts
-        half_beam * 0.70,  # narrowing
-        half_beam * 0.35,  # narrow
-        0.02,              # bow tip (nearly pointed)
+        half_beam,          # taper starts
+        half_beam * 0.70,   # narrowing
+        half_beam * 0.35,   # narrow
+        0.02,               # bow tip (nearly pointed)
     ]
 
-    # Build vertices: for each station, create 4 corners
-    # (port-bottom, starboard-bottom, starboard-top, port-top)
-    vertices = []
-    for x, hb in zip(stations, half_beams):
-        vertices.extend([
-            [x, hb, -depth],      # port bottom
-            [x, -hb, -depth],     # starboard bottom
-            [x, -hb, 0.0],       # starboard top (deck, z=0)
-            [x, hb, 0.0],        # port top (deck, z=0)
-        ])
+    # Gunwale height above deck (z=0) at each station — bow rake
+    # From photos and side-view diagrams, the gunwale rises toward the bow.
+    gunwale_heights = [
+        0.25,   # stern transom
+        0.25,
+        0.25,
+        0.25,   # amidships
+        0.25,
+        0.27,   # starting to rise toward bow
+        0.30,
+        0.33,
+        0.35,   # bow tip (highest point)
+    ]
 
-    # Also add bottom vertices with slight V-shape for realism
-    # (the hull has a shallow V bottom, deeper at center)
-    # We'll keep it simple with flat bottom for now
+    n_stations = len(stations_x)
+    vpn = 10  # vertices per station (U-shaped cross-section)
+    vertices = []
+
+    for i in range(n_stations):
+        x = stations_x[i]
+        hb = half_beams[i]
+        gwh = gunwale_heights[i]
+        hbi = max(hb - wall, 0.001)  # inner half-beam (clamped for narrow bow)
+
+        # 10 vertices per station forming U-shaped cross-section
+        vertices.extend([
+            [x,  hb,   -depth],  # 0: outer port bottom
+            [x, -hb,   -depth],  # 1: outer stbd bottom
+            [x, -hb,    0.0],    # 2: outer stbd at deck level
+            [x, -hb,    gwh],    # 3: outer stbd gunwale top
+            [x, -hbi,   gwh],    # 4: inner stbd gunwale top
+            [x, -hbi,   0.0],    # 5: inner stbd deck
+            [x,  hbi,   0.0],    # 6: inner port deck
+            [x,  hbi,   gwh],    # 7: inner port gunwale top
+            [x,  hb,    gwh],    # 8: outer port gunwale top
+            [x,  hb,    0.0],    # 9: outer port at deck level
+        ])
 
     vertices = np.array(vertices)
     faces = []
 
-    n_stations = len(stations)
+    # Longitudinal faces between adjacent stations.
+    # Each edge around the 10-vertex perimeter generates a quad strip.
+    perimeter_edges = [
+        (0, 1),  # outer bottom
+        (1, 2),  # outer stbd below deck
+        (2, 3),  # outer stbd above deck
+        (3, 4),  # gunwale cap stbd
+        (4, 5),  # inner stbd wall
+        (5, 6),  # deck floor
+        (6, 7),  # inner port wall
+        (7, 8),  # gunwale cap port
+        (8, 9),  # outer port above deck
+        (9, 0),  # outer port below deck
+    ]
 
-    # Side faces between adjacent stations
     for i in range(n_stations - 1):
-        base = i * 4
-        next_base = (i + 1) * 4
-        for j in range(4):
-            j_next = (j + 1) % 4
-            # Two triangles per quad
-            v0 = base + j
-            v1 = base + j_next
-            v2 = next_base + j_next
-            v3 = next_base + j
-            faces.append([v0, v1, v2])
-            faces.append([v0, v2, v3])
+        b = i * vpn
+        nb = (i + 1) * vpn
+        for e0, e1 in perimeter_edges:
+            faces.append([b + e0, b + e1, nb + e1])
+            faces.append([b + e0, nb + e1, nb + e0])
 
-    # Stern transom face (close the back)
-    faces.append([0, 1, 2])
-    faces.append([0, 2, 3])
+    # End caps: stern and bow are solid walls (outer rectangle only).
+    # Stern transom (facing -x)
+    b = 0
+    faces.append([b + 0, b + 8, b + 1])
+    faces.append([b + 1, b + 8, b + 3])
 
-    # Bow tip face (close the front) — last station
-    bow_base = (n_stations - 1) * 4
-    faces.append([bow_base, bow_base + 2, bow_base + 1])
-    faces.append([bow_base, bow_base + 3, bow_base + 2])
+    # Bow tip (facing +x)
+    b = (n_stations - 1) * vpn
+    faces.append([b + 0, b + 1, b + 8])
+    faces.append([b + 1, b + 3, b + 8])
 
     faces = np.array(faces)
     hull_mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
     hull_mesh.fix_normals()
+    hull_mesh.merge_vertices()
 
-    # Add deck (top face) — close the top between all stations
-    deck_verts = []
-    deck_faces = []
-    vert_offset = len(hull_mesh.vertices)
-
-    for i in range(n_stations):
-        base = i * 4
-        # Top vertices are indices 2 (starboard) and 3 (port)
-        deck_verts.append(vertices[base + 3])  # port top
-        deck_verts.append(vertices[base + 2])  # starboard top
-
-    deck_verts = np.array(deck_verts)
-
-    for i in range(n_stations - 1):
-        p0 = vert_offset + i * 2       # port current
-        s0 = vert_offset + i * 2 + 1   # starboard current
-        p1 = vert_offset + (i + 1) * 2     # port next
-        s1 = vert_offset + (i + 1) * 2 + 1  # starboard next
-        deck_faces.append([p0, s0, s1])
-        deck_faces.append([p0, s1, p1])
-
-    # Bottom face
-    bottom_verts = []
-    bottom_offset = vert_offset + len(deck_verts)
-
-    for i in range(n_stations):
-        base = i * 4
-        bottom_verts.append(vertices[base])      # port bottom
-        bottom_verts.append(vertices[base + 1])   # starboard bottom
-
-    bottom_verts = np.array(bottom_verts)
-    bottom_faces = []
-
-    for i in range(n_stations - 1):
-        p0 = bottom_offset + i * 2
-        s0 = bottom_offset + i * 2 + 1
-        p1 = bottom_offset + (i + 1) * 2
-        s1 = bottom_offset + (i + 1) * 2 + 1
-        bottom_faces.append([p0, s1, s0])
-        bottom_faces.append([p0, p1, s1])
-
-    all_verts = np.vstack([hull_mesh.vertices, deck_verts, bottom_verts])
-    all_faces = np.vstack([
-        hull_mesh.faces,
-        np.array(deck_faces),
-        np.array(bottom_faces),
-    ])
-
-    complete_hull = trimesh.Trimesh(vertices=all_verts, faces=all_faces)
-    complete_hull.fix_normals()
-    complete_hull.merge_vertices()
-
-    return complete_hull
+    return hull_mesh
 
 
 def main():

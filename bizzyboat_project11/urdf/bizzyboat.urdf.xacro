@@ -40,32 +40,86 @@
       <material name="bumper_black"/>
     </visual>
 
-    <!-- Mast uprights (two vertical stainless steel tubes).
-         Port upright extends to camera bracket at top (~z=1.41).
-         Starboard upright extends to center rail height (~z=0.89). -->
-    <visual name="mast_port">
-      <geometry>
-        <box size="0.04 0.04 1.11"/>
-      </geometry>
-      <origin xyz="0.15 0.35 0.855"/>
+    <!-- ── Mast frame ──
+         Rectangular cage visible in photos: four uprights at hull
+         corners, lateral crossbars fore and aft, fore-aft side rails,
+         risers to center rail, and a camera mast extension.
+         Uprights rise from hull gunwale (~z=0.30) to crossbar
+         height (z=0.77, from measurement sketch). -->
+
+    <!-- Four uprights (hull gunwale to crossbar height) -->
+    <visual name="mast_fwd_port">
+      <geometry><box size="0.04 0.04 0.47"/></geometry>
+      <origin xyz="0.30 0.35 0.535"/>
       <material name="metal_gray"/>
     </visual>
-    <visual name="mast_starboard">
-      <geometry>
-        <box size="0.04 0.04 0.59"/>
-      </geometry>
-      <origin xyz="0.15 -0.35 0.595"/>
+    <visual name="mast_fwd_stbd">
+      <geometry><box size="0.04 0.04 0.47"/></geometry>
+      <origin xyz="0.30 -0.35 0.535"/>
+      <material name="metal_gray"/>
+    </visual>
+    <visual name="mast_aft_port">
+      <geometry><box size="0.04 0.04 0.47"/></geometry>
+      <origin xyz="-0.40 0.35 0.535"/>
+      <material name="metal_gray"/>
+    </visual>
+    <visual name="mast_aft_stbd">
+      <geometry><box size="0.04 0.04 0.47"/></geometry>
+      <origin xyz="-0.40 -0.35 0.535"/>
       <material name="metal_gray"/>
     </visual>
 
-    <!-- Fore-aft center rail along y=0, supported by the two uprights.
+    <!-- Lateral crossbars (port-to-starboard at top of uprights) -->
+    <visual name="crossbar_fwd">
+      <geometry><box size="0.04 0.70 0.04"/></geometry>
+      <origin xyz="0.30 0.0 0.77"/>
+      <material name="metal_gray"/>
+    </visual>
+    <visual name="crossbar_aft">
+      <geometry><box size="0.04 0.70 0.04"/></geometry>
+      <origin xyz="-0.40 0.0 0.77"/>
+      <material name="metal_gray"/>
+    </visual>
+
+    <!-- Fore-aft side rails (connecting forward and aft bents) -->
+    <visual name="rail_port">
+      <geometry><box size="0.70 0.04 0.04"/></geometry>
+      <origin xyz="-0.05 0.35 0.77"/>
+      <material name="metal_gray"/>
+    </visual>
+    <visual name="rail_stbd">
+      <geometry><box size="0.70 0.04 0.04"/></geometry>
+      <origin xyz="-0.05 -0.35 0.77"/>
+      <material name="metal_gray"/>
+    </visual>
+
+    <!-- Risers from crossbars to center rail height -->
+    <visual name="riser_fwd">
+      <geometry><box size="0.04 0.04 0.12"/></geometry>
+      <origin xyz="0.30 0.0 0.83"/>
+      <material name="metal_gray"/>
+    </visual>
+    <visual name="riser_aft">
+      <geometry><box size="0.04 0.04 0.12"/></geometry>
+      <origin xyz="-0.40 0.0 0.83"/>
+      <material name="metal_gray"/>
+    </visual>
+
+    <!-- Fore-aft center rail along y=0 (z=0.89).
          GNSS antennas mount at the forward and aft ends; USB camera
-         and other equipment mount between them. -->
+         and other equipment mount between them. Overhangs the frame
+         to reach the GNSS positions at x=±0.835. -->
     <visual name="center_rail">
-      <geometry>
-        <box size="1.67 0.04 0.04"/>
-      </geometry>
+      <geometry><box size="1.67 0.04 0.04"/></geometry>
       <origin xyz="0.0 0.0 0.89"/>
+      <material name="metal_gray"/>
+    </visual>
+
+    <!-- Camera mast (vertical extension above forward-port upright
+         to camera bracket at z=1.41) -->
+    <visual name="camera_mast">
+      <geometry><box size="0.04 0.04 0.64"/></geometry>
+      <origin xyz="0.31 0.35 1.09"/>
       <material name="metal_gray"/>
     </visual>
   </link>

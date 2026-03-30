@@ -36,21 +36,32 @@ physically measured. Update this document as measurements are taken.
 
 ### Mast Structure
 
-The mast consists of two vertical stainless steel uprights bolted to the hull
-sides, connected at the top by a **single fore-aft center rail** running down the
-centerline (y=0). This is NOT a port-to-starboard crossbar — the rail runs
-bow-to-stern along the center of the boat. The GNSS antennas mount at the
-forward and aft ends of this center rail; the USB camera and other equipment
-also mount on it.
+The mast is a **rectangular cage frame** with four uprights (two per side),
+lateral crossbars, fore-aft side rails, and a fore-aft center rail on top.
 
-Estimated mast height is ~1.1m above the hull floor (based on air draft of
-1.32m minus hull height above waterline).
+| Component | x | y | z | Size (x,y,z) | Status |
+|-----------|---|---|---|--------------|--------|
+| Fwd-port upright | 0.30 | 0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
+| Fwd-stbd upright | 0.30 | -0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
+| Aft-port upright | -0.40 | 0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
+| Aft-stbd upright | -0.40 | -0.35 | 0.30→0.77 | 0.04 x 0.04 x 0.47 | [EST] |
+| Fwd lateral crossbar | 0.30 | 0 | 0.77 | 0.04 x 0.70 x 0.04 | [EST] |
+| Aft lateral crossbar | -0.40 | 0 | 0.77 | 0.04 x 0.70 x 0.04 | [EST] |
+| Port side rail | -0.05 | 0.35 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
+| Stbd side rail | -0.05 | -0.35 | 0.77 | 0.70 x 0.04 x 0.04 | [EST] |
+| Center rail | 0 | 0 | 0.89 | 1.67 x 0.04 x 0.04 | [MEAS] rough |
+| Camera mast | 0.31 | 0.35 | 0.77→1.41 | 0.04 x 0.04 x 0.64 | [EST] |
+
+The z=0.77 crossbar height is from the measurement sketch. Uprights rise from
+the hull gunwale (~z=0.30) to this height. Short risers at x=0.30 and x=-0.40
+connect the crossbars to the center rail at z=0.89. The center rail overhangs
+the frame fore and aft, extending to x=±0.835 where the GNSS antennas mount.
+The camera mast extends above the forward-port upright to the camera bracket
+at z=1.41.
 
 Visible in: Manual Figures 1 (System Overview, p9), 3 (Front View, p11),
 4 (Side View, p12), 139 (Top View Diagram, p115).
-
-The URDF models this as a fore-aft box along y=0, spanning ~1.67m from the
-forward GNSS antenna to the aft GNSS antenna.
+Photos: BizzyBoat3.jpg, BizzyBoat6.jpg.
 
 ### 4x OAK-1 PoE Cameras
 
@@ -167,8 +178,8 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 
 ### URDF Corrections Identified from Diagrams
 
-1. ~~**Mast crossbar orientation**~~: Fixed — URDF now has a fore-aft center rail
-   along y=0, spanning ~1.67m between the GNSS antennas.
+1. ~~**Mast crossbar orientation**~~: Fixed — URDF now models full rectangular
+   cage frame with four uprights, lateral crossbars, side rails, and center rail.
 
 2. ~~**Center rail length**~~: Fixed — rail modeled as 1.67m box along x-axis.
 
@@ -177,6 +188,9 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 
 4. **AutoNav box**: Confirmed at stern inside hull (Figs 4, 6). Mechanical diagram
    (Fig 137) may have exact dimensions — needs closer reading of dimension callouts.
+
+5. **Frame upright positions**: The four upright x-positions (0.30 and -0.40)
+   are estimated from photos. Refine with measurements from base_link.
 
 ## What Needs Measurement
 
@@ -193,5 +207,9 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 | IMU position within AutoNav box | center [EST] | Locate Cube Orange inside box, measure offset from front-bottom |
 | IMU orientation | identity [EST] | Verify Cube Orange axes align with boat frame |
 | USB camera position | 0.55, 0, 0.89 [EST] | Measure from base_link reference along center rail |
+| Frame upright fwd x | 0.30 [EST] | Measure from base_link to forward upright pair |
+| Frame upright aft x | -0.40 [EST] | Measure from base_link to aft upright pair |
+| Frame crossbar height (z) | 0.77 [EST] | Measure from hull floor to top of lateral crossbars |
+| Hull gunwale height (z) | 0.30 [EST] | Measure from hull floor to top of hull side |
 | base_link to bow distance | ~1.2m [EST] | Measure from screw hole to bow tip |
 | base_link to stern distance | ~1.2m [EST] | Measure from screw hole to transom |
