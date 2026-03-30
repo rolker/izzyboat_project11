@@ -37,9 +37,21 @@ physically measured. Update this document as measurements are taken.
 ### Mast Structure
 
 The mast consists of two vertical stainless steel uprights bolted to the hull
-sides, connected by a horizontal aluminum crossbar. Estimated mast height is
-~1.1m above the hull floor (based on air draft of 1.32m minus hull height
-above waterline).
+sides, connected at the top by a **single fore-aft center rail** running down the
+centerline (y=0). This is NOT a port-to-starboard crossbar — the rail runs
+bow-to-stern along the center of the boat. The GNSS antennas mount at the
+forward and aft ends of this center rail; the USB camera and other equipment
+also mount on it.
+
+Estimated mast height is ~1.1m above the hull floor (based on air draft of
+1.32m minus hull height above waterline).
+
+Visible in: Manual Figures 1 (System Overview, p9), 3 (Front View, p11),
+4 (Side View, p12), 139 (Top View Diagram, p115).
+
+**URDF correction needed**: The current URDF models the crossbar as a lateral
+(port-to-starboard) box. It should be a fore-aft rail along y=0, spanning
+roughly from the forward GNSS antenna to the aft GNSS antenna (~1.67m long).
 
 ### 4x OAK-1 PoE Cameras
 
@@ -49,10 +61,10 @@ starboard, aft). All cameras are tilted ~10 degrees downward from horizontal.
 
 | Camera | x | y | z | yaw (rad) | pitch (rad) | Status |
 |--------|---|---|---|-----------|-------------|--------|
-| Forward | 0.15 | 0.0 | 1.25 | 0 | -0.17 | [EST] |
-| Port | 0.15 | 0.0 | 1.25 | 1.571 | -0.17 | [EST] |
-| Starboard | 0.15 | 0.0 | 1.25 | -1.571 | -0.17 | [EST] |
-| Aft | 0.15 | 0.0 | 1.25 | 3.142 | -0.17 | [EST] |
+| Forward | 0.31 | 0.0 | 1.41 | 0 | -0.17 | [MEAS] rough |
+| Port | 0.31 | 0.0 | 1.41 | 1.571 | -0.17 | [MEAS] rough |
+| Starboard | 0.31 | 0.0 | 1.41 | -1.571 | -0.17 | [MEAS] rough |
+| Aft | 0.31 | 0.0 | 1.41 | 3.142 | -0.17 | [MEAS] rough |
 
 **Notes**:
 - All four cameras share the same origin (center of the 3D-printed bracket)
@@ -62,19 +74,17 @@ starboard, aft). All cameras are tilted ~10 degrees downward from horizontal.
 
 ### 2x CUAV C-RTK 2HP GNSS Antennas
 
-Black puck antennas in white mounting brackets, one at each end of the
-horizontal crossbar. The baseline (distance between antennas) spans nearly
-the full crossbar width.
+Black puck antennas in white mounting brackets, fore and aft.
 
 | Antenna | x | y | z | Status |
 |---------|---|---|---|--------|
-| Port | 0.15 | 0.40 | 1.15 | [EST] |
-| Starboard | 0.15 | -0.40 | 1.15 | [EST] |
+| Forward | 0.835 | 0.0 | 0.89 | [MEAS] rough |
+| Aft | -0.835 | 0.0 | 0.89 | [MEAS] rough |
 
 **Notes**:
-- Baseline ~0.80m (crossbar width).
-- The crossbar is slightly below the camera bracket height.
+- Baseline ~1.67m (fore-aft separation).
 - GNSS antenna phase center is at the top surface of the puck.
+- Positions are rough measurements from base_link (center screw hole).
 
 ### Imagenex DeltaT Sonar
 
@@ -84,7 +94,7 @@ receiver near amidships.
 
 | Sensor | x | y | z | roll (rad) | yaw (rad) | Status |
 |--------|---|---|---|------------|-----------|--------|
-| DeltaT | -0.15 | 0.0 | -0.15 | 3.142 | 3.142 | [EST] |
+| DeltaT | -0.23 | 0.0 | -0.18 | 3.142 | 3.142 | [MEAS] rough |
 
 **Notes**:
 - Orientation is flipped (roll=pi, yaw=pi) matching the IzzyBoat convention
@@ -102,8 +112,28 @@ pucks.
 | USB camera | 0.55 | 0.0 | 1.15 | [EST] |
 
 **Notes**:
-- On the crossbar rail, forward of the GNSS antennas, pointing forward.
-- Height matches the crossbar (~1.15m above hull floor).
+- On the center fore-aft rail, forward of the GNSS antennas, pointing forward.
+- Height matches the rail (~1.15m above hull floor).
+
+### AutoNav Box (Cube Orange FCU + IMU)
+
+The AutoNav box is behind a panel at the stern of the boat. It contains the
+Cube Orange flight controller with the onboard IMU. Visible in Manual Figures
+4 (Side View, p12), 6 (Internal View With Equipment, p14), and 137 (Side
+View Diagram, p113). The box sits inside the stern compartment, aft of the
+main hatch area.
+
+| Component | x | y | z | Status |
+|-----------|---|---|---|--------|
+| Box front-bottom | -0.875 | 0.0 | -0.01 | [MEAS] rough |
+| IMU (est. center of box) | -0.975 | 0.0 | 0.065 | [EST] |
+
+**Notes**:
+- Front-bottom of the box is the measured reference point.
+- Box dimensions ~0.20 x 0.15 x 0.15m estimated from photos. The mechanical
+  diagrams (Fig 137) may provide better dimensions — needs closer inspection.
+- The Cube Orange IMU position within the box needs refinement.
+- The IMU orientation relative to base_link needs verification.
 
 ## Coordinate Frame Conventions
 
@@ -114,19 +144,60 @@ Each camera has two TF frames:
   Required by ROS image processing pipeline.
 
 GNSS antennas publish to their respective frames; the dual-antenna heading
-is computed from the baseline vector between `bizzy/gnss_port` and
-`bizzy/gnss_starboard`.
+is computed from the baseline vector between `bizzy/gnss_forward` and
+`bizzy/gnss_aft`.
+
+## Manual Diagram Analysis
+
+Extracted pages from the EchoBoat 240 Manual V (PDF offset = 5; document page
+N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.png`.
+
+### Key Figures Referenced
+
+| Figure | Doc Page | Description |
+|--------|----------|-------------|
+| 1  | 9   | System Overview — 3/4 perspective showing single center rail, GNSS antennas, cameras |
+| 2  | 10  | Bottom View — sonar projector/receiver placement, tracking fins, SVP tube |
+| 3  | 11  | Front View — mast uprights with center rail, antenna, equipment |
+| 4  | 12  | Side View — both sides; shows AutoNav box, receiver box, sonar topside |
+| 5  | 13  | Internal View — top-down and side cross-sections with dimensions |
+| 6  | 14  | Internal View With Equipment — AutoNav, PC, CAA module, T50 sonar, batteries |
+| 137 | 113 | Side View Diagram — mechanical drawing with dimension callouts |
+| 138 | 114 | Front View Diagram — width/height dimensions |
+| 139 | 115 | Top View Diagram — plan view showing overall layout |
+
+### URDF Corrections Identified from Diagrams
+
+1. **Mast crossbar orientation**: The current URDF has a lateral (port-to-starboard)
+   crossbar. The actual boat has a **fore-aft center rail** along y=0. The GNSS
+   antennas mount at the fore and aft ends of this rail. The two vertical uprights
+   on port and starboard sides are correct, but they support the center rail rather
+   than a lateral crossbar.
+
+2. **Center rail length**: The rail spans roughly from the forward GNSS antenna
+   (x≈0.835) to the aft GNSS antenna (x≈-0.835), approximately 1.67m long.
+   The USB camera and other equipment mount between the antennas on this rail.
+
+3. **Sonar placement**: Bottom view (Fig 2) confirms sonar projector and receiver
+   are near amidships on the hull bottom, consistent with current DeltaT position.
+
+4. **AutoNav box**: Confirmed at stern inside hull (Figs 4, 6). Mechanical diagram
+   (Fig 137) may have exact dimensions — needs closer reading of dimension callouts.
 
 ## What Needs Measurement
 
 | Item | Current value | How to measure |
 |------|---------------|----------------|
-| Camera bracket height (z) | 1.25m [EST] | Tape measure from hull floor to bracket center |
-| Camera bracket fore-aft (x) | 0.15m [EST] | Measure from base_link screw hole to bracket |
+| Camera bracket height (z) | 1.41m [MEAS] rough | Refine with tape measure from hull floor to bracket center |
+| Camera bracket fore-aft (x) | 0.31m [MEAS] rough | Refine from base_link screw hole to bracket |
 | Camera down-tilt angle | 10 deg [EST] | Inclinometer on camera face, or CAD angle |
-| GNSS baseline | 0.80m [EST] | Measure center-to-center between pucks |
-| GNSS height (z) | 1.15m [EST] | Tape measure from hull floor to puck top |
-| DeltaT position (x, z) | -0.15, -0.15 [EST] | Measure from screw hole; depth below hull |
+| GNSS baseline | 1.67m [MEAS] rough | Refine center-to-center between pucks |
+| GNSS height (z) | 0.89m [MEAS] rough | Refine with tape measure from hull floor to puck top |
+| GNSS fore-aft (x) | ±0.835m [MEAS] rough | Refine from base_link screw hole to each puck |
+| DeltaT position (x, z) | -0.23, -0.18 [MEAS] rough | Refine from screw hole; depth below hull |
+| AutoNav box dimensions | ~0.20 x 0.15 x 0.15 [EST] | Measure box length, width, height |
+| IMU position within AutoNav box | center [EST] | Locate Cube Orange inside box, measure offset from front-bottom |
+| IMU orientation | identity [EST] | Verify Cube Orange axes align with boat frame |
 | USB camera position | 0.55, 0, 1.15 [EST] | Measure from base_link reference along crossbar |
 | base_link to bow distance | ~1.2m [EST] | Measure from screw hole to bow tip |
 | base_link to stern distance | ~1.2m [EST] | Measure from screw hole to transom |
