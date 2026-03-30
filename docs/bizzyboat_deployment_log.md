@@ -20,10 +20,11 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Agent assigned. Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs) |
+| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Core launch tested on gabby. Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF, open), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs, done) |
 | [CCOMJHC/ccomjhc_project11#6](https://github.com/CCOMJHC/ccomjhc_project11/issues/6) | Site-specific config | not started | |
 | [unh_echoboats_project11#23](https://github.com/rolker/unh_echoboats_project11/issues/23) | Sensors layer (OAK + DeltaT) | **done** | PR [#24](https://github.com/rolker/unh_echoboats_project11/pull/24) merged |
-| [CCOMJHC/ccomjhc_project11#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) | Operator station manifest (salmon) | **in progress** | Agent assigned, tmux session to salmon |
+| [CCOMJHC/ccomjhc_project11#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) | DHCP reservations for boat devices | **done** | PR [#12](https://github.com/CCOMJHC/ccomjhc_project11/pull/12) merged. All 6 devices verified reachable after power cycle |
+| [CCOMJHC/ccomjhc_project11#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) | Operator station manifest (salmon) | **done** | PRs [#13](https://github.com/CCOMJHC/ccomjhc_project11/pull/13), [#14](https://github.com/CCOMJHC/ccomjhc_project11/pull/14) merged |
 | [ros2_agent_workspace#423](https://github.com/rolker/ros2_agent_workspace/issues/423) | Git-bug/offline agent workflow | not started | |
 | [unh_echoboats_project11#18](https://github.com/rolker/unh_echoboats_project11/issues/18) | Deployment guide | not started | |
 
@@ -171,3 +172,21 @@ Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
 - **Finned enclosures**: gabby (Linux, Neousys Nuvo 9160GC) on right, Windows machine on left
 - Reference point sticker placed on hull for URDF measurements
 - Photos saved in `~/Downloads/2026-03-27_BizzyBoat*.jpg` (7 photos total)
+
+### 2026-03-30
+
+#### DHCP reservation verification
+
+- Boat powered up — all computers, switches, and cameras power cycled
+- Verified all DHCP reservations from [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) are working:
+  - mercat (192.168.20.8) — confirmed by Roland
+  - kvm (192.168.20.50) — ping from gabby: 0.7ms
+  - bizzy-oak-1 (192.168.20.9) — ping from gabby: 0.2ms
+  - bizzy-oak-2 (192.168.20.10) — ping from gabby: 0.9ms
+  - bizzy-oak-3 (192.168.20.11) — ping from gabby: 0.8ms
+  - bizzy-oak-4 (192.168.20.12) — ping from gabby: 0.9ms
+- PR [CCOMJHC#12](https://github.com/CCOMJHC/ccomjhc_project11/pull/12) merged, issue [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) closed
+
+#### Operator station manifest complete
+
+- [CCOMJHC#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) closed — PRs [#13](https://github.com/CCOMJHC/ccomjhc_project11/pull/13) (manifest) and [#14](https://github.com/CCOMJHC/ccomjhc_project11/pull/14) (docs) merged on 2026-03-27
