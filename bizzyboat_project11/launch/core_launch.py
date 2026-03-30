@@ -131,31 +131,32 @@ def generate_launch_description():
                         ])
                     )
                 ),
-
-                # URDF / robot state publisher
-                IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(
-                        PathJoinSubstitution([
-                            FindPackageShare('bizzyboat_project11'),
-                            'launch',
-                            'publish_state_launch.py'
-                        ])
-                    ),
-                    launch_arguments={
-                        'namespace': namespace
-                    }.items()
-                ),
             ]
         ),
 
-        # NTRIP (outside namespace group — matches izzyboat pattern)
+        # URDF / robot state publisher (outside namespace group —
+        # publish_state_launch.py sets namespace on nodes directly)
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([
                     FindPackageShare('bizzyboat_project11'),
                     'launch',
-                    'ntrip_launch.py'
+                    'publish_state_launch.py'
                 ])
             ),
+            launch_arguments={
+                'namespace': namespace
+            }.items()
         ),
+
+        # NTRIP — disabled until credentials are configured
+        # IncludeLaunchDescription(
+        #     PythonLaunchDescriptionSource(
+        #         PathJoinSubstitution([
+        #             FindPackageShare('bizzyboat_project11'),
+        #             'launch',
+        #             'ntrip_launch.py'
+        #         ])
+        #     ),
+        # ),
     ])
