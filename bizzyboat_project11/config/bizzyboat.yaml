@@ -76,11 +76,11 @@
             - usb_camera
             - usb_camera_info
             topics:
-              command_response: {source: project11/response}
+              command_response: {source: marine/response}
               diagnostics: {source: /diagnostics}
               global_costmap: {source: global_costmap/costmap, period: 3.0}
-              heartbeat: {source: project11/heartbeat}
-              heartbeat_nav: {source: project11/status/mission_manager}
+              heartbeat: {source: marine/heartbeat}
+              heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
@@ -98,7 +98,7 @@
               deltat_grid: {source: sensors/deltat/grid}
               battery: {source: /bizzy/mavros/battery}
               plan: {source: plan}
-              platforms: {source: /project11/platforms}
+              platforms: {source: /marine/platforms}
               mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
@@ -127,15 +127,15 @@
             - tf
             - tf_static
             topics:
-              command_response: {source: project11/response}
+              command_response: {source: marine/response}
               diagnostics: {source: /diagnostics}
-              heartbeat: {source: project11/heartbeat}
-              heartbeat_nav: {source: project11/status/mission_manager}
+              heartbeat: {source: marine/heartbeat}
+              heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
               odom: {source: odom}
               battery: {source: /bizzy/mavros/battery}
               plan: {source: plan}
-              platforms: {source: /project11/platforms}
+              platforms: {source: /marine/platforms}
               mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
@@ -156,8 +156,8 @@
       - /bizzy/mavros/imu/data
       - /bizzy/mavros/state
       - /bizzy/odom
-      - /bizzy/project11/heartbeat
-      - /bizzy/project11/status/mission_manager
+      - /bizzy/marine/heartbeat
+      - /bizzy/marine/status/mission_manager
       - /bizzy/robot_description
       - /bizzy/sensors/cameras/oak_forward/rgb/camera_info
       - /bizzy/sensors/cameras/oak_forward/rgb/image_raw/compressed
@@ -169,7 +169,7 @@
       - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
-      - /project11/platforms
+      - /marine/platforms
       - /rosout
       - /tf
       - /tf_static

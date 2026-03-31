@@ -105,6 +105,28 @@ RC override mode (`rc_mode=True`) was a ROS1→ROS2 transition workaround and sh
 - Steering servo shuddered slightly while centered — likely normal servo hunting
 - Conclusion: mission must be cleared before entering GUIDED for velocity control
 
+### 2026-03-31 — Step 2: operator launch on salmon
+- Operator launch (`operator_core_launch.py`) started on salmon in tmux session `operator`
+- joy_to_helm configured: throttle=axis 1, rudder=axis 3, manual=btn 0, standby=btn 1, autonomous=btn 2
+- Joystick connected at `/dev/input/js0`
+- Helm messages reaching gabby via UDP bridge — confirmed `/bizzy/piloting_mode/manual/helm`
+  - Note: messages only appeared after pressing manual mode button on joystick (expected)
+
+### 2026-03-31 — Topic naming mismatches found
+- **UDP bridge config** (`bizzyboat.yaml`, `operator.yaml`): stale `project11/` topic references
+  - `project11/heartbeat` → should be `marine/heartbeat`
+  - `project11/response` → should be `marine/response`
+  - `project11/status/mission_manager` → should be `marine/status/mission_manager`
+  - `/project11/platforms` → should be `/marine/platforms`
+  - `/bizzy/project11/command` → should be `/bizzy/marine/command`
+  - Logger references also updated
+  - **Fixed** in both config files
+- **echo_helm** (`seafloor_echoboat_project11`): uses `marine_autonomy/` prefix instead of `marine/`
+  - Subscribes to `marine_autonomy/control/cmd_vel` — helm_manager publishes to `marine/control/cmd_vel`
+  - Publishes to `marine_autonomy/status/helm` — helm_manager expects `marine/status/helm`
+  - This means helm_manager → echo_helm path is broken (our Step 1 test worked because we published directly)
+  - **Fix needed** in `echo_helm_node.cpp` in `seafloor_echoboat_project11` repo
+
 ### 2026-03-31 — Research digest review
 - `setpoint_velocity` with `mav_frame: "BODY_NED"` confirmed correct for BizzyBoat (in `echoboat_project11/config/mavros.yaml`)
   - `twist.linear.x` = forward speed, `twist.angular.z` = yaw rate, body frame
@@ -118,6 +140,13 @@ RC override mode (`rc_mode=True`) was a ROS1→ROS2 transition workaround and sh
 - Props responded correctly, script returned to standby/MANUAL automatically
 - Note: standby state check in script may catch transition mid-flight (showed GUIDED briefly before settling to MANUAL)
 - **Step 1 complete** — echo_helm + mavros control path verified
+
+### 2026-03-31 — Additional control tests (user-driven)
+- **Turn left in place** (`test_cmd_vel.sh 0.0 0.5 3`): steering actuated to turn, props did not spin — expected for yaw-only command
+- **Slow forward** (`test_cmd_vel.sh 0.1 0.0 10`): props started turning
+- **RC emergency stop**: during 10s forward test, flicked mode switch on RC controller to MANUAL — props stopped immediately
+  - Confirms RC controller can override GUIDED mode at any time as an emergency stop
+  - This is the primary safety mechanism for field operations
 
 ## Notes
 - **All tmux commands require user approval before sending** — violated once during this session (sent `ls` to check built layers without asking). Must show every command and get explicit approval, no exceptions.
