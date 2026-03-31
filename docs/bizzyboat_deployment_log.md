@@ -209,6 +209,15 @@ Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
 - DNS `gabby_bb` → 192.168.20.5, 1.97ms — correct. Operator network routes to 192.168.20.0/24 via WiFi bridge by default.
 - `udp_bridge` — built in `core_ws/install/`
 - `bizzyboat_project11` — **not built** on salmon. Package lives on `feature/issue-13` (unmerged). Need to get this branch checked out and built on salmon.
+- Agent flagged that `gabby_bb` resolved to the LAN IP rather than a WiFi bridge IP — worth verifying the routing path is optimal.
+
+**UDP bridge misconception**: Both the gabby and salmon agents initially reported that `operator.yaml` needed image topic *subscriptions* for the operator to receive images. This was incorrect — the UDP bridge automatically accepts incoming data from the remote side. The operator config only needs to declare topics it wants to *send* to the robot; the receive side is implicit. Corrected by Roland after both agents agreed on the wrong answer. Lesson: agent consensus on a technical claim doesn't make it correct — domain expertise is still ground truth.
+
+**Deployment method**: Multiple iterate-fix-deploy cycles coordinated across 3 machines (deadpool as coordinator, gabby running cameras + bridge, salmon running operator bridge + rqt). Edits committed on deadpool, pushed to gitcloud as `jazzy` branch, then pulled and rebuilt on gabby and salmon.
+
+**Incident — push to wrong remote**: During one fix cycle, a commit was pushed to `origin` (GitHub) instead of `gitcloud`, bypassing GitHub branch protection / PR review. Followed up with the correct push to gitcloud. Lesson: in multi-remote repos, always specify the remote explicitly — `origin` is GitHub, `gitcloud` is the field deployment server.
+
+**Near-miss — wrong-repo checkout on gabby**: The gabby agent tried a relative `cd layers/main/.../unh_echoboats_project11` which failed, then retried with bare `git checkout jazzy` which would have run in the workspace root. Coordinator spotted the risk and warned, but the warning was nearly missed. Lesson: prompts to remote agents should use absolute paths; time-sensitive warnings about rejecting commands need to be more prominent.
 
 **Fixes applied during testing**:
 - `operator.yaml`: replaced legacy hostnames (`gabby_bb`, `salmon_bb`, etc.) with hierarchical DNS names (`gabby.bizzy.p11.lan`, `salmon.op.p11.lan`, etc.)
@@ -223,3 +232,7 @@ Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
 | oak_port | 192.168.20.11 | 194430106121872D00 |
 
 **End-to-end verified**: 4 OAK cameras on gabby → UDP bridge over WiFi bridge → rqt on salmon. All images display correctly with correct position labels.
+
+**Remote agent coordination notes**:
+- `tmux send-keys ... Enter` submits immediately in Claude Code — multiline prompts get truncated to the first line. Single-line prompts worked reliably for directing remote agents.
+- Coordinator sent a duplicate `make build` to gabby without checking tmux state first — Roland had already run it. Lesson: always observe the session before sending commands.
