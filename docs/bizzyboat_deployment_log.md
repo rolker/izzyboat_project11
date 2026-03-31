@@ -236,3 +236,96 @@ Plugged in BizzyBoat hardware and monitored syslog. All devices detected:
 **Remote agent coordination notes**:
 - `tmux send-keys ... Enter` submits immediately in Claude Code — multiline prompts get truncated to the first line. Single-line prompts worked reliably for directing remote agents.
 - Coordinator sent a duplicate `make build` to gabby without checking tmux state first — Roland had already run it. Lesson: always observe the session before sending commands.
+
+### 2026-03-31
+
+#### FCU tooling setup
+
+**Goal**: Install MAVProxy for ArduPilot parameter management, set up udev rules, review FCU config.
+
+**Coordinator error — wrong venv path**: Coordinator sent a prompt to the gabby agent telling it to install MAVProxy in `~/.venv` instead of the workspace venv at `~/project11/.venv`. Roland interrupted the agent, redirected it to first check the workspace venv state, then ran `make lint` to properly create the venv via the Makefile's standard path. MAVProxy install then directed to the correct location. Lesson: coordinator must know the target machine's workspace layout — gabby's workspace is at `~/project11`, not `~`.
+
+- `make generate-skills` run on gabby — 21 skill files generated
+- `make lint` run on gabby — created `.venv`, installed pre-commit + deps, all linters passed
+- MAVProxy installed in `/home/field/project11/.venv/`:
+  - `pip install MAVProxy` pulled v1.8.74 but hit missing `future` module, then `pkg_resources` not found
+  - Root cause: `setuptools` v82 dropped `pkg_resources`; MAVProxy still imports it
+  - Fix: `pip install 'setuptools<81'` (installed 80.10.2) — MAVProxy 1.8.74 now working
+  - ModemManager warning is informational — proper fix is udev rules to exclude FCU serial ports
+- Udev rules ([#26](https://github.com/rolker/unh_echoboats_project11/issues/26)) — separate agent assigned to set up stable symlinks and ModemManager exclusions
+- Opened [#30](https://github.com/rolker/unh_echoboats_project11/issues/30) — configure CUAV C-RTK 2HP GPS (depends on URDF #25 for position offsets)
+- Opened [#31](https://github.com/rolker/unh_echoboats_project11/issues/31) — test thruster response and operator joystick control (incremental: cmd_vel → joystick → end-to-end manual)
+- Opened [#32](https://github.com/rolker/unh_echoboats_project11/issues/32) — configure ArduPilot failsafes for comms loss (no hardware kill switch; failsafe is primary safety mechanism)
+- Opened [#33](https://github.com/rolker/unh_echoboats_project11/issues/33) — outdoor GPS + Starlink connectivity test (boat moving outside today)
+- **Starlink note**: already mounted on boat, connected to router WAN port, automatic failover when out of WiFi range
+- Noted [ros2_agent_workspace#432](https://github.com/rolker/ros2_agent_workspace/issues/432) — opened by repo sync agent after discovering gitcloud-only changes in `marine_ais` and `unh_echoboats_project11` from field testing. Proposes a workflow for merging field hotfixes from gitcloud back to GitHub without the full worktree ceremony.
+
+**Tmux protocol violation**: Gabby agent (working on #26 after MAVProxy install) ran `make sync` and `make build` on gabby without asking for approval. These are commands on a shared tmux session — each requires per-command human approval. The agent likely lost the tmux protocol context after being retasked from MAVProxy to #26 work. This is the same class of violation as orchestration log entry #12 (2026-03-27). Recurring pattern: agents forget tmux rules when context shifts within a session.
+
+**Launch approach**: Gabby agent (now on #31) is creating separate tmux sessions on gabby for each launch file (core, perception, nav). This differs from IzzyBoat where the startup script (`start_tmux_project11.bash`) uses one tmux session with multiple panes for a single monolithic launch. The modular tmux approach matches BizzyBoat's modular launch design (core_launch, perception_launch, nav_launch) and allows restarting individual components independently.
+
+- Opened [#34](https://github.com/rolker/unh_echoboats_project11/issues/34) — install ENC data on gabby for S-57 chart navigation
+
+#### Thruster test — unexpected prop spin (INCIDENT)
+
+First arming test on #31. Agent published `false` to `piloting_mode/standby/active`,
+which armed the FCU in GUIDED mode. **Props started spinning immediately without
+any cmd_vel command** — thrusters ramped up with steering input as if navigating
+to a waypoint.
+
+**Root cause**: ArduPilot had 2 stale mission waypoints loaded (`MIS_TOTAL=2`).
+WP1 was ~12m from current GPS position (43.1357687, -70.9392882). On entering
+GUIDED mode, ArduPilot began navigating to WP1 autonomously.
+
+**Response**: Immediately set standby (`data: true`) — echo_helm disarmed → set
+MANUAL → re-armed. Props stopped. Staying armed in MANUAL is by design for RC
+fallback.
+
+**Lessons**:
+- Must clear mission waypoints before entering GUIDED mode, or send zero-velocity setpoint immediately on arm
+- Need timed test wrapper scripts that auto-return to standby/MANUAL
+- Nav2 plugin name mismatch found: `project11_navigation::controllers::CrabbingPathFollower` not found, available as `marine_nav_crabbing_path_follower::CrabbingPathFollower` (separate issue)
+
+- Opened [#35](https://github.com/rolker/unh_echoboats_project11/issues/35) — discuss when to clear stale mission on GUIDED mode entry
+- Draft PR [#36](https://github.com/rolker/unh_echoboats_project11/pull/36) open for #31
+- **Step 1 complete**: echo_helm + mavros control path verified. cmd_vel → setpoint_velocity → thrusters working. Safety test script (`test_cmd_vel.sh`) with auto-standby created.
+- **Step 2 in progress**: moving to joystick control on salmon
+
+- Errors found from old `project11` → `marine_autonomy` rename (Nav2 plugin class name mismatch was one symptom). Agent fixing.
+
+**Also noted**: Agent violated tmux protocol again (sent `ls` without asking).
+
+#### PRs merged
+
+**PR [#29](https://github.com/rolker/unh_echoboats_project11/pull/29) — udev rules + FCU baseline** (closes #26):
+- Udev rules at `config/udev/99-bizzyboat.rules`: stable symlinks `/dev/fcu`, `/dev/fcu_slcan`, `/dev/winch`
+- Uses `ENV{}` properties to distinguish CubeOrange MAVLink vs SLCAN interfaces
+- `core_launch.py` FCU default updated from `/dev/ttyACM0:57600` to `/dev/fcu:57600`
+- 935-parameter FCU baseline captured at `config/fcu/bizzyboat_fcu_baseline.param`
+- BizzyBoat vs IzzyBoat parameter comparison documented
+- Tested on gabby: symlinks stable across unplug/replug, MAVProxy connected via `/dev/fcu`
+- USB camera intentionally omitted (only V4L2 device, `/dev/videoN` sufficient)
+
+**PR [#27](https://github.com/rolker/unh_echoboats_project11/pull/27) — URDF plan** (closes #25):
+- Plan for xacro-based URDF with hull STL mesh (2.4m EchoBoat 240)
+- `base_link` reference: center screw hole in hull floor, near CG
+- Sensor positions estimated from photos + manual, to be refined with physical measurements
+- Reference geometry documented in `docs/bizzyboat_reference_geometry.md`
+
+**PR [#424](https://github.com/rolker/ros2_agent_workspace/pull/424) — repo sync scripts** (closes workspace #422):
+- New scripts: `add_remote.py`, `push_remote.py`, `pull_remote.py`
+- Automates adding/pushing/pulling a named remote across all workspace repos
+- Replaces the manual per-repo gitcloud push workflow used during earlier deployment sessions
+
+#### Active agents
+
+| Agent | Task | Status |
+|-------|------|--------|
+| gabby-agent | FCU tooling (MAVProxy) | MAVProxy installed, idle |
+| Agent on #26 | Udev rules for FCU/Arduino/ModemManager | **done** — PR [#29](https://github.com/rolker/unh_echoboats_project11/pull/29) merged |
+| Agent on PR #424 | Repo sync script (workspace) | **done** — PR [#424](https://github.com/rolker/ros2_agent_workspace/pull/424) merged |
+| Brainstorm agent | Logging and checklist ideas | in progress |
+| Logger agent | Implementing logger | in progress |
+| Research agent | ArduPilot/mavros research | complete |
+| Gabby agent (#31) | Thruster testing | in progress |
+| This session | Coordinator / deployment log | active |
