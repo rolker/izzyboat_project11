@@ -26,7 +26,7 @@ def generate_launch_description():
 
     fcu_url = LaunchConfiguration('fcu_url')
     fcu_url_arg = DeclareLaunchArgument(
-        'fcu_url', default_value=TextSubstitution(text='/dev/ttyACM0:57600')
+        'fcu_url', default_value=TextSubstitution(text='/dev/fcu:57600')
     )
 
     gcs_url = LaunchConfiguration('gcs_url')
