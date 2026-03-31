@@ -127,6 +127,53 @@ RC override mode (`rc_mode=True`) was a ROS1→ROS2 transition workaround and sh
   - This means helm_manager → echo_helm path is broken (our Step 1 test worked because we published directly)
   - **Fix needed** in `echo_helm_node.cpp` in `seafloor_echoboat_project11` repo
 
+### 2026-03-31 — Helm_manager output_type fix
+- Joystick manual mode → helm_manager → echo_helm path not working: no prop response
+- Heartbeat confirmed flowing (topic rename fix working)
+- Root cause: `helm_manager.output_type=helm` (default) — only publishes Helm msg, not TwistStamped
+  - echo_helm subscribes to `marine/control/cmd_vel` (TwistStamped) — 0 publishers on that topic
+  - helm_manager was publishing `marine/control/helm` (Helm) only
+- Valid values: `helm`, `twist`, `dual` (from helm_manager README + source)
+- Fix: added to `bizzyboat.yaml`:
+  ```yaml
+  /**/helm_manager:
+    ros__parameters:
+      output_type: twist
+      max_speed: 2.0       # matches echo_helm scaling (2 m/s = full throttle)
+      max_yaw_speed: 1.5   # matches echo_helm scaling (1.5 rad/s = full rudder)
+  ```
+- **Not yet tested** — need to commit, push to gitcloud, rebuild on gabby, restart launches
+
+### 2026-03-31 — End of session status
+
+**What's working:**
+- Udev rules deployed and tested on gabby (#26, merged)
+- Mavros connected to FCU via `/dev/fcu`
+- Echo_helm active, heartbeat flowing (topic rename fix confirmed)
+- Direct cmd_vel → echo_helm → FCU → thrusters (Step 1 complete)
+- RC emergency stop works (mode switch on RC controller)
+- Operator launch on salmon, joystick helm messages reaching gabby via UDP bridge
+- test_cmd_vel.sh safety script with auto-standby and mission clear
+
+**What needs testing tomorrow:**
+- helm_manager `output_type: twist` config — the missing piece for joystick → thruster path
+- Full end-to-end: joystick → joy_to_helm → helm_manager (twist) → echo_helm → FCU → thrusters
+- Forward, reverse, turn left, turn right via joystick
+- Standby button stops all output and disarms
+
+**Pending commits (issue-31 worktree):**
+- `bizzyboat.yaml`: helm_manager output_type config added (uncommitted)
+
+**Open issues from this session:**
+- [#35](https://github.com/rolker/unh_echoboats_project11/issues/35) — stale mission on GUIDED entry
+- [#6](https://github.com/rolker/seafloor_echoboat_project11/issues/6) — echo_helm topic prefix (merged via PR #7)
+- Nav2 plugin class name mismatch (`project11_navigation::controllers::CrabbingPathFollower`) — not yet filed
+
+**Repos/branches to sync tomorrow:**
+- `unh_echoboats_project11` feature/issue-31 → push to gitcloud jazzy
+- Rebuild on gabby and salmon after push
+- Restart core + nav + operator launches
+
 ### 2026-03-31 — Research digest review
 - `setpoint_velocity` with `mav_frame: "BODY_NED"` confirmed correct for BizzyBoat (in `echoboat_project11/config/mavros.yaml`)
   - `twist.linear.x` = forward speed, `twist.angular.z` = yaw rate, body frame
