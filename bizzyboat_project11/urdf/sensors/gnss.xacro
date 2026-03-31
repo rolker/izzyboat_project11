@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- GNSS antenna puck macro (CUAV C-RTK 2HP style).
+       Visual: white bracket with black puck on top. -->
+  <xacro:macro name="gnss_antenna" params="parent name x y z">
+
+    <link name="bizzy/${name}">
+      <!-- Mounting bracket -->
+      <visual name="bracket">
+        <geometry>
+          <box size="0.06 0.06 0.04"/>
+        </geometry>
+        <origin xyz="0 0 -0.02"/>
+        <material name="gnss_bracket_white"/>
+      </visual>
+      <!-- Antenna puck -->
+      <visual name="puck">
+        <geometry>
+          <cylinder radius="0.04" length="0.025"/>
+        </geometry>
+        <origin xyz="0 0 0.0125"/>
+        <material name="gnss_black"/>
+      </visual>
+    </link>
+
+    <joint name="base_to_${name}" type="fixed">
+      <parent link="${parent}"/>
+      <child link="bizzy/${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- OAK-1 PoE camera macro.
+       Creates a camera link and an optical frame child.
+       Optical frame follows ROS convention: x-right, y-down, z-forward. -->
+  <xacro:macro name="oak_camera" params="parent name x y z roll:=0 pitch:=0 yaw:=0">
+
+    <link name="bizzy/${name}">
+      <visual>
+        <geometry>
+          <box size="0.04 0.06 0.04"/>
+        </geometry>
+        <origin xyz="0 0 0"/>
+        <material name="camera_dark"/>
+      </visual>
+    </link>
+
+    <joint name="base_to_${name}" type="fixed">
+      <parent link="${parent}"/>
+      <child link="bizzy/${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${roll} ${pitch} ${yaw}"/>
+    </joint>
+
+    <link name="bizzy/${name}_optical"/>
+
+    <joint name="${name}_to_${name}_optical" type="fixed">
+      <parent link="bizzy/${name}"/>
+      <child link="bizzy/${name}_optical"/>
+      <origin xyz="0 0 0" rpy="${-pi/2} 0 ${-pi/2}"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>

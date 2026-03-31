@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Imagenex DeltaT multibeam sonar macro.
+       Mounted below the hull, flipped (roll=pi, yaw=pi) so the
+       beam points downward. -->
+  <xacro:macro name="deltat_sonar" params="parent name x y z roll:=3.14159 yaw:=3.14159">
+
+    <link name="bizzy/${name}">
+      <visual>
+        <geometry>
+          <box size="0.12 0.10 0.08"/>
+        </geometry>
+        <origin xyz="0 0 0"/>
+        <material name="sonar_gray"/>
+      </visual>
+    </link>
+
+    <joint name="base_to_${name}" type="fixed">
+      <parent link="${parent}"/>
+      <child link="bizzy/${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="${roll} 0 ${yaw}"/>
+    </joint>
+
+  </xacro:macro>
+
+</robot>
