@@ -1,0 +1,12 @@
+# Stable symlinks for BizzyBoat USB devices
+# Install: sudo cp 99-bizzyboat.rules /etc/udev/rules.d/
+# Reload: sudo udevadm control --reload-rules && sudo udevadm trigger
+
+# CubeOrange FCU MAVLink interface -> /dev/fcu
+SUBSYSTEM=="tty", ENV{ID_USB_VENDOR_ID}=="2dae", ENV{ID_USB_SERIAL_SHORT}=="43001E000A51323237373236", ENV{ID_USB_INTERFACE_NUM}=="00", SYMLINK+="fcu", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# CubeOrange FCU SLCAN/CAN interface -> /dev/fcu_slcan
+SUBSYSTEM=="tty", ENV{ID_USB_VENDOR_ID}=="2dae", ENV{ID_USB_SERIAL_SHORT}=="43001E000A51323237373236", ENV{ID_USB_INTERFACE_NUM}=="02", SYMLINK+="fcu_slcan", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# Arduino winch -> /dev/winch
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0043", ATTRS{serial}=="342343139313512040B1", SYMLINK+="winch", ENV{ID_MM_DEVICE_IGNORE}="1"
