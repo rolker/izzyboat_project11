@@ -30,36 +30,43 @@ BizzyBoat origin is at the CG. Antennas are fore and aft on the centerline.
 
 Baseline (antenna-to-antenna): ~1.67 m
 
-## Planned FCU Parameter Changes
+## FCU Parameter Changes (applied 2026-04-02)
 
-Assumption: GPS1 = aft antenna, GPS2 = forward antenna (same as IzzyBoat).
-To be verified during testing — if heading is 180 degrees off, swap the assignment.
+**Key finding**: GPS1 (CAN node 124) is the **forward** antenna on BizzyBoat.
+This differs from IzzyBoat where GPS1 (CAN node 125) is the aft antenna.
+Discovered during testing — initial assumption of GPS1=aft gave heading 180° off.
 
-| Parameter | Current | New | Notes |
-|-----------|---------|-----|-------|
-| `GPS_POS1_X` | 0.0 | -0.835 | Aft antenna, behind CG |
+| Parameter | Before | After | Notes |
+|-----------|--------|-------|-------|
+| `GPS_POS1_X` | 0.0 | 0.835 | Forward antenna, ahead of CG |
 | `GPS_POS1_Y` | 0.0 | 0.0 | Centerline |
 | `GPS_POS1_Z` | 0.0 | -0.89 | Above CG (negative = up) |
-| `GPS_POS2_X` | 0.0 | 0.835 | Forward antenna, ahead of CG |
+| `GPS_POS2_X` | 0.0 | -0.835 | Aft antenna, behind CG |
 | `GPS_POS2_Y` | 0.0 | 0.0 | Centerline |
 | `GPS_POS2_Z` | 0.0 | -0.89 | Same height as GPS1 |
 | `GPS_MB1_TYPE` | 0 | 1 | Enable moving baseline |
-| `GPS_MB1_OFS_X` | 0.0 | -1.67 | Rover-to-base vector (aft) |
+| `GPS_MB1_OFS_X` | 0.0 | 1.67 | Base-to-rover vector (positive = forward) |
 | `GPS_MB1_OFS_Y` | 0.0 | 0.0 | No lateral offset |
 | `GPS_MB1_OFS_Z` | 0.0 | 0.0 | Same height |
 
-### Sanity check against IzzyBoat
+### Comparison with IzzyBoat
 
-IzzyBoat's working values for comparison:
-
-| Parameter | IzzyBoat | BizzyBoat | Ratio | Makes sense? |
-|-----------|----------|-----------|-------|-------------|
-| `GPS_POS1_X` | -0.341 | -0.835 | 2.4x | Yes — BizzyBoat (EchoBoat 240) is bigger than IzzyBoat (EchoBoat 160) |
-| `GPS_POS1_Z` | -0.616 | -0.89 | 1.4x | Yes — BizzyBoat has taller mast/mounting |
-| `GPS_MB1_OFS_X` | -0.794 | -1.67 | 2.1x | Yes — wider antenna separation on larger boat |
+| Parameter | IzzyBoat | BizzyBoat | Notes |
+|-----------|----------|-----------|-------|
+| `GPS_POS1_X` | -0.341 (aft) | 0.835 (fwd) | GPS1 is opposite end on each boat |
+| `GPS_POS1_Z` | -0.616 | -0.89 | BizzyBoat has taller mounting |
+| `GPS_MB1_OFS_X` | -0.794 | 1.67 | Sign differs (GPS1 assignment differs) |
+| `GPS_CAN_NODEID1` | 125 | 124 | Different CAN node IDs |
 
 IzzyBoat MB offset math: -(0.341 + 0.360) = -0.701 ≈ -0.794 (close, measured values)
-BizzyBoat MB offset math: -(0.835 + 0.835) = -1.67 (symmetric, from rough geometry)
+BizzyBoat MB offset math: (0.835 + 0.835) = 1.67 (symmetric, from rough geometry)
+
+### Test results
+
+- **GPS fix type**: 3 (3D fix)
+- **Satellites**: 28
+- **Heading**: ~74° (ENE) — confirmed correct for boat orientation at pier
+- **Position**: 43.072°N, 70.712°W (UNH pier area)
 
 ## Parameters Already Correct
 
@@ -73,14 +80,14 @@ These are already set correctly in the baseline dump:
 | `EK3_SRC1_YAW` | 2 | GPS heading |
 | `COMPASS_ENABLE` | 0 | Compass disabled |
 
-## Testing Plan
+## Testing Log
 
-1. SSH to gabby, connect to FCU via MAVProxy or QGroundControl
-2. Set parameters listed above
-3. Power cycle FCU
-4. Check `mavros/global_position/raw/fix` for GPS fix
-5. Verify heading is correct (not 180 degrees off)
-6. If heading is reversed, swap GPS1/GPS2 assignments or negate MB_OFS_X
+1. Connected to FCU via MAVProxy on gabby (`~/project11/.venv/bin/mavproxy.py --master=/dev/fcu,57600`)
+2. Set GPS position offsets and enabled moving baseline
+3. Rebooted FCU — `GPS_MB1_OFS` params only appear after reboot with `GPS_MB1_TYPE=1`
+4. Initial heading was ~254° (WSW) — 180° off from actual ENE orientation
+5. Negated `GPS_MB1_OFS_X` (-1.67 → +1.67) and swapped POS1/POS2 X values
+6. Heading corrected to ~74° (ENE) — matches boat orientation at pier
 
 ## NTRIP (deferred)
 
