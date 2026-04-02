@@ -1,13 +1,13 @@
 /**/platform_sender:
   ros__parameters:
-    width: 1.0
+    width: 0.9
     length: 2.4
     reference_x: 0.0
     reference_y: 0.0
     color:
-      red: 0.0
-      green: 0.5
-      blue: 1.0
+      red: 1.0
+      green: 0.85
+      blue: 0.0
 
     nav:
       source_names:
