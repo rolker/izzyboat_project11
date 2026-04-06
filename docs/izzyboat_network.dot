@@ -1,0 +1,117 @@
+graph izzyboat_network {
+    graph [
+        rankdir=TB
+        fontname="Helvetica"
+        fontsize=11
+        pad=0.5
+        nodesep=0.6
+        ranksep=0.8
+    ]
+    node [
+        fontname="Helvetica"
+        fontsize=10
+        shape=box
+        style="filled,rounded"
+        fillcolor=white
+    ]
+    edge [
+        fontname="Helvetica"
+        fontsize=9
+    ]
+
+    // ── INTERNET (top) ────────────────────────────────────────
+    // NETMAP translates addresses for VPN path selection:
+    //   192.168.14.x  →  192.168.12.x  (reach boat devices via VPN)
+    //   192.168.15.x  →  192.168.13.x  (reach operator devices via VPN)
+    internet [
+        label="Internet\n\nVPN path (NETMAP):\lBoat devices:     192.168.14.x\l  maps to:        192.168.12.x\lOperator devices: 192.168.15.x\l  maps to:        192.168.13.x\l"
+        shape=ellipse
+        style="dashed"
+        color="#999999"
+        fontcolor="#666666"
+        fillcolor="#f5f5f5"
+        fontsize=9
+    ]
+
+    // ── WAN NODES (below internet) ────────────────────────────
+    op_wan   [label="WAN\n(Starlink / lab WiFi\nor wired internet)" fillcolor="#fff0cc" color="#cc8800"]
+    starlink [label="Starlink Mini\n(WAN)"                          fillcolor="#fff0cc" color="#cc8800"]
+
+    // ── OPERATOR SIDE ─────────────────────────────────────────
+    subgraph cluster_operator {
+        label="Operator Network\n192.168.13.0/24"
+        style="filled,rounded"
+        fillcolor="#ddeeff"
+        color="#336699"
+        fontcolor="#336699"
+        fontsize=12
+
+        op_router [label="Operator Router\n192.168.13.1" fillcolor="#aaccee"]
+        op_laptop  [label="Operator Laptop"]
+        op_survey  [label="Windows PC\n(survey monitoring)"]
+        op_dev     [label="Development Laptop"]
+
+        op_router -- op_laptop
+        op_router -- op_survey
+        op_router -- op_dev
+    }
+
+    // ── WIFI BACKHAUL ─────────────────────────────────────────
+    // Dedicated 5 GHz point-to-point MikroTik link
+    subgraph cluster_wifi {
+        label="WiFi Backhaul\n172.16.12.0/24"
+        style="dashed,rounded"
+        color="#666688"
+        fontcolor="#666688"
+        fillcolor="#f4f4ff"
+        fontsize=11
+
+        wifi_op   [label="WiFi Radio\n172.16.12.4\n(operator side)" fillcolor="#eeeeff" color="#336699"]
+        wifi_boat [label="WiFi Radio\n172.16.12.3\n(boat side)"     fillcolor="#eeffee" color="#336633"]
+
+        wifi_op -- wifi_boat [label="5 GHz" color="#666688" fontcolor="#666688"]
+    }
+
+    // ── BOAT SIDE ─────────────────────────────────────────────
+    subgraph cluster_boat {
+        label="Boat Onboard Network\n192.168.12.0/24"
+        style="filled,rounded"
+        fillcolor="#ddeedd"
+        color="#336633"
+        fontcolor="#336633"
+        fontsize=12
+
+        boat_router  [label="Boat Router\n192.168.12.1"          fillcolor="#aaccaa"]
+        robot_linux  [label="Robot Computer (Linux)\n192.168.12.15"]
+        boat_windows [label="Windows PC\n192.168.12.8"]
+        camera       [label="Camera\n192.168.12.9"]
+        posmv        [label="POS MV\n192.168.12.4"]
+        fcu          [label="ArduPilot FCU\n(USB serial)"
+                      style="dashed,rounded" fillcolor="#f8f8f8"]
+
+        boat_router -- robot_linux
+        boat_router -- boat_windows
+        boat_router -- camera
+        boat_router -- posmv
+        robot_linux -- fcu [label="USB" style=dashed color="#888888" fontcolor="#888888"]
+    }
+
+    // ── INTER-NETWORK LINKS ───────────────────────────────────
+
+    // WAN uplinks to internet
+    internet -- op_wan   [style=dotted color="#cc8800"]
+    internet -- starlink [style=dotted color="#cc8800"]
+    op_wan   -- op_router   [color="#cc8800"]
+    starlink -- boat_router [color="#cc8800"]
+
+    // WiFi chain: operator router → radio → radio → boat router
+    op_router -- wifi_op   [color="#336699"]
+    wifi_boat -- boat_router [color="#336633"]
+
+    // VPN logical path (constraint=false — does not affect rank layout)
+    op_router -- internet [style=dotted color="#6666cc" label="VPN" fontcolor="#6666cc" constraint=false]
+
+    // Rank constraints: WAN nodes together; routers/WiFi on same row
+    {rank=same; op_wan; starlink}
+    {rank=same; op_router; wifi_op; wifi_boat; boat_router}
+}
