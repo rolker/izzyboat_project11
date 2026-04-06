@@ -131,6 +131,52 @@ def generate_launch_description():
                         ])
                     )
                 ),
+
+                # Marine autonomy robot core
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('marine_autonomy'),
+                            'launch',
+                            'robot_core_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'namespace': namespace,
+                        'enable_bridge': 'false',
+                    }.items()
+                ),
+
+                # Echo helm
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('echo_helm'),
+                            'launch',
+                            'echo_helm_launch.py'
+                        ])
+                    ),
+                ),
+
+                # S57 charts
+                GroupAction(
+                    actions=[
+                        PushRosNamespace('s57'),
+                        SetParameter(
+                            name='map_frame',
+                            value=[frame_prefix, 'map']
+                        ),
+                        IncludeLaunchDescription(
+                            PythonLaunchDescriptionSource(
+                                PathJoinSubstitution([
+                                    FindPackageShare('s57_grids'),
+                                    'launch',
+                                    's57_grids_launch.py'
+                                ])
+                            ),
+                        )
+                    ]
+                ),
             ]
         ),
 
