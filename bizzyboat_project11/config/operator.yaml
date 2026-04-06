@@ -19,7 +19,7 @@
             - command
             - joystick_helm
             topics:
-              command: {source: /bizzy/project11/command}
+              command: {source: /bizzy/marine/command}
               joystick_helm: {source: /bizzy/piloting_mode/manual/helm}
 
           vpn:
@@ -31,5 +31,5 @@
             - command
             - joystick_helm
             topics:
-              command: {source: /bizzy/project11/command}
+              command: {source: /bizzy/marine/command}
               joystick_helm: {source: /bizzy/piloting_mode/manual/helm}
