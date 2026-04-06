@@ -20,8 +20,11 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Core launch tested on gabby. Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF, open), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs, done) |
+| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Core launch tested on gabby. Jazzy merged into feature/issue-13 (15 commits). Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF, open), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs, done) |
+| [unh_echoboats_project11#37](https://github.com/rolker/unh_echoboats_project11/issues/37) | GPS antenna offsets | **GPS working** | Moving baseline RTK heading verified. PR [#38](https://github.com/rolker/unh_echoboats_project11/pull/38) open. NTRIP deferred |
 | [CCOMJHC/ccomjhc_project11#6](https://github.com/CCOMJHC/ccomjhc_project11/issues/6) | Site-specific config | not started | |
+| [CCOMJHC/ccomjhc_project11#16](https://github.com/CCOMJHC/ccomjhc_project11/issues/16) | Operator dnsmasq hosts | **PR open** | PR [CCOMJHC#17](https://github.com/CCOMJHC/ccomjhc_project11/pull/17) deployed, needs gabby verification |
+| [mobile_lab#1](https://github.com/rolker/mobile_lab/issues/1) | johnny5 camera integration | **in progress** | Repo consolidated from molab_description + molab_hardware |
 | [unh_echoboats_project11#23](https://github.com/rolker/unh_echoboats_project11/issues/23) | Sensors layer (OAK + DeltaT) | **done** | PR [#24](https://github.com/rolker/unh_echoboats_project11/pull/24) merged |
 | [CCOMJHC/ccomjhc_project11#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) | DHCP reservations for boat devices | **done** | PR [#12](https://github.com/CCOMJHC/ccomjhc_project11/pull/12) merged. All 6 devices verified reachable after power cycle |
 | [CCOMJHC/ccomjhc_project11#11](https://github.com/CCOMJHC/ccomjhc_project11/issues/11) | Operator station manifest (salmon) | **done** | PRs [#13](https://github.com/CCOMJHC/ccomjhc_project11/pull/13), [#14](https://github.com/CCOMJHC/ccomjhc_project11/pull/14) merged |
@@ -291,6 +294,18 @@ fallback.
 - **Step 1 complete**: echo_helm + mavros control path verified. cmd_vel → setpoint_velocity → thrusters working. Safety test script (`test_cmd_vel.sh`) with auto-standby created.
 - **Step 2 in progress**: moving to joystick control on salmon
 
+#### Joystick control progress (#31 continued)
+
+Operator launch on salmon with joystick connected at `/dev/input/js0`. Helm messages confirmed reaching gabby via UDP bridge. Several issues found and fixed during testing:
+
+- **Topic name mismatches**: stale `project11/` prefixes in UDP bridge configs (`bizzyboat.yaml`, `operator.yaml`) → updated to `marine/` prefix. Fixed.
+- **echo_helm topic prefix**: `marine_autonomy/` vs `marine/` mismatch between echo_helm and helm_manager. Fixed in `seafloor_echoboat_project11` (PR [#7](https://github.com/rolker/seafloor_echoboat_project11/pull/7), merged as [#6](https://github.com/rolker/seafloor_echoboat_project11/issues/6)).
+- **helm_manager output_type**: default `helm` only publishes Helm msg, not TwistStamped that echo_helm expects. Fix: set `output_type: twist` in `bizzyboat.yaml` — **config added but not yet deployed or tested**.
+
+**Blocked on**: pushing `output_type: twist` change to gitcloud, rebuilding on gabby + salmon, restarting launches. This is the last known gap before end-to-end joystick → thruster control.
+
+Detailed session log: `docs/bizzyboat_thruster_test_2026-03-31.md` in issue-31 worktree.
+
 - Errors found from old `project11` → `marine_autonomy` rename (Nav2 plugin class name mismatch was one symptom). Agent fixing.
 
 **Also noted**: Agent violated tmux protocol again (sent `ls` without asking).
@@ -329,3 +344,243 @@ fallback.
 | Research agent | ArduPilot/mavros research | complete |
 | Gabby agent (#31) | Thruster testing | in progress |
 | This session | Coordinator / deployment log | active |
+
+### 2026-04-02
+
+#### GPS antenna offsets (#37)
+
+Separate agent on [#37](https://github.com/rolker/unh_echoboats_project11/issues/37) configured CUAV C-RTK 2HP dual-antenna moving baseline RTK. Key results:
+
+- GPS1 (CAN 124) is the **forward** antenna — opposite from IzzyBoat
+- Moving baseline heading confirmed ~74° ENE, matching pier orientation
+- 28 sats, 3D fix at 43.072°N, 70.712°W
+- Key ArduPilot params: `GPS_POS1_X=0.835`, `GPS_POS2_X=-0.835`, `GPS_MB1_TYPE=1`, `GPS_MB1_OFS_X=1.67`
+- NTRIP deferred — needs credential migration ([CCOMJHC#10](https://github.com/CCOMJHC/ccomjhc_project11/issues/10))
+- Docs committed to `feature/issue-37` branch; PR [#38](https://github.com/rolker/unh_echoboats_project11/pull/38) open
+
+#### Operator network — mobile lab interface
+
+Added `192.168.50.1` interface on operator router for mobile lab network. This provides access to johnny5 (Axis PTZ camera, 192.168.50.55) on the mobile lab roof.
+
+#### Operator dnsmasq (CCOMJHC#16)
+
+- [CCOMJHC#16](https://github.com/CCOMJHC/ccomjhc_project11/issues/16) opened — add dnsmasq hosts file for operator router with fleet-wide hierarchical names
+- PR [CCOMJHC#17](https://github.com/CCOMJHC/ccomjhc_project11/pull/17) created by another agent:
+  - `operator.hosts` covering operator LAN, mobile lab (192.168.50.x), BizzyBoat (WiFi + VPN), IzzyBoat, ZeroTier, and WireGuard hosts
+  - Updated `bizzyboat.hosts` with new entries and bare convenience aliases
+  - Renamed operator router UCI interfaces (`mobile_lab`→`bizzy_wifi_bridge`, `wifi_bridge`→`izzy_wifi_bridge`, `lan1`→`mobile_lab`)
+  - Deployed to both routers, DNS verified from deadpool
+  - Still needs verification from gabby
+
+#### Mobile lab repos consolidated
+
+`molab_description` + `molab_hardware` merged into new `rolker/mobile_lab` repo. Manifest updated (PR [unh_marine_autonomy#119](https://github.com/rolker/unh_marine_autonomy/pull/119) merged, [unh_marine_autonomy#112](https://github.com/rolker/unh_marine_autonomy/issues/112) closed).
+
+#### johnny5 camera investigation (mobile_lab#1)
+
+Agent started on [mobile_lab#1](https://github.com/rolker/mobile_lab/issues/1) — worktree created, consolidation commits done (molab_description + molab_hardware into subdirs). No johnny5-specific commits yet.
+
+#### Merged jazzy into feature/issue-13
+
+15 commits pulled in: URDF xacro, hull mesh, udev rules, FCU baseline params, reference geometry docs.
+
+### 2026-04-03
+
+#### WiFi bridge unreachable
+
+Cannot reach BizzyBoat via WiFi bridge from operator side. Suspected cause: UCI interface renaming in CCOMJHC#17 (dnsmasq PR from April 2) may have broken firewall zones or routing rules that reference old interface names. Opened [CCOMJHC#19](https://github.com/CCOMJHC/ccomjhc_project11/issues/19) — agent investigating.
+
+Boat is inside the mobile lab today — no GPS or Starlink.
+
+**Fixed**: PR [CCOMJHC#22](https://github.com/CCOMJHC/ccomjhc_project11/pull/22) (closes [CCOMJHC#19](https://github.com/CCOMJHC/ccomjhc_project11/issues/19)). Root cause: PR #17 renamed operator router UCI network interfaces but didn't update the firewall zone — `bizzy_wifi_bridge` and `izzy_wifi_bridge` were outside any zone, so all forwarded traffic was rejected. Also renamed BizzyBoat router's `lan1` → `wifi_bridge` across all UCI subsystems for consistency. Verified: deadpool → WiFi bridge → gabby ping working.
+
+#### DNS forwarding broken on boat router — fixed
+
+External DNS resolution failing on gabby (`ping google.com: Name or service not known`)
+despite internet working via cell modem failover. Investigated:
+
+- `ping 8.8.8.8` works — internet via cell (mwan3 failover from dead Starlink)
+- `nslookup google.com 8.8.8.8` works — external DNS reachable directly
+- `nslookup google.com 192.168.20.1` fails — boat router's dnsmasq returning NXDOMAIN
+- Same NXDOMAIN from `127.0.0.1` on the router itself
+
+**Root cause**: dnsmasq had hardcoded `server=8.8.8.8/8.8.4.4/1.1.1.1` entries. These
+queries originate from the router itself, bypass mwan3 firewall marks, and follow the
+main routing table's default route via WAN (Starlink, `eth1`). With Starlink down (no
+DHCP lease indoors), these queries fail. Meanwhile, the auto-generated resolv file
+(`/tmp/resolv.conf.d/resolv.conf.auto`) has working Verizon DNS servers from the cell
+modem interface.
+
+**Fix**: Removed hardcoded `server=` entries from dnsmasq UCI config, relying solely on
+the resolv file populated by active interfaces:
+```
+uci delete dhcp.cfg01411c.server
+uci commit dhcp
+/etc/init.d/dnsmasq restart
+```
+
+Verified: `ping google.com` and `nslookup gabby.bizzy.p11.lan` both work from gabby.
+Fix is provider-agnostic — dnsmasq uses whichever upstream DNS servers are available.
+
+#### DNS naming scheme revision
+
+Reviewed the hierarchical DNS naming structure and identified several improvements:
+
+- **WiFi bridge radios**: Replace model-specific names (omnitik, sxtsq) with generic `wifi.<vehicle>` pattern. Operator-side radios: `<vehicle>.wifi.op`
+- **WireGuard endpoints**: New `wg` segment to distinguish tunnel endpoints from VPN NETMAP addresses (`bizzy.wg` vs `gabby.vpn.bizzy`)
+- **VPN NETMAP**: Canonical form `<host>.vpn.<vehicle>` with shorthands for unique hosts (`gabby.vpn`)
+- **Documentation**: Tree diagrams (operational vs infrastructure) and addressing quick guide
+
+Opened [CCOMJHC#20](https://github.com/CCOMJHC/ccomjhc_project11/issues/20) with full naming spec. Agent completed the work — PR [CCOMJHC#21](https://github.com/CCOMJHC/ccomjhc_project11/pull/21) open.
+
+#### Resuming joystick work (#31)
+
+- Both agents synced and built (`make sync`, `make build`) — gabby: 40 packages, salmon: all layers clean
+- Symlink added on gabby: `~/start_tmux_project11.bash` → installed script in `platforms_ws/install/bizzyboat_project11/lib/bizzyboat_project11/`
+- Ran `./start_tmux_project11.bash` on gabby — `project11` tmux session created with 3 windows (core, perception, nav)
+- Cron not yet configured — manual launch only during setup phase
+- Added `source ~/project11/layers/main/site_ws/install/setup.bash` (or similar) to gabby's `.bashrc` so ROS 2 commands work without manual sourcing
+- **Perception launch failed**: `cube_bathymetry` package not found — not in sensors layer on gabby
+- **Nav launch partial failure**: Nav2 `controller_server` crashed (stale plugin class `project11_navigation::controllers::CrabbingPathFollower`), but `echo_helm` and `helm_manager` started successfully
+- **Heartbeat not seen** on `/bizzy/marine/heartbeat` — helm_manager is running and publishing, but mavros not connected to FCU
+- **Root cause**: `core_launch.py` still defaulted to `/dev/ttyACM0:57600` but udev rules (PR #29) created `/dev/fcu` symlink pointing to `ttyACM1`. PR #29 added the udev rules but didn't update the launch file default. March 31 thruster test worked because agent used explicit parameter override.
+- **Fix**: Updated `core_launch.py` default to `/dev/fcu:57600` (edit on gabby, not yet committed)
+- After fix, core relaunched — mavros connected, heartbeat flowing: `connected: true`, `armed: false`, `mode: MANUAL`, `marine_autonomy_standby: true`
+- S57 ENC data: downloaded latest NOAA dataset, rsync'd from deadpool `~/data/ENC_ROOT/` to gabby `/home/field/data/ENC_ROOT/` (referenced by `ROS_S57_ENC_ROOT` in launch script). Note: next time, copy the zip and unpack on target — faster than rsync of many small files over WiFi bridge.
+- Operator launch running on salmon in tmux session `core` — UDP bridge, foxglove bridge, joy_to_helm all up
+- **Heartbeat confirmed on salmon** — flowing from gabby via UDP bridge over WiFi bridge
+- **First joystick test failed** — props spun in GUIDED mode but not responding to joystick. No stale waypoints (`wp_received=0`), but `helm_manager output_type` was still `helm` — config not loaded because helm_manager was in `nav_launch.py` which didn't load `bizzyboat.yaml`.
+
+#### Launch file restructure
+
+Reorganized launch files to put everything needed for joystick driving in core:
+
+**core_launch.py (new)**: mavros, UDP bridge, mru_transform, sea_surface_estimator, robot state publisher, marine_autonomy robot_core (helm_manager, command_bridge), echo_helm, S57 charts. Loads `bizzyboat.yaml` via `SetParametersFromFile`.
+
+**nav_launch.py (new)**: Nav2 only. Can be restarted independently without affecting joystick control or chart loading.
+
+After rebuild and relaunch, `helm_manager output_type` confirmed as `twist`.
+
+- **Joystick → thruster END-TO-END VERIFIED** — full chain working: joystick (salmon) → joy_to_helm → helm_manager (twist) → UDP bridge → echo_helm (gabby) → mavros → FCU → props responding to joystick input.
+
+#### Steering direction issues
+
+Throttle responds correctly but steering direction is intermittently reversed:
+- Sometimes correct, sometimes wrong, sometimes oscillates between the two before settling
+- Heading is stable (~244.6° from dual-antenna GPS), GPS has fix — not a heading drift issue
+- `setpoint_velocity/cmd_vel` values look correct (angular.z ~-0.5 to -0.8 rad/s)
+- Reduced `max_yaw_speed` from 1.5 to 0.5 — improved range/resolution but direction still inconsistent
+- No stale waypoints (`wp_received=0`)
+
+**Suspected root cause**: ArduRover's handling of `BODY_NED` velocity commands with `PILOT_STEER_TYPE=0` (throttle + steering servo). IzzyBoat uses `PILOT_STEER_TYPE=3` (skid-steer/differential throttle) where ArduPilot directly mixes velocity into left/right throttle. BizzyBoat's type 0 goes through a steering PID controller (`ATC_STR_*` params), which may not handle body-frame velocity commands well when stationary on a trailer (no actual yaw rate feedback → PID integral windup → oscillation/reversal).
+
+**Next session TODO**:
+- Test on water where actual yaw feedback exists — the PID may behave correctly when the boat can rotate
+- Research ArduRover GUIDED velocity control for `PILOT_STEER_TYPE=0` — does it properly support `BODY_NED`?
+- Consider testing `PILOT_STEER_TYPE=1` (direction+throttle steering) or other modes
+- If body-frame velocity remains problematic, consider `rc_mode=true` as fallback (direct PWM, no PID)
+- Check ArduPilot `GUID_OPTIONS` parameter for velocity control behavior flags
+
+#### Uncommitted changes on gabby (jazzy branch)
+
+- `bizzyboat.yaml`: `max_yaw_speed` 1.5 → 0.5
+
+#### Committed and pushed to gitcloud
+
+- `core_launch.py`: fcu_url `/dev/ttyACM0` → `/dev/fcu`, moved marine_autonomy/echo_helm/S57 from nav_launch
+- `nav_launch.py`: Nav2 only
+- `start_tmux_project11.bash`: tmux window names (core, perception, nav)
+
+#### Other notes
+
+- Moved boat outside for Starlink connectivity — cell was dropping API connections
+- gabby `.bashrc` now sources workspace setup
+- Legacy `~/dora_as_core.bash` symlink on salmon points to old ROS 1 catkin workspace
+
+#### Sub-issue status update
+
+| # | Task | Status | Notes |
+|---|------|--------|-------|
+| [#37](https://github.com/rolker/unh_echoboats_project11/issues/37) | GPS antenna offsets | **GPS working** | Moving baseline heading verified; PR [#38](https://github.com/rolker/unh_echoboats_project11/pull/38) open. NTRIP deferred |
+| [CCOMJHC#16](https://github.com/CCOMJHC/ccomjhc_project11/issues/16) | Operator dnsmasq hosts | **PR open** | PR [CCOMJHC#17](https://github.com/CCOMJHC/ccomjhc_project11/pull/17) — deployed, needs gabby verification |
+| [mobile_lab#1](https://github.com/rolker/mobile_lab/issues/1) | johnny5 camera integration | **in progress** | Repo consolidated, camera work not started |
+| [unh_marine_autonomy#112](https://github.com/rolker/unh_marine_autonomy/issues/112) | mobile_lab manifest entry | **done** | PR [#119](https://github.com/rolker/unh_marine_autonomy/pull/119) merged |
+
+### 2026-04-06
+
+Boat on pier, powered up, sky view. Strong winds — not going in the water today.
+
+#### Operator station RDP (mercat) — fixed
+
+RDP from deadpool (Remmina) to mercat was failing:
+
+1. **Kerberos auth failure**: FreeRDP tried NLA/Kerberos against `CCOM.NH` domain, couldn't reach KDC. Fix: changed Remmina security setting from default to TLS.
+2. **Login rejected**: Password accepted locally but rejected over RDP. Root cause: someone had changed the Windows **display name** but not the actual **username** (via Control Panel "Change your account name", which only changes the display name). The Remmina connection was using the displayed name, which didn't match the real account. Fixed by using the actual username (confirmed via `net user`).
+
+#### NTRIP / MACORS setup
+
+MACORS registration process for RTK corrections:
+1. Go to https://macors.massdot.state.ma.us/
+2. Create an account (one per device — convention: use boat name as username)
+3. From the account, subscribe to the **real-time GPS corrections service** (free)
+4. Wait for service activation (not instant — status shows "awaiting activation")
+5. Once active, credentials go in `ntrip_launch.py` (host: `macorsrtk.massdot.state.ma.us`, port: 31000, mountpoint: `RTCM3_MASA`)
+
+BizzyBoat account created, subscription submitted — activated same day.
+NTRIP uncommented in core_launch.py, relaunched on gabby. RTK fix confirmed —
+position visibly tighter in CAMP.
+
+#### Operator UI on salmon — working
+
+Created `operator_ui_launch.py` for bizzyboat (thin wrapper around
+`marine_autonomy/operator_ui_launch.py` with `bizzy` namespace, CAMP + rqt).
+Committed in issue-13 worktree, pushed to gitcloud as jazzy, pulled and built
+on salmon. Boat position visible in CAMP.
+
+#### RTK confirmed working
+
+MACORS account activated. Uncommented NTRIP in `core_launch.py`, relaunched on
+gabby. RTK fix confirmed — position visibly tighter and more stable in CAMP.
+Also adjusted steering rate in `bizzyboat.yaml`. Both changes committed and
+pushed from gabby to gitcloud.
+
+#### Mavros FCU — confirmed working
+
+Previously listed as TODO (had timed out). Now working end-to-end via
+core_launch — joystick driving, GPS position, and RTK corrections all
+functional.
+
+#### OAK cameras — switched to sea_surface_segmentation
+
+Updated `oak_cameras_launch.py` to use `sea_surface_segmentation` instead of
+raw `depthai_ros_driver`, matching the IzzyBoat pattern. One node per camera
+with respawn. Committed and pushed to gitcloud.
+
+Perception launch was failing due to missing `cube_bathymetry` in gabby's
+sensors layer — added it, perception now launches.
+
+#### Starlink Mini — ethernet not working, WiFi fallback
+
+Starlink Mini connected to RUTX11 via ethernet (eth1). Link up at 100Mbps,
+DHCP lease received (192.168.1.212), but zero ARP responses from gateway
+(192.168.1.1). Rebooted Starlink via web dashboard — same result. Dish MAC
+(74:24:9f:10:10:c2) visible in ARP table but never completes resolution.
+
+Suspect the Mini needs bypass mode enabled (via Starlink app or Mini's WiFi
+management page) to work properly with a third-party router. Could not reach
+Mini's management interface at 192.168.100.1 from gabby (same L2 issue).
+
+**Workaround**: Connected RUTX11 to Starlink Mini via WiFi instead of ethernet
+(ifWan1 interface). Status TBD — session ended before verifying.
+
+mwan3 failover config:
+- ifWan1 (WiFi to Starlink): metric 1 (highest priority)
+- wan (ethernet to Starlink): metric 2 — currently broken
+- mob1s1a1 (Verizon cell): metric 3 — flapping
+- mob1s2a1 (SIM 2): disabled
+
+**TODO**:
+- Verify WiFi-to-Starlink path works for internet + ZeroTier
+- Investigate Starlink Mini bypass mode for ethernet
+- Consider disabling `wan` in mwan3 until ethernet issue resolved
+- Stabilize cellular fallback
