@@ -195,14 +195,14 @@ def generate_launch_description():
             }.items()
         ),
 
-        # NTRIP — disabled until credentials are configured
-        # IncludeLaunchDescription(
-        #     PythonLaunchDescriptionSource(
-        #         PathJoinSubstitution([
-        #             FindPackageShare('bizzyboat_project11'),
-        #             'launch',
-        #             'ntrip_launch.py'
-        #         ])
-        #     ),
-        # ),
+        # NTRIP
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'ntrip_launch.py'
+                ])
+            ),
+        ),
     ])
