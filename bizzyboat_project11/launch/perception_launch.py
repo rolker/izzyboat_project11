@@ -5,6 +5,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import EnvironmentVariable
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
@@ -28,7 +29,13 @@ def generate_launch_description():
         'sonar_log_directory',
         default_value=TextSubstitution(text='/home/field/project11/logs/bizzyboat_sonar')
     )
-
+    sonar_log_directory_arg = DeclareLaunchArgument(
+        'sonar_log_directory',
+        default_value=EnvironmentVariable(
+            'P11_SONAR_LOG_DIR',
+            default_value='/home/field/data/logs/bizzyboat_sonar'
+        )
+    )      
     datetime_str = datetime.datetime.now(datetime.timezone.utc).isoformat(
         timespec='seconds').replace(':', '-')
     sonar_log_subdirectory = LaunchConfiguration('sonar_log_subdirectory')
