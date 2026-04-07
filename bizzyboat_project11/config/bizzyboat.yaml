@@ -2,7 +2,7 @@
   ros__parameters:
     output_type: twist
     max_speed: 2.0
-    max_yaw_speed: 1.5
+    max_yaw_speed: 0.5
 
 /**/platform_sender:
   ros__parameters:

@@ -27,6 +27,7 @@ export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
 export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 
 /usr/bin/tmux new -d -s project11
+/usr/bin/tmux rename-window -t project11 core
 
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 
@@ -34,12 +35,12 @@ export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 core_launch.py" C-m
 
 # Perception: cameras, sonar, logging
-/usr/bin/tmux new-window -t project11
+/usr/bin/tmux new-window -t project11 -n perception
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 perception_launch.py log_directory:=${LOGDIR_BAG}" C-m
 
 # Nav: autonomy, helm, s57, nav2
-/usr/bin/tmux new-window -t project11
+/usr/bin/tmux new-window -t project11 -n nav
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 nav_launch.py" C-m
 
