@@ -137,13 +137,17 @@ main hatch area.
 | Component | x | y | z | Status |
 |-----------|---|---|---|--------|
 | Box front-bottom | -0.875 | 0.0 | -0.01 | [MEAS] rough |
-| IMU (est. center of box) | -0.975 | 0.0 | 0.065 | [EST] |
+| Box dimensions (x × y × z) | 0.23 × 0.28 × 0.14 | | | [MEAS] from IzzyBoat photos |
+| IMU (Cube Orange center) | -0.99 | 0.0 | 0.05 | [MEAS] from IzzyBoat photos |
 
 **Notes**:
-- Front-bottom of the box is the measured reference point.
-- Box dimensions ~0.20 x 0.15 x 0.15m estimated from photos. The mechanical
-  diagrams (Fig 137) may provide better dimensions — needs closer inspection.
-- The Cube Orange IMU position within the box needs refinement.
+- Front-bottom of the box is the measured reference point on BizzyBoat.
+- Box dimensions measured from IzzyBoat AutoNav photos (2024-06-14) with tape
+  measure — same model (Seafloor Systems AutoNav) used on both boats.
+  X=0.23m depth (fore-aft, ~9"), Y=0.28m width (~11"), Z=0.14m height (~5.5").
+- Cube Orange is in the lower compartment, roughly centered fore-aft and laterally,
+  ~0.06m above box bottom. IMU is at center of Cube Orange (~65mm cube).
+- IMU position in base_link frame: (-0.875 - 0.115, 0.0, -0.01 + 0.06) = (-0.99, 0.0, 0.05).
 - The IMU orientation relative to base_link needs verification.
 
 ## Coordinate Frame Conventions
@@ -205,8 +209,8 @@ N is at PDF page N+5). Key diagrams stored in `~/bizzyboat/pages/doc-page-NNN.pn
 | GNSS height (z) | 0.89m [MEAS] rough | Refine with tape measure from hull floor to puck top |
 | GNSS fore-aft (x) | ±0.835m [MEAS] rough | Refine from base_link screw hole to each puck |
 | DeltaT position (x, z) | -0.23, -0.18 [MEAS] rough | Refine from screw hole; depth below hull |
-| AutoNav box dimensions | ~0.20 x 0.15 x 0.15 [EST] | Measure box length, width, height |
-| IMU position within AutoNav box | center [EST] | Locate Cube Orange inside box, measure offset from front-bottom |
+| AutoNav box dimensions | 0.23 x 0.28 x 0.14 [MEAS] from IzzyBoat photos | Confirm on BizzyBoat |
+| IMU position within AutoNav box | -0.115, 0.0, 0.06 from box front-bottom [MEAS] from IzzyBoat photos | Confirm on BizzyBoat |
 | IMU orientation | identity [EST] | Verify Cube Orange axes align with boat frame |
 | USB camera position | 1.05, 0, 0.89 [EST] | At forward end of center rail — refine with measurement |
 | Frame upright fwd x | 0.30 [EST] | Measure from base_link to forward upright pair |
