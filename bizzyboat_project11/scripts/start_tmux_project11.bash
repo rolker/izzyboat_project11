@@ -4,7 +4,8 @@
 
 DAY=$(date "+%Y-%m-%d")
 NOW=$(date "+%Y-%m-%dT%H.%M.%S.%N")
-LOGDIR="/home/field/project11/logs/bizzyboat"
+LOGDIR="${P11_LOG_DIR:-/home/field/data/logs/bizzyboat}"
+
 mkdir -p "$LOGDIR"
 LOG_FILE="${LOGDIR}/autostart_${NOW}.txt"
 LOGDIR_BAG="${LOGDIR}/${NOW}"

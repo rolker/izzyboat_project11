@@ -63,12 +63,16 @@
             - global_costmap
             - oak_forward
             - oak_forward_info
+            - oak_forward_raw
             - oak_starboard
             - oak_starboard_info
+            - oak_starboard_raw
             - oak_aft
             - oak_aft_info
+            - oak_aft_raw
             - oak_port
             - oak_port_info
+            - oak_port_raw
             - odom
             - path_follower_visualization
             - plan
@@ -91,14 +95,18 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_forward:      {source: sensors/cameras/oak_forward/rgb/image_raw/compressed, period: 2.0}
-              oak_forward_info: {source: sensors/cameras/oak_forward/rgb/camera_info}
-              oak_starboard:      {source: sensors/cameras/oak_starboard/rgb/image_raw/compressed, period: 2.0}
-              oak_starboard_info: {source: sensors/cameras/oak_starboard/rgb/camera_info}
-              oak_aft:      {source: sensors/cameras/oak_aft/rgb/image_raw/compressed, period: 2.0}
-              oak_aft_info: {source: sensors/cameras/oak_aft/rgb/camera_info}
-              oak_port:      {source: sensors/cameras/oak_port/rgb/image_raw/compressed, period: 2.0}
-              oak_port_info: {source: sensors/cameras/oak_port/rgb/camera_info}
+              oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 2.0}
+              oak_forward_info: {source: sensors/cameras/oak_forward/camera_info}
+              oak_forward_raw:    {source: sensors/cameras/oak_forward/image_raw, period: -1.0}
+              oak_starboard:      {source: sensors/cameras/oak_starboard/image_raw/compressed, period: 2.0}
+              oak_starboard_info: {source: sensors/cameras/oak_starboard/camera_info}
+              oak_starboard_raw:  {source: sensors/cameras/oak_starboard/image_raw, period: -1.0}
+              oak_aft:      {source: sensors/cameras/oak_aft/image_raw/compressed, period: 2.0}
+              oak_aft_info: {source: sensors/cameras/oak_aft/camera_info}
+              oak_aft_raw:  {source: sensors/cameras/oak_aft/image_raw, period: -1.0}
+              oak_port:      {source: sensors/cameras/oak_port/image_raw/compressed, period: 2.0}
+              oak_port_info: {source: sensors/cameras/oak_port/camera_info}
+              oak_port_raw:  {source: sensors/cameras/oak_port/image_raw, period: -1.0}
               path_follower_visualization: {source: path_follower_visualization}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
@@ -180,7 +188,7 @@
       - /tf
       - /tf_static
     storage:
-      uri: /home/field/project11/logs/bizzyboat
+      uri: /home/field/data/logs/bizzyboat
       max_bagfile_duration: 300
       storage_preset_profile: zstd_fast
 
@@ -196,6 +204,6 @@
       - /tf
       - /tf_static
     storage:
-      uri: /home/field/project11/logs/bizzyboat_sonar
+      uri: /home/field/project11/data/bizzyboat_sonar
       max_bagfile_duration: 300
       storage_preset_profile: zstd_fast
