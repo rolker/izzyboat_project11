@@ -1,10 +1,9 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
@@ -16,6 +15,12 @@ def generate_launch_description():
         'namespace', default_value='bizzy'
     )
 
+    ntrip_credentials = PathJoinSubstitution([
+        FindPackageShare('ccomjhc_project11'),
+        'configuration',
+        'bizzyboat_ntrip.yaml'
+    ])
+
     return LaunchDescription([
         namespace_arg,
         GroupAction(
@@ -25,23 +30,26 @@ def generate_launch_description():
                     src='rtcm',
                     dst=['/', namespace, '/mavros/gps_rtk/send_rtcm']
                 ),
-                IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(
-                        PathJoinSubstitution([
-                            FindPackageShare('bizzyboat_project11'),
-                            'launch',
-                            'ntrip_client_launch.py'
-                        ])
-                    ),
-                    launch_arguments={
-                        'namespace': 'sensors/ntrip',
-                        'host': 'macorsrtk.massdot.state.ma.us',
-                        'port': '31000',
-                        'mountpoint': 'RTCM3_MASA',
-                        'username': 'bizzyboat',
-                        'password': 'bizzyboat',
-                        'rtcm_message_package': 'mavros_msgs',
-                    }.items()
+                Node(
+                    name='ntrip_client',
+                    namespace='sensors/ntrip',
+                    package='ntrip_client',
+                    executable='ntrip_ros.py',
+                    respawn=True,
+                    respawn_delay=5,
+                    emulate_tty=True,
+                    parameters=[
+                        ntrip_credentials,
+                        {
+                            'rtcm_message_package': 'mavros_msgs',
+                            'rtcm_frame_id': 'odom',
+                            'nmea_max_length': 128,
+                            'nmea_min_length': 3,
+                            'reconnect_attempt_max': 10,
+                            'reconnect_attempt_wait_seconds': 5,
+                            'rtcm_timeout_seconds': 4,
+                        }
+                    ],
                 ),
             ]
         )

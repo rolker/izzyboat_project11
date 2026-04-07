@@ -89,8 +89,26 @@ These are already set correctly in the baseline dump:
 5. Negated `GPS_MB1_OFS_X` (-1.67 → +1.67) and swapped POS1/POS2 X values
 6. Heading corrected to ~74° (ENE) — matches boat orientation at pier
 
-## NTRIP (deferred)
+## NTRIP / RTK (verified 2026-04-06)
 
-NTRIP RTK corrections are commented out in `bizzyboat_project11/launch/core_launch.py`.
-Assess after basic GPS fix is confirmed. IzzyBoat uses MassDOT CORS
-(`macorsrtk.massdot.state.ma.us:31000`, mountpoint `RTCM3_MASA`).
+NTRIP RTK corrections verified working on BizzyBoat.
+
+### MACORS Setup
+
+1. Registered at https://macors.massdot.state.ma.us/
+2. Created device account (convention: one account per device)
+3. Subscribed to real-time GPS corrections service (free, activated same day)
+4. Credentials stored in `ccomjhc_project11/configuration/bizzyboat_ntrip.yaml`
+   (private repo, loaded at launch via `FindPackageShare`)
+
+### Connection Details
+
+- Host: `macorsrtk.massdot.state.ma.us`
+- Port: `31000`
+- Mountpoint: `RTCM3_MASA`
+- Same CORS network as IzzyBoat (MassDOT MACORS)
+
+### Activation
+
+- Uncommented NTRIP in `core_launch.py`, relaunched on gabby
+- RTK fix confirmed — position visibly tighter and more stable in CAMP
