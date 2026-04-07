@@ -1,4 +1,8 @@
 repositories:
+  cube_bathymetry:
+    type: git
+    url: git@gitcloud:field/cube_bathymetry.git
+    version: jazzy
   unh_marine_perception:
     type: git
     url: git@gitcloud:field/unh_marine_perception.git
