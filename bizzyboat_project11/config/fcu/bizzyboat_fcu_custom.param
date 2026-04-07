@@ -1,0 +1,35 @@
+# BizzyBoat FCU parameter customizations (diffs from baseline)
+#
+# These parameters override the factory baseline. Apply with:
+#   mavproxy: param load bizzyboat_fcu_custom.param
+#   or set individually via mavros param service
+#
+# ArduPilot body frame: X = forward, Y = right, Z = down
+
+# GPS antenna offsets (applied 2026-04-02)
+# GPS1 (CAN 124) = forward antenna, GPS2 = aft antenna
+GPS_POS1_X       0.835000
+GPS_POS1_Y       0.000000
+GPS_POS1_Z       -0.890000
+GPS_POS2_X       -0.835000
+GPS_POS2_Y       0.000000
+GPS_POS2_Z       -0.890000
+
+# Moving baseline RTK (dual-antenna heading)
+GPS_MB1_TYPE     1
+GPS_MB1_OFS_X    1.670000
+GPS_MB1_OFS_Y    0.000000
+GPS_MB1_OFS_Z    0.000000
+
+# IMU position offsets (applied 2026-04-07)
+# Cube Orange in AutoNav box, ~0.99m aft and ~0.05m above base_link
+# Measured from IzzyBoat AutoNav photos (same model)
+INS_POS1_X       -0.990000
+INS_POS1_Y       0.000000
+INS_POS1_Z       -0.050000
+INS_POS2_X       -0.990000
+INS_POS2_Y       0.000000
+INS_POS2_Z       -0.050000
+INS_POS3_X       -0.990000
+INS_POS3_Y       0.000000
+INS_POS3_Z       -0.050000

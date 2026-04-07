@@ -1,64 +1,56 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
-from launch.actions import IncludeLaunchDescription
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-  namespace = LaunchConfiguration('namespace')
+    namespace = LaunchConfiguration('namespace')
 
-  namespace_arg = DeclareLaunchArgument(
-    "namespace", default_value="izzy"
-  )
-
-  return LaunchDescription([
-    namespace_arg,
-    GroupAction(
-      actions = [
-        PushRosNamespace(namespace),
-        SetRemap(
-          src = 'rtcm',
-          dst = ['/',namespace,'/mavros/gps_rtk/send_rtcm']
-        ),
-        IncludeLaunchDescription(
-          PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-              FindPackageShare('izzyboat_project11'),
-              'launch',
-              'ntrip_client_launch.py'
-            ])
-          ),
-          launch_arguments={
-            'namespace': 'sensors/ntrip',
-            'host': 'macorsrtk.massdot.state.ma.us',
-            'port': '31000',
-            'mountpoint': 'RTCM3_MASA',
-            'username': 'izzyboat',
-            'password': 'izzyboat',
-            'rtcm_message_package': 'mavros_msgs',
-          }.items()
-        ),
-      ]
+    namespace_arg = DeclareLaunchArgument(
+        'namespace', default_value='izzy'
     )
-  ])
 
+    ntrip_credentials = PathJoinSubstitution([
+        FindPackageShare('ccomjhc_project11'),
+        'configuration',
+        'izzyboat_ntrip.yaml'
+    ])
 
-
-# <launch>
-#   <arg name="namespace" default="izzy"/>
-
-#   <include file="$(find ntrip_client)/launch/ntrip_client.launch">
-#     <arg name="namespace" value="$(arg namespace)/sensors/ntrip"/>
-#     <arg name="host" value="macorsrtk.massdot.state.ma.us"/>
-#     <arg name="port" value="31000"/>
-#     <arg name="mountpoint" value="RTCM3_MASA"/>
-#     <arg name="username" value="izzyboat"/>
-#     <arg name="password" value="izzyboat"/>
-#     <arg name="rtcm_message_package" value="mavros_msgs"/>
-#   </include>
-# </launch>
+    return LaunchDescription([
+        namespace_arg,
+        GroupAction(
+            actions=[
+                PushRosNamespace(namespace),
+                SetRemap(
+                    src='rtcm',
+                    dst=['/', namespace, '/mavros/gps_rtk/send_rtcm']
+                ),
+                Node(
+                    name='ntrip_client',
+                    namespace='sensors/ntrip',
+                    package='ntrip_client',
+                    executable='ntrip_ros.py',
+                    respawn=True,
+                    respawn_delay=5,
+                    emulate_tty=True,
+                    parameters=[
+                        ntrip_credentials,
+                        {
+                            'rtcm_message_package': 'mavros_msgs',
+                            'rtcm_frame_id': 'odom',
+                            'nmea_max_length': 128,
+                            'nmea_min_length': 3,
+                            'reconnect_attempt_max': 10,
+                            'reconnect_attempt_wait_seconds': 5,
+                            'rtcm_timeout_seconds': 4,
+                        }
+                    ],
+                ),
+            ]
+        )
+    ])

@@ -196,15 +196,16 @@
 
   <!-- ========== AutoNav Box (contains Cube Orange FCU + IMU) ========== -->
   <!-- Front bottom of box at (-0.875, 0, -0.01) from base_link.
-       Box dimensions ~0.20 x 0.15 x 0.15 estimated from photos.
-       IMU is inside the Cube Orange, position within box is approximate. -->
+       Box dimensions 0.23 x 0.28 x 0.14 measured from IzzyBoat AutoNav photos
+       (same model used on BizzyBoat). X=depth(fore-aft), Y=width, Z=height.
+       IMU is inside the Cube Orange in the lower compartment. -->
 
   <link name="bizzy/autonav_box">
     <visual>
       <geometry>
-        <box size="0.20 0.15 0.15"/>
+        <box size="0.23 0.28 0.14"/>
       </geometry>
-      <origin xyz="-0.10 0 0.075"/>
+      <origin xyz="-0.115 0 0.07"/>
       <material name="bumper_black"/>
     </visual>
   </link>
@@ -215,13 +216,15 @@
     <origin xyz="-0.875 0.0 -0.01" rpy="0 0 0"/>
   </joint>
 
-  <!-- IMU frame at estimated center of Cube Orange inside the box -->
+  <!-- IMU frame at Cube Orange center in the lower compartment.
+       Position from IzzyBoat AutoNav measurement photos (2024-06-14):
+       ~0.115m aft of box front, centered laterally, ~0.06m above box bottom. -->
   <link name="bizzy/imu"/>
 
   <joint name="autonav_box_to_imu" type="fixed">
     <parent link="bizzy/autonav_box"/>
     <child link="bizzy/imu"/>
-    <origin xyz="-0.10 0.0 0.075" rpy="0 0 0"/>
+    <origin xyz="-0.115 0.0 0.06" rpy="0 0 0"/>
   </joint>
 
 
