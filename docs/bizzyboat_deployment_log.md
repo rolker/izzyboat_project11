@@ -20,7 +20,7 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 | # | Task | Status | Notes |
 |---|------|--------|-------|
-| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Core launch tested on gabby. Jazzy merged into feature/issue-13 (15 commits). Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF, open), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs, done) |
+| [unh_echoboats_project11#13](https://github.com/rolker/unh_echoboats_project11/issues/13) | bizzyboat_project11 package | **in progress** | Core launch tested on gabby. Jazzy merged into feature/issue-13 (15 commits). Sub-issues: [#25](https://github.com/rolker/unh_echoboats_project11/issues/25) (URDF, done — PR #27 merged), [CCOMJHC#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9) (camera IPs, done) |
 | [unh_echoboats_project11#37](https://github.com/rolker/unh_echoboats_project11/issues/37) | GPS antenna offsets | **GPS working** | Moving baseline RTK heading verified. PR [#38](https://github.com/rolker/unh_echoboats_project11/pull/38) open. NTRIP deferred |
 | [CCOMJHC/ccomjhc_project11#6](https://github.com/CCOMJHC/ccomjhc_project11/issues/6) | Site-specific config | not started | |
 | [CCOMJHC/ccomjhc_project11#16](https://github.com/CCOMJHC/ccomjhc_project11/issues/16) | Operator dnsmasq hosts | **PR open** | PR [CCOMJHC#17](https://github.com/CCOMJHC/ccomjhc_project11/pull/17) deployed, needs gabby verification |
@@ -559,6 +559,12 @@ with respawn. Committed and pushed to gitcloud.
 Perception launch was failing due to missing `cube_bathymetry` in gabby's
 sensors layer — added it, perception now launches.
 
+#### DeltaT sonar — partial connectivity
+
+DeltaT verified communicating with mercat (Windows operator machine). Still need
+to configure it to send data to gabby and verify gabby's deltat ROS node receives
+the data stream.
+
 #### Starlink Mini — ethernet not working, WiFi fallback
 
 Starlink Mini connected to RUTX11 via ethernet (eth1). Link up at 100Mbps,
@@ -584,3 +590,315 @@ mwan3 failover config:
 - Investigate Starlink Mini bypass mode for ethernet
 - Consider disabling `wan` in mwan3 until ethernet issue resolved
 - Stabilize cellular fallback
+
+### 2026-04-07
+
+#### Conditions
+
+At the pier. Boat inside mobile lab being charged. No sky view — Starlink and GPS
+unlikely to work. Access to gabby via WiFi bridge from deadpool/salmon.
+
+#### Network troubleshooting
+
+`make sync` on gabby partially succeeded — some repos fetched, others failed,
+suggesting intermittent internet connectivity. Without Starlink (no sky view inside
+the lab), gabby's only internet path is cellular (Verizon via RUTX11 mwan3).
+
+**Symptom**: `make sync` on gabby partially succeeded — some repos fetched, others
+timed out. Intermittent internet via cellular (only viable path with no sky view).
+
+**Root cause**: mwan3 tracking thresholds too aggressive for cellular. Default config
+marked mob1s1a1 offline after just ~9 seconds of dropped pings (interval=3, count=1,
+down=3), causing rapid flapping between online/offline.
+
+**Fix applied** (RUTX11 router, `uci commit mwan3 && mwan3 restart`):
+
+| Setting | Before | After |
+|---------|--------|-------|
+| `mwan3.mob1s1a1.interval` | 3 | 5 |
+| `mwan3.cfg0afbac.count` | 1 | 3 |
+| `mwan3.cfg0afbac.down` | 3 | 5 |
+
+Now requires ~25 seconds of total blackout before marking offline (vs ~9s before).
+After restart, mob1s1a1 stayed online 5+ minutes continuously. `make sync` on gabby
+succeeded on retry.
+
+#### WireGuard tunnel (bcloud) investigation
+
+**Symptom**: `wg show` on RUTX11 showed `0 B received, 1.01 KiB sent` — tunnel sending
+keepalives but getting no response from BenCloud (18.213.242.76:51820).
+
+**Findings**:
+
+- BenCloud WireGuard is running (confirmed via SSH). Public key matches RUTX11 config.
+- BenCloud last saw BizzyBoat handshake ~23 min ago (endpoint 174.196.200.125:4818).
+- RUTX11 can ping BenCloud public IP (18.213.242.76) over cellular — 0% loss, 40-87ms.
+- BenCloud reachable from gabby via ZeroTier (10.242.7.97) — confirmed working.
+- gitcloud also reachable from gabby via ZeroTier — `make sync` succeeded through it.
+- NETMAP NAT confirmed correct: 192.168.20.0/24 ↔ 192.168.21.0/24 for WG traffic.
+- BenCloud allowed IPs for BizzyBoat peer: `10.132.146.6/32, 192.168.21.0/24` — correct.
+
+**Log analysis**: mwan3 hotplug triggers WireGuard restarts on every WAN interface
+state change (Teltonika firmware behavior, source not found in shell scripts — likely
+proprietary). wan1 (WiFi to Starlink) flapping inside lab triggered 6+ restarts in
+~2 minutes before our mwan3 threshold fix.
+
+**Conclusion**: Verizon cellular is blocking outbound UDP to port 51820. Evidence:
+- ICMP ping from RUTX11 to BenCloud (18.213.242.76) works — 0% loss, ~50ms.
+- RUTX11 sends WG keepalives (7.66 KiB sent, 0 B received).
+- BenCloud (rebooted, fresh state) sees no packets from BizzyBoat peer — no endpoint,
+  no handshake, no transfer.
+- First peer (153.66.163.21, non-cellular) re-established immediately after reboot.
+
+**Fix needed**: Change BenCloud WG listen port to a carrier-friendly port (443, 53,
+or 500) and update RUTX11 endpoint to match. Both sides need to change.
+
+**Update**: After DNS fix changed the default route to Starlink (wan1), bcloud tunnel
+came up immediately — handshake established, bidirectional traffic confirmed. The UDP
+51820 block is **Verizon cellular specific**. Tunnel works fine over Starlink. For
+offshore use: if Starlink drops and only cellular remains, the VPN will go down.
+Port change still needed for full cellular resilience.
+
+#### DNS resolution broken on gabby — fixed
+
+**Symptom**: `nslookup google.com` and other external hostnames failing on gabby.
+`make sync` worked earlier (via gitcloud/ZeroTier, which doesn't need DNS).
+
+**Root cause**: Multiple interacting issues with dnsmasq upstream DNS on RUTX11:
+
+1. wan1 (WiFi to mobile lab Starlink) provided 192.168.1.1 as DNS via DHCP — the
+   Starlink router's built-in DNS proxy is unreliable (intermittent NXDOMAIN).
+2. Verizon IPv4 DNS (198.224.186.x) unreachable when default route goes through
+   Starlink (carrier-specific servers only work from Verizon's network).
+3. wan6 IPv6 DNS (`fd2c:81e:f07e:10::1`) from Starlink ethernet (broken L2 interface)
+   was returning fast NXDOMAIN responses that won the race against working servers.
+4. With `all-servers` enabled, dnsmasq uses the first response — a fast wrong NXDOMAIN
+   beats a slow correct answer.
+
+**Fix applied** (RUTX11 router):
+```
+# Add reliable public DNS servers
+uci add_list dhcp.cfg01411c.server='8.8.8.8'
+uci add_list dhcp.cfg01411c.server='1.1.1.1'
+uci set dhcp.cfg01411c.allservers='1'
+uci set dhcp.cfg01411c.nonegcache='1'
+uci commit dhcp
+
+# Stop interfaces from advertising broken DNS servers
+uci set network.wan1.peerdns='0'
+uci set network.wan6.peerdns='0'
+uci set network.mob1s1a1.peerdns='0'
+uci commit network
+
+/etc/init.d/network reload
+/etc/init.d/dnsmasq restart
+```
+
+**Design rationale**: Public DNS (8.8.8.8, 1.1.1.1) works over any ISP path — Starlink
+or cellular. `peerdns='0'` on all WAN interfaces removes unreliable per-carrier DNS.
+`allservers` and `nonegcache` provide resilience. Prior approach (April 3) of removing
+hardcoded servers failed because dnsmasq's locally-originated queries bypass mwan3 marks
+and follow the main routing table — hardcoded servers only work if the default route is
+alive. Public DNS + `peerdns='0'` avoids this because the servers are ISP-agnostic.
+
+**Verified**: `nslookup google.com` and `nslookup macorsrtk.massdot.state.ma.us` both
+resolve correctly on gabby.
+
+#### OAK cameras — working, compressed image workaround needed
+
+4x OAK cameras launch and produce images via `sea_surface_segmentation`. However,
+compressed images (via `image_transport`) are not published unless the raw topic also
+has a subscriber.
+
+**Root cause**: Bug in `depthai_bridge::BridgePublisher` (upstream `depthai-ros`).
+In `BridgePublisher.hpp:239`, `publish()` is gated on
+`_node->count_subscribers(_rosTopic)` which only counts raw topic subscribers.
+`image_transport::Publisher::publish()` would produce compressed output, but it never
+gets called because `count_subscribers` doesn't see compressed-only subscribers
+(they subscribe to `<topic>/compressed`, a different topic name). The correct fix
+would be to use `image_transport`'s own `getNumSubscribers()` which includes all
+transport plugin subscribers.
+
+**Workaround**: Configure `udp_bridge` to subscribe to raw image topics with
+`period: -1` (never actually send), which creates a raw subscriber that satisfies
+the `count_subscribers` check, enabling compressed publishing for the real
+compressed subscriptions.
+
+#### Nav stack — launched, GPS-dependent errors expected
+
+Nav2 controller server was failing due to old `project11_navigation` plugin names —
+fixed in [seafloor_echoboat_project11#9](https://github.com/rolker/seafloor_echoboat_project11/pull/9).
+After fix, full nav stack launches successfully. GPS and tide errors are expected
+indoors (no fix → sea_surface_estimator can't look up tide data). Confirmed
+sea_surface_estimator is included in core_launch.py.
+
+Also reconciled gitcloud/GitHub divergence for unh_echoboats_project11 —
+field fixes from Apr 2-6 merged via [#42](https://github.com/rolker/unh_echoboats_project11/pull/42).
+
+#### ROS discovery fix
+
+`ros2 node list` returned empty from SSH shells due to
+`ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` only set in the project11 tmux windows,
+not globally. Fixed by adding `export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST` to
+`~/.bashrc` on gabby. Also required `ros2 daemon stop && ros2 daemon start` to
+clear stale daemon state.
+
+#### IMU position offsets — applied to FCU
+
+Refined AutoNav box dimensions and Cube Orange IMU position from IzzyBoat
+measurement photos (2024-06-14, same Seafloor Systems AutoNav model):
+
+- Box: 0.23 × 0.28 × 0.14 m (was 0.20 × 0.15 × 0.15 estimated)
+- IMU at (-0.99, 0.0, 0.05) in ROS frame from base_link
+- ArduPilot INS_POS: X=-0.99, Y=0.0, Z=-0.05 (all 3 IMUs)
+
+Applied via mavproxy on gabby. Updated URDF, reference geometry doc, and created
+`bizzyboat_fcu_custom.param` overlay file. Merged as part of PR #38 (issue #37).
+
+#### Outstanding issues at end of session
+
+- **NTRIP not running**: PR #38 merged the NTRIP credential launch change (loads
+  from `ccomjhc_project11` private config). But `ros2 pkg prefix ccomjhc_project11`
+  returns "Package not found" on gabby despite it building in the site layer. Needs
+  investigation — may be a sourcing order issue or the package install wasn't picked
+  up after sync/rebuild. Core launch fails because it can't find the NTRIP config.
+
+- **`molab_description` stale build**: On deadpool, `make build` failed due to stale
+  build artifacts for `molab_description` (consolidated into `mobile_lab` repo).
+  Fixed by removing stale build/install dirs. Gabby may have the same issue.
+
+- **WireGuard port**: ~~bcloud tunnel works over Starlink but not Verizon cellular
+  (UDP 51820 blocked). Port change still needed for cellular resilience.~~
+  Re-tested 2026-04-08 — tunnel works over Verizon cellular (see session below).
+  Original block was likely transient. Monitor; add iptables port redirect if recurs.
+
+- **Startup script**: `start_tmux_project11.bash` still has redundant
+  `ROS_AUTOMATIC_DISCOVERY_RANGE` exports (now in `.bashrc`). Should be cleaned up.
+
+- **`nav_launch.py` removed**: The gitcloud merge (PR #42) deleted nav_launch.py
+  but the startup script still references it (line 45). Needs updating.
+
+### 2026-04-08
+
+#### WireGuard over Verizon cellular — working (was transient issue)
+
+Re-investigated the April 7 finding that UDP 51820 was blocked by Verizon cellular.
+
+**Test conditions**: BizzyBoat router on cellular only (mob1s1a1). WAN (Starlink
+ethernet) and wan1 (WiFi bridge) both offline, confirmed via `mwan3 interfaces`.
+
+**Result**: WireGuard tunnel to bcloud is working over Verizon cellular on port 51820.
+
+- Router side: `wg show` on RUTX11 shows active handshake (8s ago), bidirectional
+  transfer (565 KiB rx, 432 KiB tx), persistent keepalive every 25s.
+- bcloud side: `wg show` on wg0 shows BizzyBoat peer (174.242.69.124:4130) with
+  active handshake (9s ago), 166 MiB rx / 10 MiB tx.
+- Both operator and BizzyBoat peers connected simultaneously.
+
+**Conclusion**: The April 7 block was transient — possibly Verizon CGNAT port
+mapping issue or mwan3 flapping disrupting the tunnel before our threshold fix
+stabilized cellular tracking. No port change needed at this time.
+
+**Additional test**: Re-enabled WAN interface (Starlink ethernet) — WireGuard tunnel
+remained up through the mwan3 failover. No disruption to the bcloud tunnel when
+switching from cellular-only back to multi-WAN.
+
+**Starlink WAN**: Re-enabled WAN (Starlink ethernet) interface — confirmed online
+via `mwan3 interfaces` (3m uptime alongside cellular). Starlink connectivity working
+today (boat presumably has sky view).
+
+**Contingency**: If UDP 51820 gets blocked again, plan is to add an iptables
+PREROUTING REDIRECT on bcloud (e.g., UDP 4500 → 51820) so only the BizzyBoat
+router endpoint needs updating — other clients stay on 51820.
+
+#### ccomjhc_project11 package not found — fixed
+
+**Symptom**: `ros2 pkg prefix ccomjhc_project11` returned "Package not found" on
+gabby even after `make clean && make build`. Core launch failed because NTRIP
+launch couldn't resolve `FindPackageShare('ccomjhc_project11')`.
+
+**Root cause**: `package.xml` was missing the `<export><build_type>ament_cmake</build_type></export>`
+tag. Without it, colcon didn't generate the `local_setup` entries in `package.dsv`,
+so the package was never added to `AMENT_PREFIX_PATH` when sourcing the workspace.
+Symptom was catkin-related CMake warnings during build (`CATKIN_INSTALL_INTO_PREFIX_ROOT`,
+`CATKIN_SYMLINK_INSTALL` not used).
+
+**Fix**: Added `<export><build_type>ament_cmake</build_type></export>` to
+`ccomjhc_project11/package.xml`, rebuilt. Package now found, NTRIP launches
+successfully as part of core_launch.
+
+**Also noted**: Layer sourcing order mismatch — `setup.bash` sources sensors before
+site, but `layers.txt` has site before sensors. Not blocking but should be
+investigated.
+
+#### Operator station working
+
+Operator station (salmon) confirmed working:
+- OAK camera views in rqt
+- Foxglove with battery gauge
+- johnny5 PTZ camera (192.168.50.55)
+
+#### Agent incident — unauthorized tmux keystrokes
+
+Claude Code agent sent `ros2 node list` into the gabby tmux session while the
+user was actively typing, garbling both commands. Violation of the established
+rule: always ask before sending ANY command to a tmux session. Logged in agent
+feedback memory to prevent recurrence.
+
+#### mru_transform missing sensor config — fixed
+
+`mru_transform` had empty sensor topics (orientation, position, velocity) because
+`bizzyboat.yaml` had no `mru_transform` section. Added sensor config pointing to
+mavros topics (`mavros/imu/data`, `mavros/global_position/raw/fix`,
+`mavros/global_position/raw/gps_vel`). Odom now publishing, tide frame working.
+
+#### NTRIP/RTK lost on WAN failover
+
+WAN (Starlink ethernet) connection dropped. Fallback to cellular did not restore
+NTRIP — RTK fix lost. Workaround: re-enabled WiFi connection to Starlink (wan1),
+disabled WAN (ethernet), RTK came back. Suggests mwan3 failover to cellular doesn't
+properly re-route the NTRIP connection, or MACORS drops the session and ntrip_client
+doesn't reconnect. Needs investigation — this is a reliability concern for offshore
+operation where connectivity paths change.
+
+#### Nav stack — manda_coverage added, hover not working
+
+Added `manda_coverage` (ComputeSonarCoveragePath action server) to echoboat
+`navigation_launch.py` — was missing from the lifecycle nodes list and launch
+entries. Soundings remapped to `sensors/deltat/soundings` for BizzyBoat.
+
+`behavior_server` appears to hang or silently crash when loading the
+`marine_nav_behaviors::Hover` plugin. The `hover` action server never appears
+in `ros2 action list`. bt_task_navigator fails activation because it can't find
+the hover action server (1s timeout). Needs investigation — possible segfault
+on plugin load or TF frame issue.
+
+#### Water test
+
+Boat in the water. Results:
+- **RC manual control**: working
+- **RC loiter mode**: working
+- **Project11 manual control (joystick via operator)**: working
+- **Hover (station keeping via nav stack)**: launches and engages, but drifts
+  away rather than holding station. Had to take over with RC and return to
+  ArduPilot loiter mode. Nav launch was initially not running (missed in startup),
+  started it manually. Hover behavior needs tuning or investigation — may be
+  PID params, odom quality, or cmd_vel mapping issue.
+- **Trackline mission**: Planner failed — "start is occupied". Costmap S57 chart
+  layer not adjusting for tides, marking boat basin as too shallow. Charted depths
+  plus `minimum_depth: 0.1` makes the entire basin an obstacle. Need to verify
+  sea_surface_estimator tide correction and/or adjust minimum_depth for testing.
+
+Boat recovered and back inside mobile lab. Successful initial water test —
+RC control, loiter, and project11 manual joystick all working end-to-end.
+
+## Status
+
+Initial deployment complete. First water test successful on 2026-04-08.
+Remaining setup, tuning, and operator tool work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
+
+#### Forward USB camera — black image
+
+Added `field` user to `video` group on gabby for USB camera access. Forward USB
+camera (non-OAK) now opens but produces a black image. Low priority — secondary
+camera, not blocking water test. Needs investigation later.
