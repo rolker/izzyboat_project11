@@ -892,13 +892,220 @@ Boat in the water. Results:
 Boat recovered and back inside mobile lab. Successful initial water test —
 RC control, loiter, and project11 manual joystick all working end-to-end.
 
-## Status
-
-Initial deployment complete. First water test successful on 2026-04-08.
-Remaining setup, tuning, and operator tool work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
-
 #### Forward USB camera — black image
 
 Added `field` user to `video` group on gabby for USB camera access. Forward USB
 camera (non-OAK) now opens but produces a black image. Low priority — secondary
 camera, not blocking water test. Needs investigation later.
+
+---
+
+### 2026-04-10 — Field operations continued
+
+**Location**: Pier / mobile lab area
+**People**: Roland
+
+Rolled boat out of mobile lab, powered up, connected charger.
+
+#### Starlink Mini bypass mode — verified
+
+Enabled bypass mode on the Starlink Mini while offline (in mobile lab, no sky view).
+After rolling outside and powering up, verified via the RUTX11 router web UI that the
+WAN interface received an address from the Starlink and is working. This resolves the
+Starlink Mini ethernet issue from 2026-04-06 — bypass mode was the fix as suspected.
+
+Re-enabled the WAN interface on the RUTX11 so Starlink ethernet is now an active WAN
+path alongside cellular. Working for now — long-term stability TBD.
+
+#### WireGuard VPN confirmed
+
+Pinged gabby from deadpool via WireGuard (bcloud) — VPN is up.
+
+#### NTP — Time Machines TM2000B setup
+
+A colleague installed a Time Machines TM2000B GPS NTP appliance on the boat
+network. Device not visible in the router's DHCP scan or ARP table — had a
+static IP from a previous setup on a different subnet.
+
+**Finding the device**: `arp-scan -l` from gabby (installed for this purpose)
+found only known devices on 192.168.20.0/24. Factory default IP is 192.168.1.20.
+Factory reset via front-panel pinhole button, then added temp IP
+(`192.168.1.100/24`) on gabby to reach it. SSH tunnel from deadpool to access
+web UI via gabby.
+
+**Configuration**:
+- Default login: `admin` / `tmachine` (lowercase)
+- Changed password, enabled DHCP
+- Device picked up 192.168.20.211 via DHCP
+
+**Network integration** ([CCOMJHC/ccomjhc_project11#30](https://github.com/CCOMJHC/ccomjhc_project11/issues/30)):
+- DHCP reservation on boat router: MAC `d4:e9:5e:06:15:63` → `192.168.20.123`
+- DNS names added to both routers:
+  - `time.lan.bizzy.p11.lan` / `time.bizzy.p11.lan` (192.168.20.123)
+  - `time.vpn.bizzy.p11.lan` (192.168.21.123)
+- Version-controlled hosts files updated in worktree (feature/issue-30)
+- DHCP reservations for both routers backed up to `configuration/dnsmasq/`
+- Rebooted TM2000B, confirmed it picked up .123 — `ping time.bizzy` works
+  from deadpool via VPN
+- Removed temp IP from gabby
+- Version-controlled files committed, PR [CCOMJHC#31](https://github.com/CCOMJHC/ccomjhc_project11/pull/31)
+  merged, closes [CCOMJHC#30](https://github.com/CCOMJHC/ccomjhc_project11/issues/30)
+
+**NTP verification**: After reboot, TM2000B initially had only 2D fix (12 sats
+tracked but not converged). NTP query returned "no eligible servers" — device
+won't serve time without 3D fix (configurable). After a few minutes, 3D fix
+acquired and NTP confirmed working:
+
+```
+ntpdate -q 192.168.20.123
+2026-04-10 14:19:36 -0.017872 +/- 0.001383 192.168.20.123 s1 no-leap
+```
+
+Stratum 1, ~18ms offset, healthy. TM2000B is now the primary NTP source for the
+boat network.
+
+#### ISC ntpd on boat router
+
+Replaced Teltonika NTP stack with ISC ntpd 4.2.8p15, same as operator router
+(see `bizzyboat_ntp_investigation_2026-04-09.md` for background).
+
+**Steps**:
+1. Stopped/disabled Teltonika `ntpclient` (UCI `enabled='0'` + init.d disable),
+   disabled `ntp_gps`. `untpd` was already disabled on this router.
+2. Installed ISC ntpd: `opkg install ntpd`
+3. UCI `file_flag='1'` + `config_file='/etc/ntp.conf'` — the UCI server list
+   doesn't support per-server options like `prefer`, so using a static config.
+4. Custom `/etc/ntp.conf`:
+   - TM2000B (192.168.20.123) as preferred server
+   - 0–3.openwrt.pool.ntp.org as backup
+   - Server enabled for LAN clients
+
+**Verification from gabby**:
+```
+ntpdate -q 192.168.20.123  →  s1, -17.9ms offset (TM2000B, GPS direct)
+ntpdate -q 192.168.20.1    →  s2, -17.7ms offset (router, via TM2000B)
+```
+
+NTP chain: GPS → TM2000B (stratum 1) → router (stratum 2) → LAN clients.
+
+#### Operator router NTP updated
+
+Updated op router ISC ntpd config to include boat sources (also switched to
+`file_flag='1'` + `/etc/ntp.conf` for consistency with boat router):
+- TM2000B (192.168.20.123) via WiFi bridge
+- Boat router (192.168.20.1) via WiFi bridge
+- Internet pools as fallback
+
+These sources are only reachable when the boat is nearby on the WiFi bridge.
+ISC ntpd handles unreachable servers gracefully.
+
+Also added DHCP option 42 (NTP server) on the op router LAN:
+`uci add_list dhcp.lan.dhcp_option='42,192.168.13.1'`
+This pushes the op router as NTP server to all DHCP clients, though Ubuntu
+clients need a dispatcher script to act on it (not yet configured).
+
+#### NTP client configuration — all machines
+
+| Machine | Client | Sources | Notes |
+|---------|--------|---------|-------|
+| **gabby** | chrony (new, replaced timesyncd) | TM2000B (prefer), boat router, op router | Most critical — ROS 2 compute |
+| **salmon** | chrony | op router, boat router (WiFi+VPN), TM2000B (WiFi+VPN), gabby (noselect) | Operator station |
+| **deadpool** | chrony | op router, boat router (WiFi+VPN), TM2000B (WiFi+VPN) | Dev station |
+| **boat router** | ISC ntpd | TM2000B (prefer), internet pools | Serves stratum 2 to LAN |
+| **op router** | ISC ntpd | TM2000B (WiFi bridge), boat router (WiFi bridge), internet pools | Serves stratum 2-3 to LAN |
+
+All chrony configs use `/etc/chrony/sources.d/project11.sources`.
+Deadpool and salmon include both WiFi bridge and VPN paths for redundancy.
+
+**Verified**: deadpool selected TM2000B via WiFi bridge as primary (`^*`),
+stratum 2, -216μs offset, sub-millisecond accuracy from GPS.
+
+#### PRs merged for water test
+
+- [rolker/mru_transform#9](https://github.com/rolker/mru_transform/pull/9) —
+  chart_datum_node for ellipsoid-to-MLLW vertical datum transform. Reviewed
+  Copilot comments, fixed curl `--fail` flag and libproj runtime dependency.
+- [rolker/unh_echoboats_project11#44](https://github.com/rolker/unh_echoboats_project11/pull/44) —
+  mru_transform config and segmentation streams for bizzyboat.
+- Both repos synced to gitcloud.
+
+#### chart_datum_node added to BizzyBoat launch
+
+Added `chart_datum_launch.py` include to `core_launch.py` (directly on gabby,
+between sea_surface_estimator and MAVRos sections). This provides the
+`map → chart_datum` MLLW vertical datum transform needed for correct
+depth-aware planning against S57 charts.
+
+VDatum grids (~1.7GB) copied from deadpool via rsync to `~/.cache/mru_transform/`
+on gabby — CMake build-time download was too slow. Opened
+[rolker/mru_transform#10](https://github.com/rolker/mru_transform/issues/10) to
+make the build check-and-warn instead of downloading.
+
+Full rebuild on gabby completed successfully. Gabby rebooted (pending kernel
+upgrade). Setting up for second water test.
+
+#### Starlink ethernet down after launch
+
+Starlink was working all morning on the pier. After launching the boat,
+the WAN interface (eth1) shows physical link UP but DHCP fails — no IP
+assigned. `ifup wan` doesn't help. Starlink web GUI (via app) shows
+satellite connection is fine. Cellular fallback is marginal (SINR 0 dB,
+33% packet loss). Attempting remote Starlink reboot.
+
+Bypass mode may have reverted, or the ethernet adapter needs a power cycle.
+This is the same symptom as the April 6 ethernet issue.
+
+#### WiFi bridge bandwidth saturation
+
+Camera streams via UDP bridge saturated the WiFi bridge link to the operator
+station, making it unusable. Had to manually reduce stream rates in UDP bridge
+to recover. Need to reduce default bandwidth usage — lower resolution/FPS,
+compress more aggressively, or send on demand only.
+
+#### Water test #2 — partial, connectivity issues
+
+Boat launched. Starlink ethernet stopped working (same bypass mode symptom as
+April 6 — eth1 link UP but no DHCP). Remote reboot of Starlink via app didn't
+help. Cellular fallback was marginal (SINR 0 dB, 33% packet loss, connection
+bouncing). Connected boat router to mobile lab Starlink WiFi as workaround —
+NTRIP/RTK recovered.
+
+**WiFi bridge bandwidth saturation**: Camera streams via UDP bridge saturated
+the WiFi bridge to the operator station, making it unusable. Had to manually
+reduce stream rates to recover. Need to address default bandwidth usage.
+
+**TF tree issue — `bizzy/map` frame missing**: mru_transform node is running,
+publishing `/bizzy/odom` at 10Hz with valid position data, and registered as
+a `/tf` publisher — but the `earth → bizzy/map → bizzy/odom` TF chain is not
+appearing. Only `bizzy/base_link_north_up → bizzy/base_link` is on `/tf`.
+Sea surface estimator IS publishing `bizzy/odom → bizzy/map_tide`. The missing
+map frame means chart_datum_node can't look up position and doesn't publish
+`bizzy/map → bizzy/chart_datum`. This needs investigation — may be a sensor
+config issue preventing mru_transform from establishing the map frame origin.
+
+**chart_datum_node configuration issues found**:
+- Frame params (`map_frame`, `chart_datum_frame`, `base_frame`) default to
+  unprefixed names (`map`, `chart_datum`, `base_link`) — need `bizzy/` prefix
+- `SetParametersFromFile` from `bizzyboat.yaml` doesn't apply node-specific
+  params by name — need to pass frame params inline in the launch file instead
+- Added params to `bizzyboat.yaml` but they weren't picked up; set via
+  `ros2 param set` as workaround but underlying TF issue blocked testing
+
+**Changes made on gabby (not yet committed)**:
+- `core_launch.py`: added chart_datum_launch.py include
+- `bizzyboat.yaml`: added chart_datum params section (may need different approach)
+
+Boat recovered.
+
+#### TODO from water test #2
+- [ ] Investigate why mru_transform isn't publishing `earth → bizzy/map → bizzy/odom` TF
+- [ ] Fix chart_datum frame params — pass inline in launch file with frame_prefix
+- [ ] Starlink bypass mode — why did it stop working? Physical inspection needed
+- [ ] Reduce UDP bridge camera bandwidth defaults
+- [ ] Test chart_datum + tide frames once map frame issue resolved
+
+## Status
+
+Second water test in progress (2026-04-10). Chart datum node added for MLLW
+vertical datum support. NTP infrastructure complete with GPS time source.
+Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
