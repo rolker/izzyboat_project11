@@ -1145,9 +1145,27 @@ via launch files. All publish `diagnostic_msgs/DiagnosticArray`.
 Runs on both gabby (boat-side: Starlink, cellular, boat WiFi bridge) and
 salmon (operator-side: operator WiFi bridge, VPN).
 
+#### Infrastructure completed
+
+- Created [rolker/ros2_network_monitor](https://github.com/rolker/ros2_network_monitor) repo with `jazzy` branch
+- Created `jazzy` branch on [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros) fork
+- Added both repos to sensors layer manifests:
+  - [unh_marine_autonomy PR #121](https://github.com/rolker/unh_marine_autonomy/pull/121) — merged
+  - [unh_echoboats_project11 PR #48](https://github.com/rolker/unh_echoboats_project11/pull/48) — merged
+- Both repos cloned into sensors layer and pushed to gitcloud
+- Added gitcloud remotes to `rqt_operator_tools` and `mobile_lab` (previously missing)
+- Workspace validation passing (40/40 repos, all on correct branches)
+- Merged field fix PRs: [CCOMJHC/ccomjhc_project11#29](https://github.com/CCOMJHC/ccomjhc_project11/pull/29), [seafloor_echoboat_project11#10](https://github.com/rolker/seafloor_echoboat_project11/pull/10)
+
+#### Active development
+
+- Starlink ROS 2 port ([munzz11/starlink_stats_ros#1](https://github.com/munzz11/starlink_stats_ros/issues/1)) — agent working, worktree active
+- MikroTik monitor ([ros2_network_monitor#2](https://github.com/rolker/ros2_network_monitor/issues/2)) — agent working
+
 ## Status
 
-Network monitoring plan established (2026-04-13). Issues created across repos
-for parallel development. Chart datum and TF issues from water test #2 still
-need investigation.
+Network monitoring infrastructure in place (2026-04-13). Repos created, manifests
+updated, gitcloud synced. Starlink port and MikroTik monitor under active
+development by parallel agents. Chart datum and TF issues from water test #2
+still need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
