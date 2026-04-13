@@ -21,6 +21,7 @@
   <depend>robot_state_publisher</depend>
   <depend>rosbag2_transport</depend>
   <exec_depend>starlink_stats</exec_depend>
+  <exec_depend>teltonika_monitor</exec_depend>
   <exec_depend>topic_tools</exec_depend>
   <exec_depend>usb_cam</exec_depend>
   <depend>xacro</depend>
