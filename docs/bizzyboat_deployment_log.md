@@ -1104,8 +1104,29 @@ Boat recovered.
 - [ ] Reduce UDP bridge camera bandwidth defaults
 - [ ] Test chart_datum + tide frames once map frame issue resolved
 
+### Session 7 — 2026-04-13
+
+#### Starlink API reachable in bypass mode
+
+Confirmed from gabby that the Starlink dish management interface at
+`192.168.100.1` is reachable even with the dish in bypass mode. `curl
+http://192.168.100.1` returns the Starlink diagnostics web UI. The gRPC API at
+`192.168.100.1:9200` should also be available, enabling monitoring of dish stats
+(signal quality, obstruction, throughput, latency).
+
+Original ROS 1 package by munzz11: [munzz11/starlink_stats_ros](https://github.com/munzz11/starlink_stats_ros).
+Fork at [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros).
+Plan: port to ROS 2 and add to the workspace for network health monitoring.
+
+#### Network status at end of April 10
+
+Starlink ethernet stopped responding to the router (bypass mode issue recurred).
+Cellular fallback was marginal — SINR ~0 dB, 33% packet loss. Both WAN links
+need better monitoring to detect degradation before it becomes a problem.
+
 ## Status
 
-Second water test in progress (2026-04-10). Chart datum node added for MLLW
-vertical datum support. NTP infrastructure complete with GPS time source.
+Starlink API confirmed reachable in bypass mode (2026-04-13). Planning ROS 2
+port of starlink_stats_ros for network monitoring. Chart datum and TF issues
+from water test #2 still need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
