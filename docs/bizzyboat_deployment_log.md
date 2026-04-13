@@ -1169,19 +1169,41 @@ Three rounds of Copilot review, all findings addressed. Builds and passes
 
 - [mru_transform PR #12](https://github.com/rolker/mru_transform/pull/12) — rosdep
   key `libproj-dev` → `proj` (merged)
+- [mru_transform PR #14](https://github.com/rolker/mru_transform/pull/14) — removed
+  redundant `proj-data` dep (merged)
 - [mobile_lab PR #3](https://github.com/rolker/mobile_lab/pull/3) — stale
   `project11` dependency → `marine_autonomy` (merged)
-- `starlink_stats_ros` `catkin` dependency — will be fixed by the ROS 2 port
+- [rqt_operator_tools PR #6](https://github.com/rolker/rqt_operator_tools/pull/6) —
+  removed redundant `ament_python` buildtool_depend (merged)
 
-#### Active development
+#### Network monitoring packages — all merged
 
-- Starlink ROS 2 port ([munzz11/starlink_stats_ros#1](https://github.com/munzz11/starlink_stats_ros/issues/1)) — agent working, worktree active
-- MikroTik monitor ([ros2_network_monitor#2](https://github.com/rolker/ros2_network_monitor/issues/2)) — agent working
+- **`starlink_stats`** ([rolker/starlink_stats_ros PR #1](https://github.com/rolker/starlink_stats_ros/pull/1)) —
+  ROS 2 port complete. Moved to `starlink_stats/` subdir, uses `MessageToDict`
+  instead of regex parsing, parameterized dish address and poll rate. Builds, tests pass.
+- **`teltonika_monitor`** ([ros2_network_monitor PR #5](https://github.com/rolker/ros2_network_monitor/pull/5)) —
+  polls RUTX11 via ubus JSON-RPC for cellular signal, mwan3 routing, WireGuard
+  status, interface stats. Builds, tests pass.
+- **`mikrotik_monitor`** ([ros2_network_monitor PR #4](https://github.com/rolker/ros2_network_monitor/pull/4)) —
+  polls MikroTik via RouterOS API for WiFi signal, traffic, association.
+  Builds, tests pass.
+
+#### BizzyBoat launch files — in progress
+
+[unh_echoboats_project11 PR #49](https://github.com/rolker/unh_echoboats_project11/pull/49) —
+boat-side and operator-side launch files for MikroTik, Starlink, and Teltonika
+monitoring with device-specific config.
+
+#### Remaining
+
+- [ros2_network_monitor#3](https://github.com/rolker/ros2_network_monitor/issues/3) —
+  `network_tools` (generic ping/latency) — not started
+- All repos pushed to gitcloud
 
 ## Status
 
-Network monitoring infrastructure in place, annunciator panel merged,
-rosdep issues fixed (2026-04-13). Starlink port and MikroTik monitor under
-active development by parallel agents. Chart datum and TF issues from water
-test #2 still need investigation.
+All three network monitoring packages merged and building (2026-04-13).
+BizzyBoat launch file PR in progress. Annunciator panel ready to display
+diagnostics. Rosdep issues fixed across workspace. Chart datum and TF issues
+from water test #2 still need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
