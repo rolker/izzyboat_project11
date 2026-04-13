@@ -1124,9 +1124,30 @@ Starlink ethernet stopped responding to the router (bypass mode issue recurred).
 Cellular fallback was marginal — SINR ~0 dB, 33% packet loss. Both WAN links
 need better monitoring to detect degradation before it becomes a problem.
 
+#### Network monitoring plan
+
+Comprehensive network health monitoring via ROS 2 diagnostics, covering all
+communication links. Packages split by device vendor, assembled per-platform
+via launch files. All publish `diagnostic_msgs/DiagnosticArray`.
+
+**New repo**: [rolker/ros2_network_monitor](https://github.com/rolker/ros2_network_monitor)
+- `teltonika_monitor` — cellular signal, mwan3 routing, VPN, interface stats via ubus JSON-RPC ([#1](https://github.com/rolker/ros2_network_monitor/issues/1))
+- `mikrotik_monitor` — WiFi bridge signal, traffic, association via RouterOS API ([#2](https://github.com/rolker/ros2_network_monitor/issues/2))
+- `network_tools` — generic ping latency, packet loss, link up/down ([#3](https://github.com/rolker/ros2_network_monitor/issues/3))
+
+**Existing repo**: [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros)
+- `starlink_stats` — Starlink gRPC polling, port from ROS 1 ([munzz11/starlink_stats_ros#1](https://github.com/munzz11/starlink_stats_ros/issues/1))
+
+**Integration**:
+- BizzyBoat launch file + manifest update ([#47](https://github.com/rolker/unh_echoboats_project11/issues/47))
+- Sensors layer manifest ([rolker/unh_marine_autonomy#120](https://github.com/rolker/unh_marine_autonomy/issues/120))
+
+Runs on both gabby (boat-side: Starlink, cellular, boat WiFi bridge) and
+salmon (operator-side: operator WiFi bridge, VPN).
+
 ## Status
 
-Starlink API confirmed reachable in bypass mode (2026-04-13). Planning ROS 2
-port of starlink_stats_ros for network monitoring. Chart datum and TF issues
-from water test #2 still need investigation.
+Network monitoring plan established (2026-04-13). Issues created across repos
+for parallel development. Chart datum and TF issues from water test #2 still
+need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
