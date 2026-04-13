@@ -83,6 +83,17 @@ def generate_launch_description():
                     }.items()
                 ),
 
+                # Chart datum (MLLW vertical datum transform)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('mru_transform'),
+                            'launch',
+                            'chart_datum_launch.py'
+                        ])
+                    ),
+                ),
+
                 # MAVRos
                 GroupAction(
                     actions=[
