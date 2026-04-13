@@ -17,6 +17,12 @@ def generate_launch_description():
         'teltonika_monitor_operator.yaml'
     ])
 
+    ping_config = PathJoinSubstitution([
+        FindPackageShare('bizzyboat_project11'),
+        'config',
+        'ping_targets_operator.yaml'
+    ])
+
     return LaunchDescription([
         Node(
             package='mikrotik_monitor',
@@ -40,6 +46,13 @@ def generate_launch_description():
                 'dish_address': '192.168.100.1:9200',
                 'poll_rate': 1.0,
             }],
+            output='screen',
+        ),
+        Node(
+            package='network_tools',
+            executable='ping_monitor_node',
+            name='ping_monitor',
+            parameters=[ping_config],
             output='screen',
         ),
     ])
