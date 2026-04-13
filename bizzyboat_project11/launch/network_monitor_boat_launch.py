@@ -19,4 +19,14 @@ def generate_launch_description():
             parameters=[config_file],
             output='screen',
         ),
+        Node(
+            package='starlink_stats',
+            executable='starlink_diagnostics_node',
+            name='starlink_diagnostics',
+            parameters=[{
+                'dish_address': '192.168.100.1:9200',
+                'poll_rate': 1.0,
+            }],
+            output='screen',
+        ),
     ])
