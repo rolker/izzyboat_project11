@@ -1188,22 +1188,44 @@ Three rounds of Copilot review, all findings addressed. Builds and passes
   polls MikroTik via RouterOS API for WiFi signal, traffic, association.
   Builds, tests pass.
 
-#### BizzyBoat launch files — in progress
+#### BizzyBoat launch files
 
 [unh_echoboats_project11 PR #49](https://github.com/rolker/unh_echoboats_project11/pull/49) —
 boat-side and operator-side launch files for MikroTik, Starlink, and Teltonika
-monitoring with device-specific config.
+monitoring with device-specific config. Pushed to gitcloud as `jazzy` for
+field testing.
+
+#### Operator station manifest fixes
+
+- [CCOMJHC/ccomjhc_project11 PR #33](https://github.com/CCOMJHC/ccomjhc_project11/pull/33) —
+  added `rqt_operator_tools` to operator UI manifest (merged)
+- [CCOMJHC/ccomjhc_project11 PR #35](https://github.com/CCOMJHC/ccomjhc_project11/pull/35) —
+  added `starlink_stats_ros` and `ros2_network_monitor` to operator sensors
+  manifest (merged)
+- Fixed `gh` repo resolution on `ccomjhc_project11` — was targeting
+  `rolker/` fork instead of `CCOMJHC/` origin. Set `gh repo set-default`.
+
+#### First test on salmon — success
+
+All four network monitoring nodes launched on salmon and confirmed publishing
+diagnostics data:
+- `starlink_stats` — Starlink dish telemetry
+- `teltonika_monitor` — RUTX11 cellular/mwan3/VPN stats
+- `mikrotik_monitor` — WiFi bridge signal/traffic
+- `network_tools` — generic network health
 
 #### Remaining
 
 - [ros2_network_monitor#3](https://github.com/rolker/ros2_network_monitor/issues/3) —
-  `network_tools` (generic ping/latency) — not started
+  `network_tools` (generic ping/latency) — in progress
+- Test annunciator panel with live diagnostics data
+- Deploy and test on gabby (boat-side)
 - All repos pushed to gitcloud
 
 ## Status
 
-All three network monitoring packages merged and building (2026-04-13).
-BizzyBoat launch file PR in progress. Annunciator panel ready to display
-diagnostics. Rosdep issues fixed across workspace. Chart datum and TF issues
-from water test #2 still need investigation.
+Network monitoring end-to-end working on salmon (2026-04-13). All four
+monitor nodes publishing diagnostics. Annunciator panel merged and ready
+for live testing. Operator and boat manifests updated. Chart datum and TF
+issues from water test #2 still need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
