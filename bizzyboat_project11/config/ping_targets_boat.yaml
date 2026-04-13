@@ -1,0 +1,11 @@
+ping_monitor:
+  ros__parameters:
+    targets:
+      - "salmon_direct:salmon.op.p11.lan"
+      - "salmon_vpn:salmon.vpn.bizzy.p11.lan"
+      - "router_op_direct:router.op.p11.lan"
+      - "router_op_vpn:router.vpn-op.bizzy.p11.lan"
+      - "bencloud:bencloud.wg.p11.lan"
+    poll_interval: 10.0
+    ping_count: 3
+    ping_timeout: 5.0
