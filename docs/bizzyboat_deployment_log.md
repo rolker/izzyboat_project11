@@ -1157,6 +1157,22 @@ salmon (operator-side: operator WiFi bridge, VPN).
 - Workspace validation passing (40/40 repos, all on correct branches)
 - Merged field fix PRs: [CCOMJHC/ccomjhc_project11#29](https://github.com/CCOMJHC/ccomjhc_project11/pull/29), [seafloor_echoboat_project11#10](https://github.com/rolker/seafloor_echoboat_project11/pull/10)
 
+#### Annunciator panel merged
+
+[rqt_operator_tools PR #4](https://github.com/rolker/rqt_operator_tools/pull/4) —
+dark-until-problem status indicators for operator station. Reads from
+`/diagnostics` topics (what the network monitor nodes will publish to).
+Three rounds of Copilot review, all findings addressed. Builds and passes
+33 tests. Not yet tested with live data.
+
+#### Rosdep fixes
+
+- [mru_transform PR #12](https://github.com/rolker/mru_transform/pull/12) — rosdep
+  key `libproj-dev` → `proj` (merged)
+- [mobile_lab PR #3](https://github.com/rolker/mobile_lab/pull/3) — stale
+  `project11` dependency → `marine_autonomy` (merged)
+- `starlink_stats_ros` `catkin` dependency — will be fixed by the ROS 2 port
+
 #### Active development
 
 - Starlink ROS 2 port ([munzz11/starlink_stats_ros#1](https://github.com/munzz11/starlink_stats_ros/issues/1)) — agent working, worktree active
@@ -1164,8 +1180,8 @@ salmon (operator-side: operator WiFi bridge, VPN).
 
 ## Status
 
-Network monitoring infrastructure in place (2026-04-13). Repos created, manifests
-updated, gitcloud synced. Starlink port and MikroTik monitor under active
-development by parallel agents. Chart datum and TF issues from water test #2
-still need investigation.
+Network monitoring infrastructure in place, annunciator panel merged,
+rosdep issues fixed (2026-04-13). Starlink port and MikroTik monitor under
+active development by parallel agents. Chart datum and TF issues from water
+test #2 still need investigation.
 Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
