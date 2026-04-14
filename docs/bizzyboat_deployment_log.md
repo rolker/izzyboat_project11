@@ -1222,10 +1222,148 @@ diagnostics data:
 - Deploy and test on gabby (boat-side)
 - All repos pushed to gitcloud
 
+### 2026-04-14 — Water test #3, DDS fix, tide-aware costmap
+
+**Location**: Pier / harbor
+**People**: Roland
+
+#### Network debugging (done earlier today by other agent)
+
+Network monitor nodes deployed to gabby. Debugging session documented in
+`ccomjhc_project11/documentation/bizzyboat_network_debug_2026-04-14.md`
+(private repo, on gabby only — not yet synced to origin). Field fixes
+pushed to gitcloud:
+- `32cc023` — chart datum node added to core launch, camera bridge rates reduced (2s→1s)
+- `ed7301b` — network monitor included in core launch
+- `1de8751` — fixed network monitor params (namespace issue, `chart_datum:` → `/**/chart_datum:`)
+
+#### chart_datum_node — fixed and verified
+
+`chart_datum_node` was running but not publishing transforms. Root cause:
+params in `bizzyboat.yaml` were keyed as `chart_datum:` instead of
+`/**/chart_datum:`. Without the wildcard prefix, `SetParametersFromFile`
+doesn't match the namespaced node `/bizzy/chart_datum`. Frame params
+defaulted to unprefixed names (`map`, `chart_datum`, `base_link`) which
+don't exist in BizzyBoat's TF tree.
+
+**Fix**: Changed `chart_datum:` to `/**/chart_datum:` in `bizzyboat.yaml`
+(done live on gabby). After restart:
+- `bizzy/map → bizzy/chart_datum`: Z = -28.014m (matches validated Portsmouth value)
+- `bizzy/chart_datum → bizzy/map_tide`: Z = +3.1m (tide above MLLW)
+
+#### DDS participant exhaustion — switched to Cyclone DDS
+
+Many nodes (NTRIP, network monitors) were running as processes but invisible
+to `ros2 node list`. Root cause: **DDS participant limit exhaustion**. With
+~100 visible nodes (mavros alone registers 50+), FastDDS's shared memory
+segments in `/dev/shm/` were exhausted (336 segments).
+
+Switched to Cyclone DDS (`rmw_cyclonedds_cpp`). Hit the same issue —
+Cyclone DDS default `MaxAutoParticipantIndex` is 99.
+
+**Fix**: Created `/home/field/cyclonedds.xml`:
+```xml
+<CycloneDDS>
+  <Domain>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>256</MaxAutoParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>
+```
+
+Added to `~/.bashrc`:
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///home/field/cyclonedds.xml
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+```
+
+After reboot and restart, all nodes visible including NTRIP, mikrotik_monitor,
+teltonika_monitor, starlink_diagnostics, and ping_monitor.
+
+#### NTRIP/RTK — confirmed working
+
+With NTRIP node now properly discovered, RTCM corrections flowing at ~2.5 Hz.
+GPS fix type 6 (RTK Fixed), 33 satellites, 2cm horizontal / 2.8cm vertical
+accuracy. GPS `alt_ellipsoid` = -26.1m.
+
+#### GPS altitude discrepancy
+
+NOAA tide prediction for Portsmouth (station 8423745): low tide at 15:45,
+~0.12m above MLLW. Expected ellipsoid height ≈ -28.014 + 0.12 = -27.89m.
+GPS reports -26.1m (alt_ellipsoid) / -25.5m (mavros raw/fix) — ~1.8-2.4m
+too high.
+
+Contributing factors identified:
+- **mavros `raw/fix` altitude** doesn't match `alt_ellipsoid` from GPS raw
+  (0.6m difference, unknown mavros processing)
+- **GPS antenna height**: CUAV C-RTK 2HP is 0.89m above base_link (waterline).
+  mavros `raw/fix` has `frame_id: base_link` so mru_transform applies zero
+  sensor offset. The URDF has `bizzy/gnss_forward` frame but mavros doesn't
+  use it.
+- Remaining error likely EKF altitude processing in ArduPilot
+
+**Outstanding**: Need to either set mavros frame_id to `bizzy/gnss_forward`
+or find another way to get correct ellipsoid height for the waterline.
+
+#### S57 layer tide offset — implemented
+
+[rolker/s57_tools#11](https://github.com/rolker/s57_tools/issues/11) /
+[PR #12](https://github.com/rolker/s57_tools/pull/12)
+
+Added `chart_datum_frame` parameter to S57 costmap layer. When set, the
+layer looks up `chart_datum → global_frame` (map_tide) to get the tide
+offset, then adjusts: `actual_depth = chart_depth + tide_offset`. Tiles
+are regenerated when tide changes by >1cm. Backwards compatible — empty
+parameter preserves existing behavior.
+
+Pushed to gitcloud `jazzy` for field testing. Config needed in nav2_params.yaml:
+```yaml
+chart_layer:
+  chart_datum_frame: bizzy/chart_datum
+```
+
+#### Water test #3 — first successful mission planning
+
+After applying S57 tide offset and fixing DDS discovery:
+- **Costmap shows navigable water** where the boat is located (previously
+  "start occupied" due to MLLW depths without tide correction)
+- **Trackline planning succeeded** — first time planner produced a valid path
+- **Trackline execution partially worked** — controller_server crashed a few
+  times (respawned), hover behavior applies rotation but no throttle
+
+#### controller_server crash
+
+`controller_server` segfaults (exit code -11) during `SeaSurfaceLayer::matchSize()`.
+Crashes after getting `bizzy/map_tide` transform. Not related to S57 changes —
+happens in the sea surface perception layer. Removing `sea_surface_layer` from
+the local costmap plugins resolved the crash. Pre-existing issue or Cyclone DDS
+related.
+
+#### Hover behavior — no throttle
+
+Hover (station keeping) applies yaw commands but zero throttle on `cmd_vel`.
+Boat rotates in place but doesn't hold position. Same symptom as water test #1.
+Needs investigation — may be PID tuning, `cmd_vel` mapping, or a missing
+velocity source.
+
+#### Outstanding issues
+
+- [ ] Merge gitcloud field fixes to origin (3 commits: chart datum, network monitor, params fix)
+- [ ] Fix mavros GPS frame_id or antenna offset for correct sea surface height
+- [ ] Investigate `SeaSurfaceLayer::matchSize()` segfault in controller_server
+- [ ] Investigate hover behavior — no throttle, only yaw
+- [ ] Sync `bizzyboat_network_debug_2026-04-14.md` from gabby to origin
+- [ ] Reduce UDP bridge camera bandwidth defaults (repeat from water test #2)
+- [ ] Starlink bypass mode reliability
+
 ## Status
 
-Network monitoring end-to-end working on salmon (2026-04-13). All four
-monitor nodes publishing diagnostics. Annunciator panel merged and ready
-for live testing. Operator and boat manifests updated. Chart datum and TF
-issues from water test #2 still need investigation.
-Remaining work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
+Water test #3 partially successful (2026-04-14). DDS discovery fixed via
+Cyclone DDS with raised participant limit. Chart datum transform working.
+S57 tide offset correction implemented and deployed. First successful
+trackline plan and partial execution. Hover and controller_server issues
+remain. Remaining work tracked in
+[#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
