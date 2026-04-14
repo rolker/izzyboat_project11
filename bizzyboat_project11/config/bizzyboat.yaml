@@ -291,7 +291,7 @@
       max_bagfile_duration: 300
       storage_preset_profile: zstd_fast
 
-chart_datum:
+/**/chart_datum:
   ros__parameters:
     map_frame: bizzy/map
     chart_datum_frame: bizzy/chart_datum
