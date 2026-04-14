@@ -296,3 +296,40 @@ chart_datum:
     map_frame: bizzy/map
     chart_datum_frame: bizzy/chart_datum
     base_frame: bizzy/base_link
+
+/**/mikrotik_monitor:
+  ros__parameters:
+    host: 'wifi.bizzy.p11.lan'
+    username: 'ros_monitor'
+    password: 'ros_monitor'
+    port: 80
+    use_ssl: false
+    poll_interval: 5.0
+    hardware_id: 'wifi.bizzy'
+
+/**/teltonika_monitor:
+  ros__parameters:
+    host: 'router.bizzy'
+    username: 'ros_monitor'
+    password: 'ROS2_monitor'
+    port: 443
+    use_ssl: true
+    poll_interval: 5.0
+    hardware_id: 'router.bizzy'
+
+/**/starlink_diagnostics:
+  ros__parameters:
+    dish_address: '192.168.100.1:9200'
+    poll_rate: 1.0
+
+/**/ping_monitor:
+  ros__parameters:
+    targets:
+      - "salmon_direct:salmon.op.p11.lan"
+      - "salmon_vpn:salmon.vpn.bizzy.p11.lan"
+      - "router_op_direct:router.op.p11.lan"
+      - "router_op_vpn:router.vpn-op.bizzy.p11.lan"
+      - "bencloud:bencloud.wg.p11.lan"
+    poll_interval: 10.0
+    ping_count: 3
+    ping_timeout: 5.0
