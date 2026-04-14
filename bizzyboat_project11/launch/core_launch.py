@@ -188,6 +188,17 @@ def generate_launch_description():
                         )
                     ]
                 ),
+
+                # Network monitor (boat side)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'network_monitor_boat_launch.py'
+                        ])
+                    ),
+                ),
             ]
         ),
 
