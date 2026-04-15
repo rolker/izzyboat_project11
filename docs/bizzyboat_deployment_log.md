@@ -1349,6 +1349,78 @@ Boat rotates in place but doesn't hold position. Same symptom as water test #1.
 Needs investigation — may be PID tuning, `cmd_vel` mapping, or a missing
 velocity source.
 
+#### Bag log analysis — water test #3 (2026-04-14)
+
+Post-hoc analysis of rosbag data from gabby (`~/data/logs`) covering the
+April 14 session. Bags span 08:43–14:28 UTC across 8 recording sessions
+(10 total autostart events, including rapid restarts during troubleshooting
+around 16:43–16:52 UTC).
+
+**Timeline reconstructed from GPS altitude and position:**
+
+| Time (UTC) | Phase | Alt (m) | Notes |
+|------------|-------|---------|-------|
+| 08:43–11:28 | Stationary on land | -21.0 | At storage location (43.07204, -70.71165), speed 0 |
+| ~11:30 | Rolled to crane | -21.1 | Speed jumps to ~0.9 m/s, position shifts toward crane |
+| ~11:34 | Crane lowers to water | -21 → -23.6 | ~2.5 m altitude drop as boat enters water |
+| 11:36–14:07 | On water — operations | -24.6 → -26.1 | Gradual altitude decrease tracks rising tide |
+| 13:51 | GUIDED mode engaged | -25.7 | First autonomous mode of session |
+| 13:54:22 | controller_server crash | -25.9 | `SeaSurfaceLayer::matchSize()` — nav lifecycle shutdown |
+| 13:59, 14:07, 14:11 | MANUAL mode switches | — | Operator takes manual control |
+| 14:07:44–14:09 | Fast transit | -26.1 | ~1.9 m/s to farthest point from dock |
+| 14:21:45–14:22:45 | Crane lifts from water | -26.2 → -20.8 | ~5 m altitude rise |
+| 14:24:45 | Moved back to storage | -21.1 | Speed ~1.25 m/s, returns to original position |
+| 14:25:45+ | Stationary on land | -21.1 | Back at storage, speed 0 |
+
+**Key findings from diagnostics:**
+
+1. **GPS health flicker (13:48)** — ArduPilot reported GPS sensor health
+   as "Fail" intermittently while the boat was stationary on the water near
+   the dock. NavSatFix still had STATUS_FIX with valid coordinates
+   throughout. Likely multipath or partial sky obstruction near dock
+   structures. The GPS flicker at 13:48 preceded the controller_server
+   crash at 13:54 — unclear if related.
+
+2. **Direct WiFi loss (14:09–14:24)** — `router_op_direct` and
+   `salmon_direct` pings showed 100% packet loss (40 error events). This
+   correlates exactly with the boat being at its farthest point from the
+   dock (~43.07200, -70.71052). VPN links over cellular stayed up. WiFi
+   link recovered when the boat returned closer to the dock.
+
+3. **controller_server crash (13:54:22)** — Lifecycle manager reported
+   heartbeat loss after 4 seconds. Failed to cancel `follow_path` action
+   and couldn't restart `controller_server` via `change_state` service.
+   Consistent with the `SeaSurfaceLayer::matchSize()` segfault noted above.
+
+4. **Sensor bitmask changes correlate with flight mode** — When the FCU
+   switched to MANUAL mode, 4 control-loop sensors (angular rate control,
+   attitude stabilization, yaw position, xy position control) correctly
+   dropped from the enabled set. This is normal ArduPilot behavior, not a
+   hardware fault.
+
+5. **Odom rate ~9% below nominal** — 25,340 messages vs ~27,850 expected
+   at 10 Hz in the last bag. No single large gap — steady small drops
+   throughout. Worth monitoring.
+
+6. **Teltonika WAN interface intermittent** — `router.bizzy` interface
+   `wan1` showed WARN 105 times (out of 556 reports), and `mwan3/wan1`
+   had 5 ERROR and 550 WARN. MikroTik ethernet ports 2–5 all reported
+   "Not running" consistently.
+
+7. **Arming checks disabled** — FCU logged "Warning: Arming Checks
+   Disabled". Presumably intentional for testing.
+
+**Altitude vs. tide:**
+
+GPS ellipsoid altitude dropped from -24.6 m (11:36) to -26.1 m (14:07)
+over ~2.5 hours on the water — a ~1.5 m decrease. This is consistent with
+a rising tide lifting the boat's waterline higher relative to the geoid
+while the ellipsoid height decreases (the boat's physical altitude above
+ellipsoid goes down as the water rises). Combined with the earlier note
+that GPS altitude was already ~1.8–2.4 m too high vs NOAA predictions,
+the altitude trend is plausible but the absolute offset remains an open
+issue (see GPS altitude discrepancy above).
+
 #### Outstanding issues
 
 - [ ] Merge gitcloud field fixes to origin (3 commits: chart datum, network monitor, params fix)
@@ -1358,6 +1430,8 @@ velocity source.
 - [ ] Sync `bizzyboat_network_debug_2026-04-14.md` from gabby to origin
 - [ ] Reduce UDP bridge camera bandwidth defaults (repeat from water test #2)
 - [ ] Starlink bypass mode reliability
+- [ ] Monitor odom rate — 9% message loss in water test #3 bags
+- [ ] Investigate WiFi range limitations — direct link lost at ~300 m from dock
 
 ## Status
 
