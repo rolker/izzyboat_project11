@@ -1,0 +1,55 @@
+diagnostics_topic: /diagnostics
+indicators:
+  # --- Link Quality ---
+  - name: WiFi Bridge
+    source: diagnostics
+    diagnostic_name: "MikroTik: wifi.bizzy: wireless/"
+    format: "{}"
+    stale_timeout: 15.0
+
+  - name: Cell Signal
+    source: diagnostics
+    diagnostic_name: "Teltonika: router.bizzy: cellular"
+    format: "{}"
+    stale_timeout: 15.0
+
+  - name: Starlink
+    source: diagnostics
+    diagnostic_name: "Starlink: starlink.bizzy"
+    format: "{}"
+    stale_timeout: 5.0
+
+  # --- Critical Systems ---
+  - name: Battery
+    source: diagnostics
+    diagnostic_name: "mavros: Battery"
+    format: "{}"
+
+  - name: GPS
+    source: diagnostics
+    diagnostic_name: "mavros: GPS"
+    format: "{}"
+
+  - name: FCU
+    source: diagnostics
+    diagnostic_name: "mavros: Heartbeat"
+    format: "{}"
+
+  - name: Comms
+    source: diagnostics
+    diagnostic_name: "Ping: ping.bizzy: salmon_direct"
+    format: "{}"
+    stale_timeout: 30.0
+
+  - name: Nav Stack
+    source: diagnostics
+    diagnostic_name: "lifecycle_manager_navigation"
+    format: "{}"
+    stale_timeout: 10.0
+
+  - name: Mission
+    source: diagnostics
+    diagnostic_name: "mission_manager"
+    match_mode: substring
+    format: "{}"
+    stale_timeout: 5.0
