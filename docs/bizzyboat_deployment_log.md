@@ -1558,6 +1558,56 @@ side effects, and preserving real source IPs aids diagnostics. If bridge
 device replacement or factory reset becomes frequent, reconsider masquerade
 as the zero-config option.
 
+#### Network diagnostics improvements (2026-04-15)
+
+Reviewed the full diagnostic collection pipeline and implemented
+improvements across multiple repos. Tracked in
+[ros2_network_monitor#7](https://github.com/rolker/ros2_network_monitor/issues/7).
+
+**Signal quality thresholds** (ros2_network_monitor
+[PR #8](https://github.com/rolker/ros2_network_monitor/pull/8), merged):
+- teltonika_monitor: cellular diagnostic level based on RSRP (OK > -90,
+  WARN -90 to -110, ERROR < -110 dBm), SINR downgrades by one bar if < 0.
+  Message shows `LTE -85dBm ▁▂▃▅·`.
+- mikrotik_monitor: wireless diagnostic level based on SNR (OK > 20,
+  WARN 10-20, ERROR < 10 dB). Message shows `Associated SNR 22dB ▁▂▃▅·`.
+
+**Hardware ID for instance disambiguation** (merged):
+- starlink_diagnostics: added `hardware_id` parameter
+  ([starlink_stats_ros PR #3](https://github.com/rolker/starlink_stats_ros/pull/3)).
+  Boat: `starlink.bizzy`, operator: `starlink.op`.
+- ping_monitor: added `hardware_id` parameter
+  ([ros2_network_monitor PR #10](https://github.com/rolker/ros2_network_monitor/pull/10)).
+  Boat: `ping.bizzy`, operator: `ping.op`.
+- All four monitor node types (teltonika, mikrotik, starlink, ping) now have
+  `hardware_id` for distinguishing boat vs operator instances.
+
+**DNS ping targets** ([unh_echoboats_project11
+PR #53](https://github.com/rolker/unh_echoboats_project11/pull/53), merged):
+- Added 8.8.8.8 and 1.1.1.1 to boat, operator, and merged ping configs.
+  Would have caught the recurring mwan3/dnsmasq DNS routing failure.
+
+**Annunciator config** (PR #53):
+- Created `bizzyboat_annunciator.yaml` with 9 indicators:
+  - Link quality: WiFi Bridge, Cell Signal, Starlink
+  - Critical systems: Battery, GPS, FCU, Comms, Nav Stack, Mission Manager
+- Loaded by the rqt annunciator panel at runtime.
+
+**Diagnostic aggregator config** (PR #53):
+- Added boat-side network device groups (MikroTik, Teltonika, Starlink, Ping)
+  using hardware_id prefixes to separate from operator-side devices.
+- Added operator Ping group.
+- rqt_robot_monitor and rqt_runtime_monitor can now show the full grouped
+  tree for drill-down.
+
+**Gitcloud field changes PR'd and merged**:
+- [rqt_operator_tools PR #7](https://github.com/rolker/rqt_operator_tools/pull/7) —
+  gitignore + rqt deps
+- [ccomjhc_project11 PR #36](https://github.com/CCOMJHC/ccomjhc_project11/pull/36) —
+  network debug log from April 14
+- [unh_echoboats_project11 PR #51](https://github.com/rolker/unh_echoboats_project11/pull/51) —
+  field fixes (network monitor YAML merge, diagnostic aggregator, chart datum)
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
@@ -1565,5 +1615,7 @@ Cyclone DDS with raised participant limit. Chart datum transform working.
 S57 tide offset correction implemented and deployed. First successful
 trackline plan and partial execution. Hover and controller_server issues
 remain. DNS failover fix applied (2026-04-15) — structural fix for
-recurring dnsmasq/mwan3 interaction. Remaining work tracked in
+recurring dnsmasq/mwan3 interaction. Network diagnostics enhanced with
+signal quality thresholds, hardware_id disambiguation, DNS ping targets,
+annunciator config, and aggregator improvements. Remaining work tracked in
 [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
