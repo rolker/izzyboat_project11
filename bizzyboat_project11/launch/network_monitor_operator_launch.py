@@ -45,6 +45,7 @@ def generate_launch_description():
             parameters=[{
                 'dish_address': '192.168.100.1:9200',
                 'poll_rate': 1.0,
+                'hardware_id': 'starlink.op',
             }],
             output='screen',
         ),

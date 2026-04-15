@@ -321,6 +321,7 @@
   ros__parameters:
     dish_address: '192.168.100.1:9200'
     poll_rate: 1.0
+    hardware_id: 'starlink.bizzy'
 
 /**/ping_monitor:
   ros__parameters:
@@ -330,6 +331,8 @@
       - "router_op_direct:router.op.p11.lan"
       - "router_op_vpn:router.vpn-op.bizzy.p11.lan"
       - "bencloud:bencloud.wg.p11.lan"
+      - "dns_google:8.8.8.8"
+      - "dns_cloudflare:1.1.1.1"
     poll_interval: 10.0
     ping_count: 3
     ping_timeout: 5.0
