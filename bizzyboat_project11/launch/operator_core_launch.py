@@ -8,6 +8,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
+from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParametersFromFile
 from launch_ros.substitutions import FindPackageShare
@@ -51,8 +52,35 @@ def generate_launch_description():
                         ])
                     ),
                     condition=IfCondition(enable_bridge)
-                )
+                ),
+                Node(
+                    package='diagnostic_aggregator',
+                    executable='aggregator_node',
+                    name='diagnostic_aggregator',
+                    parameters=[
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'config',
+                            'diagnostics.yaml'
+                        ])
+                    ],
+                    remappings=[
+                        ('diagnostics', '/diagnostics'),
+                        ('diagnostics_agg', '/diagnostics_agg'),
+                        ('diagnostics_toplevel_state', '/diagnostics_toplevel_state'),
+                    ],
+                    output='screen',
+                ),
             ]
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'network_monitor_operator_launch.py'
+                ])
+            ),
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

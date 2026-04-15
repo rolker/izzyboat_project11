@@ -1,0 +1,40 @@
+/**:
+  ros__parameters:
+    path: ""
+    analyzers:
+      boat:
+        type: diagnostic_aggregator/AnalyzerGroup
+        path: Boat
+        analyzers:
+          mavros:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: MAVROS
+            startswith: ["mavros:"]
+          mavros_router:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: MAVROS Router
+            startswith: ["mavros_router:"]
+          navigation:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: Navigation
+            startswith: ["lifecycle_manager_navigation:"]
+      operator:
+        type: diagnostic_aggregator/AnalyzerGroup
+        path: Operator
+        analyzers:
+          mikrotik:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: MikroTik
+            startswith: ["MikroTik:"]
+          teltonika:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: Teltonika
+            startswith: ["Teltonika:"]
+          starlink:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: Starlink
+            startswith: ["Starlink:"]
+          ping:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: Ping
+            startswith: ["Ping:"]
