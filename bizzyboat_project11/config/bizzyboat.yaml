@@ -325,6 +325,7 @@
 
 /**/ping_monitor:
   ros__parameters:
+    hardware_id: 'ping.bizzy'
     targets:
       - "salmon_direct:salmon.op.p11.lan"
       - "salmon_vpn:salmon.vpn.bizzy.p11.lan"

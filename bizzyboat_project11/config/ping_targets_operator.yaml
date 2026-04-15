@@ -1,5 +1,6 @@
 ping_monitor:
   ros__parameters:
+    hardware_id: 'ping.op'
     targets:
       - "gabby_direct:gabby.bizzy.p11.lan"
       - "gabby_vpn:gabby.vpn.bizzy.p11.lan"

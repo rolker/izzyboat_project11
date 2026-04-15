@@ -33,7 +33,7 @@
           ping:
             type: diagnostic_aggregator/GenericAnalyzer
             path: Ping
-            contains: ["Ping:"]
+            startswith: ["Ping: ping.bizzy"]
       operator:
         type: diagnostic_aggregator/AnalyzerGroup
         path: Operator
@@ -50,3 +50,7 @@
             type: diagnostic_aggregator/GenericAnalyzer
             path: Starlink
             startswith: ["Starlink: starlink.op"]
+          ping:
+            type: diagnostic_aggregator/GenericAnalyzer
+            path: Ping
+            startswith: ["Ping: ping.op"]

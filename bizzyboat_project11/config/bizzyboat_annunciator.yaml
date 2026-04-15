@@ -37,7 +37,7 @@ indicators:
 
   - name: Comms
     source: diagnostics
-    diagnostic_name: "Ping: salmon_direct"
+    diagnostic_name: "Ping: ping.bizzy: salmon_direct"
     format: "{}"
     stale_timeout: 30.0
 
