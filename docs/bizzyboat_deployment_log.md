@@ -1532,6 +1532,32 @@ network.mob1s1a1.peerdns='0'
   on interface state changes. Overkill with hardcoded public DNS but useful
   if interface-specific servers are ever needed.
 
+#### WiFi bridge routing — review of masquerade decision
+
+The April 14 debug session (see `ccomjhc_project11` repo,
+`documentation/bizzyboat_network_debug_2026-04-14.md`) disabled masquerade
+on the operator router's LAN zone and added static return routes on the
+OmniTIK and SXTsq bridge devices. Post-hoc review of the tradeoffs:
+
+| Approach | Bridge device config | Real source IPs | Survives factory reset |
+|----------|---------------------|-----------------|----------------------|
+| Masquerade on both routers | None | No | Yes |
+| Static routes per subnet (current) | 2 routes × 2 devices | Yes | No |
+| Default gateway only | 1 gateway × 2 devices | Yes | No |
+| DHCP on bridge subnet | Initial DHCP client setup | Yes | Mostly |
+
+**Decision**: keep current state (masquerade off, static routes). Plan to
+simplify to **default gateway** approach when next hands-on with bridge
+devices — set OmniTIK default gw to 172.16.20.1 (boat router), SXTsq
+default gw to 172.16.20.2 (operator router), and remove the per-subnet
+static routes. This reduces config to one item per device and handles
+future new subnets automatically.
+
+Masquerade was not re-enabled because removing it had no known unintended
+side effects, and preserving real source IPs aids diagnostics. If bridge
+device replacement or factory reset becomes frequent, reconsider masquerade
+as the zero-config option.
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
