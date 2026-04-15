@@ -1623,6 +1623,46 @@ PR #53](https://github.com/rolker/unh_echoboats_project11/pull/53), merged):
   fix BehaviorTree Script nodes to use single quotes for string literals.
   Was causing BT evaluation failures during mission execution.
 
+#### Annunciator panel testing (2026-04-15)
+
+First live test of annunciator panel on salmon with boat (gabby) running
+updated nodes.
+
+**Standalone entry point segfaults** — `ros2 run rqt_operator_tools annunciator`
+crashes immediately. Qt initialization issue. Workaround:
+`rqt --standalone rqt_operator_tools`, then load config via File dialog.
+Needs investigation — likely a QApplication initialization order problem
+in `annunciator_standalone.py`.
+
+**Data partially showing** — indicators mostly grey (STALE) but some data
+flickers in briefly. Likely causes:
+- Stale timeouts may be too short for 10-second ping poll interval
+- Diagnostic name matching may not be hitting all expected statuses
+- The boat-side nodes were just started and may still be initializing
+- The new `hardware_id` params need to be in the deployed configs on gabby
+
+**Resize is very flaky** — the adaptive layout (horizontal/vertical/grid
+based on aspect ratio) doesn't work well. The `_rebuild_layout()` method
+deletes and recreates the layout on every resize event, which causes visual
+glitches and possibly crashes. Needs rework — either debounce the resize,
+or use a fixed layout that doesn't change on resize.
+
+#### Outstanding issues (updated)
+
+- [ ] Merge gitcloud field fixes to origin (3 commits: chart datum, network monitor, params fix)
+- [ ] Fix mavros GPS frame_id or antenna offset for correct sea surface height
+- [ ] Investigate `SeaSurfaceLayer::matchSize()` segfault in controller_server
+- [ ] Investigate hover behavior — no throttle, only yaw
+- [ ] Reduce UDP bridge camera bandwidth defaults (repeat from water test #2)
+- [ ] Monitor odom rate — 9% message loss in water test #3 bags
+- [ ] Investigate WiFi range limitations — direct link lost at ~300 m from dock
+- [ ] Fix annunciator standalone segfault (Qt init issue)
+- [ ] Fix annunciator resize flakiness
+- [ ] Tune annunciator stale timeouts and diagnostic name matching
+- [ ] Deploy updated configs (hardware_id, DNS ping targets) to gabby
+- [ ] Consider DNS-over-HTTPS on RUTX11 for long-term DNS resilience
+- [ ] WiFi bridge: switch from static routes to default gateway approach
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
@@ -1632,7 +1672,8 @@ trackline plan and partial execution. Hover and controller_server issues
 remain. DNS failover fix applied (2026-04-15) — structural fix for
 recurring dnsmasq/mwan3 interaction. Network diagnostics enhanced with
 signal quality thresholds, hardware_id disambiguation, DNS ping targets,
-annunciator config, and aggregator improvements. Tide awareness pipeline
-advanced: S57 tide offset merged, MHHW datum frame added, BT string
-literal fix merged. Remaining work tracked in
-[#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
+annunciator config, and aggregator improvements. Annunciator panel first
+tested — functional via rqt but standalone segfaults and resize needs
+work. Tide awareness pipeline advanced: S57 tide offset merged, MHHW
+datum frame added, BT string literal fix merged. Remaining work tracked
+in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
