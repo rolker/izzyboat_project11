@@ -1433,11 +1433,111 @@ issue (see GPS altitude discrepancy above).
 - [ ] Monitor odom rate — 9% message loss in water test #3 bags
 - [ ] Investigate WiFi range limitations — direct link lost at ~300 m from dock
 
+### Session: 2026-04-15 — DNS failover fix
+
+#### Symptom
+
+`sudo apt update` on gabby failed — all repos returning "Could not resolve"
+errors. Raw IP connectivity fine (`ping 8.8.8.8` works, 21ms), router
+reachable (0.5ms). Problem is purely DNS. Boat is in mobile lab, router
+using WiFi to mobile lab Starlink for internet (wan1).
+
+#### Diagnosis
+
+This is the **third recurrence** of DNS failure on the boat router (RUTX11),
+each with a slightly different trigger but the same structural cause:
+
+| Date | Trigger | Quick fix applied |
+|------|---------|-------------------|
+| Apr 3 | Starlink ethernet down indoors | Removed hardcoded DNS servers, rely on auto resolv |
+| Apr 7 | Starlink DNS proxy returning NXDOMAIN, carrier DNS unreachable cross-WAN | Re-added hardcoded 8.8.8.8/1.1.1.1, `peerdns='0'` on wan1/wan6/mob1s1a1, `allservers=1`, `nonegcache=1` |
+| **Apr 15** | Starlink ethernet down indoors (same as Apr 3) | — see proper fix below |
+
+**Root cause analysis:**
+
+The April 7 fix set `peerdns='0'` on wan1, wan6, and mob1s1a1 — but
+**missed `wan`** (Starlink ethernet). With `wan` still injecting its DNS
+server (206.214.239.195) into `/tmp/resolv.conf.d/resolv.conf.auto`,
+dnsmasq was querying it alongside 8.8.8.8 and 1.1.1.1.
+
+With `allservers=1`, dnsmasq races queries to ALL configured servers in
+parallel and uses the **first response**. The dead Starlink router at
+206.214.239.195 is still reachable on L2 (same subnet) but has no
+internet, so it returns **NXDOMAIN fast**. The working queries to
+8.8.8.8/1.1.1.1 via wan1 are slower. The fast wrong answer wins.
+
+Additionally, 206.214.239.0/24 is in mwan3's `mwan3_connected` ipset,
+so traffic to that server bypasses mwan3 policy routing entirely —
+it follows the main routing table straight to the dead eth1 interface.
+
+This is a **well-known OpenWrt/mwan3 limitation**
+([openwrt/packages#5760](https://github.com/openwrt/packages/issues/5760),
+[openwrt/packages#5055](https://github.com/openwrt/packages/issues/5055)):
+locally-originated traffic (including dnsmasq queries) does not fully
+participate in mwan3 policy routing, and dnsmasq has no awareness of
+interface health.
+
+#### Fix applied (proper)
+
+```bash
+# 1. Disable peerdns on wan (the one that was missed)
+uci set network.wan.peerdns='0'
+uci commit network
+
+# 2. Remove allservers — use sequential queries, not racing
+uci delete dhcp.cfg01411c.allservers
+uci commit dhcp
+
+# 3. Reload
+/etc/init.d/network reload
+/etc/init.d/dnsmasq restart
+```
+
+**Why this is durable (not another quick fix):**
+
+- All four WAN interfaces now have `peerdns='0'` — no interface can
+  inject its DNS servers into dnsmasq, regardless of state
+- Only hardcoded 8.8.8.8 and 1.1.1.1 are used — anycast addresses
+  reachable via any working WAN path
+- Without `allservers`, dnsmasq tries servers **sequentially** — a dead
+  path times out and falls through to the next server, rather than a
+  fast NXDOMAIN winning a race
+- `nonegcache='1'` (already set from Apr 7) prevents caching of negative
+  responses as a safety net
+- 8.8.8.8/1.1.1.1 are NOT in `mwan3_connected` ipset, so they go through
+  mwan3 policy routing → wan1 (active path)
+
+**Verified**: `nslookup google.com` on router, `sudo apt update` on gabby —
+both working. All repos fetched successfully.
+
+#### Current dnsmasq/DNS config state
+
+```
+dhcp.@dnsmasq[0].server='8.8.8.8' '1.1.1.1'
+dhcp.@dnsmasq[0].nonegcache='1'
+network.wan.peerdns='0'
+network.wan1.peerdns='0'
+network.wan6.peerdns='0'
+network.mob1s1a1.peerdns='0'
+```
+
+#### Future improvements to consider
+
+- **DNS-over-HTTPS (`https-dns-proxy`)** — RUTX11 supports this; turns DNS
+  into regular HTTPS that mwan3 policy-routes properly. Most elegant fix.
+- **DNS-based mwan3 health checks** — use domain resolution as
+  `track_method` instead of ICMP ping, so an interface with IP connectivity
+  but broken DNS is marked down.
+- **`/etc/mwan3.user` hotplug script** — dynamically update dnsmasq servers
+  on interface state changes. Overkill with hardcoded public DNS but useful
+  if interface-specific servers are ever needed.
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
 Cyclone DDS with raised participant limit. Chart datum transform working.
 S57 tide offset correction implemented and deployed. First successful
 trackline plan and partial execution. Hover and controller_server issues
-remain. Remaining work tracked in
+remain. DNS failover fix applied (2026-04-15) — structural fix for
+recurring dnsmasq/mwan3 interaction. Remaining work tracked in
 [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
