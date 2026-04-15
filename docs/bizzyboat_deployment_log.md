@@ -1608,6 +1608,21 @@ PR #53](https://github.com/rolker/unh_echoboats_project11/pull/53), merged):
 - [unh_echoboats_project11 PR #51](https://github.com/rolker/unh_echoboats_project11/pull/51) —
   field fixes (network monitor YAML merge, diagnostic aggregator, chart datum)
 
+**Other agent work merged same day**:
+- [s57_tools PR #12](https://github.com/rolker/s57_tools/pull/12) — S57
+  costmap layer tide offset correction via chart datum transform. Adds
+  `chart_datum_frame` parameter; when set, layer looks up tide offset and
+  adjusts chart depths so costmap reflects actual depth below current water
+  surface. Tiles regenerated when tide changes >1cm. Field-tested April 14.
+- [mru_transform PR #16](https://github.com/rolker/mru_transform/pull/16) —
+  MHHW datum frame + out-of-range tide rejection. chart_datum_node now
+  publishes `map → chart_datum_mhhw` TF alongside existing MLLW frame.
+  sea_surface_estimator suppresses `map_tide` when estimated water level
+  exceeds MHHW + margin, preventing bogus tide values from propagating.
+- [unh_marine_navigation PR #13](https://github.com/rolker/unh_marine_navigation/pull/13) —
+  fix BehaviorTree Script nodes to use single quotes for string literals.
+  Was causing BT evaluation failures during mission execution.
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
@@ -1617,5 +1632,7 @@ trackline plan and partial execution. Hover and controller_server issues
 remain. DNS failover fix applied (2026-04-15) — structural fix for
 recurring dnsmasq/mwan3 interaction. Network diagnostics enhanced with
 signal quality thresholds, hardware_id disambiguation, DNS ping targets,
-annunciator config, and aggregator improvements. Remaining work tracked in
+annunciator config, and aggregator improvements. Tide awareness pipeline
+advanced: S57 tide offset merged, MHHW datum frame added, BT string
+literal fix merged. Remaining work tracked in
 [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
