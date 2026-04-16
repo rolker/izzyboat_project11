@@ -2120,6 +2120,110 @@ ring, original L116-128 logic takes over so the boat stops orbiting.
 Bag analysis script saved at `/tmp/hover_analyze.py` for re-running
 on the next session.
 
+**Bag analysis #2 — wind perturbation events (last 25 min before v4
+deploy, still on v3)**:
+
+Phases observed in `2026-04-16T12.52.58.143303849` chunks _45–_51:
+
+| Phase | Range | Spd max | Notes |
+|---|---|---|---|
+| 0–6 min | 1.7–4.9 m | 0.28 | Stable orbital limit cycle |
+| 6–9 min | 1.7–6.0 m | 0.39 | First wind nudges |
+| 9–13 min | up to 7.2 m | 0.30 | Larger excursions |
+| **15–17 min** | **6 → 12 → 18 → 20.4 m** | 0.66 | **Big wind event, blown 20 m off** |
+| 17–18 min | 20 → 5 m | 0.66 | Slow return |
+| 19–22 min | 7 → 13 → 7 m | 0.54 | Second perturbation |
+| 22–25 min | 3–6 m | 0.34 | Settling back to orbit |
+
+**Why recovery was slow** — at the 20 m peak, trajectory shows ground
+speed only 0.12–0.23 m/s while still ~100° off heading. v3 hover code:
+
+- `range > max_radius` → original `target_speed = 1.0` (max)
+- L131 taper `* max(0, 1 - 4 * steering_proportion)` = 0 with proportion ≈ 0.7
+- → `1.0 * 0 = 0`, then v3 floor `max(0, 0.2) = 0.2`
+
+So **v3's flat floor was actually holding the boat back from a 1.0 m/s
+return** — it could only do 0.2 m/s while heading was off. After
+turning around (~+10s into the recovery) it briefly hit 0.66 m/s but
+spent most of the excursion at the floor.
+
+**v4 prediction**: at range = 20 m, `range_factor = 1.0`,
+`turn_min = 0.5 * max_speed = 0.5 m/s`. Recovery should be ~2.5× faster
+than v3, but still won't restore full 1.0 m/s because L131 taper still
+zeros the original max_speed when heading is off. v4 deployed; awaiting
+field test.
+
+**Possible v5 (deferred until v4 is validated)** — make the L131 taper
+range-aware so far-away cases don't get throttled by heading error:
+
+```cpp
+double taper_slope = 4.0 * (1.0 - range_factor);  // 4.0 near, 0 far
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion * taper_slope);
+```
+
+At max_radius: no taper → full max_speed even with heading off (drive
+home, correct yaw underway). At min_radius: original behavior (don't
+overshoot). Holds for v4 floor to layer on top.
+
+Bag script with perturbation timeline saved at `/tmp/hover_analyze2.py`.
+
+**v4 field result**: "Hover is looking good." Range-aware floor with
+the cliff at minimum_radius broke the orbital limit cycle. Boat now
+settles inside the ring instead of orbiting at the kinematic radius.
+v5 (range-aware taper for faster excursion recovery) still deferred —
+not needed unless wind perturbations become a recurring problem.
+
+**Bag analysis #3 — v4 quantitative validation** (new bag
+`2026-04-16T17.20.52.010254426`, ~30 min post-v4 deploy):
+
+Range from target (last 25 min):
+
+| %ile | range |
+|---|---|
+| p25 | 1.67 m |
+| p50 | 2.42 m (inside minimum_radius!) |
+| p75 | 2.97 m |
+| p90 | 4.20 m |
+| p95 | 7.36 m |
+| max | 16.82 m |
+
+Killer stat:
+
+- `cmd_lin == 0`: **8731 / 16858 (52%)** of commanded throttle is
+  exactly zero. With v3 the floor of 0.2 was always on — this was
+  effectively 0%. The cliff at `minimum_radius` is letting the boat
+  actually settle.
+- `cmd_lin > 0.45`: 405 / 7271 (5.6%) — the active "drive home"
+  events when range exceeds the band.
+
+Observed phases (post-v4):
+
+- t = 300–360s: big thrust burst cmd_lin = 0.72–0.79 m/s — active
+  recovery from a perturbation, range-aware floor doing its job
+- t = 420s onwards (~22 min): stable hover, range mean 1–3 m,
+  cmd_vel oscillating 0 ↔ 0.2 m/s as boat enters/exits the ring
+- Recovery from largest excursion (16.8 m) worked cleanly vs v3's
+  20 m crawl-home at 0.2 m/s
+
+Actual speed ≈ commanded speed throughout — control loop healthy.
+No orbital limit cycle, no drift-to-infinity, no v5 needed.
+
+Bag script saved at `/tmp/hover_analyze3.py`.
+
+#### Logger config: cmd_vel and udp_bridge per-remote stats
+
+Topics added for post-mortem analysis (commit `8f2bb99` on PR #54):
+
+- `/bizzy/piloting_mode/autonomous/cmd_vel` ✓ (TwistStamped, captured)
+- `/bizzy/mavros/setpoint_velocity/cmd_vel` ✓ (captured)
+- `/bizzy/cmd_vel_nav` and `/bizzy/cmd_vel_smoothed` — ABSENT in
+  recorded topics. Implies `velocity_smoother` is not in the active
+  launch's pipeline; nav2 publishes directly to
+  `piloting_mode/autonomous/cmd_vel`. Not a problem for analysis;
+  `piloting_mode/autonomous/cmd_vel` is the raw hover output.
+- `/bizzy/udp_bridge/remotes/operator/{bridge_info,topic_statistics}` ✓
+  (per-remote bandwidth stats now captured for WiFi/VPN attribution)
+
 For future reference: the hover behavior parameters
 (`minimum_radius=2.5`, `maximum_radius=10`, `maximum_speed=1.0`,
 `maximum_rotation_speed=0.75`) and the "kill throttle above 45° error"
