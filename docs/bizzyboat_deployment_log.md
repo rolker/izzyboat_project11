@@ -1790,6 +1790,169 @@ Side benefits: also fixes the aggregator `?` icons (no need to bump
 analyzer timeouts) and removes the need for any annunciator
 `stale_timeout` tuning.
 
+#### CrabbingPathFollower PID — YAML key names never took effect
+
+Live param check on `/bizzy/controller_server` revealed the PID
+parameters declared by the running node are:
+
+```
+FollowPath.pid.p
+FollowPath.pid.i
+FollowPath.pid.d
+FollowPath.pid.i_clamp_max / i_clamp_min
+FollowPath.pid.u_clamp_max / u_clamp_min
+FollowPath.pid.activate_state_publisher
+```
+
+But the YAML in
+`seafloor_echoboat_project11/echoboat_project11/config/nav2_params.yaml:62-73`
+uses the OLD `control_toolbox::Pid` API names: `kp`, `ki`, `kd`,
+`upper_limit`, `lower_limit`, `windup_limit`, `publish_debug`. These are
+silently ignored by `control_toolbox::PidROS`.
+
+**Implication**: the YAML's tuning values (`kp=20.0`, `ki=0.5`, `kd=0.6`,
+`windup_limit=30.0`) have **never been in effect**. The controller has
+been running with the C++ defaults from `crabbing_path_follower.cpp:29`:
+`p=1.0, i=0.0, d=0.0, u_clamp=±90, i_clamp=±75`. Effectively a P-only
+controller with kp=1 — explains the historical "controller feels sluggish,
+must be wind/current" character of trackline runs.
+
+**Field test of corrected gains** — set live via correct names:
+
+```bash
+ros2 param set /bizzy/controller_server FollowPath.pid.p 20.0
+ros2 param set /bizzy/controller_server FollowPath.pid.i 0.5
+ros2 param set /bizzy/controller_server FollowPath.pid.d 0.6
+```
+
+Tried following a line. **Boat took off in completely wrong direction.**
+The "tuning values" in the YAML were never validated because they were
+never applied — they're not actually correct gains for the platform.
+Real tuning needs to be redone from scratch with correct param names.
+
+**Recovery suggestion (untested)**: back off to something much lower
+(e.g. `p=2.0, i=0.0, d=0.0`) and increment from there. Going 1 → 20 in
+one step was a 20× jump.
+
+**Update — actual validated values found in ben simulation config**
+(`ben_project11/config/nav2_params.yaml:64-75`):
+
+```yaml
+FollowPath:
+  pid:
+    p: -6.0          # NEGATIVE — sign convention!
+    i: -0.5          # NEGATIVE
+    d: -0.6          # NEGATIVE
+    i_clamp_max: 50.0
+    i_clamp_min: -50.0
+    u_clamp_max: 90.0
+    u_clamp_min: -90.0
+```
+
+The ben config uses the correct new PidROS names AND negative signs.
+Echoboat's YAML was simply left behind when the controller's underlying
+API changed — and someone tried to translate the old gains to the new
+keys without realizing the sign convention. The "boat ran in completely
+wrong direction" symptom = positive gain driving cross-track-error in
+the wrong direction.
+
+**Sign-flip mystery resolved via git history**:
+
+| Date | Repo | Commit | What changed |
+|---|---|---|---|
+| 2025-05-15 | echoboat | `10fcf8c` | switched FollowPath to old `project11_navigation::CrabbingPathFollower`, kp=6 (positive) |
+| 2025-06-18 → 2025-06-20 | echoboat | `148359a`/`f3aef48` | tuned to kp=20, ki=0.5, kd=0.6, windup=30 (positive, validated on IzzyBoat) |
+| 2025-10-31 | unh_marine_navigation | `c501dd2` | created new `marine_nav_crabbing_path_follower` using `control_toolbox::PidROS` (new API names: `p`/`i`/`d` instead of `kp`/`ki`/`kd`) |
+| 2025-11-04 | unh_marine_navigation | `1c5db5a` | removed legacy `project11_navigation` code |
+| 2025-11-04 → 2026-04-16 | echoboat | (none) | YAML plugin name updated to `marine_nav_*` but PID keys never updated |
+
+So:
+
+- **June 2025 → October 2025** (4 months): IzzyBoat ran with `kp=20.0`
+  POSITIVE on the OLD `project11_navigation` controller. Validated.
+- **November 2025 → now** (~5 months): both IzzyBoat and BizzyBoat have
+  been running with PidROS *defaults* (`p=1.0, i=0, d=0`) because the
+  YAML keys were silently ignored. Explains the "controller feels
+  sluggish, blame wind/current" character of trackline runs in this
+  period.
+
+**The new `marine_nav_*` controller has flipped the cross-track-error
+sign convention** vs the old `project11_navigation` one — confirmed by
+the BizzyBoat field test where `p=20.0` (positive, what worked on the
+old code) drove the boat off in the wrong direction. The ben/vrx sim
+configs use negative signs and are the only places that match the new
+API.
+
+**Recommended values for echoboat YAML** (IzzyBoat-validated magnitude,
+sign flipped to match new controller):
+
+```yaml
+pid:
+  p: -20.0
+  i: -0.5
+  d: -0.6
+  i_clamp_max: 30.0
+  i_clamp_min: -30.0
+  u_clamp_max: 90.0
+  u_clamp_min: -90.0
+  activate_state_publisher: true
+```
+
+Ben sim alternative (gentler, sim-only validation):
+`p: -6.0, i: -0.5, d: -0.6, i_clamp: ±50`.
+
+**Field result with `p=-20, i=-0.5, d=-0.6, i_clamp=±30`**: boat
+**solidly following survey lines**. PID values confirmed working. After
+~5 months of sluggish-controller behavior caused by the silently-ignored
+YAML, real tracking is restored.
+
+#### Plan-time TF extrapolation when starting next survey line
+
+After completing a survey line, `compute_path_through_poses` repeatedly
+fails with:
+
+```
+Extrapolation Error looking up target frame:
+Lookup would require extrapolation into the past.
+Requested time 1776355217.065278 but the earliest data is at time
+1776355270.367 ... 271.268 ... 273.267 (advancing each retry)
+when looking up transform from frame [bizzy/map] to frame [bizzy/map_tide]
+```
+
+Symptom: requested timestamp stays *fixed* across retries while the
+earliest-available time keeps advancing. The fixed timestamp is from
+~70 s before the planner is invoked — i.e., when the original survey
+plan was issued, not when the next-line goal is being processed.
+
+User hypothesis (confirmed by behavior): the survey-pattern executor
+holds the original mission timestamps on the per-line goals, then when
+the next line is started, the planner gets a goal with a stale
+header.stamp. The `bizzy/map → bizzy/map_tide` TF buffer doesn't reach
+back that far.
+
+Behavior tree falls back to `hover` after the planner aborts —
+`[behavior_server] Running hover` appears in the log. So failure mode
+is non-catastrophic but blocks autonomous progress.
+
+**Fix candidates** (to investigate):
+- Refresh `header.stamp = now()` on per-line goals at the moment the
+  task is dispatched (in survey-pattern executor or BT task navigator)
+- Use `tf2::TimePointZero` in whatever code path resolves the goal
+  transform (use latest available rather than exact-time lookup)
+- Increase `sea_surface_estimator` TF publish rate / buffer length so
+  older requests can still resolve
+
+Investigating the survey-pattern executor / BT task navigator code path
+next.
+
+**Outstanding follow-ups**:
+- Rewrite YAML to use correct PidROS names everywhere CrabbingPathFollower
+  is loaded (echoboat, ben_project11, others)
+- Re-tune gains from a known-low baseline
+- Consider adding a comment in `crabbing_path_follower.cpp` near
+  `initialize_from_args(...)` that the API uses different param names
+  than older Pid
+
 #### Hover deadlock — controller assumes skid-steer, BizzyBoat has vectored thrusters
 
 In-water hover test: boat commands sustained `angular.z = -0.5`,
@@ -1826,6 +1989,136 @@ controller has zero authority to correct.
 **Fix path**: patch `hover.cpp` to maintain minimum forward speed during
 heading correction so vectored thrust has authority to redirect. User
 will patch directly in the field; backport to the repo after.
+
+**Field-applied patch v1 (2026-04-16, initial — "seems to be working OK")**:
+
+```cpp
+if (steering_proportion > 0.25)
+{
+    current_target_speed = 0.2;   // was 0.0
+}
+```
+
+Single-character intent change — give the boat 0.2 m/s forward thrust
+during large heading corrections instead of zero. Worked initially.
+
+**Drift-away regression observed shortly after** — boat drifted beyond
+`maximum_radius` (10 m) and didn't return. Diagnosed as:
+
+1. Range > max_radius → original L107 sets `current_target_speed = 1.0`
+2. v1 patch L132 *clobbers* this to 0.2
+3. L135 `*= (1 - 4*0.667) = -1.667` → result is `0.2 * -1.667 = -0.333`
+   (reverse thrust)
+4. L139 clamps with `minimum_speed_ = 0` → effectively 0 thrust
+5. Boat can't return to station; drifts further
+
+**Field-applied patch v2** — two changes:
+
+```cpp
+if (steering_proportion > 0.25)
+{
+    current_target_speed = std::max(current_target_speed, 0.2);  // FLOOR, not clobber
+}
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion*4.0);  // clamp L135 ≥ 0
+```
+
+Preserves the original "drive home at 1.0 m/s" behavior when far from
+station, while still ensuring 0.2 m/s minimum thrust at station for
+rudder/vectored-thrust authority during heading correction. L135 no
+longer goes negative.
+
+**Patch v2 still deadlocks** — order-of-operations bug. For
+`steering_proportion >= 0.25`:
+
+```
+floor: current_target_speed = max(x, 0.2)         → 0.2 (or higher)
+taper: current_target_speed *= max(0, 1 - 4*0.25) → 0.2 * 0 = 0
+final clamp: max(0, minimum_speed_)               → max(0, 0) = 0  DEADLOCK
+```
+
+The 0.2 floor is applied BEFORE the multiplier, and the multiplier is
+exactly zero at the 0.25 threshold and beyond. Floor gets wiped.
+
+**Field-applied patch v3** — flip the order, floor AFTER the taper:
+
+```cpp
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion*4.0);
+if (steering_proportion > 0.1)   // ↓ threshold from 0.25 — vectored
+{                                 //   thrust needs flow at smaller errors too
+  current_target_speed = std::max(current_target_speed, 0.2);
+}
+```
+
+Floor now wins because it runs after the multiplier. Threshold lowered
+to 0.1 (~18°) since vectored thrust needs forward flow even for moderate
+heading corrections.
+
+Sanity check — covers all input regions:
+
+| Region | steering | Original | After taper | After floor |
+|---|---|---|---|---|
+| Far (>10m), aligned | 0.05 | 1.0 | 0.8 | 0.8 (no floor at 0.05) |
+| Far, 60° off | 0.333 | 1.0 | 0 | **0.2** ✓ |
+| Mid (5m), 120° off | 0.667 | 0.333 | 0 | **0.2** ✓ |
+| At target, aligned | 0.05 | 0 | 0 | 0 (calm) |
+| At target, 30° off | 0.167 | 0 | 0 | **0.2** ✓ |
+| Inside min/2, aligned | 0 | -0.05 | -0.05 | -0.05 (small reverse OK) |
+| Inside min/2, 60° off | 0.333 | -0.05 | 0 | **0.2** (overrides reverse for rudder) |
+
+**Field result with v3 (commit `ca0dc6f` on `unh_marine_navigation#14`,
+pushed to `gitcloud/jazzy`)**: hover working — boat slowly spirals
+toward the center. Acceptable behavior for vectored thrust: 0.2 m/s
+minimum forward thrust during heading correction means the boat can't
+sit perfectly still while turning, so it traces a tightening loop as
+range decreases. No deadlock.
+
+**Bag analysis (last 10 min of session, `2026-04-16T12.52.58.143303849`)**
+shows the "spiral" is actually a **stable orbital limit cycle**, not
+convergence:
+
+| Metric | Value |
+|---|---|
+| Ground speed | mean 0.20 m/s (range 0.13–0.28) — locked at v3 floor |
+| Range from centroid | mean 3.23 m, settled at 2.5–3 m for last 5 min |
+| Yaw rate | mean 3.8°/s, max 9°/s |
+| Orbit period | ~60–80 s |
+
+Kinematic explanation: at v_min = 0.2 m/s and sustained yaw rate
+~6°/s (0.105 rad/s), turning radius = v/ω ≈ 1.9 m — matches observed
+orbit radius. The 0.2 m/s floor (necessary for rudder authority far
+from station) becomes a trap when close: boat can't stop, endlessly
+orbits at the kinematic radius.
+
+**Applied v4** (commit `cfd8560` on `unh_marine_navigation#14`, pushed
+to `gitcloud/jazzy`) — range-aware floor that ramps with the existing
+target_speed gradient:
+
+```cpp
+if (steering_proportion > 0.1 && current_range >= minimum_radius_)
+{
+  double range_factor = std::clamp(
+      (current_range - minimum_radius_) /
+      (maximum_radius_ - minimum_radius_),
+      0.0, 1.0);
+  double turn_min_speed = (0.2 + 0.3 * range_factor) * maximum_speed_;
+  current_target_speed = std::max(current_target_speed, turn_min_speed);
+}
+```
+
+| range | turn_min (max_speed=1.0) |
+|---|---|
+| ≥ max_radius (10 m) | 0.5 m/s (more authority for return) |
+| 6 m (mid) | 0.34 m/s |
+| 3 m (just outside ring) | 0.22 m/s |
+| 2.5 m (at ring) | 0.2 m/s (matches v3 at boundary) |
+| < 2.5 m (inside ring) | **0** (cliff — boat can settle) |
+
+Behavior just outside the ring is identical to v3 (continuity at the
+cliff). Far away, more aggressive return (0.5 vs 0.2). Inside the
+ring, original L116-128 logic takes over so the boat stops orbiting.
+
+Bag analysis script saved at `/tmp/hover_analyze.py` for re-running
+on the next session.
 
 For future reference: the hover behavior parameters
 (`minimum_radius=2.5`, `maximum_radius=10`, `maximum_speed=1.0`,
