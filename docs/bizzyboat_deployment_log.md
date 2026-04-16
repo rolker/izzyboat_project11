@@ -2247,7 +2247,20 @@ since the root cause is now understood and being fixed properly.
 - [ ] Consider hover behavior variants for skid-steer vs vectored-thrust
       platforms (or a `vectored_thrust` parameter)
 
+### 2026-04-16 — Starlink ethernet root cause update
+
+The recurring Starlink Mini ethernet drops (2026-04-06, 2026-04-07,
+2026-04-10 water test #2) were likely **not** caused by bypass mode
+reversion. On inspection, the ethernet connector to the dish was not
+clipping securely — an intermittent physical connection. A colleague
+glued the connector in place (~2026-04-13). Starlink ethernet has been
+stable since. Bypass mode was also enabled and doesn't hurt, but the
+loose connector was probably the real issue.
+
 ## Status
+
+Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
+(BizzyBoat field ops — survey readiness and class prep).
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
 Cyclone DDS with raised participant limit. Chart datum transform working.
@@ -2259,5 +2272,10 @@ signal quality thresholds, hardware_id disambiguation, DNS ping targets,
 annunciator config, and aggregator improvements. Annunciator panel first
 tested — functional via rqt but standalone segfaults and resize needs
 work. Tide awareness pipeline advanced: S57 tide offset merged, MHHW
-datum frame added, BT string literal fix merged. Remaining work tracked
-in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
+datum frame added, BT string literal fix merged.
+
+2026-04-16: CrabbingPathFollower PID fix field-validated (correct PidROS
+key names with negative signs). Hover v4 validated — range-aware floor
+with cliff at minimum_radius broke orbital limit cycle. TF extrapolation
+fix for multi-line surveys applied. Multi-line survey execution working.
+Starlink ethernet root cause identified (loose connector, not bypass mode).
