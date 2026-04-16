@@ -1,12 +1,24 @@
 # BizzyBoat Hardware Setup
 
-Reference documentation for BizzyBoat (Seafloor Systems EchoBoat 240)
-hardware configuration. Hull/geometry details are covered in the
-companion doc [bizzyboat_reference_geometry.md](bizzyboat_reference_geometry.md).
+Reference documentation for BizzyBoat (Seafloor Systems EchoBoat 240).
+
+This doc catalogs **both** the factory kit and the project11 add-on
+hardware. It replaces the hardware list in
+[unh_echoboats_project11#8](https://github.com/rolker/unh_echoboats_project11/issues/8),
+which asked for this information to be moved into a document.
 
 Seed reference: the manufacturer manual lives outside this repo at
 `~/bizzyboat/EchoBoat_240_Manual_V.pdf` on the development station.
-Page numbers below refer to that PDF.
+Page numbers below refer to that PDF. The manual shows **all possible**
+equipment for the EchoBoat 240 platform; not everything shown is
+installed on BizzyBoat. Items not present on our boat are noted
+explicitly.
+
+Companion docs:
+- [bizzyboat_reference_geometry.md](bizzyboat_reference_geometry.md) — URDF / hull geometry
+- [../../docs/bizzyboat_network.md](../../docs/bizzyboat_network.md) — network architecture
+- [../../docs/bizzyboat_deployment_log.md](../../docs/bizzyboat_deployment_log.md) — session-by-session log
+- [../../docs/izzyboat_hardware.md](../../docs/izzyboat_hardware.md) — IzzyBoat reference (do not assume parity)
 
 ## Differences from IzzyBoat
 
@@ -25,20 +37,181 @@ before assuming shared parameter values are correct.
 | Batteries | 2× Torqeedo Power 24-3500 in parallel | 4× smaller packs (model not yet characterized) |
 | Current sensor | None wired | None wired |
 
-## Propulsion
+---
 
-- **Top speed**: 4 kn (2 m/s)
-- **Survey speed**: 2 kn (1 m/s)
-- **Steering**: directed thrust (vectored), not differential. The hover
-  behavior must maintain non-zero forward speed during heading
-  corrections to retain turning authority — see `hover.cpp` v3/v4
-  patches (`unh_marine_navigation#14`, commits `ca0dc6f`, `cfd8560`).
+## Factory Hardware
 
-## Batteries
+All items in this section are as-delivered from Seafloor Systems.
+References are to Figures 1–7 in the EchoBoat 240 manual (pp. 9–15).
 
-**Pack**: 2× Torqeedo Power 24-3500 in parallel.
+### Hull & Structure
 
-### Torqeedo Power 24-3500 spec (Manual §3.6.1, Table 6, p. 25)
+- HDPE hull, 7.87 ft × 2.95 ft, 1 ft draft, 1.32 m air draft
+- 316 stainless hardware
+- Lifting point, drain plug, carry handles, bumper
+- Main hatch, bow hatch, main switch panel
+- Tower (mast)
+- Tracking fins (bottom), fairing fin (stern)
+- Custom trailer
+
+### Propulsion
+
+- 2× electric outdrive thrusters (Fig 1, 2)
+- Directed-thrust (vectored) steering via 2× servos (5 A fused, Fig 54)
+- 2× ESCs (Electronic Speed Controllers, Fig 7)
+- Capacitor Box, Fuse Box (Fig 7)
+
+### Power
+
+- **Batteries**: 2× **Torqeedo Power 24-3500** in parallel — full spec in the [Batteries](#batteries-detail) section below
+- 24 VDC main bus
+- AC Inverter (24 VDC → 120 VAC) for sonar PC and payload
+- Main Power Button with LED ring indicator (flashing = battery error)
+- Power 24-3500 Fast Charger (topside, 100–240 VAC)
+
+### Navigation & Sensing (factory)
+
+- **Primary GPS Antenna** (bow) — factory-installed; physically present but **unused** (superseded by CUAV C-RTK 2HP, see [Added Hardware](#positioning))
+- **Secondary GPS Antenna** (stern) — same; physically present but unused
+- **SVP** (Sound Velocity Profiler, bottom-mount) — in SVP Tube (Fig 2)
+- **SVS** (Sound Velocity Sensor, bottom-mount)
+- **SmartCast** + **Winch** — lowerable sensor for profiling
+- **Arduino CTD winch controller** — part of the factory SmartCast system (VID:PID `2341:0043`, serial `342343139313512040B1`, USB `ttyACM2`)
+- **USB Camera** (tower-mount, HD, VID:PID `32e4:9230`) — factory UVC camera; used as backup situational-awareness camera (intentionally uncalibrated, not logged to rosbag)
+
+**Not installed on BizzyBoat** (shown in manual but absent from this hull):
+- IMU (Fig 2 — optional add-on slot; not present)
+- T50 SONAR (Receiver, Projector, Topside — Fig 2, 6; not present)
+- LiDAR (tower-mount — Fig 1, 3; not present)
+- Stereo Camera (tower-mount — Fig 1, 3; not present)
+- CAA Topside (Collision Avoidance Assist — Fig 4, 6; optional add-on, not present)
+
+### Factory Comms
+
+- **MikroTik OmniTIK 5 ac** (`RBOmniTikG-5HacD`) — boat-side WiFi bridge radio. Factory-provided; reconfigured for project11 network (see [bizzyboat_network.md](../../docs/bizzyboat_network.md)). RouterOS 7.22, AP bridge mode, 5 GHz a/n/ac.
+- Onboard Antenna (hull-top, for shoreside RC link)
+- Receiver Box (houses RF link components)
+- Shoreside Antenna + Shoreside PoE (topside kit)
+
+### Factory Compute
+
+- **AutoNav** box (Fig 4, 6) — Seafloor Systems' autopilot enclosure containing the **Cube Orange** FCU:
+  - **Hex/ProfiCNC Cube Orange** running ArduPilot ArduRover
+  - Serial number: `43001E000A51323237373236` (observed 2026-03-27)
+  - VID:PID `2dae:1016`, USB `ttyACM0` / `ttyACM1`
+  - Connection to gabby: USB, MAVLink 2, target system 1, component 1
+  - Firmware updated to support the CUAV C-RTK 2HP GPS; existing factory params kept, selectively overridden as needed
+  - Param baseline: `bizzyboat_project11/config/fcu/bizzyboat_fcu_baseline.param`
+  - Overrides: `bizzyboat_project11/config/fcu/bizzyboat_fcu_custom.param`
+- **PC** — Windows sonar PC (Fig 4, 6). Used for the factory hydrographic
+  software. Separate from the project11 compute stack (gabby).
+
+### RCU / Topside Kit
+
+- Remote Control Unit (RCU): Taranis Q-X7 Access Transmitter — USB mini charging
+- Long Range Module (for RCU)
+- 2S LiPo battery + Cube Balance Charger
+- Voltage Tester (LiPo cell check)
+- AML3 Adapter (for SmartCast SVP)
+- USB drive (Seafloor software/drivers/manual)
+- Programming cables: ESC programming cable, DB9 null modem, DB9 gender changer, USB-to-serial adapter
+
+---
+
+## Added Hardware (project11 retrofit)
+
+These items are not part of the stock EchoBoat 240 kit — they were
+installed to integrate the boat with the project11 autonomy framework.
+Seed list from
+[unh_echoboats_project11#8](https://github.com/rolker/unh_echoboats_project11/issues/8),
+expanded with items discovered during deployment (see
+[bizzyboat_deployment_log.md](../../docs/bizzyboat_deployment_log.md)
+entries from 2026-03-26 onward).
+
+### Compute
+
+| Item | Model | Role | Host name |
+|---|---|---|---|
+| Onboard Linux PC | **Neousys Nuvo-9160GC** (Intel Core i7-14700, 32 GB RAM) | ROS 2 autonomy compute | `gabby` |
+
+Mounted in one of the two finned enclosures in the electronics bay
+(right-hand side; left-hand finned enclosure is the factory Windows
+sonar PC).
+
+### Positioning
+
+| Item | Model | Role |
+|---|---|---|
+| Dual-antenna GNSS / heading module | **CUAV C-RTK 2HP** | Centimeter-level RTK position + moving-baseline heading |
+
+- Connected to the FCU via CAN (GPS node ID 124)
+- Antenna offsets set in `bizzyboat_fcu_custom.param` (2026-04-02):
+  forward antenna `GPS_POS1 = (+0.835, 0, -0.890)`, aft antenna
+  `GPS_POS2 = (-0.835, 0, -0.890)`
+- Moving-baseline: `GPS_MB1_TYPE=1`, `GPS_MB1_OFS = (+1.670, 0, 0)`
+- The factory Primary/Secondary GPS antennas are still physically on
+  the mast but are unused; the C-RTK 2HP is the sole active GNSS.
+
+### Perception
+
+| Item | Model | Count | Network location |
+|---|---|---|---|
+| Depth / RGB cameras | Luxonis **OAK-D** (PoE) | 4 | `192.168.20.9` – `192.168.20.12` |
+
+DHCP reservations tracked in
+[CCOMJHC/ccomjhc_project11#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9).
+Driver: `depthai_marine` from the sensors layer
+([unh_echoboats_project11#23](https://github.com/rolker/unh_echoboats_project11/issues/23)).
+
+### Sonar
+
+| Item | Model | Status |
+|---|---|---|
+| Multibeam sonar | Imagenex **DeltaT** | Physically installed on hull; ROS driver **not yet integrated**. Topic `/bizzy/sensors/deltat/soundings` is advertised but publishes zero messages as of 2026-04-16. Driver tracked in [unh_marine_autonomy#111](https://github.com/rolker/unh_marine_autonomy/issues/111). |
+
+### Time Synchronization
+
+| Item | Model | Role | Network location |
+|---|---|---|---|
+| GPS NTP appliance | **Time Machines TM2000B** | Stratum-1 time source for all boat and operator compute | `time.bizzy.p11.lan` (192.168.20.123) |
+
+- MAC: `d4:e9:5e:06:15:63`
+- Requires 3D GPS fix before serving NTP
+- Feeds NTP hierarchy: TM2000B (s1) → boat router (s2) → LAN clients / operator router
+- Full NTP architecture documented in `docs/bizzyboat_ntp_investigation_2026-04-09.md`
+  (on branch `feature/issue-45`)
+
+### Network
+
+Portable rack (black frame, see `~/bizzyboat/2026-03-27_BizzyBoat*.jpg`):
+
+| Item | Model | Role |
+|---|---|---|
+| Cellular / WiFi router | **Teltonika RUTX11** (RUTX11100400) | Boat-side router: LTE backhaul, Starlink WAN aggregation, LAN |
+| PoE switches | **Trendnet TI-PG80B** × 2 | PoE power/data for OAK cameras + MikroTik |
+| Satellite uplink | **Starlink Mini** | WAN failover via Teltonika WAN1 |
+
+Note: the **MikroTik OmniTIK 5 ac** WiFi bridge radio is factory-provided
+(see [Factory Comms](#factory-comms) above), though it was reconfigured for
+the project11 network.
+
+Diagnostics monitors for these publish under
+`Teltonika: router.bizzy:*`, `MikroTik: wifi.bizzy:*`, and
+`Starlink: starlink.bizzy:*` on `/diagnostics`.
+
+### Udev / Device Rules
+
+Rules for USB devices (Cube Orange, Arduino, USB camera) live in
+`bizzyboat_project11/config/udev/`
+([unh_echoboats_project11#26](https://github.com/rolker/unh_echoboats_project11/issues/26)).
+
+---
+
+## Batteries (detail)
+
+Pack: 2× **Torqeedo Power 24-3500** in parallel (factory).
+
+### Spec (Manual §3.6.1, Table 6, p. 25)
 
 | Property | Value |
 |---|---|
@@ -69,8 +242,8 @@ Combined nominal capacity:
   CAN/J1939 output. The factory baseline
   (`bizzyboat_fcu_baseline.param`) ships with `BATT_MONITOR=4` and
   `BATT_CURR_PIN=15` set as if an analog current sensor existed; on
-  this boat those values are wrong because no sensor is connected.
-  The ADC drifts around zero under all load conditions.
+  this boat no sensor is connected and the ADC drifts around zero
+  under all load conditions.
 - Consequence: `sensor_msgs/BatteryState.percentage` cannot be
   integrated from consumed mAh and was observed frozen at 0.99 across
   4.5 h of thruster activity on 2026-04-16.
@@ -90,8 +263,7 @@ Applied via `bizzyboat_project11/config/fcu/bizzyboat_fcu_custom.param`
 
 `BATT_FS_LOW_ACT` and `BATT_FS_CRT_ACT` remain `0` — autonomy decisions
 are owned by the ROS stack, not the FCU. The low/critical thresholds
-drive the `mavros: Battery` diagnostic and annunciator indicators
-only.
+drive the `mavros: Battery` diagnostic and annunciator indicators only.
 
 ### Voltage reference card
 
@@ -106,15 +278,7 @@ only.
 | Manufacturer minimum (damage below) | 21.0 V |
 | Hard protection shutoff | 12 V |
 
-## Power Electronics
-
-From the manual (§1.3 p. 3, §5 block diagram p. 107+):
-
-- System bus: 24 VDC
-- Shore power charge: 100–240 VAC / 50–60 Hz
-- AC inverter on board (24 VDC → 120 VAC) for sonar PC and payload
-- Main Power Button with LED ring indicator (flashing = battery error)
-- Fuses: servo fuse panel (5 A starboard, 5 A port)
+---
 
 ## Autonomy Interface
 
@@ -127,22 +291,23 @@ From the manual (§1.3 p. 3, §5 block diagram p. 107+):
   or mode failures are expected noise and should not be treated as
   issues.
 
+---
+
 ## History
 
-- 2026-03-27 — hardware inventory, side/internal photos captured
-  (`~/bizzyboat/2026-03-27_BizzyBoat*.jpg`).
-- 2026-03-30 — hull measurements (`~/bizzyboat/2026-03-30_measurements.jpg`).
-- 2026-04-02 — GPS antenna offsets applied (see
-  `bizzyboat_fcu_custom.param`).
-- 2026-04-07 — IMU position offsets applied.
-- 2026-04-16 — battery param divergence from actual hardware
-  identified; Torqeedo Power 24-3500 values applied (this doc,
-  issue #55).
+- 2026-03-18 — Hardware seed list opened as [issue #8](https://github.com/rolker/unh_echoboats_project11/issues/8)
+- 2026-03-27 — USB hardware enumeration on gabby (Cube, Arduino, USB camera); portable rack + finned enclosures photographed (`~/bizzyboat/2026-03-27_BizzyBoat*.jpg`)
+- 2026-03-30 — hull measurements (`~/bizzyboat/2026-03-30_measurements.jpg`); DHCP reservations for 4× OAK cameras verified
+- 2026-04-02 — GPS antenna offsets applied (`bizzyboat_fcu_custom.param`)
+- 2026-04-07 — IMU position offsets applied
+- 2026-04-16 — battery param divergence from actual hardware identified; Torqeedo Power 24-3500 values applied (this doc, [issue #55](https://github.com/rolker/unh_echoboats_project11/issues/55))
 
 ## References
 
 - Manufacturer manual: `~/bizzyboat/EchoBoat_240_Manual_V.pdf` (local)
-- Hull geometry: [bizzyboat_reference_geometry.md](bizzyboat_reference_geometry.md)
-- Network setup: [../../docs/bizzyboat_network.md](../../docs/bizzyboat_network.md)
 - Deployment log: [../../docs/bizzyboat_deployment_log.md](../../docs/bizzyboat_deployment_log.md)
+- Network setup: [../../docs/bizzyboat_network.md](../../docs/bizzyboat_network.md)
+- Hull geometry: [bizzyboat_reference_geometry.md](bizzyboat_reference_geometry.md)
 - IzzyBoat reference (do not assume parity): [../../docs/izzyboat_hardware.md](../../docs/izzyboat_hardware.md)
+- Parent setup issue: [rolker/unh_echoboats_project11#5](https://github.com/rolker/unh_echoboats_project11/issues/5)
+- Hardware seed list: [rolker/unh_echoboats_project11#8](https://github.com/rolker/unh_echoboats_project11/issues/8)
