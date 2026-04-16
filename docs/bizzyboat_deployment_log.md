@@ -2247,16 +2247,6 @@ since the root cause is now understood and being fixed properly.
 - [ ] Consider hover behavior variants for skid-steer vs vectored-thrust
       platforms (or a `vectored_thrust` parameter)
 
-### 2026-04-16 — Starlink ethernet root cause update
-
-The recurring Starlink Mini ethernet drops (2026-04-06, 2026-04-07,
-2026-04-10 water test #2) were likely **not** caused by bypass mode
-reversion. On inspection, the ethernet connector to the dish was not
-clipping securely — an intermittent physical connection. A colleague
-glued the connector in place (~2026-04-13). Starlink ethernet has been
-stable since. Bypass mode was also enabled and doesn't hurt, but the
-loose connector was probably the real issue.
-
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
