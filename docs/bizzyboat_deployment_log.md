@@ -1790,6 +1790,50 @@ Side benefits: also fixes the aggregator `?` icons (no need to bump
 analyzer timeouts) and removes the need for any annunciator
 `stale_timeout` tuning.
 
+#### Hover deadlock — controller assumes skid-steer, BizzyBoat has vectored thrusters
+
+In-water hover test: boat commands sustained `angular.z = -0.5`,
+`linear.x = -0.0` (negative zero) and sits there. Outstanding issue
+"Hover engages but drifts" / "Hover behavior — no throttle, only yaw"
+finally diagnosed.
+
+Root cause is in `marine_nav_behaviors/src/hover.cpp:130-135`:
+
+```cpp
+if (steering_proportion > 0.25)            // > 45° heading error
+  current_target_speed = 0.0;              // KILL THROTTLE
+current_target_speed *= (1.0 - steering_proportion*4.0);
+```
+
+For the observed `angular.z = -0.5` at `maximum_rotation_speed = 0.75`,
+working backwards: `steering_angle ≈ -120°`, `steering_proportion ≈ 0.667`.
+Above 0.25 the throttle is forced to zero, then multiplied by `-1.667`
+giving the negative-zero in the cmd_vel output.
+
+The "rotate-first, translate-second" logic was tuned on **IzzyBoat
+(skid-steer)** which can pivot in place from differential thrust alone.
+**BizzyBoat has vectored thrusters** — it needs forward velocity for
+the thrust vector to develop turning authority. So:
+
+1. Heading error > 45° → throttle killed by L132
+2. No throttle → vectored thrust has no forward component to redirect
+   → no turning authority
+3. Boat sits → heading error stays large → goto 1 (deadlock)
+
+Wind/current makes this worse — they keep nudging the heading while the
+controller has zero authority to correct.
+
+**Fix path**: patch `hover.cpp` to maintain minimum forward speed during
+heading correction so vectored thrust has authority to redirect. User
+will patch directly in the field; backport to the repo after.
+
+For future reference: the hover behavior parameters
+(`minimum_radius=2.5`, `maximum_radius=10`, `maximum_speed=1.0`,
+`maximum_rotation_speed=0.75`) and the "kill throttle above 45° error"
+heuristic are platform-dependent — they assumed skid-steer kinematics.
+A second hover variant or a `vectored_thrust: true` parameter may be
+the right long-term shape.
+
 #### Outstanding issues (updated)
 
 Replaced "Tune annunciator stale timeouts and diagnostic name matching"
@@ -1801,6 +1845,10 @@ since the root cause is now understood and being fixed properly.
       (Starlink-shows-serial bug)
 - [ ] Have `starlink_diagnostics_node` populate `status.message` with a
       readable summary
+- [ ] Backport hover.cpp patch (minimum-speed-during-turn) to
+      `unh_marine_navigation` after field validation
+- [ ] Consider hover behavior variants for skid-steer vs vectored-thrust
+      platforms (or a `vectored_thrust` parameter)
 
 ## Status
 
