@@ -1663,6 +1663,145 @@ or use a fixed layout that doesn't change on resize.
 - [ ] Consider DNS-over-HTTPS on RUTX11 for long-term DNS resilience
 - [ ] WiFi bridge: switch from static routes to default gateway approach
 
+### Session: 2026-04-16 — Annunciator deep dive
+
+Pre-launch debugging of annunciator panel on salmon. Annunciator was
+running but many indicators showed as STALE. Followed the symptom into
+the monitor nodes and corrected several hypotheses from yesterday.
+
+#### Bus is healthy — corrects yesterday's notes
+
+Probed `/diagnostics` directly from salmon (Python subscriber, not
+`ros2 topic echo` which gives lossy snapshots):
+
+| Indicator | Age | Level | Message |
+|---|---|---|---|
+| `MikroTik: wifi.bizzy: wireless/wlan1/...` | 1.9s | OK | Associated SNR 41dB ▁▂▃▅█ |
+| `Teltonika: router.bizzy: cellular` | 0.0s | OK | LTE -83dBm ▁▂▃▅· |
+| `Starlink: starlink.bizzy: dish_get_status` | 0.9s | OK | (empty) |
+| `mavros: Battery` | 0.5s | OK | Normal |
+| `mavros: GPS` | 0.5s | OK | 3D fix |
+| `mavros: Heartbeat` | 0.5s | OK | Normal |
+| `mavros: System` | 0.5s | OK | Normal |
+| `mavros: MAVROS UAS` | 0.5s | OK | connected |
+
+Topic publishing at ~6 Hz overall. **Yesterday's hypothesis that mavros
+plugins (Battery/GPS/Heartbeat) weren't loaded on gabby was wrong** —
+they're all publishing fine. The earlier `topic echo` capture window
+just missed them.
+
+#### DDS discovery is partial on salmon
+
+`ros2 node list` (cached daemon) shows `/ping_monitor`, `/mikrotik_monitor`,
+`/teltonika_monitor`. But `ros2 node list --no-daemon` (fresh discovery)
+shows only `/rqt_gui_cpp_node_NNNNN` — the local rqt instance.
+
+Means: **no operator-side monitor nodes are actually running on salmon**.
+The `Teltonika: router.op:`, `MikroTik: bizzy.wifi.op:`, and
+`Starlink: starlink.op:` diagnostics we see are all being published by
+gabby, which is configured to monitor both boat- and operator-side
+equipment over the WiFi bridge link. Daemon-cached node list entries are
+stale references to gabby's nodes.
+
+Net effect: data IS reaching salmon, just discovery is unreliable. Topic
+data passes through fine.
+
+#### Why annunciator items still go STALE — three real root causes
+
+1. **`rqt_runtime_monitor` has a hardcoded 5-second stale window**
+   (`runtime_monitor_widget.py:329`). Items not republished within 5s
+   flicker to STALE. `ping_monitor` polls every 10s by default —
+   guaranteed to flicker.
+
+2. **`diagnostic_aggregator/GenericAnalyzer` default timeout is ~5s**
+   too. Same root cause shows up in `rqt_robot_monitor`: ping group
+   shows `?` icon and ERROR badge between polls. Confirmed: ping items
+   are flagged STALE in robot_monitor aggregator view.
+
+3. **The boat-side `mikrotik_monitor` and `teltonika_monitor` poll every
+   5s** — sit right on the boundary; any slow poll pushes items past the
+   threshold momentarily.
+
+The annunciator's own `match_mode` defaults to `substring`
+(`config_model.py:168, 184`) — confirmed not the cause of stale-looking
+indicators. Substring matching against config strings like
+`MikroTik: wifi.bizzy: wireless/` correctly hits the actual published
+name `MikroTik: wifi.bizzy: wireless/wlan1/<MAC>`.
+
+#### Annunciator bug: Starlink indicator shows dish serial
+
+Starlink indicator on the panel displayed something looking like a
+serial number rather than a useful summary. Traced to
+`annunciator_widget.py:229-235`:
+
+```python
+if status.values:
+    try:
+        val = float(status.values[0].value)
+        value_text = config.format.format(val)
+    except (ValueError, IndexError, KeyError):
+        value_text = status.message or status.values[0].value  # <-- bug
+```
+
+`starlink_diagnostics_node.py:135-156` publishes with
+`status.message = ''` (empty) and a `status.values[]` list of flattened
+dish stats. Starting with `device_info.id` (the dish UT serial). The
+annunciator's fallback then displays that serial.
+
+Fix options (deferred to a separate PR on `rqt_operator_tools`):
+- (a) Reverse fallback priority — use `level.name` when message is empty
+  rather than `values[0].value`
+- (b) Add a `value_key` config field so indicators can pick a specific
+  KeyValue
+- (c) Have `starlink_diagnostics_node` populate `status.message` with a
+  human-readable summary
+
+#### Decision: republish cached diagnostics at fixed rate
+
+Rather than tweaking timeouts in three places (annunciator config,
+aggregator config, runtime_monitor — last is uneditable), the cleanest
+fix is in the monitor nodes themselves:
+
+```
+poll_timer    (every poll_interval): query device → update self._cached_msg
+publish_timer (every publish_interval=1.0s): refresh header.stamp → publish cache
+```
+
+Each `DiagnosticStatus` will also carry a new `KeyValue`:
+
+```
+key:   last_query_time
+value: 2026-04-16T13:45:23.456   (ISO 8601, set ONLY on actual poll)
+```
+
+The `last_query_time` value survives republishes unchanged so observers
+can compute true data age (vs. the header timestamp which gets refreshed
+each republish). Diagnostic-honest: header reflects "this message
+sent now", `last_query_time` reflects "this is when the device was
+actually queried".
+
+Repos to touch:
+- `rolker/ros2_network_monitor` — `ping_monitor`, `mikrotik_monitor`,
+  `teltonika_monitor` (one issue + PR)
+- `rolker/starlink_stats_ros` — `starlink_diagnostics_node` (separate
+  smaller issue + PR)
+
+Side benefits: also fixes the aggregator `?` icons (no need to bump
+analyzer timeouts) and removes the need for any annunciator
+`stale_timeout` tuning.
+
+#### Outstanding issues (updated)
+
+Replaced "Tune annunciator stale timeouts and diagnostic name matching"
+since the root cause is now understood and being fixed properly.
+
+- [ ] Implement republish-cached pattern in `ros2_network_monitor` (3 nodes)
+- [ ] Implement republish-cached pattern in `starlink_stats_ros`
+- [ ] Fix annunciator `_handle_diagnostics` value-extraction fallback
+      (Starlink-shows-serial bug)
+- [ ] Have `starlink_diagnostics_node` populate `status.message` with a
+      readable summary
+
 ## Status
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
