@@ -266,6 +266,12 @@
       - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
+      - /bizzy/udp_bridge/remotes/operator/bridge_info
+      - /bizzy/udp_bridge/remotes/operator/topic_statistics
+      - /bizzy/cmd_vel_nav
+      - /bizzy/cmd_vel_smoothed
+      - /bizzy/piloting_mode/autonomous/cmd_vel
+      - /bizzy/mavros/setpoint_velocity/cmd_vel
       - /marine/platforms
       - /rosout
       - /tf
