@@ -892,13 +892,1372 @@ Boat in the water. Results:
 Boat recovered and back inside mobile lab. Successful initial water test —
 RC control, loiter, and project11 manual joystick all working end-to-end.
 
-## Status
-
-Initial deployment complete. First water test successful on 2026-04-08.
-Remaining setup, tuning, and operator tool work tracked in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
-
 #### Forward USB camera — black image
 
 Added `field` user to `video` group on gabby for USB camera access. Forward USB
 camera (non-OAK) now opens but produces a black image. Low priority — secondary
 camera, not blocking water test. Needs investigation later.
+
+---
+
+### 2026-04-10 — Field operations continued
+
+**Location**: Pier / mobile lab area
+**People**: Roland
+
+Rolled boat out of mobile lab, powered up, connected charger.
+
+#### Starlink Mini bypass mode — verified
+
+Enabled bypass mode on the Starlink Mini while offline (in mobile lab, no sky view).
+After rolling outside and powering up, verified via the RUTX11 router web UI that the
+WAN interface received an address from the Starlink and is working. This resolves the
+Starlink Mini ethernet issue from 2026-04-06 — bypass mode was the fix as suspected.
+
+Re-enabled the WAN interface on the RUTX11 so Starlink ethernet is now an active WAN
+path alongside cellular. Working for now — long-term stability TBD.
+
+#### WireGuard VPN confirmed
+
+Pinged gabby from deadpool via WireGuard (bcloud) — VPN is up.
+
+#### NTP — Time Machines TM2000B setup
+
+A colleague installed a Time Machines TM2000B GPS NTP appliance on the boat
+network. Device not visible in the router's DHCP scan or ARP table — had a
+static IP from a previous setup on a different subnet.
+
+**Finding the device**: `arp-scan -l` from gabby (installed for this purpose)
+found only known devices on 192.168.20.0/24. Factory default IP is 192.168.1.20.
+Factory reset via front-panel pinhole button, then added temp IP
+(`192.168.1.100/24`) on gabby to reach it. SSH tunnel from deadpool to access
+web UI via gabby.
+
+**Configuration**:
+- Default login: `admin` / `tmachine` (lowercase)
+- Changed password, enabled DHCP
+- Device picked up 192.168.20.211 via DHCP
+
+**Network integration** ([CCOMJHC/ccomjhc_project11#30](https://github.com/CCOMJHC/ccomjhc_project11/issues/30)):
+- DHCP reservation on boat router: MAC `d4:e9:5e:06:15:63` → `192.168.20.123`
+- DNS names added to both routers:
+  - `time.lan.bizzy.p11.lan` / `time.bizzy.p11.lan` (192.168.20.123)
+  - `time.vpn.bizzy.p11.lan` (192.168.21.123)
+- Version-controlled hosts files updated in worktree (feature/issue-30)
+- DHCP reservations for both routers backed up to `configuration/dnsmasq/`
+- Rebooted TM2000B, confirmed it picked up .123 — `ping time.bizzy` works
+  from deadpool via VPN
+- Removed temp IP from gabby
+- Version-controlled files committed, PR [CCOMJHC#31](https://github.com/CCOMJHC/ccomjhc_project11/pull/31)
+  merged, closes [CCOMJHC#30](https://github.com/CCOMJHC/ccomjhc_project11/issues/30)
+
+**NTP verification**: After reboot, TM2000B initially had only 2D fix (12 sats
+tracked but not converged). NTP query returned "no eligible servers" — device
+won't serve time without 3D fix (configurable). After a few minutes, 3D fix
+acquired and NTP confirmed working:
+
+```
+ntpdate -q 192.168.20.123
+2026-04-10 14:19:36 -0.017872 +/- 0.001383 192.168.20.123 s1 no-leap
+```
+
+Stratum 1, ~18ms offset, healthy. TM2000B is now the primary NTP source for the
+boat network.
+
+#### ISC ntpd on boat router
+
+Replaced Teltonika NTP stack with ISC ntpd 4.2.8p15, same as operator router
+(see `bizzyboat_ntp_investigation_2026-04-09.md` for background).
+
+**Steps**:
+1. Stopped/disabled Teltonika `ntpclient` (UCI `enabled='0'` + init.d disable),
+   disabled `ntp_gps`. `untpd` was already disabled on this router.
+2. Installed ISC ntpd: `opkg install ntpd`
+3. UCI `file_flag='1'` + `config_file='/etc/ntp.conf'` — the UCI server list
+   doesn't support per-server options like `prefer`, so using a static config.
+4. Custom `/etc/ntp.conf`:
+   - TM2000B (192.168.20.123) as preferred server
+   - 0–3.openwrt.pool.ntp.org as backup
+   - Server enabled for LAN clients
+
+**Verification from gabby**:
+```
+ntpdate -q 192.168.20.123  →  s1, -17.9ms offset (TM2000B, GPS direct)
+ntpdate -q 192.168.20.1    →  s2, -17.7ms offset (router, via TM2000B)
+```
+
+NTP chain: GPS → TM2000B (stratum 1) → router (stratum 2) → LAN clients.
+
+#### Operator router NTP updated
+
+Updated op router ISC ntpd config to include boat sources (also switched to
+`file_flag='1'` + `/etc/ntp.conf` for consistency with boat router):
+- TM2000B (192.168.20.123) via WiFi bridge
+- Boat router (192.168.20.1) via WiFi bridge
+- Internet pools as fallback
+
+These sources are only reachable when the boat is nearby on the WiFi bridge.
+ISC ntpd handles unreachable servers gracefully.
+
+Also added DHCP option 42 (NTP server) on the op router LAN:
+`uci add_list dhcp.lan.dhcp_option='42,192.168.13.1'`
+This pushes the op router as NTP server to all DHCP clients, though Ubuntu
+clients need a dispatcher script to act on it (not yet configured).
+
+#### NTP client configuration — all machines
+
+| Machine | Client | Sources | Notes |
+|---------|--------|---------|-------|
+| **gabby** | chrony (new, replaced timesyncd) | TM2000B (prefer), boat router, op router | Most critical — ROS 2 compute |
+| **salmon** | chrony | op router, boat router (WiFi+VPN), TM2000B (WiFi+VPN), gabby (noselect) | Operator station |
+| **deadpool** | chrony | op router, boat router (WiFi+VPN), TM2000B (WiFi+VPN) | Dev station |
+| **boat router** | ISC ntpd | TM2000B (prefer), internet pools | Serves stratum 2 to LAN |
+| **op router** | ISC ntpd | TM2000B (WiFi bridge), boat router (WiFi bridge), internet pools | Serves stratum 2-3 to LAN |
+
+All chrony configs use `/etc/chrony/sources.d/project11.sources`.
+Deadpool and salmon include both WiFi bridge and VPN paths for redundancy.
+
+**Verified**: deadpool selected TM2000B via WiFi bridge as primary (`^*`),
+stratum 2, -216μs offset, sub-millisecond accuracy from GPS.
+
+#### PRs merged for water test
+
+- [rolker/mru_transform#9](https://github.com/rolker/mru_transform/pull/9) —
+  chart_datum_node for ellipsoid-to-MLLW vertical datum transform. Reviewed
+  Copilot comments, fixed curl `--fail` flag and libproj runtime dependency.
+- [rolker/unh_echoboats_project11#44](https://github.com/rolker/unh_echoboats_project11/pull/44) —
+  mru_transform config and segmentation streams for bizzyboat.
+- Both repos synced to gitcloud.
+
+#### chart_datum_node added to BizzyBoat launch
+
+Added `chart_datum_launch.py` include to `core_launch.py` (directly on gabby,
+between sea_surface_estimator and MAVRos sections). This provides the
+`map → chart_datum` MLLW vertical datum transform needed for correct
+depth-aware planning against S57 charts.
+
+VDatum grids (~1.7GB) copied from deadpool via rsync to `~/.cache/mru_transform/`
+on gabby — CMake build-time download was too slow. Opened
+[rolker/mru_transform#10](https://github.com/rolker/mru_transform/issues/10) to
+make the build check-and-warn instead of downloading.
+
+Full rebuild on gabby completed successfully. Gabby rebooted (pending kernel
+upgrade). Setting up for second water test.
+
+#### Starlink ethernet down after launch
+
+Starlink was working all morning on the pier. After launching the boat,
+the WAN interface (eth1) shows physical link UP but DHCP fails — no IP
+assigned. `ifup wan` doesn't help. Starlink web GUI (via app) shows
+satellite connection is fine. Cellular fallback is marginal (SINR 0 dB,
+33% packet loss). Attempting remote Starlink reboot.
+
+Bypass mode may have reverted, or the ethernet adapter needs a power cycle.
+This is the same symptom as the April 6 ethernet issue.
+
+#### WiFi bridge bandwidth saturation
+
+Camera streams via UDP bridge saturated the WiFi bridge link to the operator
+station, making it unusable. Had to manually reduce stream rates in UDP bridge
+to recover. Need to reduce default bandwidth usage — lower resolution/FPS,
+compress more aggressively, or send on demand only.
+
+#### Water test #2 — partial, connectivity issues
+
+Boat launched. Starlink ethernet stopped working (same bypass mode symptom as
+April 6 — eth1 link UP but no DHCP). Remote reboot of Starlink via app didn't
+help. Cellular fallback was marginal (SINR 0 dB, 33% packet loss, connection
+bouncing). Connected boat router to mobile lab Starlink WiFi as workaround —
+NTRIP/RTK recovered.
+
+**WiFi bridge bandwidth saturation**: Camera streams via UDP bridge saturated
+the WiFi bridge to the operator station, making it unusable. Had to manually
+reduce stream rates to recover. Need to address default bandwidth usage.
+
+**TF tree issue — `bizzy/map` frame missing**: mru_transform node is running,
+publishing `/bizzy/odom` at 10Hz with valid position data, and registered as
+a `/tf` publisher — but the `earth → bizzy/map → bizzy/odom` TF chain is not
+appearing. Only `bizzy/base_link_north_up → bizzy/base_link` is on `/tf`.
+Sea surface estimator IS publishing `bizzy/odom → bizzy/map_tide`. The missing
+map frame means chart_datum_node can't look up position and doesn't publish
+`bizzy/map → bizzy/chart_datum`. This needs investigation — may be a sensor
+config issue preventing mru_transform from establishing the map frame origin.
+
+**chart_datum_node configuration issues found**:
+- Frame params (`map_frame`, `chart_datum_frame`, `base_frame`) default to
+  unprefixed names (`map`, `chart_datum`, `base_link`) — need `bizzy/` prefix
+- `SetParametersFromFile` from `bizzyboat.yaml` doesn't apply node-specific
+  params by name — need to pass frame params inline in the launch file instead
+- Added params to `bizzyboat.yaml` but they weren't picked up; set via
+  `ros2 param set` as workaround but underlying TF issue blocked testing
+
+**Changes made on gabby (not yet committed)**:
+- `core_launch.py`: added chart_datum_launch.py include
+- `bizzyboat.yaml`: added chart_datum params section (may need different approach)
+
+Boat recovered.
+
+#### TODO from water test #2
+- [ ] Investigate why mru_transform isn't publishing `earth → bizzy/map → bizzy/odom` TF
+- [ ] Fix chart_datum frame params — pass inline in launch file with frame_prefix
+- [ ] Starlink bypass mode — why did it stop working? Physical inspection needed
+- [ ] Reduce UDP bridge camera bandwidth defaults
+- [ ] Test chart_datum + tide frames once map frame issue resolved
+
+### Session 7 — 2026-04-13
+
+#### Starlink API reachable in bypass mode
+
+Confirmed from gabby that the Starlink dish management interface at
+`192.168.100.1` is reachable even with the dish in bypass mode. `curl
+http://192.168.100.1` returns the Starlink diagnostics web UI. The gRPC API at
+`192.168.100.1:9200` should also be available, enabling monitoring of dish stats
+(signal quality, obstruction, throughput, latency).
+
+Original ROS 1 package by munzz11: [munzz11/starlink_stats_ros](https://github.com/munzz11/starlink_stats_ros).
+Fork at [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros).
+Plan: port to ROS 2 and add to the workspace for network health monitoring.
+
+#### Network status at end of April 10
+
+Starlink ethernet stopped responding to the router (bypass mode issue recurred).
+Cellular fallback was marginal — SINR ~0 dB, 33% packet loss. Both WAN links
+need better monitoring to detect degradation before it becomes a problem.
+
+#### Network monitoring plan
+
+Comprehensive network health monitoring via ROS 2 diagnostics, covering all
+communication links. Packages split by device vendor, assembled per-platform
+via launch files. All publish `diagnostic_msgs/DiagnosticArray`.
+
+**New repo**: [rolker/ros2_network_monitor](https://github.com/rolker/ros2_network_monitor)
+- `teltonika_monitor` — cellular signal, mwan3 routing, VPN, interface stats via ubus JSON-RPC ([#1](https://github.com/rolker/ros2_network_monitor/issues/1))
+- `mikrotik_monitor` — WiFi bridge signal, traffic, association via RouterOS API ([#2](https://github.com/rolker/ros2_network_monitor/issues/2))
+- `network_tools` — generic ping latency, packet loss, link up/down ([#3](https://github.com/rolker/ros2_network_monitor/issues/3))
+
+**Existing repo**: [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros)
+- `starlink_stats` — Starlink gRPC polling, port from ROS 1 ([munzz11/starlink_stats_ros#1](https://github.com/munzz11/starlink_stats_ros/issues/1))
+
+**Integration**:
+- BizzyBoat launch file + manifest update ([#47](https://github.com/rolker/unh_echoboats_project11/issues/47))
+- Sensors layer manifest ([rolker/unh_marine_autonomy#120](https://github.com/rolker/unh_marine_autonomy/issues/120))
+
+Runs on both gabby (boat-side: Starlink, cellular, boat WiFi bridge) and
+salmon (operator-side: operator WiFi bridge, VPN).
+
+#### Infrastructure completed
+
+- Created [rolker/ros2_network_monitor](https://github.com/rolker/ros2_network_monitor) repo with `jazzy` branch
+- Created `jazzy` branch on [rolker/starlink_stats_ros](https://github.com/rolker/starlink_stats_ros) fork
+- Added both repos to sensors layer manifests:
+  - [unh_marine_autonomy PR #121](https://github.com/rolker/unh_marine_autonomy/pull/121) — merged
+  - [unh_echoboats_project11 PR #48](https://github.com/rolker/unh_echoboats_project11/pull/48) — merged
+- Both repos cloned into sensors layer and pushed to gitcloud
+- Added gitcloud remotes to `rqt_operator_tools` and `mobile_lab` (previously missing)
+- Workspace validation passing (40/40 repos, all on correct branches)
+- Merged field fix PRs: [CCOMJHC/ccomjhc_project11#29](https://github.com/CCOMJHC/ccomjhc_project11/pull/29), [seafloor_echoboat_project11#10](https://github.com/rolker/seafloor_echoboat_project11/pull/10)
+
+#### Annunciator panel merged
+
+[rqt_operator_tools PR #4](https://github.com/rolker/rqt_operator_tools/pull/4) —
+dark-until-problem status indicators for operator station. Reads from
+`/diagnostics` topics (what the network monitor nodes will publish to).
+Three rounds of Copilot review, all findings addressed. Builds and passes
+33 tests. Not yet tested with live data.
+
+#### Rosdep fixes
+
+- [mru_transform PR #12](https://github.com/rolker/mru_transform/pull/12) — rosdep
+  key `libproj-dev` → `proj` (merged)
+- [mru_transform PR #14](https://github.com/rolker/mru_transform/pull/14) — removed
+  redundant `proj-data` dep (merged)
+- [mobile_lab PR #3](https://github.com/rolker/mobile_lab/pull/3) — stale
+  `project11` dependency → `marine_autonomy` (merged)
+- [rqt_operator_tools PR #6](https://github.com/rolker/rqt_operator_tools/pull/6) —
+  removed redundant `ament_python` buildtool_depend (merged)
+
+#### Network monitoring packages — all merged
+
+- **`starlink_stats`** ([rolker/starlink_stats_ros PR #1](https://github.com/rolker/starlink_stats_ros/pull/1)) —
+  ROS 2 port complete. Moved to `starlink_stats/` subdir, uses `MessageToDict`
+  instead of regex parsing, parameterized dish address and poll rate. Builds, tests pass.
+- **`teltonika_monitor`** ([ros2_network_monitor PR #5](https://github.com/rolker/ros2_network_monitor/pull/5)) —
+  polls RUTX11 via ubus JSON-RPC for cellular signal, mwan3 routing, WireGuard
+  status, interface stats. Builds, tests pass.
+- **`mikrotik_monitor`** ([ros2_network_monitor PR #4](https://github.com/rolker/ros2_network_monitor/pull/4)) —
+  polls MikroTik via RouterOS API for WiFi signal, traffic, association.
+  Builds, tests pass.
+
+#### BizzyBoat launch files
+
+[unh_echoboats_project11 PR #49](https://github.com/rolker/unh_echoboats_project11/pull/49) —
+boat-side and operator-side launch files for MikroTik, Starlink, and Teltonika
+monitoring with device-specific config. Pushed to gitcloud as `jazzy` for
+field testing.
+
+#### Operator station manifest fixes
+
+- [CCOMJHC/ccomjhc_project11 PR #33](https://github.com/CCOMJHC/ccomjhc_project11/pull/33) —
+  added `rqt_operator_tools` to operator UI manifest (merged)
+- [CCOMJHC/ccomjhc_project11 PR #35](https://github.com/CCOMJHC/ccomjhc_project11/pull/35) —
+  added `starlink_stats_ros` and `ros2_network_monitor` to operator sensors
+  manifest (merged)
+- Fixed `gh` repo resolution on `ccomjhc_project11` — was targeting
+  `rolker/` fork instead of `CCOMJHC/` origin. Set `gh repo set-default`.
+
+#### First test on salmon — success
+
+All four network monitoring nodes launched on salmon and confirmed publishing
+diagnostics data:
+- `starlink_stats` — Starlink dish telemetry
+- `teltonika_monitor` — RUTX11 cellular/mwan3/VPN stats
+- `mikrotik_monitor` — WiFi bridge signal/traffic
+- `network_tools` — generic network health
+
+#### Remaining
+
+- [ros2_network_monitor#3](https://github.com/rolker/ros2_network_monitor/issues/3) —
+  `network_tools` (generic ping/latency) — in progress
+- Test annunciator panel with live diagnostics data
+- Deploy and test on gabby (boat-side)
+- All repos pushed to gitcloud
+
+### 2026-04-14 — Water test #3, DDS fix, tide-aware costmap
+
+**Location**: Pier / harbor
+**People**: Roland
+
+#### Network debugging (done earlier today by other agent)
+
+Network monitor nodes deployed to gabby. Debugging session documented in
+`ccomjhc_project11/documentation/bizzyboat_network_debug_2026-04-14.md`
+(private repo, on gabby only — not yet synced to origin). Field fixes
+pushed to gitcloud:
+- `32cc023` — chart datum node added to core launch, camera bridge rates reduced (2s→1s)
+- `ed7301b` — network monitor included in core launch
+- `1de8751` — fixed network monitor params (namespace issue, `chart_datum:` → `/**/chart_datum:`)
+
+#### chart_datum_node — fixed and verified
+
+`chart_datum_node` was running but not publishing transforms. Root cause:
+params in `bizzyboat.yaml` were keyed as `chart_datum:` instead of
+`/**/chart_datum:`. Without the wildcard prefix, `SetParametersFromFile`
+doesn't match the namespaced node `/bizzy/chart_datum`. Frame params
+defaulted to unprefixed names (`map`, `chart_datum`, `base_link`) which
+don't exist in BizzyBoat's TF tree.
+
+**Fix**: Changed `chart_datum:` to `/**/chart_datum:` in `bizzyboat.yaml`
+(done live on gabby). After restart:
+- `bizzy/map → bizzy/chart_datum`: Z = -28.014m (matches validated Portsmouth value)
+- `bizzy/chart_datum → bizzy/map_tide`: Z = +3.1m (tide above MLLW)
+
+#### DDS participant exhaustion — switched to Cyclone DDS
+
+Many nodes (NTRIP, network monitors) were running as processes but invisible
+to `ros2 node list`. Root cause: **DDS participant limit exhaustion**. With
+~100 visible nodes (mavros alone registers 50+), FastDDS's shared memory
+segments in `/dev/shm/` were exhausted (336 segments).
+
+Switched to Cyclone DDS (`rmw_cyclonedds_cpp`). Hit the same issue —
+Cyclone DDS default `MaxAutoParticipantIndex` is 99.
+
+**Fix**: Created `/home/field/cyclonedds.xml`:
+```xml
+<CycloneDDS>
+  <Domain>
+    <Discovery>
+      <ParticipantIndex>auto</ParticipantIndex>
+      <MaxAutoParticipantIndex>256</MaxAutoParticipantIndex>
+    </Discovery>
+  </Domain>
+</CycloneDDS>
+```
+
+Added to `~/.bashrc`:
+```bash
+export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+export CYCLONEDDS_URI=file:///home/field/cyclonedds.xml
+export ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST
+```
+
+After reboot and restart, all nodes visible including NTRIP, mikrotik_monitor,
+teltonika_monitor, starlink_diagnostics, and ping_monitor.
+
+#### NTRIP/RTK — confirmed working
+
+With NTRIP node now properly discovered, RTCM corrections flowing at ~2.5 Hz.
+GPS fix type 6 (RTK Fixed), 33 satellites, 2cm horizontal / 2.8cm vertical
+accuracy. GPS `alt_ellipsoid` = -26.1m.
+
+#### GPS altitude discrepancy
+
+NOAA tide prediction for Portsmouth (station 8423745): low tide at 15:45,
+~0.12m above MLLW. Expected ellipsoid height ≈ -28.014 + 0.12 = -27.89m.
+GPS reports -26.1m (alt_ellipsoid) / -25.5m (mavros raw/fix) — ~1.8-2.4m
+too high.
+
+Contributing factors identified:
+- **mavros `raw/fix` altitude** doesn't match `alt_ellipsoid` from GPS raw
+  (0.6m difference, unknown mavros processing)
+- **GPS antenna height**: CUAV C-RTK 2HP is 0.89m above base_link (waterline).
+  mavros `raw/fix` has `frame_id: base_link` so mru_transform applies zero
+  sensor offset. The URDF has `bizzy/gnss_forward` frame but mavros doesn't
+  use it.
+- Remaining error likely EKF altitude processing in ArduPilot
+
+**Outstanding**: Need to either set mavros frame_id to `bizzy/gnss_forward`
+or find another way to get correct ellipsoid height for the waterline.
+
+#### S57 layer tide offset — implemented
+
+[rolker/s57_tools#11](https://github.com/rolker/s57_tools/issues/11) /
+[PR #12](https://github.com/rolker/s57_tools/pull/12)
+
+Added `chart_datum_frame` parameter to S57 costmap layer. When set, the
+layer looks up `chart_datum → global_frame` (map_tide) to get the tide
+offset, then adjusts: `actual_depth = chart_depth + tide_offset`. Tiles
+are regenerated when tide changes by >1cm. Backwards compatible — empty
+parameter preserves existing behavior.
+
+Pushed to gitcloud `jazzy` for field testing. Config needed in nav2_params.yaml:
+```yaml
+chart_layer:
+  chart_datum_frame: bizzy/chart_datum
+```
+
+#### Water test #3 — first successful mission planning
+
+After applying S57 tide offset and fixing DDS discovery:
+- **Costmap shows navigable water** where the boat is located (previously
+  "start occupied" due to MLLW depths without tide correction)
+- **Trackline planning succeeded** — first time planner produced a valid path
+- **Trackline execution partially worked** — controller_server crashed a few
+  times (respawned), hover behavior applies rotation but no throttle
+
+#### controller_server crash
+
+`controller_server` segfaults (exit code -11) during `SeaSurfaceLayer::matchSize()`.
+Crashes after getting `bizzy/map_tide` transform. Not related to S57 changes —
+happens in the sea surface perception layer. Removing `sea_surface_layer` from
+the local costmap plugins resolved the crash. Pre-existing issue or Cyclone DDS
+related.
+
+#### Hover behavior — no throttle
+
+Hover (station keeping) applies yaw commands but zero throttle on `cmd_vel`.
+Boat rotates in place but doesn't hold position. Same symptom as water test #1.
+Needs investigation — may be PID tuning, `cmd_vel` mapping, or a missing
+velocity source.
+
+#### Bag log analysis — water test #3 (2026-04-14)
+
+Post-hoc analysis of rosbag data from gabby (`~/data/logs`) covering the
+April 14 session. Bags span 08:43–14:28 UTC across 8 recording sessions
+(10 total autostart events, including rapid restarts during troubleshooting
+around 16:43–16:52 UTC).
+
+**Timeline reconstructed from GPS altitude and position:**
+
+| Time (UTC) | Phase | Alt (m) | Notes |
+|------------|-------|---------|-------|
+| 08:43–11:28 | Stationary on land | -21.0 | At storage location (43.07204, -70.71165), speed 0 |
+| ~11:30 | Rolled to crane | -21.1 | Speed jumps to ~0.9 m/s, position shifts toward crane |
+| ~11:34 | Crane lowers to water | -21 → -23.6 | ~2.5 m altitude drop as boat enters water |
+| 11:36–14:07 | On water — operations | -24.6 → -26.1 | Gradual altitude decrease tracks rising tide |
+| 13:51 | GUIDED mode engaged | -25.7 | First autonomous mode of session |
+| 13:54:22 | controller_server crash | -25.9 | `SeaSurfaceLayer::matchSize()` — nav lifecycle shutdown |
+| 13:59, 14:07, 14:11 | MANUAL mode switches | — | Operator takes manual control |
+| 14:07:44–14:09 | Fast transit | -26.1 | ~1.9 m/s to farthest point from dock |
+| 14:21:45–14:22:45 | Crane lifts from water | -26.2 → -20.8 | ~5 m altitude rise |
+| 14:24:45 | Moved back to storage | -21.1 | Speed ~1.25 m/s, returns to original position |
+| 14:25:45+ | Stationary on land | -21.1 | Back at storage, speed 0 |
+
+**Key findings from diagnostics:**
+
+1. **GPS health flicker (13:48)** — ArduPilot reported GPS sensor health
+   as "Fail" intermittently while the boat was stationary on the water near
+   the dock. NavSatFix still had STATUS_FIX with valid coordinates
+   throughout. Likely multipath or partial sky obstruction near dock
+   structures. The GPS flicker at 13:48 preceded the controller_server
+   crash at 13:54 — unclear if related.
+
+2. **Direct WiFi loss (14:09–14:24)** — `router_op_direct` and
+   `salmon_direct` pings showed 100% packet loss (40 error events). This
+   correlates exactly with the boat being at its farthest point from the
+   dock (~43.07200, -70.71052). VPN links over cellular stayed up. WiFi
+   link recovered when the boat returned closer to the dock.
+
+3. **controller_server crash (13:54:22)** — Lifecycle manager reported
+   heartbeat loss after 4 seconds. Failed to cancel `follow_path` action
+   and couldn't restart `controller_server` via `change_state` service.
+   Consistent with the `SeaSurfaceLayer::matchSize()` segfault noted above.
+
+4. **Sensor bitmask changes correlate with flight mode** — When the FCU
+   switched to MANUAL mode, 4 control-loop sensors (angular rate control,
+   attitude stabilization, yaw position, xy position control) correctly
+   dropped from the enabled set. This is normal ArduPilot behavior, not a
+   hardware fault.
+
+5. **Odom rate ~9% below nominal** — 25,340 messages vs ~27,850 expected
+   at 10 Hz in the last bag. No single large gap — steady small drops
+   throughout. Worth monitoring.
+
+6. **Teltonika WAN interface intermittent** — `router.bizzy` interface
+   `wan1` showed WARN 105 times (out of 556 reports), and `mwan3/wan1`
+   had 5 ERROR and 550 WARN. MikroTik ethernet ports 2–5 all reported
+   "Not running" consistently.
+
+7. **Arming checks disabled** — FCU logged "Warning: Arming Checks
+   Disabled". Presumably intentional for testing.
+
+**Altitude vs. tide:**
+
+GPS ellipsoid altitude dropped from -24.6 m (11:36) to -26.1 m (14:07)
+over ~2.5 hours on the water — a ~1.5 m decrease. This is consistent with
+a rising tide lifting the boat's waterline higher relative to the geoid
+while the ellipsoid height decreases (the boat's physical altitude above
+ellipsoid goes down as the water rises). Combined with the earlier note
+that GPS altitude was already ~1.8–2.4 m too high vs NOAA predictions,
+the altitude trend is plausible but the absolute offset remains an open
+issue (see GPS altitude discrepancy above).
+
+#### Outstanding issues
+
+- [ ] Merge gitcloud field fixes to origin (3 commits: chart datum, network monitor, params fix)
+- [ ] Fix mavros GPS frame_id or antenna offset for correct sea surface height
+- [ ] Investigate `SeaSurfaceLayer::matchSize()` segfault in controller_server
+- [ ] Investigate hover behavior — no throttle, only yaw
+- [ ] Sync `bizzyboat_network_debug_2026-04-14.md` from gabby to origin
+- [ ] Reduce UDP bridge camera bandwidth defaults (repeat from water test #2)
+- [ ] Starlink bypass mode reliability
+- [ ] Monitor odom rate — 9% message loss in water test #3 bags
+- [ ] Investigate WiFi range limitations — direct link lost at ~300 m from dock
+
+### Session: 2026-04-15 — DNS failover fix
+
+#### Symptom
+
+`sudo apt update` on gabby failed — all repos returning "Could not resolve"
+errors. Raw IP connectivity fine (`ping 8.8.8.8` works, 21ms), router
+reachable (0.5ms). Problem is purely DNS. Boat is in mobile lab, router
+using WiFi to mobile lab Starlink for internet (wan1).
+
+#### Diagnosis
+
+This is the **third recurrence** of DNS failure on the boat router (RUTX11),
+each with a slightly different trigger but the same structural cause:
+
+| Date | Trigger | Quick fix applied |
+|------|---------|-------------------|
+| Apr 3 | Starlink ethernet down indoors | Removed hardcoded DNS servers, rely on auto resolv |
+| Apr 7 | Starlink DNS proxy returning NXDOMAIN, carrier DNS unreachable cross-WAN | Re-added hardcoded 8.8.8.8/1.1.1.1, `peerdns='0'` on wan1/wan6/mob1s1a1, `allservers=1`, `nonegcache=1` |
+| **Apr 15** | Starlink ethernet down indoors (same as Apr 3) | — see proper fix below |
+
+**Root cause analysis:**
+
+The April 7 fix set `peerdns='0'` on wan1, wan6, and mob1s1a1 — but
+**missed `wan`** (Starlink ethernet). With `wan` still injecting its DNS
+server (206.214.239.195) into `/tmp/resolv.conf.d/resolv.conf.auto`,
+dnsmasq was querying it alongside 8.8.8.8 and 1.1.1.1.
+
+With `allservers=1`, dnsmasq races queries to ALL configured servers in
+parallel and uses the **first response**. The dead Starlink router at
+206.214.239.195 is still reachable on L2 (same subnet) but has no
+internet, so it returns **NXDOMAIN fast**. The working queries to
+8.8.8.8/1.1.1.1 via wan1 are slower. The fast wrong answer wins.
+
+Additionally, 206.214.239.0/24 is in mwan3's `mwan3_connected` ipset,
+so traffic to that server bypasses mwan3 policy routing entirely —
+it follows the main routing table straight to the dead eth1 interface.
+
+This is a **well-known OpenWrt/mwan3 limitation**
+([openwrt/packages#5760](https://github.com/openwrt/packages/issues/5760),
+[openwrt/packages#5055](https://github.com/openwrt/packages/issues/5055)):
+locally-originated traffic (including dnsmasq queries) does not fully
+participate in mwan3 policy routing, and dnsmasq has no awareness of
+interface health.
+
+#### Fix applied (proper)
+
+```bash
+# 1. Disable peerdns on wan (the one that was missed)
+uci set network.wan.peerdns='0'
+uci commit network
+
+# 2. Remove allservers — use sequential queries, not racing
+uci delete dhcp.cfg01411c.allservers
+uci commit dhcp
+
+# 3. Reload
+/etc/init.d/network reload
+/etc/init.d/dnsmasq restart
+```
+
+**Why this is durable (not another quick fix):**
+
+- All four WAN interfaces now have `peerdns='0'` — no interface can
+  inject its DNS servers into dnsmasq, regardless of state
+- Only hardcoded 8.8.8.8 and 1.1.1.1 are used — anycast addresses
+  reachable via any working WAN path
+- Without `allservers`, dnsmasq tries servers **sequentially** — a dead
+  path times out and falls through to the next server, rather than a
+  fast NXDOMAIN winning a race
+- `nonegcache='1'` (already set from Apr 7) prevents caching of negative
+  responses as a safety net
+- 8.8.8.8/1.1.1.1 are NOT in `mwan3_connected` ipset, so they go through
+  mwan3 policy routing → wan1 (active path)
+
+**Verified**: `nslookup google.com` on router, `sudo apt update` on gabby —
+both working. All repos fetched successfully.
+
+#### Current dnsmasq/DNS config state
+
+```
+dhcp.@dnsmasq[0].server='8.8.8.8' '1.1.1.1'
+dhcp.@dnsmasq[0].nonegcache='1'
+network.wan.peerdns='0'
+network.wan1.peerdns='0'
+network.wan6.peerdns='0'
+network.mob1s1a1.peerdns='0'
+```
+
+#### Future improvements to consider
+
+- **DNS-over-HTTPS (`https-dns-proxy`)** — RUTX11 supports this; turns DNS
+  into regular HTTPS that mwan3 policy-routes properly. Most elegant fix.
+- **DNS-based mwan3 health checks** — use domain resolution as
+  `track_method` instead of ICMP ping, so an interface with IP connectivity
+  but broken DNS is marked down.
+- **`/etc/mwan3.user` hotplug script** — dynamically update dnsmasq servers
+  on interface state changes. Overkill with hardcoded public DNS but useful
+  if interface-specific servers are ever needed.
+
+#### WiFi bridge routing — review of masquerade decision
+
+The April 14 debug session (see `ccomjhc_project11` repo,
+`documentation/bizzyboat_network_debug_2026-04-14.md`) disabled masquerade
+on the operator router's LAN zone and added static return routes on the
+OmniTIK and SXTsq bridge devices. Post-hoc review of the tradeoffs:
+
+| Approach | Bridge device config | Real source IPs | Survives factory reset |
+|----------|---------------------|-----------------|----------------------|
+| Masquerade on both routers | None | No | Yes |
+| Static routes per subnet (current) | 2 routes × 2 devices | Yes | No |
+| Default gateway only | 1 gateway × 2 devices | Yes | No |
+| DHCP on bridge subnet | Initial DHCP client setup | Yes | Mostly |
+
+**Decision**: keep current state (masquerade off, static routes). Plan to
+simplify to **default gateway** approach when next hands-on with bridge
+devices — set OmniTIK default gw to 172.16.20.1 (boat router), SXTsq
+default gw to 172.16.20.2 (operator router), and remove the per-subnet
+static routes. This reduces config to one item per device and handles
+future new subnets automatically.
+
+Masquerade was not re-enabled because removing it had no known unintended
+side effects, and preserving real source IPs aids diagnostics. If bridge
+device replacement or factory reset becomes frequent, reconsider masquerade
+as the zero-config option.
+
+#### Network diagnostics improvements (2026-04-15)
+
+Reviewed the full diagnostic collection pipeline and implemented
+improvements across multiple repos. Tracked in
+[ros2_network_monitor#7](https://github.com/rolker/ros2_network_monitor/issues/7).
+
+**Signal quality thresholds** (ros2_network_monitor
+[PR #8](https://github.com/rolker/ros2_network_monitor/pull/8), merged):
+- teltonika_monitor: cellular diagnostic level based on RSRP (OK > -90,
+  WARN -90 to -110, ERROR < -110 dBm), SINR downgrades by one bar if < 0.
+  Message shows `LTE -85dBm ▁▂▃▅·`.
+- mikrotik_monitor: wireless diagnostic level based on SNR (OK > 20,
+  WARN 10-20, ERROR < 10 dB). Message shows `Associated SNR 22dB ▁▂▃▅·`.
+
+**Hardware ID for instance disambiguation** (merged):
+- starlink_diagnostics: added `hardware_id` parameter
+  ([starlink_stats_ros PR #3](https://github.com/rolker/starlink_stats_ros/pull/3)).
+  Boat: `starlink.bizzy`, operator: `starlink.op`.
+- ping_monitor: added `hardware_id` parameter
+  ([ros2_network_monitor PR #10](https://github.com/rolker/ros2_network_monitor/pull/10)).
+  Boat: `ping.bizzy`, operator: `ping.op`.
+- All four monitor node types (teltonika, mikrotik, starlink, ping) now have
+  `hardware_id` for distinguishing boat vs operator instances.
+
+**DNS ping targets** ([unh_echoboats_project11
+PR #53](https://github.com/rolker/unh_echoboats_project11/pull/53), merged):
+- Added 8.8.8.8 and 1.1.1.1 to boat, operator, and merged ping configs.
+  Would have caught the recurring mwan3/dnsmasq DNS routing failure.
+
+**Annunciator config** (PR #53):
+- Created `bizzyboat_annunciator.yaml` with 9 indicators:
+  - Link quality: WiFi Bridge, Cell Signal, Starlink
+  - Critical systems: Battery, GPS, FCU, Comms, Nav Stack, Mission Manager
+- Loaded by the rqt annunciator panel at runtime.
+
+**Diagnostic aggregator config** (PR #53):
+- Added boat-side network device groups (MikroTik, Teltonika, Starlink, Ping)
+  using hardware_id prefixes to separate from operator-side devices.
+- Added operator Ping group.
+- rqt_robot_monitor and rqt_runtime_monitor can now show the full grouped
+  tree for drill-down.
+
+**Gitcloud field changes PR'd and merged**:
+- [rqt_operator_tools PR #7](https://github.com/rolker/rqt_operator_tools/pull/7) —
+  gitignore + rqt deps
+- [ccomjhc_project11 PR #36](https://github.com/CCOMJHC/ccomjhc_project11/pull/36) —
+  network debug log from April 14
+- [unh_echoboats_project11 PR #51](https://github.com/rolker/unh_echoboats_project11/pull/51) —
+  field fixes (network monitor YAML merge, diagnostic aggregator, chart datum)
+
+**Other agent work merged same day**:
+- [s57_tools PR #12](https://github.com/rolker/s57_tools/pull/12) — S57
+  costmap layer tide offset correction via chart datum transform. Adds
+  `chart_datum_frame` parameter; when set, layer looks up tide offset and
+  adjusts chart depths so costmap reflects actual depth below current water
+  surface. Tiles regenerated when tide changes >1cm. Field-tested April 14.
+- [mru_transform PR #16](https://github.com/rolker/mru_transform/pull/16) —
+  MHHW datum frame + out-of-range tide rejection. chart_datum_node now
+  publishes `map → chart_datum_mhhw` TF alongside existing MLLW frame.
+  sea_surface_estimator suppresses `map_tide` when estimated water level
+  exceeds MHHW + margin, preventing bogus tide values from propagating.
+- [unh_marine_navigation PR #13](https://github.com/rolker/unh_marine_navigation/pull/13) —
+  fix BehaviorTree Script nodes to use single quotes for string literals.
+  Was causing BT evaluation failures during mission execution.
+
+#### Annunciator panel testing (2026-04-15)
+
+First live test of annunciator panel on salmon with boat (gabby) running
+updated nodes.
+
+**Standalone entry point segfaults** — `ros2 run rqt_operator_tools annunciator`
+crashes immediately. Qt initialization issue. Workaround:
+`rqt --standalone rqt_operator_tools`, then load config via File dialog.
+Needs investigation — likely a QApplication initialization order problem
+in `annunciator_standalone.py`.
+
+**Data partially showing** — indicators mostly grey (STALE) but some data
+flickers in briefly. Likely causes:
+- Stale timeouts may be too short for 10-second ping poll interval
+- Diagnostic name matching may not be hitting all expected statuses
+- The boat-side nodes were just started and may still be initializing
+- The new `hardware_id` params need to be in the deployed configs on gabby
+
+**Resize is very flaky** — the adaptive layout (horizontal/vertical/grid
+based on aspect ratio) doesn't work well. The `_rebuild_layout()` method
+deletes and recreates the layout on every resize event, which causes visual
+glitches and possibly crashes. Needs rework — either debounce the resize,
+or use a fixed layout that doesn't change on resize.
+
+#### Outstanding issues (updated)
+
+- [ ] Merge gitcloud field fixes to origin (3 commits: chart datum, network monitor, params fix)
+- [ ] Fix mavros GPS frame_id or antenna offset for correct sea surface height
+- [ ] Investigate `SeaSurfaceLayer::matchSize()` segfault in controller_server
+- [ ] Investigate hover behavior — no throttle, only yaw
+- [ ] Reduce UDP bridge camera bandwidth defaults (repeat from water test #2)
+- [ ] Monitor odom rate — 9% message loss in water test #3 bags
+- [ ] Investigate WiFi range limitations — direct link lost at ~300 m from dock
+- [ ] Fix annunciator standalone segfault (Qt init issue)
+- [ ] Fix annunciator resize flakiness
+- [ ] Tune annunciator stale timeouts and diagnostic name matching
+- [ ] Deploy updated configs (hardware_id, DNS ping targets) to gabby
+- [ ] Consider DNS-over-HTTPS on RUTX11 for long-term DNS resilience
+- [ ] WiFi bridge: switch from static routes to default gateway approach
+
+### Session: 2026-04-16 — Annunciator deep dive
+
+Pre-launch debugging of annunciator panel on salmon. Annunciator was
+running but many indicators showed as STALE. Followed the symptom into
+the monitor nodes and corrected several hypotheses from yesterday.
+
+#### Bus is healthy — corrects yesterday's notes
+
+Probed `/diagnostics` directly from salmon (Python subscriber, not
+`ros2 topic echo` which gives lossy snapshots):
+
+| Indicator | Age | Level | Message |
+|---|---|---|---|
+| `MikroTik: wifi.bizzy: wireless/wlan1/...` | 1.9s | OK | Associated SNR 41dB ▁▂▃▅█ |
+| `Teltonika: router.bizzy: cellular` | 0.0s | OK | LTE -83dBm ▁▂▃▅· |
+| `Starlink: starlink.bizzy: dish_get_status` | 0.9s | OK | (empty) |
+| `mavros: Battery` | 0.5s | OK | Normal |
+| `mavros: GPS` | 0.5s | OK | 3D fix |
+| `mavros: Heartbeat` | 0.5s | OK | Normal |
+| `mavros: System` | 0.5s | OK | Normal |
+| `mavros: MAVROS UAS` | 0.5s | OK | connected |
+
+Topic publishing at ~6 Hz overall. **Yesterday's hypothesis that mavros
+plugins (Battery/GPS/Heartbeat) weren't loaded on gabby was wrong** —
+they're all publishing fine. The earlier `topic echo` capture window
+just missed them.
+
+#### DDS discovery is partial on salmon
+
+`ros2 node list` (cached daemon) shows `/ping_monitor`, `/mikrotik_monitor`,
+`/teltonika_monitor`. But `ros2 node list --no-daemon` (fresh discovery)
+shows only `/rqt_gui_cpp_node_NNNNN` — the local rqt instance.
+
+Means: **no operator-side monitor nodes are actually running on salmon**.
+The `Teltonika: router.op:`, `MikroTik: bizzy.wifi.op:`, and
+`Starlink: starlink.op:` diagnostics we see are all being published by
+gabby, which is configured to monitor both boat- and operator-side
+equipment over the WiFi bridge link. Daemon-cached node list entries are
+stale references to gabby's nodes.
+
+Net effect: data IS reaching salmon, just discovery is unreliable. Topic
+data passes through fine.
+
+#### Why annunciator items still go STALE — three real root causes
+
+1. **`rqt_runtime_monitor` has a hardcoded 5-second stale window**
+   (`runtime_monitor_widget.py:329`). Items not republished within 5s
+   flicker to STALE. `ping_monitor` polls every 10s by default —
+   guaranteed to flicker.
+
+2. **`diagnostic_aggregator/GenericAnalyzer` default timeout is ~5s**
+   too. Same root cause shows up in `rqt_robot_monitor`: ping group
+   shows `?` icon and ERROR badge between polls. Confirmed: ping items
+   are flagged STALE in robot_monitor aggregator view.
+
+3. **The boat-side `mikrotik_monitor` and `teltonika_monitor` poll every
+   5s** — sit right on the boundary; any slow poll pushes items past the
+   threshold momentarily.
+
+The annunciator's own `match_mode` defaults to `substring`
+(`config_model.py:168, 184`) — confirmed not the cause of stale-looking
+indicators. Substring matching against config strings like
+`MikroTik: wifi.bizzy: wireless/` correctly hits the actual published
+name `MikroTik: wifi.bizzy: wireless/wlan1/<MAC>`.
+
+#### Annunciator bug: Starlink indicator shows dish serial
+
+Starlink indicator on the panel displayed something looking like a
+serial number rather than a useful summary. Traced to
+`annunciator_widget.py:229-235`:
+
+```python
+if status.values:
+    try:
+        val = float(status.values[0].value)
+        value_text = config.format.format(val)
+    except (ValueError, IndexError, KeyError):
+        value_text = status.message or status.values[0].value  # <-- bug
+```
+
+`starlink_diagnostics_node.py:135-156` publishes with
+`status.message = ''` (empty) and a `status.values[]` list of flattened
+dish stats. Starting with `device_info.id` (the dish UT serial). The
+annunciator's fallback then displays that serial.
+
+Fix options (deferred to a separate PR on `rqt_operator_tools`):
+- (a) Reverse fallback priority — use `level.name` when message is empty
+  rather than `values[0].value`
+- (b) Add a `value_key` config field so indicators can pick a specific
+  KeyValue
+- (c) Have `starlink_diagnostics_node` populate `status.message` with a
+  human-readable summary
+
+#### Decision: republish cached diagnostics at fixed rate
+
+Rather than tweaking timeouts in three places (annunciator config,
+aggregator config, runtime_monitor — last is uneditable), the cleanest
+fix is in the monitor nodes themselves:
+
+```
+poll_timer    (every poll_interval): query device → update self._cached_msg
+publish_timer (every publish_interval=1.0s): refresh header.stamp → publish cache
+```
+
+Each `DiagnosticStatus` will also carry a new `KeyValue`:
+
+```
+key:   last_query_time
+value: 2026-04-16T13:45:23.456   (ISO 8601, set ONLY on actual poll)
+```
+
+The `last_query_time` value survives republishes unchanged so observers
+can compute true data age (vs. the header timestamp which gets refreshed
+each republish). Diagnostic-honest: header reflects "this message
+sent now", `last_query_time` reflects "this is when the device was
+actually queried".
+
+Repos to touch:
+- `rolker/ros2_network_monitor` — `ping_monitor`, `mikrotik_monitor`,
+  `teltonika_monitor` (one issue + PR)
+- `rolker/starlink_stats_ros` — `starlink_diagnostics_node` (separate
+  smaller issue + PR)
+
+Side benefits: also fixes the aggregator `?` icons (no need to bump
+analyzer timeouts) and removes the need for any annunciator
+`stale_timeout` tuning.
+
+#### CrabbingPathFollower PID — YAML key names never took effect
+
+Live param check on `/bizzy/controller_server` revealed the PID
+parameters declared by the running node are:
+
+```
+FollowPath.pid.p
+FollowPath.pid.i
+FollowPath.pid.d
+FollowPath.pid.i_clamp_max / i_clamp_min
+FollowPath.pid.u_clamp_max / u_clamp_min
+FollowPath.pid.activate_state_publisher
+```
+
+But the YAML in
+`seafloor_echoboat_project11/echoboat_project11/config/nav2_params.yaml:62-73`
+uses the OLD `control_toolbox::Pid` API names: `kp`, `ki`, `kd`,
+`upper_limit`, `lower_limit`, `windup_limit`, `publish_debug`. These are
+silently ignored by `control_toolbox::PidROS`.
+
+**Implication**: the YAML's tuning values (`kp=20.0`, `ki=0.5`, `kd=0.6`,
+`windup_limit=30.0`) have **never been in effect**. The controller has
+been running with the C++ defaults from `crabbing_path_follower.cpp:29`:
+`p=1.0, i=0.0, d=0.0, u_clamp=±90, i_clamp=±75`. Effectively a P-only
+controller with kp=1 — explains the historical "controller feels sluggish,
+must be wind/current" character of trackline runs.
+
+**Field test of corrected gains** — set live via correct names:
+
+```bash
+ros2 param set /bizzy/controller_server FollowPath.pid.p 20.0
+ros2 param set /bizzy/controller_server FollowPath.pid.i 0.5
+ros2 param set /bizzy/controller_server FollowPath.pid.d 0.6
+```
+
+Tried following a line. **Boat took off in completely wrong direction.**
+The "tuning values" in the YAML were never validated because they were
+never applied — they're not actually correct gains for the platform.
+Real tuning needs to be redone from scratch with correct param names.
+
+**Recovery suggestion (untested)**: back off to something much lower
+(e.g. `p=2.0, i=0.0, d=0.0`) and increment from there. Going 1 → 20 in
+one step was a 20× jump.
+
+**Update — actual validated values found in ben simulation config**
+(`ben_project11/config/nav2_params.yaml:64-75`):
+
+```yaml
+FollowPath:
+  pid:
+    p: -6.0          # NEGATIVE — sign convention!
+    i: -0.5          # NEGATIVE
+    d: -0.6          # NEGATIVE
+    i_clamp_max: 50.0
+    i_clamp_min: -50.0
+    u_clamp_max: 90.0
+    u_clamp_min: -90.0
+```
+
+The ben config uses the correct new PidROS names AND negative signs.
+Echoboat's YAML was simply left behind when the controller's underlying
+API changed — and someone tried to translate the old gains to the new
+keys without realizing the sign convention. The "boat ran in completely
+wrong direction" symptom = positive gain driving cross-track-error in
+the wrong direction.
+
+**Sign-flip mystery resolved via git history**:
+
+| Date | Repo | Commit | What changed |
+|---|---|---|---|
+| 2025-05-15 | echoboat | `10fcf8c` | switched FollowPath to old `project11_navigation::CrabbingPathFollower`, kp=6 (positive) |
+| 2025-06-18 → 2025-06-20 | echoboat | `148359a`/`f3aef48` | tuned to kp=20, ki=0.5, kd=0.6, windup=30 (positive, validated on IzzyBoat) |
+| 2025-10-31 | unh_marine_navigation | `c501dd2` | created new `marine_nav_crabbing_path_follower` using `control_toolbox::PidROS` (new API names: `p`/`i`/`d` instead of `kp`/`ki`/`kd`) |
+| 2025-11-04 | unh_marine_navigation | `1c5db5a` | removed legacy `project11_navigation` code |
+| 2025-11-04 → 2026-04-16 | echoboat | (none) | YAML plugin name updated to `marine_nav_*` but PID keys never updated |
+
+So:
+
+- **June 2025 → October 2025** (4 months): IzzyBoat ran with `kp=20.0`
+  POSITIVE on the OLD `project11_navigation` controller. Validated.
+- **November 2025 → now** (~5 months): both IzzyBoat and BizzyBoat have
+  been running with PidROS *defaults* (`p=1.0, i=0, d=0`) because the
+  YAML keys were silently ignored. Explains the "controller feels
+  sluggish, blame wind/current" character of trackline runs in this
+  period.
+
+**The new `marine_nav_*` controller has flipped the cross-track-error
+sign convention** vs the old `project11_navigation` one — confirmed by
+the BizzyBoat field test where `p=20.0` (positive, what worked on the
+old code) drove the boat off in the wrong direction. The ben/vrx sim
+configs use negative signs and are the only places that match the new
+API.
+
+**Recommended values for echoboat YAML** (IzzyBoat-validated magnitude,
+sign flipped to match new controller):
+
+```yaml
+pid:
+  p: -20.0
+  i: -0.5
+  d: -0.6
+  i_clamp_max: 30.0
+  i_clamp_min: -30.0
+  u_clamp_max: 90.0
+  u_clamp_min: -90.0
+  activate_state_publisher: true
+```
+
+Ben sim alternative (gentler, sim-only validation):
+`p: -6.0, i: -0.5, d: -0.6, i_clamp: ±50`.
+
+**Field result with `p=-20, i=-0.5, d=-0.6, i_clamp=±30`**: boat
+**solidly following survey lines**. PID values confirmed working. After
+~5 months of sluggish-controller behavior caused by the silently-ignored
+YAML, real tracking is restored.
+
+#### Plan-time TF extrapolation when starting next survey line
+
+After completing a survey line, `compute_path_through_poses` repeatedly
+fails with:
+
+```
+Extrapolation Error looking up target frame:
+Lookup would require extrapolation into the past.
+Requested time 1776355217.065278 but the earliest data is at time
+1776355270.367 ... 271.268 ... 273.267 (advancing each retry)
+when looking up transform from frame [bizzy/map] to frame [bizzy/map_tide]
+```
+
+Symptom: requested timestamp stays *fixed* across retries while the
+earliest-available time keeps advancing. The fixed timestamp is from
+~70 s before the planner is invoked — i.e., when the original survey
+plan was issued, not when the next-line goal is being processed.
+
+User hypothesis (confirmed by behavior): the survey-pattern executor
+holds the original mission timestamps on the per-line goals, then when
+the next line is started, the planner gets a goal with a stale
+header.stamp. The `bizzy/map → bizzy/map_tide` TF buffer doesn't reach
+back that far.
+
+Behavior tree falls back to `hover` after the planner aborts —
+`[behavior_server] Running hover` appears in the log. So failure mode
+is non-catastrophic but blocks autonomous progress.
+
+**Fix candidates** (to investigate):
+- Refresh `header.stamp = now()` on per-line goals at the moment the
+  task is dispatched (in survey-pattern executor or BT task navigator)
+- Use `tf2::TimePointZero` in whatever code path resolves the goal
+  transform (use latest available rather than exact-time lookup)
+- Increase `sea_surface_estimator` TF publish rate / buffer length so
+  older requests can still resolve
+
+Investigating the survey-pattern executor / BT task navigator code path
+next.
+
+**Outstanding follow-ups**:
+- Rewrite YAML to use correct PidROS names everywhere CrabbingPathFollower
+  is loaded (echoboat, ben_project11, others)
+- Re-tune gains from a known-low baseline
+- Consider adding a comment in `crabbing_path_follower.cpp` near
+  `initialize_from_args(...)` that the API uses different param names
+  than older Pid
+
+#### Hover deadlock — controller assumes skid-steer, BizzyBoat has vectored thrusters
+
+In-water hover test: boat commands sustained `angular.z = -0.5`,
+`linear.x = -0.0` (negative zero) and sits there. Outstanding issue
+"Hover engages but drifts" / "Hover behavior — no throttle, only yaw"
+finally diagnosed.
+
+Root cause is in `marine_nav_behaviors/src/hover.cpp:130-135`:
+
+```cpp
+if (steering_proportion > 0.25)            // > 45° heading error
+  current_target_speed = 0.0;              // KILL THROTTLE
+current_target_speed *= (1.0 - steering_proportion*4.0);
+```
+
+For the observed `angular.z = -0.5` at `maximum_rotation_speed = 0.75`,
+working backwards: `steering_angle ≈ -120°`, `steering_proportion ≈ 0.667`.
+Above 0.25 the throttle is forced to zero, then multiplied by `-1.667`
+giving the negative-zero in the cmd_vel output.
+
+The "rotate-first, translate-second" logic was tuned on **IzzyBoat
+(skid-steer)** which can pivot in place from differential thrust alone.
+**BizzyBoat has vectored thrusters** — it needs forward velocity for
+the thrust vector to develop turning authority. So:
+
+1. Heading error > 45° → throttle killed by L132
+2. No throttle → vectored thrust has no forward component to redirect
+   → no turning authority
+3. Boat sits → heading error stays large → goto 1 (deadlock)
+
+Wind/current makes this worse — they keep nudging the heading while the
+controller has zero authority to correct.
+
+**Fix path**: patch `hover.cpp` to maintain minimum forward speed during
+heading correction so vectored thrust has authority to redirect. User
+will patch directly in the field; backport to the repo after.
+
+**Field-applied patch v1 (2026-04-16, initial — "seems to be working OK")**:
+
+```cpp
+if (steering_proportion > 0.25)
+{
+    current_target_speed = 0.2;   // was 0.0
+}
+```
+
+Single-character intent change — give the boat 0.2 m/s forward thrust
+during large heading corrections instead of zero. Worked initially.
+
+**Drift-away regression observed shortly after** — boat drifted beyond
+`maximum_radius` (10 m) and didn't return. Diagnosed as:
+
+1. Range > max_radius → original L107 sets `current_target_speed = 1.0`
+2. v1 patch L132 *clobbers* this to 0.2
+3. L135 `*= (1 - 4*0.667) = -1.667` → result is `0.2 * -1.667 = -0.333`
+   (reverse thrust)
+4. L139 clamps with `minimum_speed_ = 0` → effectively 0 thrust
+5. Boat can't return to station; drifts further
+
+**Field-applied patch v2** — two changes:
+
+```cpp
+if (steering_proportion > 0.25)
+{
+    current_target_speed = std::max(current_target_speed, 0.2);  // FLOOR, not clobber
+}
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion*4.0);  // clamp L135 ≥ 0
+```
+
+Preserves the original "drive home at 1.0 m/s" behavior when far from
+station, while still ensuring 0.2 m/s minimum thrust at station for
+rudder/vectored-thrust authority during heading correction. L135 no
+longer goes negative.
+
+**Patch v2 still deadlocks** — order-of-operations bug. For
+`steering_proportion >= 0.25`:
+
+```
+floor: current_target_speed = max(x, 0.2)         → 0.2 (or higher)
+taper: current_target_speed *= max(0, 1 - 4*0.25) → 0.2 * 0 = 0
+final clamp: max(0, minimum_speed_)               → max(0, 0) = 0  DEADLOCK
+```
+
+The 0.2 floor is applied BEFORE the multiplier, and the multiplier is
+exactly zero at the 0.25 threshold and beyond. Floor gets wiped.
+
+**Field-applied patch v3** — flip the order, floor AFTER the taper:
+
+```cpp
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion*4.0);
+if (steering_proportion > 0.1)   // ↓ threshold from 0.25 — vectored
+{                                 //   thrust needs flow at smaller errors too
+  current_target_speed = std::max(current_target_speed, 0.2);
+}
+```
+
+Floor now wins because it runs after the multiplier. Threshold lowered
+to 0.1 (~18°) since vectored thrust needs forward flow even for moderate
+heading corrections.
+
+Sanity check — covers all input regions:
+
+| Region | steering | Original | After taper | After floor |
+|---|---|---|---|---|
+| Far (>10m), aligned | 0.05 | 1.0 | 0.8 | 0.8 (no floor at 0.05) |
+| Far, 60° off | 0.333 | 1.0 | 0 | **0.2** ✓ |
+| Mid (5m), 120° off | 0.667 | 0.333 | 0 | **0.2** ✓ |
+| At target, aligned | 0.05 | 0 | 0 | 0 (calm) |
+| At target, 30° off | 0.167 | 0 | 0 | **0.2** ✓ |
+| Inside min/2, aligned | 0 | -0.05 | -0.05 | -0.05 (small reverse OK) |
+| Inside min/2, 60° off | 0.333 | -0.05 | 0 | **0.2** (overrides reverse for rudder) |
+
+**Field result with v3 (commit `ca0dc6f` on `unh_marine_navigation#14`,
+pushed to `gitcloud/jazzy`)**: hover working — boat slowly spirals
+toward the center. Acceptable behavior for vectored thrust: 0.2 m/s
+minimum forward thrust during heading correction means the boat can't
+sit perfectly still while turning, so it traces a tightening loop as
+range decreases. No deadlock.
+
+**Bag analysis (last 10 min of session, `2026-04-16T12.52.58.143303849`)**
+shows the "spiral" is actually a **stable orbital limit cycle**, not
+convergence:
+
+| Metric | Value |
+|---|---|
+| Ground speed | mean 0.20 m/s (range 0.13–0.28) — locked at v3 floor |
+| Range from centroid | mean 3.23 m, settled at 2.5–3 m for last 5 min |
+| Yaw rate | mean 3.8°/s, max 9°/s |
+| Orbit period | ~60–80 s |
+
+Kinematic explanation: at v_min = 0.2 m/s and sustained yaw rate
+~6°/s (0.105 rad/s), turning radius = v/ω ≈ 1.9 m — matches observed
+orbit radius. The 0.2 m/s floor (necessary for rudder authority far
+from station) becomes a trap when close: boat can't stop, endlessly
+orbits at the kinematic radius.
+
+**Applied v4** (commit `cfd8560` on `unh_marine_navigation#14`, pushed
+to `gitcloud/jazzy`) — range-aware floor that ramps with the existing
+target_speed gradient:
+
+```cpp
+if (steering_proportion > 0.1 && current_range >= minimum_radius_)
+{
+  double range_factor = std::clamp(
+      (current_range - minimum_radius_) /
+      (maximum_radius_ - minimum_radius_),
+      0.0, 1.0);
+  double turn_min_speed = (0.2 + 0.3 * range_factor) * maximum_speed_;
+  current_target_speed = std::max(current_target_speed, turn_min_speed);
+}
+```
+
+| range | turn_min (max_speed=1.0) |
+|---|---|
+| ≥ max_radius (10 m) | 0.5 m/s (more authority for return) |
+| 6 m (mid) | 0.34 m/s |
+| 3 m (just outside ring) | 0.22 m/s |
+| 2.5 m (at ring) | 0.2 m/s (matches v3 at boundary) |
+| < 2.5 m (inside ring) | **0** (cliff — boat can settle) |
+
+Behavior just outside the ring is identical to v3 (continuity at the
+cliff). Far away, more aggressive return (0.5 vs 0.2). Inside the
+ring, original L116-128 logic takes over so the boat stops orbiting.
+
+Bag analysis script saved at `/tmp/hover_analyze.py` for re-running
+on the next session.
+
+**Bag analysis #2 — wind perturbation events (last 25 min before v4
+deploy, still on v3)**:
+
+Phases observed in `2026-04-16T12.52.58.143303849` chunks _45–_51:
+
+| Phase | Range | Spd max | Notes |
+|---|---|---|---|
+| 0–6 min | 1.7–4.9 m | 0.28 | Stable orbital limit cycle |
+| 6–9 min | 1.7–6.0 m | 0.39 | First wind nudges |
+| 9–13 min | up to 7.2 m | 0.30 | Larger excursions |
+| **15–17 min** | **6 → 12 → 18 → 20.4 m** | 0.66 | **Big wind event, blown 20 m off** |
+| 17–18 min | 20 → 5 m | 0.66 | Slow return |
+| 19–22 min | 7 → 13 → 7 m | 0.54 | Second perturbation |
+| 22–25 min | 3–6 m | 0.34 | Settling back to orbit |
+
+**Why recovery was slow** — at the 20 m peak, trajectory shows ground
+speed only 0.12–0.23 m/s while still ~100° off heading. v3 hover code:
+
+- `range > max_radius` → original `target_speed = 1.0` (max)
+- L131 taper `* max(0, 1 - 4 * steering_proportion)` = 0 with proportion ≈ 0.7
+- → `1.0 * 0 = 0`, then v3 floor `max(0, 0.2) = 0.2`
+
+So **v3's flat floor was actually holding the boat back from a 1.0 m/s
+return** — it could only do 0.2 m/s while heading was off. After
+turning around (~+10s into the recovery) it briefly hit 0.66 m/s but
+spent most of the excursion at the floor.
+
+**v4 prediction**: at range = 20 m, `range_factor = 1.0`,
+`turn_min = 0.5 * max_speed = 0.5 m/s`. Recovery should be ~2.5× faster
+than v3, but still won't restore full 1.0 m/s because L131 taper still
+zeros the original max_speed when heading is off. v4 deployed; awaiting
+field test.
+
+**Possible v5 (deferred until v4 is validated)** — make the L131 taper
+range-aware so far-away cases don't get throttled by heading error:
+
+```cpp
+double taper_slope = 4.0 * (1.0 - range_factor);  // 4.0 near, 0 far
+current_target_speed *= std::max(0.0, 1.0 - steering_proportion * taper_slope);
+```
+
+At max_radius: no taper → full max_speed even with heading off (drive
+home, correct yaw underway). At min_radius: original behavior (don't
+overshoot). Holds for v4 floor to layer on top.
+
+Bag script with perturbation timeline saved at `/tmp/hover_analyze2.py`.
+
+**v4 field result**: "Hover is looking good." Range-aware floor with
+the cliff at minimum_radius broke the orbital limit cycle. Boat now
+settles inside the ring instead of orbiting at the kinematic radius.
+v5 (range-aware taper for faster excursion recovery) still deferred —
+not needed unless wind perturbations become a recurring problem.
+
+**Bag analysis #3 — v4 quantitative validation** (new bag
+`2026-04-16T17.20.52.010254426`, ~30 min post-v4 deploy):
+
+Range from target (last 25 min):
+
+| %ile | range |
+|---|---|
+| p25 | 1.67 m |
+| p50 | 2.42 m (inside minimum_radius!) |
+| p75 | 2.97 m |
+| p90 | 4.20 m |
+| p95 | 7.36 m |
+| max | 16.82 m |
+
+Killer stat:
+
+- `cmd_lin == 0`: **8731 / 16858 (52%)** of commanded throttle is
+  exactly zero. With v3 the floor of 0.2 was always on — this was
+  effectively 0%. The cliff at `minimum_radius` is letting the boat
+  actually settle.
+- `cmd_lin > 0.45`: 405 / 7271 (5.6%) — the active "drive home"
+  events when range exceeds the band.
+
+Observed phases (post-v4):
+
+- t = 300–360s: big thrust burst cmd_lin = 0.72–0.79 m/s — active
+  recovery from a perturbation, range-aware floor doing its job
+- t = 420s onwards (~22 min): stable hover, range mean 1–3 m,
+  cmd_vel oscillating 0 ↔ 0.2 m/s as boat enters/exits the ring
+- Recovery from largest excursion (16.8 m) worked cleanly vs v3's
+  20 m crawl-home at 0.2 m/s
+
+Actual speed ≈ commanded speed throughout — control loop healthy.
+No orbital limit cycle, no drift-to-infinity, no v5 needed.
+
+Bag script saved at `/tmp/hover_analyze3.py`.
+
+#### Logger config: cmd_vel and udp_bridge per-remote stats
+
+Topics added for post-mortem analysis (commit `8f2bb99` on PR #54):
+
+- `/bizzy/piloting_mode/autonomous/cmd_vel` ✓ (TwistStamped, captured)
+- `/bizzy/mavros/setpoint_velocity/cmd_vel` ✓ (captured)
+- `/bizzy/cmd_vel_nav` and `/bizzy/cmd_vel_smoothed` — ABSENT in
+  recorded topics. Implies `velocity_smoother` is not in the active
+  launch's pipeline; nav2 publishes directly to
+  `piloting_mode/autonomous/cmd_vel`. Not a problem for analysis;
+  `piloting_mode/autonomous/cmd_vel` is the raw hover output.
+- `/bizzy/udp_bridge/remotes/operator/{bridge_info,topic_statistics}` ✓
+  (per-remote bandwidth stats now captured for WiFi/VPN attribution)
+
+For future reference: the hover behavior parameters
+(`minimum_radius=2.5`, `maximum_radius=10`, `maximum_speed=1.0`,
+`maximum_rotation_speed=0.75`) and the "kill throttle above 45° error"
+heuristic are platform-dependent — they assumed skid-steer kinematics.
+A second hover variant or a `vectored_thrust: true` parameter may be
+the right long-term shape.
+
+#### Outstanding issues (updated)
+
+Replaced "Tune annunciator stale timeouts and diagnostic name matching"
+since the root cause is now understood and being fixed properly.
+
+- [ ] Implement republish-cached pattern in `ros2_network_monitor` (3 nodes)
+- [ ] Implement republish-cached pattern in `starlink_stats_ros`
+- [ ] Fix annunciator `_handle_diagnostics` value-extraction fallback
+      (Starlink-shows-serial bug)
+- [ ] Have `starlink_diagnostics_node` populate `status.message` with a
+      readable summary
+- [ ] Backport hover.cpp patch (minimum-speed-during-turn) to
+      `unh_marine_navigation` after field validation
+- [ ] Consider hover behavior variants for skid-steer vs vectored-thrust
+      platforms (or a `vectored_thrust` parameter)
+
+## Status
+
+Water test #3 partially successful (2026-04-14). DDS discovery fixed via
+Cyclone DDS with raised participant limit. Chart datum transform working.
+S57 tide offset correction implemented and deployed. First successful
+trackline plan and partial execution. Hover and controller_server issues
+remain. DNS failover fix applied (2026-04-15) — structural fix for
+recurring dnsmasq/mwan3 interaction. Network diagnostics enhanced with
+signal quality thresholds, hardware_id disambiguation, DNS ping targets,
+annunciator config, and aggregator improvements. Annunciator panel first
+tested — functional via rqt but standalone segfaults and resize needs
+work. Tide awareness pipeline advanced: S57 tide offset merged, MHHW
+datum frame added, BT string literal fix merged. Remaining work tracked
+in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
