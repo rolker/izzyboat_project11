@@ -83,6 +83,17 @@ def generate_launch_description():
                     }.items()
                 ),
 
+                # Chart datum (MLLW vertical datum transform)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('mru_transform'),
+                            'launch',
+                            'chart_datum_launch.py'
+                        ])
+                    ),
+                ),
+
                 # MAVRos
                 GroupAction(
                     actions=[
@@ -176,6 +187,17 @@ def generate_launch_description():
                             ),
                         )
                     ]
+                ),
+
+                # Network monitor (boat side)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'network_monitor_boat_launch.py'
+                        ])
+                    ),
                 ),
             ]
         ),

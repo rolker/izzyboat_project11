@@ -1,0 +1,9 @@
+teltonika_monitor:
+  ros__parameters:
+    host: 'router.bizzy'
+    username: 'ros_monitor'
+    password: 'ROS2_monitor'
+    port: 443
+    use_ssl: true
+    poll_interval: 5.0
+    hardware_id: 'router.bizzy'

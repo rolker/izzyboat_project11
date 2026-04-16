@@ -1,0 +1,14 @@
+ping_monitor:
+  ros__parameters:
+    hardware_id: 'ping.op'
+    targets:
+      - "gabby_direct:gabby.bizzy.p11.lan"
+      - "gabby_vpn:gabby.vpn.bizzy.p11.lan"
+      - "router_bizzy_direct:router.bizzy.p11.lan"
+      - "router_bizzy_vpn:router.vpn.bizzy.p11.lan"
+      - "bencloud:bencloud.wg.p11.lan"
+      - "dns_google:8.8.8.8"
+      - "dns_cloudflare:1.1.1.1"
+    poll_interval: 10.0
+    ping_count: 3
+    ping_timeout: 5.0

@@ -1,0 +1,9 @@
+mikrotik_monitor:
+  ros__parameters:
+    host: 'wifi.bizzy.p11.lan'
+    username: 'ros_monitor'
+    password: 'ros_monitor'
+    port: 80
+    use_ssl: false
+    poll_interval: 5.0
+    hardware_id: 'wifi.bizzy'

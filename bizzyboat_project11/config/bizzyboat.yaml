@@ -118,13 +118,13 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 1.0}
+              oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 2.0}
               oak_forward_info: {source: sensors/cameras/oak_forward/camera_info}
               oak_forward_raw:    {source: sensors/cameras/oak_forward/image_raw, period: -1.0}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 0.5}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
               oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0}
-              oak_starboard:      {source: sensors/cameras/oak_starboard/image_raw/compressed, period: 1.0}
+              oak_starboard:      {source: sensors/cameras/oak_starboard/image_raw/compressed, period: 2.0}
               oak_starboard_info: {source: sensors/cameras/oak_starboard/camera_info}
               oak_starboard_raw:  {source: sensors/cameras/oak_starboard/image_raw, period: -1.0}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, period: 0.5}
@@ -136,7 +136,7 @@
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: 0.5}
               oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
               oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0}
-              oak_port:      {source: sensors/cameras/oak_port/image_raw/compressed, period: 1.0}
+              oak_port:      {source: sensors/cameras/oak_port/image_raw/compressed, period: 2.0}
               oak_port_info: {source: sensors/cameras/oak_port/camera_info}
               oak_port_raw:  {source: sensors/cameras/oak_port/image_raw, period: -1.0}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, period: 0.5}
@@ -206,7 +206,7 @@
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
               odom: {source: odom}
-              oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 1.0}
+              oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 2.0}
               oak_forward_info: {source: sensors/cameras/oak_forward/camera_info}
               oak_forward_raw:    {source: sensors/cameras/oak_forward/image_raw, period: -1.0}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 0.5}
@@ -290,3 +290,51 @@
       uri: /home/field/project11/data/bizzyboat_sonar
       max_bagfile_duration: 300
       storage_preset_profile: zstd_fast
+
+/**/chart_datum:
+  ros__parameters:
+    map_frame: bizzy/map
+    chart_datum_frame: bizzy/chart_datum
+    base_frame: bizzy/base_link
+    mhhw_frame: bizzy/chart_datum_mhhw
+
+/**/mikrotik_monitor:
+  ros__parameters:
+    host: 'wifi.bizzy.p11.lan'
+    username: 'ros_monitor'
+    password: 'ros_monitor'
+    port: 80
+    use_ssl: false
+    poll_interval: 5.0
+    hardware_id: 'wifi.bizzy'
+
+/**/teltonika_monitor:
+  ros__parameters:
+    host: 'router.bizzy'
+    username: 'ros_monitor'
+    password: 'ROS2_monitor'
+    port: 443
+    use_ssl: true
+    poll_interval: 5.0
+    hardware_id: 'router.bizzy'
+
+/**/starlink_diagnostics:
+  ros__parameters:
+    dish_address: '192.168.100.1:9200'
+    poll_rate: 1.0
+    hardware_id: 'starlink.bizzy'
+
+/**/ping_monitor:
+  ros__parameters:
+    hardware_id: 'ping.bizzy'
+    targets:
+      - "salmon_direct:salmon.op.p11.lan"
+      - "salmon_vpn:salmon.vpn.bizzy.p11.lan"
+      - "router_op_direct:router.op.p11.lan"
+      - "router_op_vpn:router.vpn-op.bizzy.p11.lan"
+      - "bencloud:bencloud.wg.p11.lan"
+      - "dns_google:8.8.8.8"
+      - "dns_cloudflare:1.1.1.1"
+    poll_interval: 10.0
+    ping_count: 3
+    ping_timeout: 5.0
