@@ -296,6 +296,7 @@
     map_frame: bizzy/map
     chart_datum_frame: bizzy/chart_datum
     base_frame: bizzy/base_link
+    mhhw_frame: bizzy/chart_datum_mhhw
 
 /**/mikrotik_monitor:
   ros__parameters:
