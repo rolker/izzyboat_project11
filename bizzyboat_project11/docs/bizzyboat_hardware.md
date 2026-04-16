@@ -71,15 +71,14 @@ References are to Figures 1–7 in the EchoBoat 240 manual (pp. 9–15).
 
 ### Navigation & Sensing (factory)
 
-- **Primary GPS Antenna** (bow) — factory-installed; physically present but **unused** (superseded by CUAV C-RTK 2HP, see [Added Hardware](#positioning))
-- **Secondary GPS Antenna** (stern) — same; physically present but unused
-- **SVP** (Sound Velocity Profiler, bottom-mount) — in SVP Tube (Fig 2)
-- **SVS** (Sound Velocity Sensor, bottom-mount)
-- **SmartCast** + **Winch** — lowerable sensor for profiling
+- **Primary / Secondary GPS Antenna mounting positions** (bow / stern) — factory mounting spots exist but **no factory antennas were provided**. Added GPS antennas are installed at these positions for a future sonar system (see [Added Hardware](#positioning)).
+- **SmartCast** + **Winch** — lowerable sensor system for profiling
 - **Arduino CTD winch controller** — part of the factory SmartCast system (VID:PID `2341:0043`, serial `342343139313512040B1`, USB `ttyACM2`)
 - **USB Camera** (tower-mount, HD, VID:PID `32e4:9230`) — factory UVC camera; used as backup situational-awareness camera (intentionally uncalibrated, not logged to rosbag)
 
 **Not installed on BizzyBoat** (shown in manual but absent from this hull):
+- SVP (Sound Velocity Profiler — Fig 2; not provided)
+- SVS (Sound Velocity Sensor — Fig 2; not provided)
 - IMU (Fig 2 — optional add-on slot; not present)
 - T50 SONAR (Receiver, Projector, Topside — Fig 2, 6; not present)
 - LiDAR (tower-mount — Fig 1, 3; not present)
@@ -112,7 +111,7 @@ References are to Figures 1–7 in the EchoBoat 240 manual (pp. 9–15).
 - Long Range Module (for RCU)
 - 2S LiPo battery + Cube Balance Charger
 - Voltage Tester (LiPo cell check)
-- AML3 Adapter (for SmartCast SVP)
+- AML3 Adapter (for connecting the AML probe to SmartCast)
 - USB drive (Seafloor software/drivers/manual)
 - Programming cables: ESC programming cable, DB9 null modem, DB9 gender changer, USB-to-serial adapter
 
@@ -143,14 +142,14 @@ sonar PC).
 | Item | Model | Role |
 |---|---|---|
 | Dual-antenna GNSS / heading module | **CUAV C-RTK 2HP** | Centimeter-level RTK position + moving-baseline heading |
+| GPS antennas (for C-RTK 2HP) | *(model TBD)* × 2 | Mounted at non-factory positions (not the bow/stern factory antenna spots) |
+| GPS antennas (for future sonar) | *(model TBD)* × 2 | Mounted at the factory Primary/Secondary antenna positions (bow/stern); not yet connected to any active system |
 
-- Connected to the FCU via CAN (GPS node ID 124)
+- C-RTK 2HP connected to the FCU via CAN (GPS node ID 124)
 - Antenna offsets set in `bizzyboat_fcu_custom.param` (2026-04-02):
   forward antenna `GPS_POS1 = (+0.835, 0, -0.890)`, aft antenna
   `GPS_POS2 = (-0.835, 0, -0.890)`
 - Moving-baseline: `GPS_MB1_TYPE=1`, `GPS_MB1_OFS = (+1.670, 0, 0)`
-- The factory Primary/Secondary GPS antennas are still physically on
-  the mast but are unused; the C-RTK 2HP is the sole active GNSS.
 
 ### Perception
 
@@ -163,11 +162,12 @@ DHCP reservations tracked in
 Driver: `depthai_marine` from the sensors layer
 ([unh_echoboats_project11#23](https://github.com/rolker/unh_echoboats_project11/issues/23)).
 
-### Sonar
+### Sonar & Sound Velocity
 
 | Item | Model | Status |
 |---|---|---|
 | Multibeam sonar | Imagenex **DeltaT** | Physically installed on hull; ROS driver **not yet integrated**. Topic `/bizzy/sensors/deltat/soundings` is advertised but publishes zero messages as of 2026-04-16. Driver tracked in [unh_marine_autonomy#111](https://github.com/rolker/unh_marine_autonomy/issues/111). |
+| Sound velocity probe | **AML** (model *TODO: confirm*) | Attached to the factory SmartCast winch |
 
 ### Time Synchronization
 
