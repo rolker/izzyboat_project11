@@ -2310,6 +2310,96 @@ battery spec and voltage reference card. Replaces the seed list from
 **Debrief skill proposed** to automate this analysis workflow:
 [ros2_agent_workspace#435](https://github.com/rolker/ros2_agent_workspace/issues/435).
 
+### 2026-04-17 — Operator station maintenance
+
+Discovered operator router (RUTX11) WireGuard tunnel to bencloud has been
+down — salmon cannot ping `bencloud.wg.p11.lan`. Updated both routers
+from RUTX_R_00.07.21.2 to RUTX_R_00.07.21.3 (2026-03-24 stable). Key
+fix: "occasional client disconnections in busy environment." Also fixes
+edge-case network hang after reboot (.21.2). Required re-creating ubus
+ACL file (wiped by firmware upgrade) and power cycling the operator-side
+SXTsq WiFi bridge.
+
+**WiFi bridge fix**: After reboot, operator-side SXTsq (`172.16.20.4`) was
+unreachable. VLAN config on the switch was correct (VLAN 4 → port 4), but
+the SXTsq needed a power cycle after the VLAN swap investigation. WiFi
+bridge fully restored — all three endpoints reachable (boat router, boat
+OmniTIK, operator SXTsq).
+
+**WireGuard port change**: Tunnel handshakes were completing but ICMP
+failed. Investigation revealed BizzyBoat router's WG tunnel over Verizon
+cellular had 0 B received — UDP 51820 confirmed blocked by Verizon (packets
+never reached bencloud). Tested UDP 1194 (OpenVPN port) — packets arrive
+fine. Changed bencloud WireGuard from port 51820 to 1194:
+- bencloud: `/etc/wireguard/wg0.conf` ListenPort → 1194, OpenVPN stopped
+  and disabled
+- Operator router: `uci set network.bencloud.endpoint_port='1194'`
+- BizzyBoat router: `uci set network.bencloud.endpoint_port='1194'`
+
+All three WG peers initially connected on port 1194. Op-router → bencloud
+~30ms, boat → bencloud via Verizon cellular working. Shortly after, port
+1194 also stopped working from cellular (0 B received again). Switched to
+UDP 443 (QUIC/HTTP3 port) — added to AWS security group, all three devices
+updated. Port 443 working. Verizon may be doing DPI on WireGuard handshake
+patterns rather than simple port blocking — 443 is likely more resilient
+since carriers expect encrypted UDP traffic on it. VPN over Verizon cellular
+remains intermittent — tunnel connects briefly then drops (handshake goes
+stale after a few minutes). Indoor SINR of 9 is marginal. Boat moved
+outdoors for deployment; Starlink should provide a more stable WAN path.
+
+**Teltonika ubus ACL**: Both routers missing `/usr/share/rpcd/acl.d/ros_monitor.json`
+after firmware updates — recreated and added to `/etc/sysupgrade.conf` for
+persistence across future upgrades.
+
+**Switched to Zenoh RMW** (`rmw_zenoh_cpp`): Local DDS subscribers on salmon
+were intermittently losing diagnostics from the UDP bridge. Switched both
+boat and operator to Zenoh: boat tmux script runs `rmw_zenohd` daemon,
+exports `RMW_IMPLEMENTATION=rmw_zenoh_cpp`. New operator tmux startup script
+(`start_tmux_operator_project11.bash`) with Zenoh/core/foxglove/ui/rqt-diag
+windows. Foxglove bridge moved from operator_core_launch to its own tmux
+pane. Commit `88dc6c6` on gitcloud.
+
+**Annunciator/aggregator findings**: Starlink diagnostics land in `/Other`
+instead of `/Boat/Starlink` because the node publishes with a
+`starlink_diagnostics:` prefix the aggregator `startswith` filter doesn't
+expect. Mission indicator configured as diagnostics source but
+`mission_manager` is a topic, not a diagnostic. Fixes pending.
+
+**Annunciator working**: All indicators populated when running
+runtime_monitor + annunciator without robot_monitor. The rqt_robot_monitor
+plugin hogs the Qt GUI thread, causing runtime_monitor timers to miss
+ticks and all diagnostics to go stale. Root cause: `resizeColumnToContents(0)`
+called on three QTreeWidgets for every incoming `/diagnostics_agg` message
+(101 entries) — expensive Qt layout operation blocks the event loop.
+Workaround: don't load robot_monitor in the operational perspective.
+
+**Operator tmux startup**: Added foxglove-studio desktop pane to operator
+tmux script (`ecaac25` on gitcloud). Investigating filtering benign
+warnings from diagnostics (unused MikroTik ports, disabled SIM slots,
+Starlink `lower_signal_than_predicted`). Config changes pushed to gitcloud:
+`ignored_interfaces` added to MikroTik and Teltonika monitor YAMLs.
+
+**Operator tmux startup script** (`start_tmux_operator_project11.bash`):
+New single-command startup for the entire operator station — zenoh router,
+core launch, foxglove bridge, foxglove studio, rqt diagnostics perspective,
+and johnny5 PTZ camera, each in its own tmux window with correct env setup.
+Greatly reduces the effort to bring up the operator station (previously
+required manually launching each component). Commits `88dc6c6`, `ecaac25`,
+`a2b64e4` on gitcloud.
+
+**UDP bridge diagnostics**: Added `diagnostic_updater` to `udp_bridge` —
+per-remote/per-connection health with tx/rx rates, resend/drop stats, and
+staleness detection. 134 lines across 6 files. Committed `f563c73` on
+gitcloud (udp_bridge repo). Bridge runs but diagnostics emission not yet
+verified — check `ros2 lifecycle get /bizzy/udp_bridge` next session.
+
+**Warning reduction**: Added `ignored_interfaces` to MikroTik configs
+(ether2-5 on boat OmniTIK) and Teltonika configs (mob1s2a1/wan1 on boat,
+mob1s1a1/mob1s2a1/wifi_bridge/mobile_lab on operator). Added
+`publish_cellular` parameter to teltonika_monitor (disabled for operator
+router which has no SIM). Commits `e111fae`, `75bd0df` on gitcloud
+(unh_echoboats_project11), `d3e05f9` on gitcloud (ros2_network_monitor).
+
 ## Status
 
 Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
