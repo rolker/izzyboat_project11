@@ -7,3 +7,4 @@ mikrotik_monitor:
     use_ssl: false
     poll_interval: 5.0
     hardware_id: 'wifi.bizzy'
+    ignored_interfaces: ['ether2', 'ether3', 'ether4', 'ether5']
