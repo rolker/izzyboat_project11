@@ -8,3 +8,4 @@ teltonika_monitor:
     poll_interval: 5.0
     hardware_id: 'router.op'
     ignored_interfaces: ['mob1s1a1', 'mob1s2a1', 'wifi_bridge', 'mobile_lab']
+    publish_cellular: false
