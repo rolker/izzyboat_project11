@@ -272,6 +272,19 @@
       - /bizzy/cmd_vel_smoothed
       - /bizzy/piloting_mode/autonomous/cmd_vel
       - /bizzy/mavros/setpoint_velocity/cmd_vel
+      # Nav2 / BT action status and planning (issue #58)
+      - /bizzy/run_tasks/_action/status
+      - /bizzy/run_tasks/_action/send_goal
+      - /bizzy/compute_path_through_poses/_action/status
+      - /bizzy/follow_path/_action/status
+      - /bizzy/hover/_action/status
+      - /bizzy/plan
+      - /bizzy/path_follower_visualization
+      - /bizzy/hover_visualization
+      - /bizzy/behavior_tree_log
+      - /bizzy/collision_monitor_state
+      - /bizzy/local_costmap/published_footprint
+      - /bizzy/marine/response
       - /marine/platforms
       - /rosout
       - /tf
