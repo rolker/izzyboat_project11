@@ -44,6 +44,10 @@ sleep 2
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
 /usr/bin/tmux send-keys "ros2 launch foxglove_bridge foxglove_bridge_launch.xml" C-m
 
+# Foxglove Studio: desktop client that connects to the bridge above
+/usr/bin/tmux new-window -t project11 -n studio
+/usr/bin/tmux send-keys "foxglove-studio" C-m
+
 # UI: camp + rqt (bizzyboat perspective) + joystick, etc.
 /usr/bin/tmux new-window -t project11 -n ui
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
