@@ -2257,6 +2257,59 @@ glued the connector in place (~2026-04-13). Starlink ethernet has been
 stable since. Bypass mode was also enabled and doesn't hurt, but the
 loose connector was probably the real issue.
 
+#### Bag debrief (2026-04-16, post-session analysis on salmon)
+
+Post-deployment bag analysis of four sessions recorded today
+(`~/data/logs/logs/bizzyboat/2026-04-16T*`):
+
+| # | Start (UTC) | Duration | Activity |
+|---|---|---|---|
+| 1 | 12:52:58 | 4h 27m | Idle → hover debugging (v1–v4), PID tuning |
+| 2 | 17:20:52 | 30m 30s | Hover v4 validation, active autonomous ops |
+| 3 | 17:51:37 | 5m 04s | Restart after code fix |
+| 4 | 17:56:58 | ~17 min | Active ops, ended by crane recovery |
+
+Session 4 bag incomplete (no `metadata.yaml`, `_3.mcap` corrupted) —
+expected, rsync caught mid-write; will complete on next sync.
+
+**Findings:**
+
+1. **`mikrotik_monitor` and `teltonika_monitor` silently crash on
+   startup in sessions 3 & 4.** Diagnostic source count dropped from
+   45 to 18 — all Teltonika and MikroTik diagnostics lost. Root cause:
+   `ParameterUninitializedException` on `ignored_interfaces` (commit
+   `d7c096a` declared it with type-only, no default). Crashes in
+   `__init__` before any rosout output. Fix confirmed on salmon:
+   `self.declare_parameter('ignored_interfaces', [])`.
+   Tracked in [ros2_network_monitor#16](https://github.com/rolker/ros2_network_monitor/issues/16).
+
+2. **Battery percentage stuck at 0.99 all day** (160k samples, current
+   always ≈0 A). No current sensor wired on BizzyBoat; factory baseline
+   `BATT_MONITOR=4` is wrong. Corrected in
+   [PR #56](https://github.com/rolker/unh_echoboats_project11/pull/56)
+   (draft — merge after field apply to Cube).
+
+3. **BT/Nav2 action-status topics not logged** — rosout shows 20×
+   planner aborts and 9× BT task aborts but bags can't reconstruct
+   goals, decisions, or planned paths. Issue opened:
+   [unh_echoboats_project11#58](https://github.com/rolker/unh_echoboats_project11/issues/58).
+
+4. **Tide offset jumped ~4 m during session 4** — confirmed as crane
+   recovery (boat lifted out of water), not a software bug.
+
+5. **`ping_monitor` republish-cached pattern working** — sessions 3 & 4
+   show the new "poll every 10.0s, publish every 1.0s" format.
+
+**Hardware inventory doc created** as part of the battery investigation:
+`bizzyboat_project11/docs/bizzyboat_hardware.md` in
+[PR #56](https://github.com/rolker/unh_echoboats_project11/pull/56).
+Catalogs all factory and add-on equipment with Torqeedo Power 24-3500
+battery spec and voltage reference card. Replaces the seed list from
+[#8](https://github.com/rolker/unh_echoboats_project11/issues/8).
+
+**Debrief skill proposed** to automate this analysis workflow:
+[ros2_agent_workspace#435](https://github.com/rolker/ros2_agent_workspace/issues/435).
+
 ## Status
 
 Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
