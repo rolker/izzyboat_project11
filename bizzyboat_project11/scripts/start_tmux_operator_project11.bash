@@ -58,4 +58,9 @@ sleep 2
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
 /usr/bin/tmux send-keys "ros2 run rqt_gui rqt_gui -p bizzyboat-diagnostics" C-m
 
+# Johnny5 PTZ camera (axis) from molab_hardware
+/usr/bin/tmux new-window -t project11 -n johnny5
+/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
+/usr/bin/tmux send-keys "ros2 launch molab_hardware johnny5_launch.py" C-m
+
 } >> "${LOG_FILE}" 2>&1
