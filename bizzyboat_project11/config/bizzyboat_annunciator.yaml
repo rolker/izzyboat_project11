@@ -19,6 +19,18 @@ indicators:
     format: "{}"
     stale_timeout: 5.0
 
+  - name: UDP WiFi
+    source: diagnostics
+    diagnostic_name: "udp_bridge operator: bizzy: wifi"
+    format: "{}"
+    stale_timeout: 5.0
+
+  - name: UDP VPN
+    source: diagnostics
+    diagnostic_name: "udp_bridge operator: bizzy: vpn"
+    format: "{}"
+    stale_timeout: 5.0
+
   # --- Critical Systems ---
   - name: Battery
     source: diagnostics
