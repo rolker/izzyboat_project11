@@ -47,6 +47,12 @@ indicators:
     diagnostic_name: "GPS: RTK"
     format: "{}"
 
+  - name: NTRIP
+    source: diagnostics
+    diagnostic_name: "NTRIP"
+    format: "{}"
+    stale_timeout: 10.0
+
   - name: FCU
     source: diagnostics
     diagnostic_name: "mavros: Heartbeat"
