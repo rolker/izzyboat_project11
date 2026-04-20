@@ -2400,6 +2400,223 @@ mob1s1a1/mob1s2a1/wifi_bridge/mobile_lab on operator). Added
 router which has no SIM). Commits `e111fae`, `75bd0df` on gitcloud
 (unh_echoboats_project11), `d3e05f9` on gitcloud (ros2_network_monitor).
 
+### 2026-04-20 — Deployment prep
+
+**Starlink annunciator**: Boat's Starlink showing `install_pending` in
+the annunciator panel — diagnostics pipeline is working end-to-end.
+Want to change `install_pending` to WARN level instead of current level.
+Agent on gabby implemented the fix; after core restart, annunciator now
+correctly shows WARN for `install_pending`.
+
+**Operator WiFi device (MikroTik)**: Not responding to monitor node or
+web GUI, but data still flowing through it. Suspect the monitor node
+may be overloading the device's management interface. Investigating.
+
+**Intermittent internet on operator machines** — possibly related to the
+unresponsive MikroTik if it's in the network path. Operator router web
+interface also intermittent — can't stay connected long enough to
+diagnose the internet issue. Killed core launch on salmon to stop
+monitor nodes — this also brought down the udp_bridge, losing boat
+data on the operator side. Note: boat-side data was flowing fine
+throughout the network issues (problem is operator-side only). After
+killing monitor nodes, routers have not recovered — monitor node
+likely not the cause. Ping to operator router by IP works — L2/L3
+connectivity is fine, web GUI/management interface is the issue.
+SSH session to operator router (192.168.13.1) connected but `mwan3
+status` command hung and won't respond to Ctrl-C. Router up 3 days,
+load 0.39 — normal. Something is locking up the management/shell
+layer on the RUTX11. New SSH connection attempt also slow to respond.
+Power cycled operator network equipment (router + WiFi devices).
+Router came back up and is responsive. Logs only show post-boot
+entries — pre-reboot logs lost (RUTX11 stores logs in RAM). LAN3
+port flapped during boot but everything settled. No root cause
+determined.
+
+**UDP bridge**: After reboot, only showing traffic over VPN — nothing
+on WiFi path. Power cycling operator-side MikroTik again. MikroTik
+web UI now accessible after power cycle. MikroTik logs only show
+entries from last boot (Apr 4) — no logs from today's lockup session,
+confirming device was completely locked up (not even logging). WiFi
+bridge reconnected: -48dBm signal, 150Mbps link to boat-side MikroTik.
+SSH to gabby via WiFi confirmed working. Device is an SXTsq Lite5 —
+only 64MB RAM (25.3MB free after fresh boot), single-core 600MHz MIPS.
+Very resource-constrained; monitor node API polling was a plausible
+cause of the lockup. Monitored `/system resource print` every 2s while
+restarting core launch with monitor nodes — memory stayed rock solid
+at 25MB free, CPU spiked briefly to 16-18% on poll cycles but recovered
+immediately. Monitor node does not appear to be the cause of the
+earlier lockup. Root cause remains unknown.
+
+**Annunciator**: All clear after core restart — only warning is the
+Starlink `install_pending` (expected). Attempting remote reboot of
+Starlink Mini via starlink.com account portal to clear `install_pending`.
+During reboot, annunciator shows "Starlink ---" in grey (stale) — but
+should be showing WARN or ERROR for a stopped data source, not just
+going grey/stale silently. Need to fix stale-detection behavior in
+annunciator. VPN traffic dropped to 0 — expected, Starlink was the
+WAN carrying the VPN and Verizon cellular blocks the WireGuard port.
+Starlink back up after reboot — annunciator shows no alerts.
+`install_pending` cleared by the reboot. VPN not recovering for
+udp_bridge traffic despite SSH to gabby via VPN working — suspected
+udp_bridge bug where data stops flowing in one direction after a
+network interruption. Seen before. Agents on salmon and gabby
+investigating root cause before restarting.
+
+**Root cause analysis (gabby agent)**: Ping/ICMP works both ways over
+VPN (~60ms RTT). BizzyBoat's udp_bridge shows 222K B/s tx over VPN
+with 0 failures, but operator sees 0 B/s rx. Suspected cause:
+operator's udp_bridge is bound to the WiFi IP (192.168.13.142) not
+`0.0.0.0`, so UDP packets arriving at the VPN address
+(192.168.22.142:4200) are never delivered to the process. WiFi path
+worked because packets arrived on the bound address. To verify:
+`ss -uln | grep 4200` on operator — if it shows `192.168.13.142:4200`
+instead of `0.0.0.0:4200`, that's the bug. **Update**: source code
+shows udp_bridge binds `INADDR_ANY` (line 68) — bind address is NOT
+the issue. Actual likely cause: udp_bridge records the source IP of
+incoming connection packets (`source_info.host`) and sends replies
+back to that address. If operator initially connected via WiFi, it
+recorded bizzy's WiFi IP as the reply address. When WiFi dropped and
+VPN took over, bizzy sends from a different source IP but operator
+still sends to the stale WiFi address. The host/port only updates on
+a new `OPERATION_CONNECT` message — no automatic re-resolution on
+network path change. **Further update (gabby agent)**: connection
+matching uses `connection_id` from the payload, not source IP — so
+receiving is interface-agnostic. Operator's vpn connection shows
+`received_bytes/s = 0`, meaning no wrapped UDP 4200 packets from
+bizzy are reaching operator's socket at all, despite bizzy's kernel
+accepting them for tx (222 KB/s, 0 failed). Drop is in the network
+between bizzy and operator on the VPN path. Suspects: (1) firewall
+on operator host or router blocking inbound UDP 4200 on VPN interface,
+(2) MTU black-hole — WireGuard adds ~60B overhead, large UDP packets
+silently dropped while small ICMP gets through.
+
+**tcpdump on salmon** (`sudo tcpdump -ni any 'udp port 4200 and host
+192.168.21.5'`): All traffic is outbound only — salmon sending to
+192.168.21.5:4200 via `enp3s0`, zero inbound packets from bizzy.
+Bizzy's packets never reach salmon's network stack. ICMP works but
+UDP 4200 doesn't — points to firewall blocking inbound UDP from the
+VPN subnet on either the boat or operator router.
+
+**Root cause confirmed**: mwan3 connmark on boat router is steering
+VPN-destined traffic out raw WAN (eth1) instead of WireGuard tunnel
+(bcloud). tcpdump on boat router shows gabby's packets to
+192.168.22.142 arriving on eth0 but exiting via eth1 (Starlink WAN).
+`mwan3_hook` in mangle PREROUTING restores connmarks — the UDP 4200
+flow was originally marked for `wan` when VPN was working over
+Starlink. After Starlink reboot, stale connmark still routes via eth1
+instead of bcloud. `ip route show` has correct route
+(`192.168.22.0/24 dev bcloud`) but mwan3 fwmark rules (priority 2001)
+override main table (priority 32766). Both routers' NETMAP rules and
+firewall zones are correct. Fix: flush stale conntrack entries; longer
+term, add mwan3 exception for bcloud-routed subnets.
+
+**Fix applied**: `echo f > /proc/net/nf_conntrack` on boat router
+flushed the stale hardware-offloaded conntrack entry. VPN udp_bridge
+traffic immediately resumed. `mwan3 restart` and `/etc/init.d/firewall
+reload` were insufficient — the `[OFFLOAD]` flag kept the entry in
+the hardware flow table. Only the proc flush cleared it. `conntrack`
+CLI tool is not installed on the RUTX11.
+
+**Prevention**: Two-layer fix applied on boat router:
+1. Added `192.168.21.0/24` to `mwan3_custom_v4` and
+   `mwan3_connected_v4` ipsets — prevents mwan3 from marking new VPN
+   flows with a WAN fwmark. (Other VPN subnets were already present;
+   192.168.21.0/24 was the only one missing.)
+2. Added `echo f > /proc/net/nf_conntrack` to `/etc/firewall.user` —
+   flushes all conntrack (including hardware-offloaded entries) on
+   every firewall reload, which is triggered by interface up/down
+   events. Belt-and-suspenders: even if a stale connmark gets saved,
+   the next WAN failover event clears it.
+Note: mangle PREROUTING rules in firewall.user don't survive mwan3
+restart (mwan3 flushes and rebuilds the mangle table), so that
+approach was abandoned.
+
+**Testing fix**: Rebooted Starlink again — VPN traffic dropped as
+expected, then recovered automatically after Starlink came back.
+Fix confirmed working.
+
+**Final fix applied**: Disabled hardware flow offloading on boat
+router via `uci set firewall.@defaults[0].flow_offloading_hw='0'`.
+Software flow offloading remains active. HW offload was baking stale
+routing decisions into the hardware PPE table — a known incompatibility
+between mwan3, FLOWOFFLOAD hw, and WireGuard (OpenWrt issues #17915,
+packages#5943). Selective FORWARD RETURN rules didn't work because
+FORWARD policy is DROP. Performance impact negligible for this
+throughput level.
+
+**Second test**: Rebooted Starlink again. This time lost all connection
+to boat — both WiFi and VPN udp_bridge traffic at zero. Can ping boat
+router and reconnect SSH, but no udp_bridge data flowing on either
+link. Conntrack flush in firewall.user was killing all flows (WiFi
+and VPN) on every firewall reload. Removed the auto-flush.
+Software FLOWOFFLOAD also had the same stale-mark problem as hardware
+offloading — disabled all flow offloading:
+`uci set firewall.@defaults[0].flow_offloading='0'`. After disabling
+offloading and flushing conntrack, udp_bridge connections were fully
+broken — required restarting core launch on both salmon and gabby to
+re-establish. Data flow restored after both sides restarted.
+
+**Third test**: Rebooted Starlink. VPN traffic dropped to zero as
+expected. After Starlink came back, **VPN recovered automatically** —
+no manual intervention needed. Fix confirmed: disabling all flow
+offloading on the boat router resolves the mwan3/connmark/VPN
+incompatibility.
+
+**Starlink annunciator not recovering**: Node is healthy but dish at
+192.168.100.1 is unreachable from gabby — ping 100% loss, gRPC
+DEADLINE_EXCEEDED. Starlink Mini is in bypass mode (no Starlink
+router), plugged directly into boat router. Boat router needs a route
+or interface on 192.168.100.0/24 — the dish expects its .1 peer on
+that subnet. Router has no address on 192.168.100.0/24 and no route to it. Router
+itself can't ping 192.168.100.1 either — 100% loss. WAN is up
+(internet working via CGNAT 100.64.0.1 on eth1) but dish management
+API not responding. Worked earlier today after first reboot, stopped
+responding after repeated reboots for VPN testing. Not a firewall
+change side-effect — router has never had the address/route and it
+worked before. Possibly a Starlink bypass mode quirk after multiple
+rapid reboots. Another reboot fixed it — dish management API came back and starlink
+monitor recovered automatically. Annunciator showing Starlink OK.
+
+**Annunciator improvements needed**:
+- NTRIP client errors visible in gabby tmux but no annunciator entry
+  for NTRIP status — should add one.
+- GPS showing satellite count (34.0) which is somewhat useful, but
+  RTK fix type (float/fixed/none) would be much more valuable for
+  operations.
+
+**TODO**: Disable flow offloading on operator router too — same
+mwan3/connmark issue applies.
+
+**Testing fix**: Rebooting Starlink to verify VPN recovery. VPN
+traffic dropped to 0 as expected.
+
+**tcpdump on gabby** (`sudo tcpdump -ni any 'udp port 4200 and host
+192.168.22.142'`): Same result — all outbound, zero inbound. Gabby
+sends to 192.168.22.142:4200 via `enp7s0` (LAN at 192.168.20.5),
+relying on boat router to forward into WireGuard tunnel. Both sides
+sending, neither receiving. Packets leave hosts fine but are dropped
+by the routers — not forwarding UDP between LAN and WireGuard
+interfaces. Checking router firewall/routing next.
+
+**Root cause found (salmon agent)**: Operator router's VPN NETMAP rules
+are missing — didn't survive the power cycle. These rules translate
+between the operator LAN (192.168.13.0/24) and VPN subnet
+(192.168.22.0/24):
+```
+iptables -t nat -I POSTROUTING -s 192.168.13.0/24 -d 192.168.21.0/24 -j NETMAP --to 192.168.22.0/24
+iptables -t nat -I PREROUTING -d 192.168.22.0/24 -j NETMAP --to 192.168.13.0/24
+```
+Evidence: operator→boat traffic arrives at gabby with source
+192.168.13.142 (not 192.168.22.142) — POSTROUTING NETMAP missing.
+Boat→operator to 192.168.22.142 has nowhere to land — PREROUTING
+NETMAP missing. WiFi path unaffected (650 kB/s flowing). Fix: add
+rules to `/etc/firewall.user` on operator router and reload firewall.
+Initially suspected NETMAP rules were flushed by firewall reload during
+Starlink reboot, but rules are in `/etc/firewall.user` AND active:
+PREROUTING matched 562 pkts, POSTROUTING matched 468 pkts. Operator
+router NAT is working. Drop is elsewhere — likely boat-side routing
+or firewall.
+
 ## Status
 
 Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
