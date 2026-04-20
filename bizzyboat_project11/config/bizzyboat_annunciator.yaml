@@ -42,6 +42,11 @@ indicators:
     diagnostic_name: "mavros: GPS"
     format: "{}"
 
+  - name: RTK
+    source: diagnostics
+    diagnostic_name: "GPS: RTK"
+    format: "{}"
+
   - name: FCU
     source: diagnostics
     diagnostic_name: "mavros: Heartbeat"
