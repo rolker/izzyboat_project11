@@ -58,7 +58,7 @@ def generate_launch_description():
                     executable='ntrip_diagnostics_node.py',
                     name='ntrip_diagnostics',
                     parameters=[{
-                        'rtcm_topic': 'sensors/ntrip/rtcm',
+                        'rtcm_topic': 'mavros/gps_rtk/send_rtcm',
                         'diagnostic_name': 'NTRIP',
                         'warn_timeout': 5.0,
                         'error_timeout': 15.0,

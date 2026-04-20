@@ -252,7 +252,7 @@
       - /bizzy/mavros/gpsstatus/gps1/raw
       - /bizzy/mavros/imu/data
       - /bizzy/mavros/state
-      - /bizzy/sensors/ntrip/rtcm
+      - /bizzy/mavros/gps_rtk/send_rtcm
       - /bizzy/odom
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
