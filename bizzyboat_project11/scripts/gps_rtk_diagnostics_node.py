@@ -44,8 +44,11 @@ class GpsRtkDiagnosticsNode(Node):
         self._ok_min = self.get_parameter('ok_min_fix_type').value
         self._warn_min = self.get_parameter('warn_min_fix_type').value
 
+        self._last_msg = None
+
         self._pub = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
         self._sub = self.create_subscription(GPSRAW, topic, self._on_gps_raw, 10)
+        self._timer = self.create_timer(1.0, self._publish_diagnostic)
 
         self.get_logger().info(
             f'Publishing RTK diagnostics from "{topic}" as "{self._diagnostic_name}" '
@@ -53,6 +56,13 @@ class GpsRtkDiagnosticsNode(Node):
         )
 
     def _on_gps_raw(self, msg: GPSRAW):
+        self._last_msg = msg
+
+    def _publish_diagnostic(self):
+        if self._last_msg is None:
+            return
+
+        msg = self._last_msg
         fix_type = msg.fix_type
         label = FIX_TYPE_LABELS.get(fix_type, f'Unknown ({fix_type})')
 
