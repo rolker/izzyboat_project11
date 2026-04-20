@@ -132,6 +132,20 @@ def generate_launch_description():
                     ]
                 ),
 
+                # GPS RTK diagnostics
+                Node(
+                    package='bizzyboat_project11',
+                    executable='gps_rtk_diagnostics_node.py',
+                    name='gps_rtk_diagnostics',
+                    parameters=[{
+                        'gps_raw_topic': 'mavros/gpsstatus/gps1/raw',
+                        'diagnostic_name': 'GPS: RTK',
+                        'ok_min_fix_type': 6,
+                        'warn_min_fix_type': 3,
+                    }],
+                    emulate_tty=True
+                ),
+
                 # UDP bridge
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(

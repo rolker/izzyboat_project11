@@ -51,6 +51,20 @@ def generate_launch_description():
                         }
                     ],
                 ),
+
+                # NTRIP diagnostics (monitors RTCM flow)
+                Node(
+                    package='bizzyboat_project11',
+                    executable='ntrip_diagnostics_node.py',
+                    name='ntrip_diagnostics',
+                    parameters=[{
+                        'rtcm_topic': 'mavros/gps_rtk/send_rtcm',
+                        'diagnostic_name': 'NTRIP',
+                        'warn_timeout': 5.0,
+                        'error_timeout': 15.0,
+                    }],
+                    emulate_tty=True
+                ),
             ]
         )
     ])
