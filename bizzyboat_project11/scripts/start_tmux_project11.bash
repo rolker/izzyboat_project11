@@ -29,7 +29,7 @@ export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
 if /usr/bin/tmux has-session -t project11 2>/dev/null; then
     echo "WARNING: tmux session 'project11' already exists. Not starting a new one."
-    echo "Use 'tmux attach -t project11' to connect, or stop it first."
+    echo "Use 'tmux attach -t project11' to connect, or run stop_tmux_project11.bash first."
     exit 0
 fi
 

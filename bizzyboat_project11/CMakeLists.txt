@@ -12,6 +12,7 @@ install(DIRECTORY urdf DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS
   scripts/start_tmux_project11.bash
   scripts/start_tmux_operator_project11.bash
+  scripts/stop_tmux_project11.bash
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(
