@@ -2587,6 +2587,17 @@ monitor recovered automatically. Annunciator showing Starlink OK.
 **TODO**: Disable flow offloading on operator router too — same
 mwan3/connmark issue applies.
 
+**rmw_zenoh_cpp SubscriberCallback errors**: `mru_transform_node`
+logging repeated errors about subscriber callbacks triggered on
+`/bizzy/mavros/imu/data`. Possibly Zenoh RMW message queue overflow
+or subscription handling issue. CAMP on salmon is frozen — may be
+related if position updates from mru_transform are not making it
+through udp_bridge.
+
+**NTRIP recovery**: NTRIP client lost connection during Starlink
+reboot (DNS failure), but auto-reconnected to MACORS RTCM3_MASA.
+NTRIP resilience appears to be working for DNS-recoverable outages.
+
 **Testing fix**: Rebooting Starlink to verify VPN recovery. VPN
 traffic dropped to 0 as expected.
 
