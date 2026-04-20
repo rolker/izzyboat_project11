@@ -10,6 +10,8 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY meshes DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY urdf DESTINATION share/${PROJECT_NAME})
 install(PROGRAMS scripts/start_tmux_project11.bash DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/gps_rtk_diagnostics_node.py DESTINATION lib/${PROJECT_NAME})
+install(PROGRAMS scripts/ntrip_diagnostics_node.py DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(
   xacro
