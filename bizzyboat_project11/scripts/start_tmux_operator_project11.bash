@@ -26,6 +26,12 @@ set -v
 export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
 export RMW_IMPLEMENTATION=rmw_zenoh_cpp
 
+if /usr/bin/tmux has-session -t project11 2>/dev/null; then
+    echo "WARNING: tmux session 'project11' already exists. Not starting a new one."
+    echo "Use 'tmux attach -t project11' to connect, or stop it first."
+    exit 0
+fi
+
 /usr/bin/tmux new -d -s project11
 /usr/bin/tmux rename-window -t project11 zenoh
 
