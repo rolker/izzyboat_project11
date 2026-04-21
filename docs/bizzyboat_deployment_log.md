@@ -2694,3 +2694,221 @@ key names with negative signs). Hover v4 validated — range-aware floor
 with cliff at minimum_radius broke orbital limit cycle. TF extrapolation
 fix for multi-line surveys applied. Multi-line survey execution working.
 Starlink ethernet root cause identified (loose connector, not bypass mode).
+
+### 2026-04-21 — Deployment session
+
+**Pre-launch**: `make sync` and `make build` on salmon and gabby to deploy
+recent merges (annunciator improvements, UDP bridge diagnostics, gitcloud
+field-fix imports, deployment log).
+
+**Tides** (Portsmouth Harbor, MLLW): Low 8:48 AM (-1.1 ft), High 3:00 PM
+(8.9 ft), Low 9:00 PM (0.3 ft). Rising tide through the afternoon.
+
+**core_launch failure**: `gps_rtk_diagnostics_node.py` and
+`ntrip_diagnostics_node.py` not found at launch. Scripts exist in repo and
+are installed via `install(PROGRAMS ...)` in CMakeLists, but were committed
+without the execute bit (mode 0644). With `--symlink-install`, the install
+symlinks inherit the source file's 0644 permissions, so ROS rejects them as
+non-executable. Fix: `chmod +x` both scripts and commit. Applied locally on
+gabby to unblock testing; will push to gitcloud.
+
+**Annunciator on salmon**: Required `rqt --force-discover` to find the
+annunciator plugin in its new package location (rqt_operator_tools
+restructure). Once discovered, annunciator showing almost all red — expected
+with gabby nodes not yet running. Confirms the stale-escalation fix
+(rqt_operator_tools PR #16) is working correctly: missing data sources
+show red/ERROR instead of grey "---".
+
+**Gabby launch successful** after chmod fix. Annunciator showing all clear
+except one red entry — label clipped, likely mission manager. Need to
+investigate: could be expected (no mission loaded) or a real issue.
+Annunciator label clipping is a UI issue worth noting for class-ready
+polish.
+
+**Systems check**: GPS position good and stable in CAMP. All cameras
+showing in Foxglove. Controller manual mode verified — thrusters
+actuate, returned to standby. Hover command issued — thrusters
+responded, nav stack launched successfully, returned to standby.
+Mission annunciator still red after hover — not resolved by having
+the nav stack running. RC controller tested and working.
+
+**09:28 EDT**: Operator directional WiFi antenna mounted on mobile lab
+roof, pointed ~65°. Launching boat.
+
+**09:43 EDT**: Boat in water, RC-driven to loiter area outside pier,
+placed in ArduPilot Loiter mode via RC. Beginning project11 autonomous
+testing (survey lines).
+
+**Controller override test**: Controller works from operator station.
+Hover override in CAMP caused boat to move towards pier — may have
+resumed a stale hover target from pier-side testing instead of
+resetting to current position. Possible bug: hover should default to
+current position when initiated, not reuse a previous target. Goto
+override worked correctly — boat navigated to target and is hovering
+at the goto location. **TODO**: Investigate stale hover target — CAMP
+"Hover Here" context menu may not be resetting the goal to the clicked
+position, or the nav stack is reusing a latched goal from the previous
+session.
+
+**WiFi bridge annunciator**: Showing -43 dBm +/- 3 — excellent signal.
+
+**Survey lines**: Running well. Significant crabbing due to current but
+CrabbingPathFollower keeping boat on the line. PID fix from 2026-04-16
+holding up.
+
+**Bag analysis — survey line failure**: Session bag at
+`2026-04-21T13.18.20.995262455/`, topic
+`/bizzy/marine/status/mission_manager`.
+
+Survey #1 (pattern0000, 3 lines across current): All completed.
+line0 13:53→13:56, line1 13:56→13:58, line2 13:58→14:01. ~3 min/line.
+
+Survey #2 (pattern0001, 4 lines along current): Lines 0-2 completed
+normally (~3-5 min each). Line 3 started at 14:28:33 UTC and mission
+jumped to `done_hover` at 14:28:37 — only 4 seconds. The
+`survey_line_set` was marked `(done)` but `line3` itself was never
+marked `(done)`, still showing `type: survey_line`. Mission manager
+declared the set complete with an incomplete line. Initial suspicion was the TF extrapolation / stale `header.stamp`
+issue from 2026-04-16, but bag analysis shows a different root cause:
+
+```
+14:28:32.705 controller_server: Reached the goal!       (line 2 done)
+14:28:34.303 controller_server: Received a goal [...]   (line 3 goal received)
+14:28:36.304 controller_server: Costmap timed out waiting for update
+14:28:36.304 controller_server: [follow_path] Aborting handle.
+14:28:37.303 behavior_server: Running hover             (fallback)
+```
+
+**Root cause**: Local costmap timed out 2 seconds after line 3's goal
+was accepted. Controller aborted the follow_path action, mission
+manager treated the abort as survey-set complete, fell back to hover.
+Line 3 was never executed. **TODO**: Investigate costmap timeout —
+why did it stall between lines? Could be a timing issue where costmap
+updates pause during line transitions, or the SeaSurfaceLayer segfault
+workaround (removed from local costmap plugins) left insufficient
+costmap update sources.
+
+**Deep analysis** (bag + source code):
+
+*Costmap timeout root cause*: Two compounding issues in S57Layer:
+
+1. **Tile regeneration bounded by `update_timeout: 0.15s`** per
+   costmap update cycle. When the rolling costmap window jumps to a
+   new area (large inter-line transit), `matchSize()` clears all
+   cached tiles. At 5 Hz costmap update rate, the layer gets at most
+   ~5 × 0.15s = 0.75s of regeneration within the 1.0s controller
+   `costmap_update_timeout` — insufficient for a cold tile cache.
+
+2. **Chart grid data delivered asynchronously.** `generateTile()`
+   returns `complete=false` when chart grids haven't been delivered
+   yet (pending `get_datasets` service call + subscription). The
+   costmap cannot become current until callbacks fire — took ~15s in
+   this case (tide offset logged at 14:28:51, 15s after transition).
+   No amount of timeout tuning fixes this.
+
+*Why line 3 failed but lines 0–2 didn't*: Lines 0→1→2 had small
+positional shifts (~2m), within the S57Layer's prefetch buffer
+(2×5% outer buffer around costmap bounds). The ~97m jump to line 3's
+start position moved outside the prefetched area, triggering a full
+cold cache reload.
+
+*Config*: `costmap_update_timeout` is 1.0s in `nav2_params.yaml`
+(controller_server). `sea_surface_layer` confirmed removed from local
+costmap plugins (segfault workaround), leaving only `chart_layer` +
+`inflation_layer`. Planner_server also hit sustained costmap timeouts
+later (14:38–14:39, ~16 failures over 1 min). Issue filed as
+rolker/unh_marine_navigation#19.
+
+*Fix options*: (a) increase `costmap_update_timeout` to 3–5s — helps
+tile regen but not async data stall; (b) prefetch chart data for
+upcoming waypoints before line transition; (c) allow controller to
+proceed with stale costmap during transit (open water); (d) increase
+S57Layer `update_timeout` for more work per cycle.
+
+*BT abort handling bug*: Root cause is in `SurveyLineSetTask` BT
+subtree in `run_tasks.xml` (lines 296–335). Uses
+`KeepRunningUntilFailure` around the inner `Sequence(SurveyLineTask,
+SetTaskDone)`. When `FollowPath` aborts, `SurveyLineTask` returns
+FAILURE. `KeepRunningUntilFailure` converts FAILURE→SUCCESS (its
+contract: run until failure, then signal completion), causing
+`WhileDoElse` to exit the loop. The survey_line_set is then marked
+done despite line 3 never completing. Fix: replace
+`KeepRunningUntilFailure` with retry logic or a pattern that keeps
+the loop running on navigation failures.
+
+**Comms annunciator**: Yellow/WARN — 40% packet loss. Boat still on
+line so autonomy unaffected, but degraded link quality despite good
+WiFi signal (-43 dBm). SNR dropped to 20 dB — high noise floor
+(~-63 dBm), likely channel interference causing the packet loss.
+
+**Telemetry dropout**: Operator telemetry stopped arriving mid-survey.
+Boat continued autonomously on survey line — confirmed visually via
+johnny5 PTZ camera on mobile lab roof. Telemetry recovered when boat
+reached end of third (final) survey line. Boat entered hover as
+expected at end of mission. Autonomy operated correctly through the
+comms dropout — good resilience test.
+
+**WiFi antenna test**: Rotated operator directional antenna 90° CW
+(pointing away from boat). WiFi bridge annunciator dropped to 19 dB
+SNR (yellow/WARN), then recovered to 21 dB (grey/stale). Relatively
+small drop for a 90° misalignment — suggests significant multipath
+or the boat is close enough that sidelobes still provide usable signal.
+Grey at 21 dB is odd — should be yellow or green, not stale.
+
+**Link degradation** (antenna still misaligned): Various annunciators
+flashing yellow intermittently. CAMP heartbeat status went red —
+15 sec latency, recovered briefly to green, then red again at 30 sec
+latency. Consistent with marginal WiFi link causing bursty packet
+delivery. Goto command issued to test commanding through spotty
+link — boat accepted and is moving. Commands getting through despite
+degraded connection. Camera images in Foxglove still updating fine
+despite link degradation.
+
+**Antenna repointed to ~30°**: All annunciators green/grey, link
+recovered. Mission annunciator resized itself off screen — same rqt
+layout issue as earlier.
+
+**Survey test #2**: 4 lines along the current (2 with, 2 against) to
+test CrabbingPathFollower behavior in following vs opposing current.
+First survey was 3 lines across the current.
+
+**Survey test #2 result**: Boat completed 3 of 4 lines, then entered
+hover instead of continuing to line 4. Same behavior as the TF
+extrapolation issue from 2026-04-16 (stale `header.stamp` on per-line
+goals)? Or a different bug. **TODO**: Investigate — check if the
+field fix for multi-line surveys was actually committed and deployed,
+or if this is a new failure mode.
+
+**10:32 EDT**: Kongsberg M3 sonar arrived. Recovering boat for
+installation.
+
+**10:45 EDT**: Boat out of water.
+
+**Kongsberg M3 sonar installation**: Sonar mounted with SBG IMU and
+sound speed sensor connected via serial to mercat (Windows PC). Sound
+speed sensor on COM3 at 9600 baud. SBG Ellipse on COM4 at 921600
+baud, required null modem adapter. Both working. SSH enabled on
+mercat.
+
+**14:33 EDT**: Session ended. Boat on trailer.
+
+**Session summary**: Successful water test — 3-line survey completed,
+4-line survey completed 3 of 4 (costmap timeout root-caused from bag
+analysis). Annunciator stale-escalation fix verified. WiFi antenna
+misalignment test showed graceful degradation. Commands work through
+spotty link. Kongsberg M3 sonar arrived and installed with SBG + sound
+speed sensor on mercat. BT retry fix merged
+(rolker/unh_marine_navigation#20). Sim bag recording PR pending
+(rolker/unh_marine_simulation#57).
+
+**TODO for next session**:
+- M3 network integration (DHCP, DNS)
+- M3 acquisition software setup
+- PTP time sync on mercat
+- Test BT retry fix on water (4+ line survey)
+- Costmap timeout investigation — increase timeout and/or prefetch
+- Annunciator rqt resize issue
+- Investigate mystery red mission annunciator entry
+- Commit CrabbingPathFollower PID YAML
+- Commit TF extrapolation fix
+- Disable flow offloading on operator router
