@@ -2628,6 +2628,50 @@ PREROUTING matched 562 pkts, POSTROUTING matched 468 pkts. Operator
 router NAT is working. Drop is elsewhere — likely boat-side routing
 or firewall.
 
+### 2026-04-20 (cont.) — Software session (boat unavailable)
+
+Followed up on annunciator improvement needs noted during deployment above.
+
+**UDP bridge per-connection diagnostics**: Added `/diagnostics` publishing
+to `udp_bridge` with per-connection tx/rx rates and silence detection.
+Lifecycle state guard, `on_cleanup()` reset. Merged
+[rolker/udp_bridge#8](https://github.com/rolker/udp_bridge/pull/8).
+
+**New annunciator indicators**: Created diagnostic wrapper nodes:
+- `gps_rtk_diagnostics_node.py` — mavros GPSRAW → fix type diagnostic at
+  1 Hz (RTK Fixed/Float/3D/etc.), configurable thresholds.
+- `ntrip_diagnostics_node.py` — monitors RTCM flow on
+  `mavros/gps_rtk/send_rtcm`, WARN→ERROR on configurable timeouts.
+- UDP WiFi / UDP VPN config entries from operator-side udp_bridge diagnostics.
+- RTCM added to bag recording (~1.5-3 MB/hr).
+
+Fixed RTCM topic reference (ntrip_client remaps `rtcm` →
+`mavros/gps_rtk/send_rtcm`). Merged
+[#63](https://github.com/rolker/unh_echoboats_project11/pull/63),
+[#64](https://github.com/rolker/unh_echoboats_project11/pull/64).
+
+**Annunciator stale escalation**: Stale indicators now escalate WARN → ERROR
+instead of grey "---". Fixed startup flash and stale-text bug. Merged
+[rolker/rqt_operator_tools#16](https://github.com/rolker/rqt_operator_tools/pull/16).
+
+**Gitcloud field-fix imports** (from earlier deployment session):
+- `starlink_stats_ros` — `install_pending` → WARN + test
+  ([#14](https://github.com/rolker/starlink_stats_ros/pull/14))
+- `ros2_network_monitor` — `publish_cellular` param
+  ([#18](https://github.com/rolker/ros2_network_monitor/pull/18))
+- `unh_echoboats_project11` — operator tmux startup, Zenoh RMW, interface
+  suppression, idempotent session guard, graceful shutdown script
+  ([#65](https://github.com/rolker/unh_echoboats_project11/pull/65))
+
+**Operator logbook** (parallel agent):
+[rolker/rqt_operator_tools#2](https://github.com/rolker/rqt_operator_tools/pull/2) —
+Phase 1 operator logbook with multi-package restructure (`rqt_operator_log`).
+Text logging, rosbag2 recording, daily rotation, recovery. Under review.
+
+**Quality standard**: Added to AGENTS.md
+([PR #438](https://github.com/rolker/ros2_agent_workspace/pull/438)) —
+robustness non-negotiable, fix completely, don't dismiss review catches.
+
 ## Status
 
 Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
