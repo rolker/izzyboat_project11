@@ -2247,7 +2247,435 @@ since the root cause is now understood and being fixed properly.
 - [ ] Consider hover behavior variants for skid-steer vs vectored-thrust
       platforms (or a `vectored_thrust` parameter)
 
+### 2026-04-16 — Starlink ethernet root cause update
+
+The recurring Starlink Mini ethernet drops (2026-04-06, 2026-04-07,
+2026-04-10 water test #2) were likely **not** caused by bypass mode
+reversion. On inspection, the ethernet connector to the dish was not
+clipping securely — an intermittent physical connection. A colleague
+glued the connector in place (~2026-04-13). Starlink ethernet has been
+stable since. Bypass mode was also enabled and doesn't hurt, but the
+loose connector was probably the real issue.
+
+#### Bag debrief (2026-04-16, post-session analysis on salmon)
+
+Post-deployment bag analysis of four sessions recorded today
+(`~/data/logs/logs/bizzyboat/2026-04-16T*`):
+
+| # | Start (UTC) | Duration | Activity |
+|---|---|---|---|
+| 1 | 12:52:58 | 4h 27m | Idle → hover debugging (v1–v4), PID tuning |
+| 2 | 17:20:52 | 30m 30s | Hover v4 validation, active autonomous ops |
+| 3 | 17:51:37 | 5m 04s | Restart after code fix |
+| 4 | 17:56:58 | ~17 min | Active ops, ended by crane recovery |
+
+Session 4 bag incomplete (no `metadata.yaml`, `_3.mcap` corrupted) —
+expected, rsync caught mid-write; will complete on next sync.
+
+**Findings:**
+
+1. **`mikrotik_monitor` and `teltonika_monitor` silently crash on
+   startup in sessions 3 & 4.** Diagnostic source count dropped from
+   45 to 18 — all Teltonika and MikroTik diagnostics lost. Root cause:
+   `ParameterUninitializedException` on `ignored_interfaces` (commit
+   `d7c096a` declared it with type-only, no default). Crashes in
+   `__init__` before any rosout output. Fix confirmed on salmon:
+   `self.declare_parameter('ignored_interfaces', [])`.
+   Tracked in [ros2_network_monitor#16](https://github.com/rolker/ros2_network_monitor/issues/16).
+
+2. **Battery percentage stuck at 0.99 all day** (160k samples, current
+   always ≈0 A). No current sensor wired on BizzyBoat; factory baseline
+   `BATT_MONITOR=4` is wrong. Corrected in
+   [PR #56](https://github.com/rolker/unh_echoboats_project11/pull/56)
+   (draft — merge after field apply to Cube).
+
+3. **BT/Nav2 action-status topics not logged** — rosout shows 20×
+   planner aborts and 9× BT task aborts but bags can't reconstruct
+   goals, decisions, or planned paths. Issue opened:
+   [unh_echoboats_project11#58](https://github.com/rolker/unh_echoboats_project11/issues/58).
+
+4. **Tide offset jumped ~4 m during session 4** — confirmed as crane
+   recovery (boat lifted out of water), not a software bug.
+
+5. **`ping_monitor` republish-cached pattern working** — sessions 3 & 4
+   show the new "poll every 10.0s, publish every 1.0s" format.
+
+**Hardware inventory doc created** as part of the battery investigation:
+`bizzyboat_project11/docs/bizzyboat_hardware.md` in
+[PR #56](https://github.com/rolker/unh_echoboats_project11/pull/56).
+Catalogs all factory and add-on equipment with Torqeedo Power 24-3500
+battery spec and voltage reference card. Replaces the seed list from
+[#8](https://github.com/rolker/unh_echoboats_project11/issues/8).
+
+**Debrief skill proposed** to automate this analysis workflow:
+[ros2_agent_workspace#435](https://github.com/rolker/ros2_agent_workspace/issues/435).
+
+### 2026-04-17 — Operator station maintenance
+
+Discovered operator router (RUTX11) WireGuard tunnel to bencloud has been
+down — salmon cannot ping `bencloud.wg.p11.lan`. Updated both routers
+from RUTX_R_00.07.21.2 to RUTX_R_00.07.21.3 (2026-03-24 stable). Key
+fix: "occasional client disconnections in busy environment." Also fixes
+edge-case network hang after reboot (.21.2). Required re-creating ubus
+ACL file (wiped by firmware upgrade) and power cycling the operator-side
+SXTsq WiFi bridge.
+
+**WiFi bridge fix**: After reboot, operator-side SXTsq (`172.16.20.4`) was
+unreachable. VLAN config on the switch was correct (VLAN 4 → port 4), but
+the SXTsq needed a power cycle after the VLAN swap investigation. WiFi
+bridge fully restored — all three endpoints reachable (boat router, boat
+OmniTIK, operator SXTsq).
+
+**WireGuard port change**: Tunnel handshakes were completing but ICMP
+failed. Investigation revealed BizzyBoat router's WG tunnel over Verizon
+cellular had 0 B received — UDP 51820 confirmed blocked by Verizon (packets
+never reached bencloud). Tested UDP 1194 (OpenVPN port) — packets arrive
+fine. Changed bencloud WireGuard from port 51820 to 1194:
+- bencloud: `/etc/wireguard/wg0.conf` ListenPort → 1194, OpenVPN stopped
+  and disabled
+- Operator router: `uci set network.bencloud.endpoint_port='1194'`
+- BizzyBoat router: `uci set network.bencloud.endpoint_port='1194'`
+
+All three WG peers initially connected on port 1194. Op-router → bencloud
+~30ms, boat → bencloud via Verizon cellular working. Shortly after, port
+1194 also stopped working from cellular (0 B received again). Switched to
+UDP 443 (QUIC/HTTP3 port) — added to AWS security group, all three devices
+updated. Port 443 working. Verizon may be doing DPI on WireGuard handshake
+patterns rather than simple port blocking — 443 is likely more resilient
+since carriers expect encrypted UDP traffic on it. VPN over Verizon cellular
+remains intermittent — tunnel connects briefly then drops (handshake goes
+stale after a few minutes). Indoor SINR of 9 is marginal. Boat moved
+outdoors for deployment; Starlink should provide a more stable WAN path.
+
+**Teltonika ubus ACL**: Both routers missing `/usr/share/rpcd/acl.d/ros_monitor.json`
+after firmware updates — recreated and added to `/etc/sysupgrade.conf` for
+persistence across future upgrades.
+
+**Switched to Zenoh RMW** (`rmw_zenoh_cpp`): Local DDS subscribers on salmon
+were intermittently losing diagnostics from the UDP bridge. Switched both
+boat and operator to Zenoh: boat tmux script runs `rmw_zenohd` daemon,
+exports `RMW_IMPLEMENTATION=rmw_zenoh_cpp`. New operator tmux startup script
+(`start_tmux_operator_project11.bash`) with Zenoh/core/foxglove/ui/rqt-diag
+windows. Foxglove bridge moved from operator_core_launch to its own tmux
+pane. Commit `88dc6c6` on gitcloud.
+
+**Annunciator/aggregator findings**: Starlink diagnostics land in `/Other`
+instead of `/Boat/Starlink` because the node publishes with a
+`starlink_diagnostics:` prefix the aggregator `startswith` filter doesn't
+expect. Mission indicator configured as diagnostics source but
+`mission_manager` is a topic, not a diagnostic. Fixes pending.
+
+**Annunciator working**: All indicators populated when running
+runtime_monitor + annunciator without robot_monitor. The rqt_robot_monitor
+plugin hogs the Qt GUI thread, causing runtime_monitor timers to miss
+ticks and all diagnostics to go stale. Root cause: `resizeColumnToContents(0)`
+called on three QTreeWidgets for every incoming `/diagnostics_agg` message
+(101 entries) — expensive Qt layout operation blocks the event loop.
+Workaround: don't load robot_monitor in the operational perspective.
+
+**Operator tmux startup**: Added foxglove-studio desktop pane to operator
+tmux script (`ecaac25` on gitcloud). Investigating filtering benign
+warnings from diagnostics (unused MikroTik ports, disabled SIM slots,
+Starlink `lower_signal_than_predicted`). Config changes pushed to gitcloud:
+`ignored_interfaces` added to MikroTik and Teltonika monitor YAMLs.
+
+**Operator tmux startup script** (`start_tmux_operator_project11.bash`):
+New single-command startup for the entire operator station — zenoh router,
+core launch, foxglove bridge, foxglove studio, rqt diagnostics perspective,
+and johnny5 PTZ camera, each in its own tmux window with correct env setup.
+Greatly reduces the effort to bring up the operator station (previously
+required manually launching each component). Commits `88dc6c6`, `ecaac25`,
+`a2b64e4` on gitcloud.
+
+**UDP bridge diagnostics**: Added `diagnostic_updater` to `udp_bridge` —
+per-remote/per-connection health with tx/rx rates, resend/drop stats, and
+staleness detection. 134 lines across 6 files. Committed `f563c73` on
+gitcloud (udp_bridge repo). Bridge runs but diagnostics emission not yet
+verified — check `ros2 lifecycle get /bizzy/udp_bridge` next session.
+
+**Warning reduction**: Added `ignored_interfaces` to MikroTik configs
+(ether2-5 on boat OmniTIK) and Teltonika configs (mob1s2a1/wan1 on boat,
+mob1s1a1/mob1s2a1/wifi_bridge/mobile_lab on operator). Added
+`publish_cellular` parameter to teltonika_monitor (disabled for operator
+router which has no SIM). Commits `e111fae`, `75bd0df` on gitcloud
+(unh_echoboats_project11), `d3e05f9` on gitcloud (ros2_network_monitor).
+
+### 2026-04-20 — Deployment prep
+
+**Starlink annunciator**: Boat's Starlink showing `install_pending` in
+the annunciator panel — diagnostics pipeline is working end-to-end.
+Want to change `install_pending` to WARN level instead of current level.
+Agent on gabby implemented the fix; after core restart, annunciator now
+correctly shows WARN for `install_pending`.
+
+**Operator WiFi device (MikroTik)**: Not responding to monitor node or
+web GUI, but data still flowing through it. Suspect the monitor node
+may be overloading the device's management interface. Investigating.
+
+**Intermittent internet on operator machines** — possibly related to the
+unresponsive MikroTik if it's in the network path. Operator router web
+interface also intermittent — can't stay connected long enough to
+diagnose the internet issue. Killed core launch on salmon to stop
+monitor nodes — this also brought down the udp_bridge, losing boat
+data on the operator side. Note: boat-side data was flowing fine
+throughout the network issues (problem is operator-side only). After
+killing monitor nodes, routers have not recovered — monitor node
+likely not the cause. Ping to operator router by IP works — L2/L3
+connectivity is fine, web GUI/management interface is the issue.
+SSH session to operator router (192.168.13.1) connected but `mwan3
+status` command hung and won't respond to Ctrl-C. Router up 3 days,
+load 0.39 — normal. Something is locking up the management/shell
+layer on the RUTX11. New SSH connection attempt also slow to respond.
+Power cycled operator network equipment (router + WiFi devices).
+Router came back up and is responsive. Logs only show post-boot
+entries — pre-reboot logs lost (RUTX11 stores logs in RAM). LAN3
+port flapped during boot but everything settled. No root cause
+determined.
+
+**UDP bridge**: After reboot, only showing traffic over VPN — nothing
+on WiFi path. Power cycling operator-side MikroTik again. MikroTik
+web UI now accessible after power cycle. MikroTik logs only show
+entries from last boot (Apr 4) — no logs from today's lockup session,
+confirming device was completely locked up (not even logging). WiFi
+bridge reconnected: -48dBm signal, 150Mbps link to boat-side MikroTik.
+SSH to gabby via WiFi confirmed working. Device is an SXTsq Lite5 —
+only 64MB RAM (25.3MB free after fresh boot), single-core 600MHz MIPS.
+Very resource-constrained; monitor node API polling was a plausible
+cause of the lockup. Monitored `/system resource print` every 2s while
+restarting core launch with monitor nodes — memory stayed rock solid
+at 25MB free, CPU spiked briefly to 16-18% on poll cycles but recovered
+immediately. Monitor node does not appear to be the cause of the
+earlier lockup. Root cause remains unknown.
+
+**Annunciator**: All clear after core restart — only warning is the
+Starlink `install_pending` (expected). Attempting remote reboot of
+Starlink Mini via starlink.com account portal to clear `install_pending`.
+During reboot, annunciator shows "Starlink ---" in grey (stale) — but
+should be showing WARN or ERROR for a stopped data source, not just
+going grey/stale silently. Need to fix stale-detection behavior in
+annunciator. VPN traffic dropped to 0 — expected, Starlink was the
+WAN carrying the VPN and Verizon cellular blocks the WireGuard port.
+Starlink back up after reboot — annunciator shows no alerts.
+`install_pending` cleared by the reboot. VPN not recovering for
+udp_bridge traffic despite SSH to gabby via VPN working — suspected
+udp_bridge bug where data stops flowing in one direction after a
+network interruption. Seen before. Agents on salmon and gabby
+investigating root cause before restarting.
+
+**Root cause analysis (gabby agent)**: Ping/ICMP works both ways over
+VPN (~60ms RTT). BizzyBoat's udp_bridge shows 222K B/s tx over VPN
+with 0 failures, but operator sees 0 B/s rx. Suspected cause:
+operator's udp_bridge is bound to the WiFi IP (192.168.13.142) not
+`0.0.0.0`, so UDP packets arriving at the VPN address
+(192.168.22.142:4200) are never delivered to the process. WiFi path
+worked because packets arrived on the bound address. To verify:
+`ss -uln | grep 4200` on operator — if it shows `192.168.13.142:4200`
+instead of `0.0.0.0:4200`, that's the bug. **Update**: source code
+shows udp_bridge binds `INADDR_ANY` (line 68) — bind address is NOT
+the issue. Actual likely cause: udp_bridge records the source IP of
+incoming connection packets (`source_info.host`) and sends replies
+back to that address. If operator initially connected via WiFi, it
+recorded bizzy's WiFi IP as the reply address. When WiFi dropped and
+VPN took over, bizzy sends from a different source IP but operator
+still sends to the stale WiFi address. The host/port only updates on
+a new `OPERATION_CONNECT` message — no automatic re-resolution on
+network path change. **Further update (gabby agent)**: connection
+matching uses `connection_id` from the payload, not source IP — so
+receiving is interface-agnostic. Operator's vpn connection shows
+`received_bytes/s = 0`, meaning no wrapped UDP 4200 packets from
+bizzy are reaching operator's socket at all, despite bizzy's kernel
+accepting them for tx (222 KB/s, 0 failed). Drop is in the network
+between bizzy and operator on the VPN path. Suspects: (1) firewall
+on operator host or router blocking inbound UDP 4200 on VPN interface,
+(2) MTU black-hole — WireGuard adds ~60B overhead, large UDP packets
+silently dropped while small ICMP gets through.
+
+**tcpdump on salmon** (`sudo tcpdump -ni any 'udp port 4200 and host
+192.168.21.5'`): All traffic is outbound only — salmon sending to
+192.168.21.5:4200 via `enp3s0`, zero inbound packets from bizzy.
+Bizzy's packets never reach salmon's network stack. ICMP works but
+UDP 4200 doesn't — points to firewall blocking inbound UDP from the
+VPN subnet on either the boat or operator router.
+
+**Root cause confirmed**: mwan3 connmark on boat router is steering
+VPN-destined traffic out raw WAN (eth1) instead of WireGuard tunnel
+(bcloud). tcpdump on boat router shows gabby's packets to
+192.168.22.142 arriving on eth0 but exiting via eth1 (Starlink WAN).
+`mwan3_hook` in mangle PREROUTING restores connmarks — the UDP 4200
+flow was originally marked for `wan` when VPN was working over
+Starlink. After Starlink reboot, stale connmark still routes via eth1
+instead of bcloud. `ip route show` has correct route
+(`192.168.22.0/24 dev bcloud`) but mwan3 fwmark rules (priority 2001)
+override main table (priority 32766). Both routers' NETMAP rules and
+firewall zones are correct. Fix: flush stale conntrack entries; longer
+term, add mwan3 exception for bcloud-routed subnets.
+
+**Fix applied**: `echo f > /proc/net/nf_conntrack` on boat router
+flushed the stale hardware-offloaded conntrack entry. VPN udp_bridge
+traffic immediately resumed. `mwan3 restart` and `/etc/init.d/firewall
+reload` were insufficient — the `[OFFLOAD]` flag kept the entry in
+the hardware flow table. Only the proc flush cleared it. `conntrack`
+CLI tool is not installed on the RUTX11.
+
+**Prevention**: Two-layer fix applied on boat router:
+1. Added `192.168.21.0/24` to `mwan3_custom_v4` and
+   `mwan3_connected_v4` ipsets — prevents mwan3 from marking new VPN
+   flows with a WAN fwmark. (Other VPN subnets were already present;
+   192.168.21.0/24 was the only one missing.)
+2. Added `echo f > /proc/net/nf_conntrack` to `/etc/firewall.user` —
+   flushes all conntrack (including hardware-offloaded entries) on
+   every firewall reload, which is triggered by interface up/down
+   events. Belt-and-suspenders: even if a stale connmark gets saved,
+   the next WAN failover event clears it.
+Note: mangle PREROUTING rules in firewall.user don't survive mwan3
+restart (mwan3 flushes and rebuilds the mangle table), so that
+approach was abandoned.
+
+**Testing fix**: Rebooted Starlink again — VPN traffic dropped as
+expected, then recovered automatically after Starlink came back.
+Fix confirmed working.
+
+**Final fix applied**: Disabled hardware flow offloading on boat
+router via `uci set firewall.@defaults[0].flow_offloading_hw='0'`.
+Software flow offloading remains active. HW offload was baking stale
+routing decisions into the hardware PPE table — a known incompatibility
+between mwan3, FLOWOFFLOAD hw, and WireGuard (OpenWrt issues #17915,
+packages#5943). Selective FORWARD RETURN rules didn't work because
+FORWARD policy is DROP. Performance impact negligible for this
+throughput level.
+
+**Second test**: Rebooted Starlink again. This time lost all connection
+to boat — both WiFi and VPN udp_bridge traffic at zero. Can ping boat
+router and reconnect SSH, but no udp_bridge data flowing on either
+link. Conntrack flush in firewall.user was killing all flows (WiFi
+and VPN) on every firewall reload. Removed the auto-flush.
+Software FLOWOFFLOAD also had the same stale-mark problem as hardware
+offloading — disabled all flow offloading:
+`uci set firewall.@defaults[0].flow_offloading='0'`. After disabling
+offloading and flushing conntrack, udp_bridge connections were fully
+broken — required restarting core launch on both salmon and gabby to
+re-establish. Data flow restored after both sides restarted.
+
+**Third test**: Rebooted Starlink. VPN traffic dropped to zero as
+expected. After Starlink came back, **VPN recovered automatically** —
+no manual intervention needed. Fix confirmed: disabling all flow
+offloading on the boat router resolves the mwan3/connmark/VPN
+incompatibility.
+
+**Starlink annunciator not recovering**: Node is healthy but dish at
+192.168.100.1 is unreachable from gabby — ping 100% loss, gRPC
+DEADLINE_EXCEEDED. Starlink Mini is in bypass mode (no Starlink
+router), plugged directly into boat router. Boat router needs a route
+or interface on 192.168.100.0/24 — the dish expects its .1 peer on
+that subnet. Router has no address on 192.168.100.0/24 and no route to it. Router
+itself can't ping 192.168.100.1 either — 100% loss. WAN is up
+(internet working via CGNAT 100.64.0.1 on eth1) but dish management
+API not responding. Worked earlier today after first reboot, stopped
+responding after repeated reboots for VPN testing. Not a firewall
+change side-effect — router has never had the address/route and it
+worked before. Possibly a Starlink bypass mode quirk after multiple
+rapid reboots. Another reboot fixed it — dish management API came back and starlink
+monitor recovered automatically. Annunciator showing Starlink OK.
+
+**Annunciator improvements needed**:
+- NTRIP client errors visible in gabby tmux but no annunciator entry
+  for NTRIP status — should add one.
+- GPS showing satellite count (34.0) which is somewhat useful, but
+  RTK fix type (float/fixed/none) would be much more valuable for
+  operations.
+
+**TODO**: Disable flow offloading on operator router too — same
+mwan3/connmark issue applies.
+
+**rmw_zenoh_cpp SubscriberCallback errors**: `mru_transform_node`
+logging repeated errors about subscriber callbacks triggered on
+`/bizzy/mavros/imu/data`. Possibly Zenoh RMW message queue overflow
+or subscription handling issue. CAMP on salmon is frozen — may be
+related if position updates from mru_transform are not making it
+through udp_bridge.
+
+**NTRIP recovery**: NTRIP client lost connection during Starlink
+reboot (DNS failure), but auto-reconnected to MACORS RTCM3_MASA.
+NTRIP resilience appears to be working for DNS-recoverable outages.
+
+**Testing fix**: Rebooting Starlink to verify VPN recovery. VPN
+traffic dropped to 0 as expected.
+
+**tcpdump on gabby** (`sudo tcpdump -ni any 'udp port 4200 and host
+192.168.22.142'`): Same result — all outbound, zero inbound. Gabby
+sends to 192.168.22.142:4200 via `enp7s0` (LAN at 192.168.20.5),
+relying on boat router to forward into WireGuard tunnel. Both sides
+sending, neither receiving. Packets leave hosts fine but are dropped
+by the routers — not forwarding UDP between LAN and WireGuard
+interfaces. Checking router firewall/routing next.
+
+**Root cause found (salmon agent)**: Operator router's VPN NETMAP rules
+are missing — didn't survive the power cycle. These rules translate
+between the operator LAN (192.168.13.0/24) and VPN subnet
+(192.168.22.0/24):
+```
+iptables -t nat -I POSTROUTING -s 192.168.13.0/24 -d 192.168.21.0/24 -j NETMAP --to 192.168.22.0/24
+iptables -t nat -I PREROUTING -d 192.168.22.0/24 -j NETMAP --to 192.168.13.0/24
+```
+Evidence: operator→boat traffic arrives at gabby with source
+192.168.13.142 (not 192.168.22.142) — POSTROUTING NETMAP missing.
+Boat→operator to 192.168.22.142 has nowhere to land — PREROUTING
+NETMAP missing. WiFi path unaffected (650 kB/s flowing). Fix: add
+rules to `/etc/firewall.user` on operator router and reload firewall.
+Initially suspected NETMAP rules were flushed by firewall reload during
+Starlink reboot, but rules are in `/etc/firewall.user` AND active:
+PREROUTING matched 562 pkts, POSTROUTING matched 468 pkts. Operator
+router NAT is working. Drop is elsewhere — likely boat-side routing
+or firewall.
+
+### 2026-04-20 (cont.) — Software session (boat unavailable)
+
+Followed up on annunciator improvement needs noted during deployment above.
+
+**UDP bridge per-connection diagnostics**: Added `/diagnostics` publishing
+to `udp_bridge` with per-connection tx/rx rates and silence detection.
+Lifecycle state guard, `on_cleanup()` reset. Merged
+[rolker/udp_bridge#8](https://github.com/rolker/udp_bridge/pull/8).
+
+**New annunciator indicators**: Created diagnostic wrapper nodes:
+- `gps_rtk_diagnostics_node.py` — mavros GPSRAW → fix type diagnostic at
+  1 Hz (RTK Fixed/Float/3D/etc.), configurable thresholds.
+- `ntrip_diagnostics_node.py` — monitors RTCM flow on
+  `mavros/gps_rtk/send_rtcm`, WARN→ERROR on configurable timeouts.
+- UDP WiFi / UDP VPN config entries from operator-side udp_bridge diagnostics.
+- RTCM added to bag recording (~1.5-3 MB/hr).
+
+Fixed RTCM topic reference (ntrip_client remaps `rtcm` →
+`mavros/gps_rtk/send_rtcm`). Merged
+[#63](https://github.com/rolker/unh_echoboats_project11/pull/63),
+[#64](https://github.com/rolker/unh_echoboats_project11/pull/64).
+
+**Annunciator stale escalation**: Stale indicators now escalate WARN → ERROR
+instead of grey "---". Fixed startup flash and stale-text bug. Merged
+[rolker/rqt_operator_tools#16](https://github.com/rolker/rqt_operator_tools/pull/16).
+
+**Gitcloud field-fix imports** (from earlier deployment session):
+- `starlink_stats_ros` — `install_pending` → WARN + test
+  ([#14](https://github.com/rolker/starlink_stats_ros/pull/14))
+- `ros2_network_monitor` — `publish_cellular` param
+  ([#18](https://github.com/rolker/ros2_network_monitor/pull/18))
+- `unh_echoboats_project11` — operator tmux startup, Zenoh RMW, interface
+  suppression, idempotent session guard, graceful shutdown script
+  ([#65](https://github.com/rolker/unh_echoboats_project11/pull/65))
+
+**Operator logbook** (parallel agent):
+[rolker/rqt_operator_tools#2](https://github.com/rolker/rqt_operator_tools/pull/2) —
+Phase 1 operator logbook with multi-package restructure (`rqt_operator_log`).
+Text logging, rosbag2 recording, daily rotation, recovery. Under review.
+
+**Quality standard**: Added to AGENTS.md
+([PR #438](https://github.com/rolker/ros2_agent_workspace/pull/438)) —
+robustness non-negotiable, fix completely, don't dismiss review catches.
+
 ## Status
+
+Continuing under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57)
+(BizzyBoat field ops — survey readiness and class prep).
 
 Water test #3 partially successful (2026-04-14). DDS discovery fixed via
 Cyclone DDS with raised participant limit. Chart datum transform working.
@@ -2259,5 +2687,10 @@ signal quality thresholds, hardware_id disambiguation, DNS ping targets,
 annunciator config, and aggregator improvements. Annunciator panel first
 tested — functional via rqt but standalone segfaults and resize needs
 work. Tide awareness pipeline advanced: S57 tide offset merged, MHHW
-datum frame added, BT string literal fix merged. Remaining work tracked
-in [#43](https://github.com/rolker/unh_echoboats_project11/issues/43).
+datum frame added, BT string literal fix merged.
+
+2026-04-16: CrabbingPathFollower PID fix field-validated (correct PidROS
+key names with negative signs). Hover v4 validated — range-aware floor
+with cliff at minimum_radius broke orbital limit cycle. TF extrapolation
+fix for multi-line surveys applied. Multi-line survey execution working.
+Starlink ethernet root cause identified (loose connector, not bypass mode).
