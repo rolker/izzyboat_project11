@@ -3002,3 +3002,29 @@ speed sensor on mercat. BT retry fix merged
 - Commit CrabbingPathFollower PID YAML
 - Commit TF extrapolation fix
 - Disable flow offloading on operator router
+
+### 2026-04-22
+
+Planning session for hydro payload integration. Boat powered off — no
+hardware activity today beyond scoping and documentation setup.
+
+- Opened two sub-issues under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57):
+  - [#76](https://github.com/rolker/unh_echoboats_project11/issues/76) — *BizzyBoat hydro payload integration — M3, SBG, SVS on mercat*
+    (software bring-up, NTRIP strategy, calibration planning; lists mercat NTP as blocker)
+  - [#77](https://github.com/rolker/unh_echoboats_project11/issues/77) — *BizzyBoat hydro payload — physical install, offsets, URDF, SVG diagram*
+    (extends `bizzyboat_reference_geometry.md`, adds `bizzyboat_offsets.svg`, updates URDF)
+- Peer reference: [rolker/marine_tools#1](https://github.com/rolker/marine_tools/issues/1) (QINSy → ROS bridge)
+- [rolker/marine_tools#2](https://github.com/rolker/marine_tools/issues/2) (direct M3 ROS driver) deferred pending evaluation of marine_tools#1
+- AML winch sound speed profiler: deferred to a later issue
+- Initialized detailed install log at
+  [`bizzyboat_project11/docs/hydro_payload_install_log.md`](../../bizzyboat_project11/docs/hydro_payload_install_log.md) —
+  hardware inventory, photo index, measurement log, and manual-cross-reference TODOs
+- First measurement recorded: **SBG survey GPS antennas 2.05 m apart**
+  (wider than the Cube's 1.67 m baseline; SBG uses its own antennas at the
+  existing EchoBoat survey antenna positions)
+- Summary entries for hydro payload work will be added here as sessions
+  progress; day-to-day detail lives in the dedicated install log
+
+**Housekeeping**:
+- PR [#75](https://github.com/rolker/unh_echoboats_project11/pull/75) merged —
+  earlier 2026-04-21 deployment log updates now on jazzy
