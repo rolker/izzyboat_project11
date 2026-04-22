@@ -23,10 +23,10 @@ Measurements and observations extracted from them are recorded here.
 |---|---|---|---|---|---|
 | Kongsberg M3 sonar head | M3 | TBD | Ethernet (direct to mercat, isolated) | n/a | Installed |
 | Kongsberg M3 topside unit | TBD | TBD | Ethernet | n/a | Installed |
-| SBG GPS/IMU | Ellipse-D (suspected — dual-antenna INS) | TBD (read via SBG software) | Serial | TBD | Installed |
+| SBG GPS/IMU | Ellipse-D-G4A2-B1 (dual-antenna INS) | 000034256 | Serial, 115200 baud | mercat COM4 | Installed + confirmed via SBG software |
 | SBG GNSS antenna (fwd) | Trimble GNSS/MSK (exact variant TBD) | TBD | SMA coax to SBG | n/a | Installed |
 | SBG GNSS antenna (aft) | Trimble GNSS/MSK (exact variant TBD) | TBD | SMA coax to SBG | n/a | Installed |
-| Sound speed sensor | TBD (brand), 6000 m depth rating | SN 11357 | Serial | TBD | Installed, factory mount location |
+| Sound speed sensor | AML, 6000 m depth rating | SN 11357 | Serial, 9600 baud | mercat COM3 | Installed, factory mount location |
 
 **Related existing hardware (for reference, not part of this work):**
 - Cube FCU dual-antenna system: **CUAV C-RTK 2HP**, antennas at x = ±0.835 m (baseline 1.67 m). Already in `bizzyboat_reference_geometry.md`. Confirmed 2026-04-22 that these are separate from the SBG's Trimble pucks, though all four antennas share the same center rail.
@@ -127,12 +127,20 @@ Forward-Left-Up). The 180° roll reconciles the two.
   **or** configure it in SBG firmware "install orientation"
   settings. URDF tf is the ROS-idiomatic choice.
 
-**Remaining SBG unknowns** (see "To refine from vendor manuals" below):
-- Exact model — confirm via SBG software (probably Ellipse-D)
-- IMU sensing-element offset from case exterior reference
-- Case physical dimensions (length × width × height) — needed to
-  place the IMU body frame origin relative to the measured case back face
+**SBG model confirmed 2026-04-22 via SBG software on mercat**:
+- Model: **Ellipse-D-G4A2-B1** (dual-antenna INS)
+- Serial number: **000034256**
+- Connection: mercat **COM4** @ **115200 baud**
+
+**Remaining SBG unknowns**:
+- IMU sensing-element offset from case exterior reference (from vendor
+  datasheet — now that we have model + serial we can look this up)
+- Case physical dimensions per Ellipse-D datasheet (approx 46 × 45 × 48 mm
+  from recollection; confirm) — needed to place IMU body frame origin
+  relative to the measured case back face at x = -0.60
 - y-position independent verification (centerline assumption)
+- ANT1 / ANT2 wiring (which Trimble feeds SBG's primary antenna input)
+  — trace cables on the boat next session
 
 #### M3 sonar — install geometry
 
@@ -291,10 +299,14 @@ bottom (-12.3). Physically consistent with the SVS body being mostly
 *inside* the hull, with only the sensing tip protruding through the
 factory cavity.
 
+**SVS brand confirmed 2026-04-22 via mercat**: **AML**, mercat **COM3** @
+**9600 baud**. SN 11357, 6000 m depth rating (from probe markings). Exact
+AML model still TBD — resolve from stream format and/or cross-reference
+the serial number with AML's product lookup.
+
 **Remaining SVS unknowns**:
-- Brand / model (6000 m + SN 11357 is strong, but no vendor label
-  visible in photo) — resolve via serial stream when mercat is powered,
-  or via a sticker we haven't photographed yet
+- Exact AML model (Smart·SV vs. Micro·SV vs. other; serial + depth
+  rating should pin it)
 - x derivation uses an estimated M3 housing diameter (~15 cm); refine
   once the M3 datasheet is consulted
 - All z values still inherit the rail-top z = 0.89 m [EST] anchor
@@ -347,10 +359,11 @@ worth an update in `bizzyboat_reference_geometry.md` (scope of #77).
 
 ## To refine from vendor manuals
 
-- [ ] SBG case physical dimensions (length × width × height) — needed to
-  compute IMU body frame origin relative to the measured back-face at x=-0.60
-- [ ] SBG IMU sensing-element offset from case exterior reference (per
-  model datasheet; confirm model first)
+- [ ] SBG Ellipse-D case physical dimensions — verify 46 × 45 × 48 mm
+  from the Ellipse-D datasheet
+- [ ] SBG Ellipse-D IMU sensing-element offset from case exterior reference
+  — look up in the Ellipse-D datasheet now that the model is known
+  (Ellipse-D-G4A2-B1)
 - [ ] Trimble GNSS/MSK antenna — identify exact model (part number) to
   look up phase-center offset vs. mount-base reference
 - [ ] Confirm SBG ANT1 / ANT2 assignment (which Trimble is primary)
@@ -367,9 +380,15 @@ worth an update in `bizzyboat_reference_geometry.md` (scope of #77).
 
 ## Open questions / investigations
 
-- SVS model — pending verification from serial stream (suspected AML)
+- SVS — AML brand confirmed 2026-04-22 via mercat COM3 @9600; exact AML
+  model still TBD
 - NTRIP path for SBG — independent MACORS client, shared corrections from
   Cube chain, or routed via mercat? Tracked in
   [#76](https://github.com/rolker/unh_echoboats_project11/issues/76)
-- mercat NTP — still not configured; blocking accurate timestamps for
-  QINSy logging and sensor fusion
+- mercat NTP — **time server unreachable** as of 2026-04-22 bring-up.
+  Investigate: is mercat pointing at an external server blocked by the
+  boat network, or does it need to be pointed at the internal TM2000B
+  (192.168.20.123) or the boat router's ntpd? Blocks accurate timestamps
+  for QINSy logging and sensor fusion.
+- SBG ANT1 / ANT2 wiring — which Trimble feeds the primary input; trace
+  cables next session

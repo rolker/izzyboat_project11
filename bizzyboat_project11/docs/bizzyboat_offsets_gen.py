@@ -571,7 +571,7 @@ def legend():
                       **{'font-size': '10', 'fill': '#333'})); y += 18
     notes = {
         'base_link':   'hull floor, center screw',
-        'SBG':         'Ellipse-D susp.; vessel→SBG rpy=(π,0,0)',
+        'SBG':         'Ellipse-D-G4A2-B1 SN 000034256; COM4 @115200; rpy=(π,0,0)',
         'Trimble fwd': 'GNSS/MSK puck on 2 cm stud (SBG input)',
         'Trimble aft': 'GNSS/MSK puck on 2 cm stud (SBG input)',
         'CUAV fwd':    'C-RTK 2HP puck on 7.5 cm holder (Cube)',
@@ -581,7 +581,7 @@ def legend():
         'AutoNav':     'enclosure; Cube FCU + IMU inside',
         'M3':          'Kongsberg M3; ~15×15 cm',
         'Fin':         'factory Fairing Fin; bottom z=−12.3',
-        'SVS':         '6000 m rated, SN 11357; y=+25 port',
+        'SVS':         'AML 6000 m, SN 11357; COM3 @9600; y=+25 port',
     }
     for name, x, yy, z, color, ang in SENSORS:
         parts.append(circ(6, y - 3, 3.5, fill=color, stroke='black',

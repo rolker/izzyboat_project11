@@ -243,7 +243,7 @@
   <text x="18" y="47" font-size="8.5" fill="#777">hull floor, center screw</text>
   <circle cx="6" cy="56" r="3.5" fill="#8a0000" stroke="black" stroke-width="0.5"/>
   <text x="18" y="59" font-size="9.5" fill="#222" font-weight="500">SBG (-60.0, +0.0, +2.5)</text>
-  <text x="18" y="70" font-size="8.5" fill="#777">Ellipse-D susp.; vessel→SBG rpy=(π,0,0)</text>
+  <text x="18" y="70" font-size="8.5" fill="#777">Ellipse-D-G4A2-B1 SN 000034256; COM4 @115200; rpy=(π,0,0)</text>
   <circle cx="6" cy="79" r="3.5" fill="#d4a018" stroke="black" stroke-width="0.5"/>
   <text x="18" y="82" font-size="9.5" fill="#222" font-weight="500">Trimble fwd (+99.0, +0.0, +91.0)</text>
   <text x="18" y="93" font-size="8.5" fill="#777">GNSS/MSK puck on 2 cm stud (SBG input)</text>
@@ -273,7 +273,7 @@
   <text x="18" y="277" font-size="8.5" fill="#777">factory Fairing Fin; bottom z=−12.3</text>
   <circle cx="6" cy="286" r="3.5" fill="#bd00bd" stroke="black" stroke-width="0.5"/>
   <text x="18" y="289" font-size="9.5" fill="#222" font-weight="500">SVS (-45.0, +25.0, -5.5)</text>
-  <text x="18" y="300" font-size="8.5" fill="#777">6000 m rated, SN 11357; y=+25 port</text>
+  <text x="18" y="300" font-size="8.5" fill="#777">AML 6000 m, SN 11357; COM3 @9600; y=+25 port</text>
   <text x="0" y="318" font-size="9" fill="#777">Rail top z=89 cm [EST] — z derivations inherit</text>
   <text x="0" y="330" font-size="9" fill="#777">Boat pitch on cart: 1.39° nose-down (transient)</text>
   <text x="0" y="342" font-size="9" fill="#777">Hull / mast outlines stylized for layout</text>
