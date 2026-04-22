@@ -1,0 +1,282 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1396.25 1123.5"
+     width="1396.25" height="1123.5" font-family="sans-serif">
+<rect width="1396.25" height="1123.5" fill="white"/>
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="5" refY="5"
+          markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 Z" fill="#222"/>
+  </marker>
+  <marker id="oak_arr" viewBox="0 0 10 10" refX="8" refY="5"
+          markerWidth="4" markerHeight="4" orient="auto">
+    <path d="M 0 0 L 10 5 L 0 10 Z" fill="#0aa"/>
+  </marker>
+</defs>
+<rect x="2" y="2" width="1392.25" height="1119.5" fill="none" stroke="#333" stroke-width="1"/>
+<text x="30" y="32" font-size="16" font-weight="bold" fill="#111">BizzyBoat hydro payload — offsets preview (2026-04-22)</text>
+<text x="30" y="50" font-size="10" fill="#555">All positions in cm relative to base_link (hull-floor center screw). Shapes to approximate scale.</text>
+<g transform="translate(30, 76)">
+  <rect x="37.5" y="100.0" width="600.0" height="225.0" fill="#fafcfd" stroke="#333" stroke-width="1" rx="20" ry="20"/>
+  <line x1="37.5" y1="212.5" x2="637.5" y2="212.5" stroke="#aaa" stroke-width="0.6" stroke-dasharray="6,3,1,3"/>
+  <line x1="75.0" y1="212.5" x2="600.0" y2="212.5" stroke="#bbb" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <text x="645.5" y="216.5" font-size="10" fill="#777">+x bow</text>
+  <text x="29.5" y="216.5" font-size="10" fill="#777" text-anchor="end">−x stern</text>
+  <text x="337.5" y="92.0" font-size="10" fill="#777" text-anchor="middle">+y port</text>
+  <text x="337.5" y="345.0" font-size="10" fill="#777" text-anchor="middle">−y stbd</text>
+  <circle cx="415.0" cy="212.5" r="4" fill="#aaa" stroke="#666" stroke-width="0.6"/>
+  <text x="422.0" y="234.5" font-size="8.5" fill="#888" font-style="italic">mast</text>
+  <circle cx="585.0" cy="212.5" r="1.5" fill="#999" stroke="#555" stroke-width="0.4"/>
+  <circle cx="71.25" cy="212.5" r="1.5" fill="#999" stroke="#555" stroke-width="0.4"/>
+  <rect x="538.75" y="205.0" width="15.0" height="15.0" fill="white" stroke="#666" stroke-width="0.5"/>
+  <rect x="121.25" y="205.0" width="15.0" height="15.0" fill="white" stroke="#666" stroke-width="0.5"/>
+  <line x1="330.5" y1="212.5" x2="344.5" y2="212.5" stroke="#e00000" stroke-width="1.2"/>
+  <line x1="337.5" y1="205.5" x2="337.5" y2="219.5" stroke="#e00000" stroke-width="1.2"/>
+  <circle cx="337.5" cy="212.5" r="2.2" fill="#e00000"/>
+  <line x1="337.5" y1="212.5" x2="345.5" y2="226.35640646055103" stroke="#555" stroke-width="0.5"/>
+  <text x="348.5" y="230.35640646055103" font-size="10" fill="#111" text-anchor="start" font-weight="500">base_link</text>
+  <rect x="187.5" y="206.25" width="12.5" height="12.5" fill="#8a0000" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="187.5" y1="212.5" x2="148.52885682970026" y2="190.0" stroke="#555" stroke-width="0.5"/>
+  <text x="145.52885682970026" y="194.0" font-size="10" fill="#111" text-anchor="end" font-weight="500">SBG</text>
+  <circle cx="585.0" cy="212.5" r="17.5" fill="#d4a018" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="585.0" y1="212.5" x2="596.8333113287396" y2="187.1233819629738" stroke="#555" stroke-width="0.5"/>
+  <text x="599.8333113287396" y="191.1233819629738" font-size="10" fill="#111" text-anchor="start" font-weight="500">Trimble fwd</text>
+  <circle cx="71.25" cy="212.5" r="17.5" fill="#d4a018" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="71.25" y1="212.5" x2="59.41668867126042" y2="187.1233819629738" stroke="#555" stroke-width="0.5"/>
+  <text x="56.41668867126042" y="191.1233819629738" font-size="10" fill="#111" text-anchor="end" font-weight="500">Trimble aft</text>
+  <circle cx="546.25" cy="212.5" r="3.125" fill="#303030" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="546.25" y1="212.5" x2="560.3913274131039" y2="195.64702225138248" stroke="#555" stroke-width="0.5"/>
+  <text x="563.3913274131039" y="199.64702225138248" font-size="10" fill="#111" text-anchor="start" font-weight="500">CUAV fwd</text>
+  <circle cx="128.75" cy="212.5" r="3.125" fill="#303030" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="128.75" y1="212.5" x2="114.60867258689613" y2="195.64702225138248" stroke="#555" stroke-width="0.5"/>
+  <text x="111.60867258689613" y="199.64702225138248" font-size="10" fill="#111" text-anchor="end" font-weight="500">CUAV aft</text>
+  <circle cx="415.0" cy="212.5" r="7.5" fill="#0aa" stroke="black" stroke-width="0.6"/>
+  <line x1="415.0" y1="212.5" x2="431.5" y2="212.5" stroke="#0aa" stroke-width="1.4" marker-end="url(#oak_arr)"/>
+  <line x1="415.0" y1="212.5" x2="398.5" y2="212.5" stroke="#0aa" stroke-width="1.4" marker-end="url(#oak_arr)"/>
+  <line x1="415.0" y1="212.5" x2="415.0" y2="196.0" stroke="#0aa" stroke-width="1.4" marker-end="url(#oak_arr)"/>
+  <line x1="415.0" y1="212.5" x2="415.0" y2="229.0" stroke="#0aa" stroke-width="1.4" marker-end="url(#oak_arr)"/>
+  <line x1="415.0" y1="212.5" x2="420.55674168534176" y2="180.98615190360934" stroke="#555" stroke-width="0.5"/>
+  <text x="423.55674168534176" y="184.98615190360934" font-size="10" fill="#111" text-anchor="start" font-weight="500">OAK×4</text>
+  <rect x="580.0" y="207.5" width="20.0" height="10.0" fill="#2a9df4" stroke="black" stroke-width="0.6" fill-opacity="0.8" rx="4" ry="4"/>
+  <line x1="600.0" y1="212.5" x2="616.3830408857798" y2="201.0284712729791" stroke="#555" stroke-width="0.5"/>
+  <text x="619.3830408857798" y="205.0284712729791" font-size="10" fill="#111" text-anchor="start" font-weight="500">USB cam</text>
+  <rect x="61.25" y="177.5" width="57.5" height="70.0" fill="#996633" stroke="black" stroke-width="0.8" fill-opacity="0.6"/>
+  <line x1="90.0" y1="212.5" x2="67.05694254595815" y2="179.73391822844033" stroke="#555" stroke-width="0.5"/>
+  <text x="64.05694254595815" y="183.73391822844033" font-size="10" fill="#111" text-anchor="end" font-weight="500">AutoNav</text>
+  <circle cx="280.0" cy="212.5" r="18.75" fill="#1e66c8" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="280.0" y1="212.5" x2="276.51377029009365" y2="252.3477879236698" stroke="#555" stroke-width="0.5"/>
+  <text x="273.51377029009365" y="256.3477879236698" font-size="10" fill="#111" text-anchor="end" font-weight="500">M3</text>
+  <rect x="340.0" y="208.75" width="20.0" height="7.5" fill="#444" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="350.0" y1="212.5" x2="385.35331853275966" y2="254.63244437154378" stroke="#555" stroke-width="0.5"/>
+  <text x="388.35331853275966" y="258.6324443715438" font-size="10" fill="#111" text-anchor="start" font-weight="500">Fin</text>
+  <rect x="221.25" y="150.0" width="7.5" height="30.0" fill="#bd00bd" stroke="black" stroke-width="0.6" fill-opacity="0.85" rx="2" ry="2"/>
+  <circle cx="225.0" cy="150.0" r="3.0" fill="white" stroke="#bd00bd" stroke-width="0.8"/>
+  <line x1="225.0" y1="180.0" x2="225.0" y2="189.75" stroke="#bd00bd" stroke-width="1" marker-end="url(#oak_arr)"/>
+  <line x1="225.0" y1="150.0" x2="221.51377029009367" y2="110.15221207633019" stroke="#555" stroke-width="0.5"/>
+  <text x="218.51377029009367" y="114.15221207633019" font-size="10" fill="#111" text-anchor="end" font-weight="500">SVS</text>
+  <circle cx="90.0" cy="212.5" r="2" fill="#ff6600"/>
+  <text x="94.0" y="224.5" font-size="8" fill="#ff6600" font-style="italic">Cube</text>
+  <line x1="71.25" y1="212.5" x2="71.25" y2="72.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="585.0" y1="212.5" x2="585.0" y2="72.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="71.25" y1="78.0" x2="585.0" y2="78.0" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="328.125" y="75.0" font-size="10" fill="#111" text-anchor="middle" font-weight="500">205.5 cm (Trimble baseline)</text>
+  <line x1="128.75" y1="212.5" x2="128.75" y2="349.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="546.25" y1="212.5" x2="546.25" y2="349.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="128.75" y1="355.0" x2="546.25" y2="355.0" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="337.5" y="352.0" font-size="10" fill="#111" text-anchor="middle" font-weight="500">167 cm (CUAV baseline)</text>
+  <line x1="225.0" y1="212.5" x2="196.0" y2="212.5" stroke="#444" stroke-width="0.55"/>
+  <line x1="225.0" y1="150.0" x2="196.0" y2="150.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="190.0" y1="212.5" x2="190.0" y2="150.0" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="194.0" y="184.25" font-size="10" fill="#111" font-weight="500">25 cm (SVS port)</text>
+  <text x="5" y="-8" font-size="12" font-weight="bold" fill="#222">TOP VIEW (XY)</text>
+</g>
+<g transform="translate(30, 531.0)">
+  <path d="M 637.5,425.0 L 612.5,437.5 L 62.5,437.5 L 37.5,425.0 Z" fill="#fafcfd" stroke="#333" stroke-width="1"/>
+  <line x1="37.5" y1="425.0" x2="637.5" y2="425.0" stroke="#333" stroke-width="1"/>
+  <line x1="75.0" y1="202.5" x2="600.0" y2="202.5" stroke="#bbb" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+  <line x1="87.5" y1="425.0" x2="87.5" y2="232.5" stroke="#bbb" stroke-width="2"/>
+  <line x1="587.5" y1="425.0" x2="587.5" y2="232.5" stroke="#bbb" stroke-width="2"/>
+  <line x1="87.5" y1="232.5" x2="587.5" y2="232.5" stroke="#bbb" stroke-width="2"/>
+  <line x1="415.0" y1="202.5" x2="415.0" y2="70.0" stroke="#888" stroke-width="2"/>
+  <line x1="397.5" y1="72.5" x2="432.5" y2="72.5" stroke="#888" stroke-width="1.5"/>
+  <text x="425.0" y="137.5" font-size="8.5" fill="#888" font-style="italic">mast (factory WiFi ext.)</text>
+  <line x1="0.0" y1="425.0" x2="675.0" y2="425.0" stroke="#888" stroke-width="0.6" stroke-dasharray="6,3,1,3"/>
+  <line x1="0.0" y1="437.5" x2="675.0" y2="437.5" stroke="#ccc" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="4.0" y="435.5" font-size="9" fill="#888">hull bottom ≈ z=-5 (approx)</text>
+  <text x="4.0" y="423.0" font-size="9" fill="#888">z=0 hull floor</text>
+  <text x="4.0" y="200.5" font-size="9" fill="#888">rail top z=89 [EST]</text>
+  <text x="645.5" y="429.0" font-size="10" fill="#777">+x</text>
+  <text x="100.0" y="68.0" font-size="10" fill="#777">+z</text>
+  <line x1="585.0" y1="202.5" x2="585.0" y2="197.5" stroke="#555" stroke-width="1.2"/>
+  <line x1="71.25" y1="202.5" x2="71.25" y2="197.5" stroke="#555" stroke-width="1.2"/>
+  <rect x="538.75" y="183.75" width="15.0" height="18.75" fill="white" stroke="#666" stroke-width="0.5"/>
+  <rect x="121.25" y="183.75" width="15.0" height="18.75" fill="white" stroke="#666" stroke-width="0.5"/>
+  <line x1="330.5" y1="425.0" x2="344.5" y2="425.0" stroke="#e00000" stroke-width="1.2"/>
+  <line x1="337.5" y1="418.0" x2="337.5" y2="432.0" stroke="#e00000" stroke-width="1.2"/>
+  <circle cx="337.5" cy="425.0" r="2.2" fill="#e00000"/>
+  <line x1="337.5" y1="425.0" x2="345.5" y2="438.856406460551" stroke="#555" stroke-width="0.5"/>
+  <text x="348.5" y="442.856406460551" font-size="10" fill="#111" text-anchor="start" font-weight="500">base_link</text>
+  <rect x="187.5" y="406.25" width="12.5" height="12.5" fill="#8a0000" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="187.5" y1="418.75" x2="148.52885682970026" y2="396.25" stroke="#555" stroke-width="0.5"/>
+  <text x="145.52885682970026" y="400.25" font-size="10" fill="#111" text-anchor="end" font-weight="500">SBG</text>
+  <rect x="567.5" y="180.0" width="35.0" height="17.5" fill="#d4a018" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="585.0" y1="197.5" x2="596.8333113287396" y2="172.1233819629738" stroke="#555" stroke-width="0.5"/>
+  <text x="599.8333113287396" y="176.1233819629738" font-size="10" fill="#111" text-anchor="start" font-weight="500">Trimble fwd</text>
+  <rect x="53.75" y="180.0" width="35.0" height="17.5" fill="#d4a018" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="71.25" y1="197.5" x2="59.41668867126042" y2="172.1233819629738" stroke="#555" stroke-width="0.5"/>
+  <text x="56.41668867126042" y="176.1233819629738" font-size="10" fill="#111" text-anchor="end" font-weight="500">Trimble aft</text>
+  <rect x="543.125" y="172.5" width="6.25" height="11.25" fill="#303030" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="546.25" y1="183.75" x2="560.3913274131039" y2="166.89702225138248" stroke="#555" stroke-width="0.5"/>
+  <text x="563.3913274131039" y="170.89702225138248" font-size="10" fill="#111" text-anchor="start" font-weight="500">CUAV fwd</text>
+  <rect x="125.625" y="172.5" width="6.25" height="11.25" fill="#303030" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="128.75" y1="183.75" x2="114.60867258689613" y2="166.89702225138248" stroke="#555" stroke-width="0.5"/>
+  <text x="111.60867258689613" y="170.89702225138248" font-size="10" fill="#111" text-anchor="end" font-weight="500">CUAV aft</text>
+  <circle cx="415.0" cy="72.5" r="7.5" fill="#0aa" stroke="black" stroke-width="0.6"/>
+  <line x1="415.0" y1="72.5" x2="420.55674168534176" y2="40.98615190360934" stroke="#555" stroke-width="0.5"/>
+  <text x="423.55674168534176" y="44.98615190360934" font-size="10" fill="#111" text-anchor="start" font-weight="500">OAK×4</text>
+  <rect x="580.0" y="197.5" width="20.0" height="10.0" fill="#2a9df4" stroke="black" stroke-width="0.6" fill-opacity="0.8" rx="4" ry="4"/>
+  <line x1="600.0" y1="202.5" x2="616.3830408857798" y2="191.0284712729791" stroke="#555" stroke-width="0.5"/>
+  <text x="619.3830408857798" y="195.0284712729791" font-size="10" fill="#111" text-anchor="start" font-weight="500">USB cam</text>
+  <rect x="61.25" y="392.5" width="57.5" height="35.0" fill="#996633" stroke="black" stroke-width="0.8" fill-opacity="0.6"/>
+  <line x1="90.0" y1="410.0" x2="67.05694254595815" y2="377.2339182284403" stroke="#555" stroke-width="0.5"/>
+  <text x="64.05694254595815" y="381.2339182284403" font-size="10" fill="#111" text-anchor="end" font-weight="500">AutoNav</text>
+  <rect x="261.25" y="423.75" width="37.5" height="37.5" fill="#1e66c8" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="280.0" y1="461.25" x2="276.51377029009365" y2="501.09778792366984" stroke="#555" stroke-width="0.5"/>
+  <text x="273.51377029009365" y="505.09778792366984" font-size="10" fill="#111" text-anchor="end" font-weight="500">M3</text>
+  <rect x="340.0" y="443.25" width="20.0" height="12.5" fill="#444" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="350.0" y1="455.75" x2="385.35331853275966" y2="497.8824443715438" stroke="#555" stroke-width="0.5"/>
+  <text x="388.35331853275966" y="501.8824443715438" font-size="10" fill="#111" text-anchor="start" font-weight="500">Fin</text>
+  <circle cx="225.0" cy="438.75" r="3.75" fill="#bd00bd" stroke="black" stroke-width="0.6" fill-opacity="0.85"/>
+  <line x1="225.0" y1="438.75" x2="221.51377029009367" y2="398.90221207633016" stroke="#555" stroke-width="0.5"/>
+  <text x="218.51377029009367" y="402.90221207633016" font-size="10" fill="#111" text-anchor="end" font-weight="500">SVS</text>
+  <circle cx="90.0" cy="412.5" r="2.5" fill="#ff6600"/>
+  <text x="94.0" y="415.5" font-size="8" fill="#ff6600" font-style="italic">Cube</text>
+  <line x1="600.0" y1="425.0" x2="701.0" y2="425.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="600.0" y1="202.5" x2="701.0" y2="202.5" stroke="#444" stroke-width="0.55"/>
+  <line x1="695.0" y1="425.0" x2="695.0" y2="202.5" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="699.0" y="316.75" font-size="10" fill="#111" font-weight="500">89 cm</text>
+  <line x1="415.0" y1="425.0" x2="751.0" y2="425.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="415.0" y1="70.0" x2="751.0" y2="70.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="745.0" y1="425.0" x2="745.0" y2="70.0" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="749.0" y="250.5" font-size="10" fill="#111" font-weight="500">142 cm</text>
+  <text x="5" y="-8" font-size="12" font-weight="bold" fill="#222">SIDE VIEW (XZ) — port side</text>
+</g>
+<g transform="translate(805.0, 76)">
+  <path d="M 531.25,125.0 L 531.25,156.25 L 0.0,156.25 L 0.0,125.0 Z" fill="#fafcfd" stroke="#333" stroke-width="1"/>
+  <line x1="0.0" y1="125.0" x2="531.25" y2="125.0" stroke="#888" stroke-width="0.6" stroke-dasharray="6,3,1,3"/>
+  <line x1="0.0" y1="406.25" x2="0.0" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="0.0" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-60</text>
+  <line x1="31.25" y1="406.25" x2="31.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="62.5" y1="406.25" x2="62.5" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="62.5" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-50</text>
+  <line x1="93.75" y1="406.25" x2="93.75" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="125.0" y1="406.25" x2="125.0" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="125.0" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-40</text>
+  <line x1="156.25" y1="406.25" x2="156.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="187.5" y1="406.25" x2="187.5" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="187.5" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-30</text>
+  <line x1="218.75" y1="406.25" x2="218.75" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="250.0" y1="406.25" x2="250.0" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="250.0" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-20</text>
+  <line x1="281.25" y1="406.25" x2="281.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="312.5" y1="406.25" x2="312.5" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="312.5" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">-10</text>
+  <line x1="343.75" y1="406.25" x2="343.75" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="375.0" y1="406.25" x2="375.0" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="375.0" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">0</text>
+  <line x1="406.25" y1="406.25" x2="406.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="437.5" y1="406.25" x2="437.5" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="437.5" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">10</text>
+  <line x1="468.75" y1="406.25" x2="468.75" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="500.0" y1="406.25" x2="500.0" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="500.0" y="418.25" font-size="7.5" fill="#aaa" text-anchor="middle">20</text>
+  <line x1="531.25" y1="406.25" x2="531.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="406.25" x2="531.25" y2="406.25" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="375.0" x2="531.25" y2="375.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="378.0" font-size="7.5" fill="#aaa" text-anchor="end">-40</text>
+  <line x1="0.0" y1="343.75" x2="531.25" y2="343.75" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="312.5" x2="531.25" y2="312.5" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="315.5" font-size="7.5" fill="#aaa" text-anchor="end">-30</text>
+  <line x1="0.0" y1="281.25" x2="531.25" y2="281.25" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="250.0" x2="531.25" y2="250.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="253.0" font-size="7.5" fill="#aaa" text-anchor="end">-20</text>
+  <line x1="0.0" y1="218.75" x2="531.25" y2="218.75" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="187.5" x2="531.25" y2="187.5" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="190.5" font-size="7.5" fill="#aaa" text-anchor="end">-10</text>
+  <line x1="0.0" y1="156.25" x2="531.25" y2="156.25" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="125.0" x2="531.25" y2="125.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="128.0" font-size="7.5" fill="#aaa" text-anchor="end">0</text>
+  <line x1="0.0" y1="93.75" x2="531.25" y2="93.75" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="62.5" x2="531.25" y2="62.5" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="65.5" font-size="7.5" fill="#aaa" text-anchor="end">10</text>
+  <line x1="0.0" y1="31.25" x2="531.25" y2="31.25" stroke="#eee" stroke-width="0.35"/>
+  <line x1="0.0" y1="0.0" x2="531.25" y2="0.0" stroke="#eee" stroke-width="0.35"/>
+  <text x="-3.0" y="3.0" font-size="7.5" fill="#aaa" text-anchor="end">20</text>
+  <line x1="368.0" y1="125.0" x2="382.0" y2="125.0" stroke="#e00000" stroke-width="1.2"/>
+  <line x1="375.0" y1="118.0" x2="375.0" y2="132.0" stroke="#e00000" stroke-width="1.2"/>
+  <circle cx="375.0" cy="125.0" r="2.2" fill="#e00000"/>
+  <line x1="375.0" y1="125.0" x2="393.0" y2="115.0" stroke="#555" stroke-width="0.5"/>
+  <text x="396.0" y="118.0" font-size="10" fill="#111" font-weight="500" text-anchor="start">base_link (+0,+0.0)</text>
+  <rect x="0.0" y="78.125" width="31.25" height="31.25" fill="#8a0000" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="0.0" y1="109.375" x2="25.0" y2="89.375" stroke="#555" stroke-width="0.5"/>
+  <text x="28.0" y="92.375" font-size="10" fill="#111" font-weight="500" text-anchor="start">SBG (-60,+2.5)</text>
+  <rect x="184.375" y="121.875" width="93.75" height="93.75" fill="#1e66c8" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="231.25" y1="215.625" x2="259.25" y2="240.625" stroke="#555" stroke-width="0.5"/>
+  <text x="262.25" y="243.625" font-size="10" fill="#111" font-weight="500" text-anchor="start">M3 (-23,-14.5)</text>
+  <rect x="381.25" y="170.625" width="50.0" height="31.25" fill="#444" stroke="black" stroke-width="0.6" fill-opacity="0.8"/>
+  <line x1="406.25" y1="201.875" x2="428.25" y2="181.875" stroke="#555" stroke-width="0.5"/>
+  <text x="431.25" y="184.875" font-size="10" fill="#111" font-weight="500" text-anchor="start">Fin (+5,-12.3)</text>
+  <circle cx="93.75" cy="159.375" r="9.375" fill="#bd00bd" stroke="black" stroke-width="0.6" fill-opacity="0.85"/>
+  <text x="96.75" y="145.375" font-size="8.5" fill="#bd00bd" font-style="italic">y=+25 port</text>
+  <line x1="93.75" y1="159.375" x2="68.75" y2="139.375" stroke="#555" stroke-width="0.5"/>
+  <text x="65.75" y="142.375" font-size="10" fill="#111" font-weight="500" text-anchor="end">SVS (-45,-5.5)</text>
+  <line x1="231.25" y1="215.625" x2="231.25" y2="369.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="406.25" y1="201.875" x2="406.25" y2="369.0" stroke="#444" stroke-width="0.55"/>
+  <line x1="231.25" y1="375.0" x2="406.25" y2="375.0" stroke="#222" stroke-width="0.9" marker-start="url(#arr)" marker-end="url(#arr)"/>
+  <text x="318.75" y="372.0" font-size="10" fill="#111" text-anchor="middle" font-weight="500">28 cm (M3 ↔ Fairing Fin)</text>
+  <text x="5" y="-8" font-size="12" font-weight="bold" fill="#222">DETAIL — under-hull cluster (×2.5)</text>
+</g>
+<g transform="translate(805.0, 512.25)">
+  <text x="0" y="0" font-size="13" font-weight="bold" fill="#111">Legend / status</text>
+  <text x="0" y="18" font-size="10" fill="#333">cm, base_link at origin. REP-103: +x fwd, +y port, +z up.</text>
+  <circle cx="6" cy="33" r="3.5" fill="#e00000" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="36" font-size="9.5" fill="#222" font-weight="500">base_link (+0.0, +0.0, +0.0)</text>
+  <text x="18" y="47" font-size="8.5" fill="#777">hull floor, center screw</text>
+  <circle cx="6" cy="56" r="3.5" fill="#8a0000" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="59" font-size="9.5" fill="#222" font-weight="500">SBG (-60.0, +0.0, +2.5)</text>
+  <text x="18" y="70" font-size="8.5" fill="#777">Ellipse-D susp.; vessel→SBG rpy=(π,0,0)</text>
+  <circle cx="6" cy="79" r="3.5" fill="#d4a018" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="82" font-size="9.5" fill="#222" font-weight="500">Trimble fwd (+99.0, +0.0, +91.0)</text>
+  <text x="18" y="93" font-size="8.5" fill="#777">GNSS/MSK puck on 2 cm stud (SBG input)</text>
+  <circle cx="6" cy="102" r="3.5" fill="#d4a018" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="105" font-size="9.5" fill="#222" font-weight="500">Trimble aft (-106.5, +0.0, +91.0)</text>
+  <text x="18" y="116" font-size="8.5" fill="#777">GNSS/MSK puck on 2 cm stud (SBG input)</text>
+  <circle cx="6" cy="125" r="3.5" fill="#303030" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="128" font-size="9.5" fill="#222" font-weight="500">CUAV fwd (+83.5, +0.0, +96.5)</text>
+  <text x="18" y="139" font-size="8.5" fill="#777">C-RTK 2HP puck on 7.5 cm holder (Cube)</text>
+  <circle cx="6" cy="148" r="3.5" fill="#303030" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="151" font-size="9.5" fill="#222" font-weight="500">CUAV aft (-83.5, +0.0, +96.5)</text>
+  <text x="18" y="162" font-size="8.5" fill="#777">C-RTK 2HP puck on 7.5 cm holder (Cube)</text>
+  <circle cx="6" cy="171" r="3.5" fill="#0aa" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="174" font-size="9.5" fill="#222" font-weight="500">OAK×4 (+31.0, +0.0, +141.0)</text>
+  <text x="18" y="185" font-size="8.5" fill="#777">fwd/port/stbd/aft, 5° down</text>
+  <circle cx="6" cy="194" r="3.5" fill="#2a9df4" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="197" font-size="9.5" fill="#222" font-weight="500">USB cam (+105.0, +0.0, +89.0)</text>
+  <text x="18" y="208" font-size="8.5" fill="#777">forward bullet cam at rail end</text>
+  <circle cx="6" cy="217" r="3.5" fill="#996633" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="220" font-size="9.5" fill="#222" font-weight="500">AutoNav (-99.0, +0.0, +6.0)</text>
+  <text x="18" y="231" font-size="8.5" fill="#777">enclosure; Cube FCU + IMU inside</text>
+  <circle cx="6" cy="240" r="3.5" fill="#1e66c8" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="243" font-size="9.5" fill="#222" font-weight="500">M3 (-23.0, +0.0, -14.5)</text>
+  <text x="18" y="254" font-size="8.5" fill="#777">Kongsberg M3; ~15×15 cm</text>
+  <circle cx="6" cy="263" r="3.5" fill="#444" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="266" font-size="9.5" fill="#222" font-weight="500">Fin (+5.0, +0.0, -12.3)</text>
+  <text x="18" y="277" font-size="8.5" fill="#777">factory Fairing Fin; bottom z=−12.3</text>
+  <circle cx="6" cy="286" r="3.5" fill="#bd00bd" stroke="black" stroke-width="0.5"/>
+  <text x="18" y="289" font-size="9.5" fill="#222" font-weight="500">SVS (-45.0, +25.0, -5.5)</text>
+  <text x="18" y="300" font-size="8.5" fill="#777">6000 m rated, SN 11357; y=+25 port</text>
+  <text x="0" y="318" font-size="9" fill="#777">Rail top z=89 cm [EST] — z derivations inherit</text>
+  <text x="0" y="330" font-size="9" fill="#777">Boat pitch on cart: 1.39° nose-down (transient)</text>
+  <text x="0" y="342" font-size="9" fill="#777">Hull / mast outlines stylized for layout</text>
+</g>
+<text x="1366.25" y="1105.5" font-size="9" fill="#555" text-anchor="end" font-style="italic">DRAWN: Claude Code Agent · SCALE: varies · UNITS: cm · STATUS: preview</text>
+</svg>
