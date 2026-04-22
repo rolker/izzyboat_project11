@@ -253,6 +253,11 @@
       - /bizzy/mavros/imu/data
       - /bizzy/mavros/state
       - /bizzy/mavros/gps_rtk/send_rtcm
+      # FCU control effort — see what the autopilot is actually commanding
+      # to the thrusters/servos (rc/out) and how hard its internal nav
+      # controller is working to follow cmd_vel (nav_controller_output).
+      - /bizzy/mavros/rc/out
+      - /bizzy/mavros/nav_controller_output
       - /bizzy/odom
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
