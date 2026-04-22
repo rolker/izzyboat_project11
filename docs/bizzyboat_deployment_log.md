@@ -2890,7 +2890,93 @@ speed sensor on COM3 at 9600 baud. SBG Ellipse on COM4 at 921600
 baud, required null modem adapter. Both working. SSH enabled on
 mercat.
 
+**M3 network**: Sonar ships with a preconfigured static IP, not on
+the boat's 192.168.20.0/24 subnet. Connected directly to a spare
+ethernet port on mercat for now (point-to-point) so the M3 application
+can reach it without touching the boat switch or the sonar's factory
+config. Follow-up: reassign the M3 to a compatible address on the
+boat subnet (or give mercat a second interface on the M3's factory
+subnet) and move the cable to the PoE switch so the sonar is
+reachable by gabby, not just mercat.
+
 **14:33 EDT**: Session ended. Boat on trailer.
+
+### Post-session bag analysis (2026-04-21 evening)
+
+**Tide pipeline field validation — chart_datum_node working**:
+Derived observed tide height from TF chain
+`Z(map → map_tide) − Z(map → chart_datum)` and compared against a
+sinusoidal fit to NOAA Portsmouth predictions (low −1.1 ft @ 12:48 UTC,
+high +8.9 ft @ 19:00 UTC). Over the in-water window (13:43 → 14:34 UTC):
+
+- Observed rise: **+1.24 ft**
+- Predicted rise: **+1.36 ft**
+- Per-sample residual: ≤ 0.15 ft
+
+This is the first field cross-check of the chart-datum pipeline
+against an independent tide prediction rather than just confirming
+transforms publish. The S57 tide-offset applied to the costmap is
+accurate enough for planning.
+
+A ~4.70 ft constant offset (observed − predicted) remains after chain
+math and represents GPS-antenna-above-waterline + geoid detail.
+mru_transform still applies zero antenna offset on `raw/fix`
+(the standing item from `project_tide_awareness.md`); that would
+close the gap.
+
+**Current structure — per-survey-line triangulation**:
+Extracted the 6 completed survey-line segments (3 lines in pattern0000,
+3 in pattern0001; line3 aborted at 4 s excluded). For each line, the
+body-lateral component of ground velocity (perpendicular to heading) is
+a clean observation of the current projected on that axis. Fitting a
+single 2-D current vector to all 6 lateral observations by least
+squares:
+
+- **Current = 1.26 kt toward compass 101° (ESE)**
+- Per-line residual ≤ 0.28 kt (most < 0.05 kt — excellent fit).
+- Reciprocal-lane pairs (112°/228°) produce opposite-signed lateral
+  components of matching magnitude, self-consistency check.
+
+This is substantially stronger than the initial cmd_vel-based estimate
+(0.46 kt toward 93°), because the lateral-component estimator doesn't
+assume cmd_vel equals through-water velocity. Implied through-water
+forward speeds from the fit are 1.7–2.7 kt for most lines. Median
+|crab angle| during steady forward drive was 25.5°, symmetric around
+0°, matching the "significant crabbing" description in the earlier
+deployment note.
+
+Caveat: no DVL / speed-through-water sensor on board — all estimates
+are inferred from GPS + IMU + commanded velocity. The per-line lateral
+method is the best we can do without one.
+
+**Cross-check against NOAA current predictions**: Compared the
+triangulated result against the three nearest NOAA current prediction
+stations (queried via CO-OPS metadata + datagetter APIs):
+
+| Station | Dist | Phase in window | Pred. direction | Fit |
+|---|---:|---|---|---|
+| ACT0731 Clark Island, south of | 1.05 km W | late ebb, slack 15:19 UTC | ebb 85° | **good — Δdir 16°, mag consistent** |
+| ACT0726 Salamander Point, N of  | 0.65 km NW | late flood, slack 15:10 UTC | flood 257° | poor — 156° off |
+| ACT0716 Wood Island, NW of      | 0.87 km SE | end ebb, slack 14:58 UTC | ebb 199° | poor — 98° off |
+
+The measurement matches Clark Island (main entrance channel, E–W axis)
+and **not** the geographically closest station (Salamander Point, side
+pocket with a separate current cell, flood WSW). Proximity isn't a
+reliable heuristic for current-station selection at Portsmouth Harbor —
+channel topology is. Sinusoidal decay from Clark Island's max ebb
+(-2.68 kt at 11:28 UTC) toward its 15:19 UTC slack predicts ~1.3–1.6 kt
+at the window midpoint, matching the measured 1.26 kt.
+
+Conclusion: the boat experienced **late-ebb flow exiting Portsmouth
+Harbor at ~1.26 kt**, decaying toward slack. CrabbingPathFollower held
+lines against a real, predicted current — not a controller artifact.
+
+Analysis scripts + CSVs archived in ros2_agent_workspace
+`.agent/scratchpad/`:
+`tide_extract2.py`, `current_extract2.py`, `tide_current_plots.py`,
+`tide_2026-04-21.csv`, `current_2026-04-21.csv`,
+`tide_2026-04-21.png`, `current_timeseries.png`, `current_map.png`.
+
 
 **Session summary**: Successful water test — 3-line survey completed,
 4-line survey completed 3 of 4 (costmap timeout root-caused from bag
@@ -2902,7 +2988,11 @@ speed sensor on mercat. BT retry fix merged
 (rolker/unh_marine_simulation#57).
 
 **TODO for next session**:
-- M3 network integration (DHCP, DNS)
+- Dissect bag data from today's survey tests (beyond the line-3 /
+  line-4 failures already root-caused in this log — more to review)
+- M3 network integration: reassign M3 from factory static IP to boat
+  subnet, move from mercat direct-connect to PoE switch so gabby can
+  reach it
 - M3 acquisition software setup
 - PTP time sync on mercat
 - Test BT retry fix on water (4+ line survey)
