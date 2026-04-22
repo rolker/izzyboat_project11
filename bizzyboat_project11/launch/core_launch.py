@@ -191,6 +191,20 @@ def generate_launch_description():
                             name='map_frame',
                             value=[frame_prefix, 'map']
                         ),
+                        # Eager chart precompute: when TF (map → robot_base_frame)
+                        # first becomes available, queue all charts within
+                        # precompute_radius for std::async processing so the
+                        # costmap layer's first get_datasets call finds them
+                        # already cached or close to ready. Cuts cold-cache
+                        # startup latency. Requires rolker/s57_tools#19.
+                        SetParameter(
+                            name='robot_base_frame',
+                            value=[frame_prefix, 'base_link']
+                        ),
+                        SetParameter(
+                            name='precompute_radius',
+                            value=5000.0
+                        ),
                         IncludeLaunchDescription(
                             PythonLaunchDescriptionSource(
                                 PathJoinSubstitution([
