@@ -73,6 +73,7 @@
             - local_costmap_footprint
             - global_costmap
             - oak_forward
+            - oak_forward_ffmpeg
             - oak_forward_info
             - oak_forward_raw
             - oak_segmentation_forward
@@ -119,6 +120,7 @@
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
               oak_forward:      {source: sensors/cameras/oak_forward/image_raw/compressed, period: 2.0}
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg}
               oak_forward_info: {source: sensors/cameras/oak_forward/camera_info}
               oak_forward_raw:    {source: sensors/cameras/oak_forward/image_raw, period: -1.0}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 0.5}
