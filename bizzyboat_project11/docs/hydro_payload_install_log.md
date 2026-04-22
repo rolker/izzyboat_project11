@@ -261,16 +261,60 @@ From under-hull photo (`2026-04-22_sound_speed_sensor.jpg`):
 |---|---|---|
 | Serial number | 11357 | [MEAS] |
 | Depth rating | 6000 m | [MEAS] |
-| Position (x, y, z) | TBD — factory mount in Fig 2, not yet tape-referenced to base_link | [EST] |
+| Sensing tip x | -0.455 m (15 cm aft of M3 aft edge ≈ -0.305, using ~15 cm M3 dia) | [MEAS] derived |
+| Sensing tip y | +0.25 m (25 cm port of centerline) | [MEAS] |
+| Sensing tip z | -0.055 m (from ground height 0.50 m, with pitch correction) | [MEAS-derived] |
 | Orientation | Vertical, sensing element down | [MEAS] photo |
+
+**SVS position derivation (2026-04-22)**:
+
+User-supplied tape measurements (with boat on cart, pitch 1.39° nose-down):
+- Sensing tip is 25 cm on port side of centerline → y = +0.25 m
+- Sensing tip is 15 cm aft of the back of the sonar → using M3 center
+  at x = -0.23 and estimated 15 cm M3 diameter (aft edge at
+  x ≈ -0.305), SVS x ≈ -0.455 m
+- Ground-to-sensing-tip height: 0.50 m
+
+Derivation of z from ground height:
+- h_ground = h_baselink + z_SVS - 0.02433 · x_SVS
+- 0.50 = 0.544 + z_SVS - 0.02433 · (-0.455)
+- 0.50 = 0.544 + z_SVS + 0.01107
+- **z_SVS = -0.055 m (~5.5 cm below hull floor)**
+
+Sanity note: -5.5 cm is shallower than M3 face (-14.5) and Fairing Fin
+bottom (-12.3). Physically consistent with the SVS body being mostly
+*inside* the hull, with only the sensing tip protruding through the
+factory cavity.
 
 **Remaining SVS unknowns**:
 - Brand / model (6000 m + SN 11357 is strong, but no vendor label
   visible in photo) — resolve via serial stream when mercat is powered,
   or via a sticker we haven't photographed yet
-- x, y, z coordinates relative to base_link — either tape-measure
-  directly (forward of M3? beside M3?), or infer from Fig 2 with
-  pixel-anchored references
+- x derivation uses an estimated M3 housing diameter (~15 cm); refine
+  once the M3 datasheet is consulted
+- All z values still inherit the rail-top z = 0.89 m [EST] anchor
+
+#### Fairing Fin z — ground-referenced measurement
+
+User measured 2026-04-22: bottom of the Fairing Fin is **0.42 m above
+the ground** with the boat on the cart.
+
+At fin x = +0.05, pitch-adjusted:
+- h_ground = h_baselink + z_fin - 0.02433 · x_fin
+- 0.42 = 0.544 + z_fin - 0.02433 · 0.05
+- **z_fin_bottom = -0.123 m (~12.3 cm below hull floor)**
+
+About 2 cm shallower than the M3 transducer face — consistent with a
+hydrodynamic fairing forward of the sonar cavity.
+
+Updated Fairing Fin entry:
+
+| Quantity | Value | Status |
+|---|---|---|
+| Fairing Fin x | +0.05 m | [MEAS] derived (from M3 + 28 cm tape) |
+| Fairing Fin y | 0.00 m | [EST] centerline per manual Fig 2 |
+| Fairing Fin z (bottom) | -0.123 m | [MEAS] derived from ground height |
+| Fairing Fin height | TBD | [EST] assumed ~5 cm for diagram |
 
 ## To refine from vendor manuals
 
