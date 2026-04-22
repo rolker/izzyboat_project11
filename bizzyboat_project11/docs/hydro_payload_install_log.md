@@ -139,8 +139,33 @@ Forward-Left-Up). The 180° roll reconciles the two.
   from recollection; confirm) — needed to place IMU body frame origin
   relative to the measured case back face at x = -0.60
 - y-position independent verification (centerline assumption)
-- ANT1 / ANT2 wiring (which Trimble feeds SBG's primary antenna input)
-  — trace cables on the boat next session
+
+**SBG configuration applied and validated 2026-04-22**:
+- Configured per the lever arms below (assuming ANT1=aft, ANT2=fwd)
+- Heading came out forward-pointing and matches ROS side's FCU
+  heading (from Cube + CUAV dual-antenna). This confirms
+  **ANT1 = aft Trimble, ANT2 = fwd Trimble** (or equivalent symmetric
+  wiring with zero heading offset). No cable swap needed.
+- SBG-reported pitch ≈ −1° while on the cart cross-checks the
+  tape-derived 1.39° nose-down cart pitch within ~0.4° — independent
+  validation of the height/pitch derivations used for all z values.
+
+**Applied SBG configuration (for future reference)**
+
+Values entered into sbgCenter on 2026-04-22. All in SBG's FRD body
+frame (x-forward, y-right, z-down). IMU sensing center estimated at
+geometric center of case; Trimble phase center estimated at base of
+puck. Both estimates can be refined without redoing the config — the
+errors shift IMU position by a few mm and antennas by 5–10 cm in z.
+
+| Field | Value |
+|---|---|
+| IMU alignment (axes) | X forward, Y right, Z down (no rotation from case) |
+| IMU lever arm from vehicle origin | (−0.577, 0.000, −0.029) m |
+| ANT1 (primary, aft) lever arm from IMU | (−0.488, 0.000, −0.881) m |
+| ANT2 (secondary, fwd) lever arm from IMU | (+1.567, 0.000, −0.881) m |
+| Dual-antenna baseline (derived) | 2.055 m (matches tape 2.05 m) |
+| Motion profile | Marine |
 
 #### M3 sonar — install geometry
 
@@ -390,5 +415,6 @@ worth an update in `bizzyboat_reference_geometry.md` (scope of #77).
   boat network, or does it need to be pointed at the internal TM2000B
   (192.168.20.123) or the boat router's ntpd? Blocks accurate timestamps
   for QINSy logging and sensor fusion.
-- SBG ANT1 / ANT2 wiring — which Trimble feeds the primary input; trace
-  cables next session
+- ~~SBG ANT1 / ANT2 wiring~~ — resolved 2026-04-22: ANT1 = aft Trimble,
+  ANT2 = fwd Trimble (confirmed by heading matching FCU after applying
+  the recommended configuration)
