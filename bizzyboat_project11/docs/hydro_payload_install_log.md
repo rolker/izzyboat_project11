@@ -316,6 +316,30 @@ Updated Fairing Fin entry:
 | Fairing Fin z (bottom) | -0.123 m | [MEAS] derived from ground height |
 | Fairing Fin height | TBD | [EST] assumed ~5 cm for diagram |
 
+#### Rail-antenna vertical geometry — new measurements (2026-04-22)
+
+User reported 2026-04-22 the mounting heights above the rail:
+- **CUAV C-RTK 2HP** antennas sit on white holders that are **7.5 cm tall**, resting directly on the rail top
+- **Trimble GNSS/MSK** antennas are on **2 cm studs** above the rail top
+
+With rail top at z = 0.89 m ([EST] rough), the antenna **bases** are:
+- CUAV (both): z = 0.89 + 0.075 = **0.965 m** (bottom of puck)
+- Trimble (both): z = 0.89 + 0.02 = **0.91 m** (bottom of puck)
+
+Existing reference geometry has CUAV phase center at z = 0.89 m
+[MEAS] rough — that appears to have been the rail top height, not the
+puck phase center. Adding the puck geometry:
+
+- CUAV puck is 4.5 cm tall (cylinder), phase center "at the top surface
+  of the puck" per existing reference → **CUAV phase center z ≈ 0.965
+  + 0.045 = 1.01 m**
+- Trimble phase center depends on the exact Trimble model (GNSS/MSK
+  family; puck geometry TBD) → **Trimble phase center z = 0.91 +
+  Δ_Trimble_phase** (Δ still TBD)
+
+This refines the reference geometry's CUAV z entry by ~12 cm upward;
+worth an update in `bizzyboat_reference_geometry.md` (scope of #77).
+
 ## To refine from vendor manuals
 
 - [ ] SBG case physical dimensions (length × width × height) — needed to
