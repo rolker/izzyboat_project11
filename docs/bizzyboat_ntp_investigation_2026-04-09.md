@@ -424,8 +424,44 @@ and would have rejected it during the unsynchronized window.
 
 - [x] Reboot test — ISC ntpd starts on boot, reports honest stratum ✓
 - [ ] Second reboot test — verify UCI disable of ntpclient/ntpserver persists
-- [ ] Apply same ntpd setup to BizzyBoat's RUTX11
-- [ ] GPS refclock integration (future task, needs outdoor testing)
+- [x] Apply same ntpd setup to BizzyBoat's RUTX11 — done 2026-04-10
+- [~] GPS refclock integration — **superseded** by dedicated TM2000B (see below)
 - [ ] Monitor firmware update impact on configuration
 - [ ] Consider enabling `save` (persist time to flash) as additional safeguard
+
+---
+
+### Session 2 — 2026-04-10 update (post-investigation)
+
+The investigation above concluded that ISC `ntpd` on the RUTX11 would
+be a viable time source, with GPS refclock integration deferred to a
+future outdoor session.  After the investigation, the time-source
+strategy for the boat network changed in two ways that make the
+"RUTX11 serving GPS-disciplined time" direction a non-goal:
+
+1. **Dedicated stratum-1 appliance installed.**  A Time Machines
+   TM2000B GPS-disciplined NTP server was added at
+   `192.168.20.123` (`time.bizzy.p11.lan`) — a purpose-built GPS
+   clock with a rooftop antenna, an OCXO holdover oscillator, and
+   proper PPS discipline.  That is strictly better than anything
+   reachable via the RUTX11's GPS stack.  Tracked under
+   `ccomjhc_project11#30` / PR `#31` (merged).
+2. **RUTX11 repurposed as a pure NTP relay.**  Both RUTX11s
+   (operator + BizzyBoat) run the ISC `ntpd` stack from this
+   investigation, but configured with the TM2000B as preferred
+   source and internet pools as fallback — not as GPS refclock
+   servers themselves.  Clients (gabby, salmon, deadpool) reach
+   the TM2000B through the router.
+
+The RUTX11 GPS refclock remains technically possible as a last-resort
+fallback if the TM2000B is unreachable, but it is not worth pursuing
+as a first-class path given the appliance.
+
+**What of this doc stays useful**: the core technical finding — that
+Teltonika's bundled `untpd` reports a dishonest stratum (always 1 with
+zero dispersion even while unsynchronized) and therefore must not be
+left enabled on a RUTX11 serving ROS clients — is still load-bearing.
+Any future RUTX11 brought online should disable `ntpclient` /
+`untpd` / `ntp_gps` and install ISC `ntpd` as documented above, even
+if the time source is an external appliance.
 
