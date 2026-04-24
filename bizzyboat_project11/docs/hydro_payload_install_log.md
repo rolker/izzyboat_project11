@@ -51,12 +51,83 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       mercat.  Capture rationale under the "Open questions" section
       below.
 
-**QINSy setup — M3 sonar**:
+**QINSy setup — SBG message set on COM4** (`#76` follow-up):
 
-- [ ] Configure M3 in QINSy acquisition template.
-- [ ] Verify first pings in QINSy with SBG attitude applied.
+- [ ] Confirm sbgCenter is closed on mercat before launching QINSy
+      (sbgCenter holds the unit and blocks the QINSy serial driver).
+- [ ] Enable the required SBG_ECOM logs on the COM4 output: `STATUS`
+      (1 Hz / new data), `UTC_TIME` (new data), `EKF_NAV` (50 Hz),
+      `EKF_EULER` (50 Hz), `SHIP_MOTION` (50 Hz). Heave lives in
+      SHIP_MOTION, not EULER — both must be on for vertical-motion
+      correction.
+- [ ] Enable recommended GPS logs for dual-antenna QC: `GPS1_POS`,
+      `GPS1_VEL`, `GPS1_HDT` (GNSS-native rate, 5–10 Hz).
+- [ ] In QINSy, instantiate the `SBG Systems (R-P-H) – 03` serial
+      driver — one driver feeding Position Navigation, Gyro Compass,
+      and Pitch-Roll-Heave systems. Lever arms reference Vessel CoG;
+      do **not** re-enter the SBG-side lever arms in QINSy.
+- [ ] Sanity-check the COM4 baud budget — full required+GPS set fits
+      well under 115200; only adding `IMU_DATA` at 50 Hz pushes near
+      the ceiling. Drop IMU rate or bump baud if we add it later.
+
+**QINSy setup — M3 sonar** (`#76` follow-up):
+
+- [ ] On M3 software: `File → Exporting Format → Profile Point (.all)`
+      (Kongsberg EM datagram standard; the only format the QINSy M3
+      driver decodes).
+- [ ] On M3 software: `Setup → Preferences → UDP Data Export` — set
+      `Port for .ALL format = 20002` (record exact port chosen),
+      `Remote IP Address = 127.0.0.1` (QINSy is co-located on
+      mercat), `Export to File` unchecked.
+- [ ] On M3 software: `Setup → System Configuration → Devices → Sonar
+      Setup → Override Network Link Speed = 125 Mbps`.
+- [ ] Feed the AML SVS into the M3 in parallel with QINSy (M3 uses it
+      for its own refraction model; QINSy still consumes the same
+      stream for soundings). Most SVS tools support multi-port output.
+- [ ] In QINSy, instantiate the `Kongsberg Mesotech M3 – 20` driver on
+      the matching UDP port. Verify the **Clock datagram** is in the
+      stream via QINSy's port monitor — without it, the driver decodes
+      nothing.
+- [ ] Enter the M3 mounting offsets in QINSy (from `#77` measurements:
+      x = -0.23, y = 0, z = -0.145, transducer face Down). Do **not**
+      duplicate offsets in the M3 software's Deployment dialog.
+- [ ] Verify first pings in QINSy with SBG attitude + heave applied.
 - [ ] Capture a short QINSy log at the dock and save an index entry in
       the photo / data log below.
+
+**1PPS time-sync wiring — M3 head from SBG** (`#76` follow-up):
+
+Background: the M3 head requires a 0–5 V 50%-duty 1PPS pulse on its
+breakout box plus NMEA ZDA over UDP 31100 @ 1 Hz to its IP. The
+TM2000B has no physical PPS output, so the SBG Ellipse-D's `SYNC OUT
+A` (main connector pin 6, LVTTL) is our 1PPS source.
+
+- [ ] **Confirm the M3 breakout box has the 4-pin Sync/1PPS connector**
+      (the manual lists a stripped-down variant without it). Photo of
+      the breakout settles it. Block — without this connector we
+      either order the sync-capable variant or run 1PPS through the
+      main 10-pin underwater cable, which means re-terminating the
+      wet-end on a through-hull install.
+- [ ] **Confirm M3 head firmware ≥ 1.5** before relying on 1PPS time
+      sync mode (hard prerequisite per install manual).
+- [ ] **Set SBG Sync Out A to PPS / pulse mode** in sbgCenter (Output
+      → Sync Out → pulse mode); record configured pulse width.
+- [ ] **Fabricate the PPS cable**: SEA CON MIND-4 connector on the
+      breakout-box end (Pin 1 DGND, Pin 3 DRAIN/shield, Pin 4
+      1PPS_SYNC); shielded twisted pair to the SBG's SYNC OUT A pin 6
+      and ground; keep < 1 m. Scope the pulse at the M3 end before
+      committing (SBG high-level is 3.2 V light-load / 2.6 V at 16 mA
+      — well above TTL Vih but worth verifying after the cable run).
+- [ ] **Set M3 Time Sync Mode to 1PPS**: `Sonar Setup → Time Sync
+      Mode → 1PPS`.
+- [ ] **Decide ZDA bridge mechanism** for ZDA → M3 head IP:31100.
+      Options: QINSy NMEA pass-through (cleanest if supported), tiny
+      Python/PowerShell forwarder on mercat reading SBG NMEA off
+      COM4, or other. Ellipse-D is serial-only — no native UDP ZDA
+      from the SBG. Capture chosen path and rationale below.
+- [ ] **Verify 1PPS lock**: M3 log should show
+      `INF 1PPS: 10 pulses received in 10s`. If fewer than 10, the
+      pulse isn't reaching the head.
 
 **ROS side (optional, time permitting)**:
 
