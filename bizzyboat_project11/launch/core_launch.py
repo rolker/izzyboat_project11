@@ -124,6 +124,17 @@ def generate_launch_description():
                                     'config',
                                     'mavros.yaml'
                                 ]),
+                                # Bizzyboat-specific mavros overrides: frame_ids
+                                # on plugin sub-nodes. Must be a yaml (not an
+                                # inline dict), because each plugin runs as its
+                                # own node (e.g. /bizzy/mavros/imu) and only the
+                                # /**/plugin_name: pattern reaches them — an
+                                # inline dict binds to the main mavros_node.
+                                PathJoinSubstitution([
+                                    FindPackageShare('bizzyboat_project11'),
+                                    'config',
+                                    'mavros.yaml'
+                                ]),
                             ],
                             respawn=True,
                             respawn_delay=5.0,

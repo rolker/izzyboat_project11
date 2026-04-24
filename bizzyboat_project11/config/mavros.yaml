@@ -1,0 +1,25 @@
+# Bizzyboat-specific mavros plugin overrides.
+#
+# Applied AFTER the shared mavros defaults (mavros/launch/apm_config.yaml)
+# and AFTER echoboat_project11/config/mavros.yaml, so entries here win.
+#
+# Each mavros plugin is its own ROS 2 node (e.g. /bizzy/mavros/imu), so
+# the /**/plugin_name: ros__parameters: pattern is the only form that
+# reaches them. Inline dicts on the mavros_node Node action don't.
+#
+# The 'bizzy/' prefix is hardcoded — yaml can't accept launch
+# Substitutions. Must be updated by hand if the launch-file
+# frame_prefix ever changes.
+
+/**/global_position:
+  ros__parameters:
+    frame_id: "bizzy/map"
+    child_frame_id: "bizzy/base_link"
+
+/**/imu:
+  ros__parameters:
+    frame_id: "bizzy/base_link"
+
+/**/local_position:
+  ros__parameters:
+    frame_id: "bizzy/map"
