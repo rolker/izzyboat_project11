@@ -3445,3 +3445,151 @@ will pull today's changes including the merged rqt_camera_grid.
 operator-side / workflow-side. The verification happens when gabby
 and salmon sync and we exercise the camera pipeline with the boat
 powered up.
+
+### 2026-04-24 — Pier session (actual)
+
+Boat deployed at the pier, station-keeping next to it for sonar and
+operator-station testing.
+
+**VPN**: not working. (Details TBD — logging the fact now, diagnosis
+pending.)
+
+**ffmpeg image_transport**: looking great. The operator-side
+verification queued yesterday is passing — `rqt_camera_grid`
+subscribes to the `ffmpeg` transport directly and the video comes
+through cleanly.
+
+**`rqt_camera_grid`: crashed a few times while configuring the
+layout.** Could not complete the intended 3x3 grid. Intended config:
+
+| Row        | Pane 1        | Pane 2       | Pane 3        |
+| ---------- | ------------- | ------------ | ------------- |
+| Top        | port video    | fwd video    | starboard video |
+| Middle     | port seg      | fwd seg      | starboard seg |
+| Bottom     | johnny5       | aft video    | aft seg       |
+
+The **port-seg and starboard-seg panes were the two that couldn't be
+added** before the plugin crashed. Fwd seg + all three video streams +
+johnny5 + aft pair apparently could be added. Repro details (sequence
+of clicks, crash stack, ROS log) not yet captured — flagged for a
+follow-up issue on `rqt_operator_tools` once we can get a stack /
+console tail from salmon.
+
+**Config dialog is a fixed size**, which clipped the topic dropdown
+narrower than the actual topic names. Operator couldn't read full
+topic paths while picking them — directly contributed to the
+configuration difficulty and likely made the layout fight worse than
+it had to be. Dialog should resize (and the combo's popup should be
+as wide as the longest topic name, not capped to the combo's own
+width). Separate bug from the crash; candidate for the same batched
+PR.
+
+#### Kongsberg M3 sonar — first-light config
+
+M3 software up, **sonar is pinging** (first confirmed pings from the
+loaner). Configuration is proving non-trivial:
+
+- **Custom sensor flow is under-instrumented.** Trying to specify the
+  sound-speed-sensor data format and the config UI is not surfacing
+  enough debug info to tell whether a given format string is being
+  accepted, rejected, or silently mis-parsed. Operator is flying
+  blind on whether the SV input is actually landing.
+- Actionable follow-up: capture which sensor flow / format paths
+  were tried and which error (or silence) each produced, so we can
+  either file with Kongsberg or, if the tooling is ours to extend,
+  add the debug surface ourselves. (See workspace memory
+  `project_kongsberg_m3.md` — M3 is Mesotech-lineage, not EM; no
+  existing ROS driver applies yet.)
+
+#### Hatch inspection at the floating dock
+
+Broke off from station-keeping to run BizzyBoat down to the floating
+dock. Tied up alongside **Ruby** (the support RHIB at the floating
+dock) and opened the hatch to eyeball the bilge — **sanity check on
+the sonar cable glands**, no specific leak suspected, just verifying
+the new penetrations are sealing under use. (Water check result not
+yet called out — if nothing further is said, assume dry.)
+
+Returned to loiter afterward — currently **FCU-controlled loiter**,
+not project11 autonomy.
+
+#### Nav stack unhealthy — mission rejected
+
+Tried to send a mission from project11 and the **nav stack is not
+healthy at the moment**, so the mission didn't take. No diagnosis
+yet — logging the fact. Follow-ups when we can look:
+
+- Is this related to the earlier VPN issue (i.e. something upstream
+  that couldn't reach gabby / the operator station), or is gabby's
+  nav stack itself in a bad state?
+- Which nav nodes are missing / faulted? (lifecycle states, TF
+  health, costmap status — whichever tooling is on hand.)
+- Does the FCU-loiter path still work cleanly while the project11
+  nav side is down? (If so, good fallback; if not, that's a
+  separate alarm.)
+
+#### Manual control sanity check
+
+Tested direct manual control with the **USB controller** — worked
+fine. Returned the boat to loiter via the **RC controller**. So the
+teleop path and the RC → FCU-loiter path are both healthy; the failure
+is scoped to the project11 autonomy / nav stack, not to the underlying
+vehicle control chain.
+
+#### Screenshooter running on salmon
+
+Activated the screenshooter on salmon to start capturing
+operator-station state for the rest of the session.
+
+#### Bag capture on gabby
+
+Recording **2-minute bags on gabby** with video data included. Will
+be useful for post-session playback to reproduce the `rqt_camera_grid`
+crash offline on salmon and to have a reference sample of the ffmpeg
+transport working end-to-end.
+
+#### Recovery
+
+Boat recovered. Session wrap-up.
+
+**Outstanding from today — pick up post-session:**
+
+- **VPN not working** — logged, no diagnosis yet.
+- **Nav stack not healthy** — project11 mission dispatch rejected;
+  FCU loiter and manual (USB/RC) paths are both clean, so the fault
+  is scoped to the project11 autonomy side. No diagnosis yet.
+- **`rqt_camera_grid` crashes during config** — port-seg and
+  starboard-seg panes were the two that couldn't be added before the
+  crash. Today's gabby bags should let us reproduce offline on salmon.
+  Candidate for a follow-up issue on `rolker/rqt_operator_tools`.
+- **`rqt_camera_grid` config dialog fixed size / narrow topic combo**
+  — operator couldn't read full topic paths while configuring.
+  Candidate for the same batched PR as the staleness fix (PR #26).
+- **Kongsberg M3 custom sensor flow** under-instrumented for
+  specifying the sound-speed-sensor data format. First pings
+  successful; capture specific format attempts + errors next
+  session so we can file with Kongsberg or extend our own tooling.
+- **Staleness PR ([rolker/rqt_operator_tools#26](https://github.com/rolker/rqt_operator_tools/pull/26))**
+  held in draft to batch with the other `rqt_camera_grid` fixes
+  above.
+
+**gitcloud push from gabby**: the on-boat agent pushed today's logs
+to gitcloud at wrap-up, so `make sync` on salmon (and any other
+gitcloud-connected machine) will pick them up.
+
+**Staleness-tracker oversight — pre-deploy**: surfaced earlier today
+that the new `rqt_camera_grid` staleness border was measuring arrival
+time only, not `header.stamp`. That means a stream whose frames get
+buffered upstream and arrive 15–30 s late would show a green/neutral
+border while the image on screen reflects what the camera saw half a
+minute ago — exactly the "trust this image or not" question the
+border is supposed to answer, and it would have answered wrong.
+Tracked in
+[rolker/rqt_operator_tools#25](https://github.com/rolker/rqt_operator_tools/issues/25).
+Fix implemented on branch `feature/issue-25`
+([draft PR #26](https://github.com/rolker/rqt_operator_tools/pull/26)):
+worst-of-both `max(arrival_age, stamp_age)` drives the border; invalid
+stamps (zero or >60 s in the future) force Error + `[no stamp]` label
+marker; pane label shows both ages (`rx Xs | hdr Ys`) so the operator
+can see which side is driving. 19 gtests passing. **PR held open** to
+batch with additional pier-session bug fixes before merging.
