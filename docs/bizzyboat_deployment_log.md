@@ -3384,3 +3384,64 @@ mercat is being powered down for the day. Next session:
 3. If still drifting after restart, search for another clock-setter
    we missed (scheduled tasks, other services). `ntpq -c rv` will
    show ntpd's internal PLL state.
+
+### 2026-04-24 — Queued for tomorrow's pier session
+
+Operator-station software day. Boat not powered. Work done on
+salmon (workspace machine) and pushed to both GitHub and gitcloud
+so gabby + salmon can `make sync` in the morning and have the
+changes.
+
+**Queued for verification** (see "Next pier session" checklist at
+the top of this log):
+
+- **`rqt_camera_grid` plugin landed on `jazzy`** via
+  [rolker/rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)
+  ([merge `fd3bb3e`](https://github.com/rolker/rqt_operator_tools/commit/fd3bb3e)).
+  Closes [rolker/rqt_operator_tools#20](https://github.com/rolker/rqt_operator_tools/issues/20).
+  Multi-stream image_transport grid with per-pane staleness border,
+  YAML perspective persistence, and a live-thumbnail config dialog
+  (direction arrows + Clear, no `+` / `-`). Tested hands-on via the
+  shipped webcam demo (`ros2 launch rqt_camera_grid demo_webcam_grid.launch.py`
+  + `config/demo_webcam_grid.yaml`). Tomorrow's operator-side
+  verification on salmon replaces the `image_transport republish`
+  workaround documented in the 2026-04-23 session — rqt_camera_grid
+  subscribes to the `ffmpeg` transport directly.
+- **`package.xml` now declares all four image_transport plugins** as
+  `exec_depend` — `compressed_image_transport`,
+  `compressed_depth_image_transport`, `theora_image_transport`,
+  `ffmpeg_image_transport`. Fresh `rosdep install` on salmon will
+  pull everything the config dialog can select, closing the "operator
+  station manual install" gap flagged on 2026-04-23.
+- **`plan-task` skill guidance for implementation-phase plan edits**
+  merged to workspace `main` via
+  [rolker/ros2_agent_workspace PR #450](https://github.com/rolker/ros2_agent_workspace/pull/450)
+  ([merge `8c92c6d`](https://github.com/rolker/ros2_agent_workspace/commit/8c92c6d)).
+  Closes [rolker/ros2_agent_workspace#449](https://github.com/rolker/ros2_agent_workspace/issues/449).
+  Documents inline-edit default + appended "Implementation Notes"
+  for design pivots + commit discipline, with a worked example from
+  PR #22's round-8 fix pass. Not a hardware change — affects how
+  future plan-first PRs stay in sync with their plans.
+
+**gitcloud push**: `./.agent/scripts/push_remote.py --remote gitcloud`
+ran clean — 32 repos, 0 errors. Gabby and salmon pull from gitcloud
+(see memory `reference_gitcloud.md`); `make sync` on either machine
+will pull today's changes including the merged rqt_camera_grid.
+
+**Also during the session**:
+
+- Added a "Next pier session" checklist at the top of this log so
+  it's the first thing a future-me sees when opening the deployment
+  log. Hydro-payload specific items stay in `hydro_payload_install_log.md`;
+  the top-of-deployment-log checklist covers boat-wide verification
+  (sync, build, camera grid, time sync, network reach).
+- Multi-round Copilot review on PR #22 (22 rounds, ~60 comments).
+  41 valid findings addressed, 2 false positives dismissed. The
+  experience prompted the workspace-level "Surface UX decisions
+  before deciding" feedback memory — don't silently pick a side
+  when a bot offers multiple reasonable UX options; ask first.
+
+**Nothing to verify on the boat from today** — all changes are
+operator-side / workflow-side. The verification happens when gabby
+and salmon sync and we exercise the camera pipeline with the boat
+powered up.
