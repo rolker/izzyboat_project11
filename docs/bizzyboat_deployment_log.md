@@ -3028,3 +3028,263 @@ hardware activity today beyond scoping and documentation setup.
 **Housekeeping**:
 - PR [#75](https://github.com/rolker/unh_echoboats_project11/pull/75) merged —
   earlier 2026-04-21 deployment log updates now on jazzy
+
+### 2026-04-23
+
+H.265 / `ffmpeg_image_transport` field test on salmon. Boat at the pier,
+powered up. `oak_forward` publishing the H.265 stream and forwarded
+over the wifi `udp_bridge` at 5 fps per
+[PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79)
+(depends on [unh_marine_perception PR #5](https://github.com/rolker/unh_marine_perception/pull/5)).
+
+**End-to-end H.265 decode confirmed on salmon.** The `/ffmpeg` topic
+arrives over the wifi udp_bridge and is decodable on the operator
+station with the `ffmpeg_image_transport` plugin installed.
+
+Two operator-side gotchas worth recording:
+
+1. **`ffmpeg_image_transport` is not a rosdep on any operator-side
+   package.** Only `depthai_marine` (boat side) declares it. Installed
+   `ros-jazzy-ffmpeg-image-transport` manually on salmon for now.
+   Issue [rolker/rqt_operator_tools#20](https://github.com/rolker/rqt_operator_tools/issues/20)
+   tracks the proper fix — a new `rqt_camera_grid` plugin in
+   `rqt_operator_tools` will declare the dep so rosdep handles it on
+   future operator-station installs.
+
+2. **`rqt_image_view` does not list `image_raw/ffmpeg` topics
+   directly.** Its topic discovery only knows
+   `sensor_msgs/Image` and `sensor_msgs/CompressedImage`;
+   `ffmpeg_image_transport_msgs/FFMPEGPacket` is invisible to it.
+   The udp_bridge forwards only the `/compressed` and `/ffmpeg`
+   sibling topics, never the base `image_raw`, so the usual
+   transport-dropdown trick can't help. Workaround: run an
+   `image_transport republish` node on salmon that subscribes via
+   the `ffmpeg` transport and re-emits raw `sensor_msgs/Image`:
+
+   ```
+   ros2 run image_transport republish \
+     --ros-args \
+     -p in_transport:=ffmpeg -p out_transport:=raw \
+     --remap in/ffmpeg:=/bizzy/sensors/cameras/oak_forward/image_raw/ffmpeg \
+     --remap out:=/decoded/oak_forward/image_raw
+   ```
+
+   Then point `rqt_image_view` at `/decoded/oak_forward/image_raw`.
+   (Note: positional `republish ffmpeg raw` syntax is stale — Jazzy
+   reads `in_transport`/`out_transport` as ROS parameters. Wrong
+   ordering silently spins up an FFMPEG *encoder* instead of a
+   decoder.)
+
+   The `rqt_camera_grid` plugin from #20 will subscribe through
+   `image_transport` directly and skip the republisher entirely.
+
+**Bitrate tuning** (commits `0b7a558`, `3c4aaec` on `feature/issue-78`,
+both folded into PR #79):
+
+- 4000 kbps default → visible block artifacts during udp_bridge byte
+  drops on wifi.
+- 2000 kbps → much better, occasional hiccups.
+- 1000 kbps + `enable_video: False` (preview/JPEG/raw + camera_info
+  publishers off) on all four OAKs, plus segmentation throttle
+  (`period: 0.5`) removed from the wifi `udp_bridge` map → **solid
+  front image, no more block artifacts observed.** Other three
+  cameras pending visual confirmation as the operator UI is set up
+  for them.
+
+Orphaned udp_bridge entries from `enable_video: False` (the
+`<cam>/image_raw/compressed`, `_raw`, and `_info` siblings) are
+intentionally left in the wifi map — harmless when no publisher
+exists, and a single-line revert restores the JPEG path if needed.
+Cleanup deferred to a follow-up after a few sessions confirm we
+don't miss them.
+
+vpn `udp_bridge` sub-tree untouched — deferred per
+[PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79)
+scope.
+
+**Later in the session** the scope widened well past "step 1". All four
+OAKs are now on H.265 @ 1000 kbps over both wifi and vpn (segmentation
+throttled at 1 Hz on vpn to fit its ~1 MB/s budget), `enable_video: False`
+is the default on every camera, and the orphaned `oak_<name>` /
+`oak_<name>_info` / `oak_<name>_raw` udp_bridge entries were dropped
+once the `FFMPEGPublisher`-is-not-lazy rationale made the "subscribe
+to raw image to wake up the compressed publisher" trick unnecessary.
+PR #79 merged as `ce2246f` on `jazzy`, title/body rewritten to match
+the actual rollout.
+
+### TM2000B lockup (first observed)
+
+TM2000B NTP appliance (192.168.20.123) went unreachable during this
+session — `ping` 100% loss from the boat router, ARP showing the
+"tried to resolve, got silence" marker (`00:00:00:00:00:00`), DHCP
+lease purged. L2 dead, not just L3, which ruled out firewall / lock
+state.
+
+Power-cycled the device. Came back immediately:
+
+- ping: 0% loss, 0.8–2.8 ms RTT
+- ARP: MAC `d4:e9:5e:06:15:63` resolved on `br-lan`
+- DHCP: lease restored (hostname `time`, 12 h)
+
+First lockup event since the 2026-04-10 install. Worth tracking
+frequency — if this recurs, consider a scheduled reboot or a watchdog
+on the PoE port (not available on the current unmanaged Trendnet
+TI-PG80B switch, so it'd need manual or router-driven power cycling).
+Follow-up: verify GPS 3D fix and NTP serving via the web UI and
+downstream `chronyc sources` on gabby after recovery.
+
+Gabby's `chronyc sources` later confirmed the TM2000B is back at
+Stratum 1 with one successful poll 98 s in — reach will walk up as
+polls accumulate. Also surfaced a separate, pre-existing issue:
+**gabby sees `reach 0` / `LastRx -` for both `router.lan.bizzy.p11.lan`
+and `router.lan.op.p11.lan`** — it has never had a successful NTP
+poll from either RUTX11. Not caused by today's TM2000B outage; worth
+its own investigation (likely ntpd listen-address or firewall on the
+routers). Internet stratum-1 fallback (`50.205.57.38`) was selected
+throughout, system-time offset stayed within 1 ms.
+
+### Mercat COM4 stuck after reboot
+
+Mercat rebooted during the session (Windows pending update). After
+reboot, sbgCenter couldn't see the SBG Ellipse and TeraTerm reported
+"Access denied" on COM4. A second power cycle (from the boat) did
+not clear it.
+
+Ran a layered diagnostic from the operator side over SSH to mercat:
+
+- `Win32_SerialPort` showed COM4 as `Status: OK` on native on-board
+  RS-232 (`ACPI\PNP0501\SMODULEC4`) — not a USB-adapter renumbering
+  issue.
+- `mode COM4` → "Device COM4 is not currently available."
+- `.NET SerialPort.Open()` → "Access to the port 'COM4' is denied."
+- Sysinternals `handle64.exe -accepteula -a COM4` / `Serial` /
+  `Serial4` — **no matching handles** even from an elevated SSH
+  session (`High Mandatory Level`). No user-mode process held the
+  port.
+- `lfsvc` (Windows Geolocation Service) was running and kept being
+  re-triggered on "Manual" start type. Stopped and set to
+  `StartupType Disabled` on suspicion it was probing COM ports for
+  NMEA GPS. Did not release COM4.
+
+The hold was below user-mode. Fix was a PnP device cycle:
+
+```powershell
+Disable-PnpDevice -InstanceId "ACPI\PNP0501\SMODULEC4" -Confirm:$false
+Enable-PnpDevice  -InstanceId "ACPI\PNP0501\SMODULEC4" -Confirm:$false
+```
+
+Immediately after the enable, `.NET SerialPort.Open('COM4', 9600)`
+returned `IsOpen=True`. sbgCenter able to proceed.
+
+Recipe saved to memory (`reference_mercat_com4_stuck.md`) so next
+mercat reboot that lands in the same state can go straight to the
+disable/enable cycle rather than rediscovering the problem. Worth
+opening a dedicated sub-issue under #76 if it recurs, to track whether
+it's every reboot or a sporadic condition.
+
+### Mercat service cleanup
+
+With mercat already open over SSH, surveyed its running services and
+the time-sync stack.
+
+Disabled (Stopped + `StartupType Disabled`):
+
+- **`lfsvc`** — Geolocation Service. No location-API consumer on a
+  survey PC; was a suspected COM-port holder earlier in the session.
+- **`DiagTrack`** — Connected User Experiences and Telemetry. Sends
+  diagnostic/telemetry to Microsoft. Not useful here.
+- **`CDPSvc`** — Connected Devices Platform. Pairs with phones/tablets
+  (Your Phone, Continue on PC). Nothing to pair with.
+- **`PDSSettimeService`** — Teledyne "Adjust computer time to GPS
+  time" service from the Sonar UI installer. Was actively **fighting
+  the Meinberg NTP daemon** — offset was -26.9 ms with 2.5 ms jitter
+  while it was running, since it was stepping the clock from the
+  DeltaT sonar's GPS feed behind ntpd's back.
+
+Third-party services left running (verified legitimate): Meinberg `NTP`,
+`hasplms` (QPS license), `PostgreSQL (QPS)`, `QpsHelpServer`,
+`SQLWriter`, `TeamViewer`, Microsoft Defender trio.
+
+### Mercat time-sync picture + PTP evaluation
+
+Current stack:
+
+- **Meinberg-style ISC `ntpd`** at `C:\Program Files (x86)\NTP`,
+  service name `NTP`, pointed at `time.bizzy.p11.lan` (TM2000B).
+- Config: `server time.bizzy.p11.lan iburst minpoll 6 maxpoll 7`.
+- Windows `w32time` is **Stopped** — no conflict.
+- `ntpq -pn` after the PDSSettimeService disable shows TM2000B
+  selected (`*`, refid `.GPS.`, stratum 1, reach 377, delay 0.5 ms).
+- Offset at the moment of capture was -26.9 ms (footprint of the
+  now-disabled Teledyne service); ntpd will slew to near-zero over
+  the next several polls.
+
+**PTP evaluated and deferred.** Summary of the decision (full write-up
+in `project_time_sync_ptp.md`):
+
+- NIC: Intel I211 Gigabit — IEEE 1588 HW timestamping at the silicon
+  level; Windows driver doesn't surface PTP knobs via
+  `Get-NetAdapterAdvancedProperty` (common for Intel GbE).
+- OS: Windows 11 Pro has no native PTP — that's Server-only.
+  Third-party clients (Meinberg PTP add-on, Domain Time II,
+  TimeKeeper) are commercial, ~$250-$400/seat.
+- Path: unmanaged Trendnet TI-PG80B PoE switch caps PTP accuracy at
+  ~10-100 μs (no transparent/boundary clock).
+- Current NTP accuracy (~1 ms) is already ~2 mm at 4 kt — inside
+  multibeam pulse bandwidth.
+- Revisit PTP only if a future sonar / sync requirement drops below
+  1 ms, or the PoE switch gets replaced anyway, or mercat moves to
+  Windows Server.
+
+All verification commands and the PTP decision criteria are captured
+in `reference_mercat_time_sync.md` in memory.
+
+### Other-agent PR activity on 2026-04-23
+
+While this session focused on the boat (H.265 rollout, TM2000B
+recovery, mercat COM4 + service cleanup), other agents landed /
+opened PRs worth noting for the record:
+
+- **[rolker/unh_marine_perception#5](https://github.com/rolker/unh_marine_perception/pull/5)
+  (merged, +843/-62)** — the on-device H.265 encoder in
+  `depthai_marine` that PR #79 depends on. Previously we were pulling
+  the dev branch from `gitcloud/jazzy`; as of today it's on
+  `origin/jazzy`, so a regular `git pull` on gabby (once its clock
+  resets there) pulls everything end-to-end.
+- **[rolker/rqt_operator_tools#21](https://github.com/rolker/rqt_operator_tools/pull/21)
+  (merged, +191/-6)** — fixes the long-running annunciator
+  window-resize bug (#19). The mission annunciator no longer blows out
+  the rqt window horizontally when dragged taller. (Root cause:
+  `QLabel.minimumSizeHint()` scaling with font metrics.)
+- **[rolker/rqt_operator_tools#22](https://github.com/rolker/rqt_operator_tools/pull/22)
+  (open, +3630)** — full `rqt_camera_grid` plugin implementation
+  closing the #20 issue opened earlier in this session. 3.6 k lines —
+  multi-pane grid with per-pane `(base_topic, transport_hint)` config
+  and staleness border. When this merges, salmon will subscribe to
+  `image_raw/ffmpeg` directly and the `image_transport republish`
+  workaround logged above becomes obsolete.
+- **[rolker/rqt_operator_tools#23](https://github.com/rolker/rqt_operator_tools/issues/23)
+  / #24 (open, +559/-23)** — annunciator adaptive column widths +
+  per-cell font fitting. Quality-of-life follow-up to #21.
+
+### Open item for next mercat session — NTP convergence
+
+After disabling `PDSSettimeService`, the Meinberg ntpd offset against
+TM2000B **did not converge**. Two samples ~5 min apart:
+
+- `offset -26.912 ms` (initial, right after disable)
+- `offset -32.663 ms` (5 min later)
+
+`reach 377`, `delay ~0.5 ms`, `jitter ~2.8 ms` both times — link and
+measurement quality are fine, the clock is just drifting away. Most
+likely ntpd's drift/frequency estimate got corrupted while
+PDSSettimeService was stepping the clock behind its back; restarting
+the NTP service would reset the PLL. Not pursued in this session —
+mercat is being powered down for the day. Next session:
+
+1. Check with `ntpq -pn` on boot and see what offset is.
+2. If still drifting, `Restart-Service NTP` and observe for a few
+   minutes (iburst will give 8 rapid polls).
+3. If still drifting after restart, search for another clock-setter
+   we missed (scheduled tasks, other services). `ntpq -c rv` will
+   show ntpd's internal PLL state.
