@@ -39,6 +39,102 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 ---
 
+## Next pier session — verify recent workspace / operator-station changes
+
+Planned for the next day at the pier. Focus: `make sync` on gabby and
+salmon to pull everything pushed to gitcloud the night before, then
+walk through each recent change area and confirm no regressions
+before any on-water work.
+
+Hydro-payload / M3 / SBG / SVS activities have their own detailed
+checklist in [`bizzyboat_project11/docs/hydro_payload_install_log.md`](../bizzyboat_project11/docs/hydro_payload_install_log.md).
+This list stays boat-wide.
+
+Strike items and add session notes inline under "### Session: YYYY-MM-DD"
+below once done (follow the pattern from earlier sessions).
+
+**Pre-deployment (bench, salmon + gabby available)**:
+
+- [ ] On salmon: `make sync`. Expect fast-forward on every repo —
+      conflicts would mean gitcloud and GitHub diverged overnight,
+      which we don't expect if the push-to-gitcloud at end of the
+      previous session was clean.
+- [ ] On gabby (via VPN or at the boat): `make sync`. Same
+      expectation. Reference: [`reference_gitcloud.md`](... memory) —
+      gabby pulls from gitcloud, not GitHub.
+- [ ] On salmon: `make build`. Confirm the workspace still builds
+      end-to-end. `rqt_camera_grid` should be present in the build
+      regardless of whether [rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)
+      has merged — it's on `feature/issue-20` which salmon is tracking
+      while the review cycle continues.
+- [ ] On gabby: `make build`. Confirm the boat-side stack still
+      builds with the post-2026-04-23 H.265 / udp_bridge changes from
+      [PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79).
+      If cyclonedds profile drift is suspected, re-check per
+      memory/`project_cyclonedds_gabby.md`.
+
+**On-boat verification — operator station camera pipeline**:
+
+- [ ] Start the normal boat-side core stack on gabby.
+- [ ] On salmon: launch rqt, add the `Camera Grid` plugin (from
+      [rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)),
+      configure it with the four OAKs' base topics and `ffmpeg`
+      transport. Confirm:
+      - frames render in all four panes
+      - per-pane rate label shows a steady value near 5 fps
+      - staleness border stays Neutral while publishers are up
+- [ ] Kill one OAK publisher on gabby; confirm the corresponding pane's
+      border transitions to Warn at ~2 s, Error at ~5 s (the
+      operator-station-consistent defaults). Restart the publisher;
+      confirm the border returns to Neutral immediately (the R5 fix —
+      recovery tracks frame arrival, not the 1 Hz tick).
+- [ ] Replaces the `image_transport republish` workaround documented
+      in the 2026-04-23 session — if rqt_camera_grid works, that
+      manual bridge is no longer needed on salmon.
+
+**On-boat verification — time sync**:
+
+- [ ] On mercat: `ntpq.exe -pn` against `time.bizzy.p11.lan`.
+      Expect the TM2000B reference as the selected peer, offset
+      < 10 ms. Recovery playbook in memory/`reference_mercat_time_sync.md`.
+- [ ] On gabby: `chronyc tracking` converged against the intended
+      source.
+- [ ] Confirm TM2000B has not locked up again since the 2026-04-23
+      power-cycle (ping, ARP). Second lockup would be a real pattern,
+      not a one-off — worth capturing.
+
+**On-boat verification — network / device reach**:
+
+- [ ] From gabby: ping all DHCP-reserved boat devices (camera IPs,
+      TM2000B, mercat, RUTX11, KVM). Same list as
+      [CCOMJHC/ccomjhc_project11#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9);
+      all were green at the 2026-04-20 session.
+- [ ] DNS via `.p11.lan` from gabby and salmon: resolve
+      `time.bizzy.p11.lan`, `mercat.bizzy.p11.lan`,
+      `kvm.bizzy.p11.lan`.
+- [ ] Confirm the orphaned `oak_<name>` / `_info` / `_raw` udp_bridge
+      entries from 2026-04-23 are still harmless (no log noise, no
+      CPU cost on gabby).
+
+**Stretch — only if above is solid**:
+
+- [ ] Short on-water run, if conditions allow. Record a small bag
+      (cameras + IMU + GPS). Usable for validating rqt_camera_grid
+      under longer durations and wifi churn, and as baseline data for
+      future comparisons.
+- [ ] Evaluate PTP convergence on gabby (`linuxptp`) against TM2000B.
+      memory/`project_time_sync_ptp.md` claims ~10–100 μs achievable
+      — worth a spot check, not a blocker.
+
+**End of session**:
+
+- [ ] Add a "### Session: YYYY-MM-DD" entry below with what was
+      accomplished, observations, and any new open items.
+- [ ] Hydro-payload / M3 / SBG / SVS items: detail goes in the
+      hydro install log; a short summary entry mirrored here.
+
+---
+
 ## Session Log
 
 ### 2026-03-26
