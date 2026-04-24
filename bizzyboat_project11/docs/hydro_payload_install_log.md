@@ -17,6 +17,67 @@ Tracking:
 Photos are kept locally on the operator workstation (not committed).
 Measurements and observations extracted from them are recorded here.
 
+## Next pier session — QINSy + SBG + M3 integration checklist
+
+Planned for the next day at the pier.  Focus: wire up QINSy on mercat
+to receive from SBG and drive the M3, end-to-end.  Strike items and
+add session notes inline under "Session: YYYY-MM-DD" below once done
+(follow the pattern from earlier sessions).
+
+**Pre-deployment (bench / boat-powered-at-pier)**:
+
+- [ ] Verify mercat ntpd convergence on boot: `ntpq -pn` against
+      `time.bizzy.p11.lan`.  If offset still drifting, `Restart-Service
+      NTP` and observe for a few iburst polls; if still bad, run
+      `ntpq -c rv` to find another clock-setter.  Block — QINSy logging
+      timestamps depend on this.
+- [ ] Confirm SBG still appears on `COM4 @ 115200` after COM port
+      recovery (memory: `reference_mercat_com4_stuck.md` — disable /
+      enable `ACPI\PNP0501\SMODULEC4` if the port is locked).
+- [ ] Confirm SVS on `COM3 @ 9600` responds.
+- [ ] Ping M3 on its factory IP (point-to-point via the spare mercat
+      Ethernet port).  Record IP in "Hardware inventory" above if not
+      already captured.
+
+**QINSy setup — SBG IO driver**:
+
+- [ ] Configure SBG as a QINSy IO driver (consult current QINSy version's
+      IO driver list — name and field conventions vary by release).
+- [ ] Verify QINSy receives SBG position + heading + attitude at steady
+      rate; log the driver name and QINSy config screen references
+      below.
+- [ ] Decide NTRIP path for SBG and implement: independent MACORS
+      client on SBG vs. shared corrections via Cube vs. routed via
+      mercat.  Capture rationale under the "Open questions" section
+      below.
+
+**QINSy setup — M3 sonar**:
+
+- [ ] Configure M3 in QINSy acquisition template.
+- [ ] Verify first pings in QINSy with SBG attitude applied.
+- [ ] Capture a short QINSy log at the dock and save an index entry in
+      the photo / data log below.
+
+**ROS side (optional, time permitting)**:
+
+- [ ] Scope the QINSy → ROS bridge approach (`marine_tools#1`) — watch
+      QINSy's external output options (broadcast, file tail, DB
+      connection?) and decide which is cheapest to consume from ROS.
+      No code expected this session — observation only.
+
+**Stretch — only if above is solid**:
+
+- [ ] Apply measured offsets from 2026-04-22 to URDF (SBG antennas, M3
+      position, SVS tip).  Tracked under `#77`.
+- [ ] Refine rail-top `z` with a proper measurement (currently
+      `[EST] 0.89 m`).
+
+**End of session**:
+
+- [ ] Add a "Session: YYYY-MM-DD" entry below with what was
+      accomplished, observations, and any new open items.  Summary
+      duplicated to `docs/bizzyboat_deployment_log.md`.
+
 ## Hardware inventory
 
 | Device | Model | Serial | Link | mercat port | Status |
@@ -410,11 +471,19 @@ worth an update in `bizzyboat_reference_geometry.md` (scope of #77).
 - NTRIP path for SBG — independent MACORS client, shared corrections from
   Cube chain, or routed via mercat? Tracked in
   [#76](https://github.com/rolker/unh_echoboats_project11/issues/76)
-- mercat NTP — **time server unreachable** as of 2026-04-22 bring-up.
-  Investigate: is mercat pointing at an external server blocked by the
-  boat network, or does it need to be pointed at the internal TM2000B
-  (192.168.20.123) or the boat router's ntpd? Blocks accurate timestamps
-  for QINSy logging and sensor fusion.
+- ~~mercat NTP — time server unreachable as of 2026-04-22 bring-up~~
+  resolved 2026-04-23: Meinberg ISC `ntpd` pointed at TM2000B
+  (`time.bizzy.p11.lan`, 192.168.20.123), stratum-1 GPS source reaching
+  reliably (`reach 377`, `delay ~0.5 ms`).  `w32time` disabled, the
+  Teledyne `PDSSettimeService` that was stepping the clock from the
+  DeltaT GPS feed behind ntpd's back has been disabled too.  See
+  deployment log entry 2026-04-23 for full picture + PTP deferral
+  decision.  **Open sub-item**: ntpd offset did not converge after
+  the `PDSSettimeService` disable (drifted from -26.9 ms to -32.7 ms
+  over 5 min — PLL probably corrupted by the rival clock-setter).
+  Next mercat session: `Restart-Service NTP` and observe for a few
+  minutes; if still drifting, hunt for another clock-setter via
+  `ntpq -c rv`.
 - ~~SBG ANT1 / ANT2 wiring~~ — resolved 2026-04-22: ANT1 = aft Trimble,
   ANT2 = fwd Trimble (confirmed by heading matching FCU after applying
   the recommended configuration)
