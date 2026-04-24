@@ -39,6 +39,102 @@ Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboa
 
 ---
 
+## Next pier session — verify recent workspace / operator-station changes
+
+Planned for the next day at the pier. Focus: `make sync` on gabby and
+salmon to pull everything pushed to gitcloud the night before, then
+walk through each recent change area and confirm no regressions
+before any on-water work.
+
+Hydro-payload / M3 / SBG / SVS activities have their own detailed
+checklist in [`bizzyboat_project11/docs/hydro_payload_install_log.md`](../bizzyboat_project11/docs/hydro_payload_install_log.md).
+This list stays boat-wide.
+
+Strike items and add session notes inline under "### Session: YYYY-MM-DD"
+below once done (follow the pattern from earlier sessions).
+
+**Pre-deployment (bench, salmon + gabby available)**:
+
+- [ ] On salmon: `make sync`. Expect fast-forward on every repo —
+      conflicts would mean gitcloud and GitHub diverged overnight,
+      which we don't expect if the push-to-gitcloud at end of the
+      previous session was clean.
+- [ ] On gabby (via VPN or at the boat): `make sync`. Same
+      expectation. Reference: [`reference_gitcloud.md`](... memory) —
+      gabby pulls from gitcloud, not GitHub.
+- [ ] On salmon: `make build`. Confirm the workspace still builds
+      end-to-end. `rqt_camera_grid` should be present in the build
+      regardless of whether [rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)
+      has merged — it's on `feature/issue-20` which salmon is tracking
+      while the review cycle continues.
+- [ ] On gabby: `make build`. Confirm the boat-side stack still
+      builds with the post-2026-04-23 H.265 / udp_bridge changes from
+      [PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79).
+      If cyclonedds profile drift is suspected, re-check per
+      memory/`project_cyclonedds_gabby.md`.
+
+**On-boat verification — operator station camera pipeline**:
+
+- [ ] Start the normal boat-side core stack on gabby.
+- [ ] On salmon: launch rqt, add the `Camera Grid` plugin (from
+      [rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)),
+      configure it with the four OAKs' base topics and `ffmpeg`
+      transport. Confirm:
+      - frames render in all four panes
+      - per-pane rate label shows a steady value near 5 fps
+      - staleness border stays Neutral while publishers are up
+- [ ] Kill one OAK publisher on gabby; confirm the corresponding pane's
+      border transitions to Warn at ~2 s, Error at ~5 s (the
+      operator-station-consistent defaults). Restart the publisher;
+      confirm the border returns to Neutral immediately (the R5 fix —
+      recovery tracks frame arrival, not the 1 Hz tick).
+- [ ] Replaces the `image_transport republish` workaround documented
+      in the 2026-04-23 session — if rqt_camera_grid works, that
+      manual bridge is no longer needed on salmon.
+
+**On-boat verification — time sync**:
+
+- [ ] On mercat: `ntpq.exe -pn` against `time.bizzy.p11.lan`.
+      Expect the TM2000B reference as the selected peer, offset
+      < 10 ms. Recovery playbook in memory/`reference_mercat_time_sync.md`.
+- [ ] On gabby: `chronyc tracking` converged against the intended
+      source.
+- [ ] Confirm TM2000B has not locked up again since the 2026-04-23
+      power-cycle (ping, ARP). Second lockup would be a real pattern,
+      not a one-off — worth capturing.
+
+**On-boat verification — network / device reach**:
+
+- [ ] From gabby: ping all DHCP-reserved boat devices (camera IPs,
+      TM2000B, mercat, RUTX11, KVM). Same list as
+      [CCOMJHC/ccomjhc_project11#9](https://github.com/CCOMJHC/ccomjhc_project11/issues/9);
+      all were green at the 2026-04-20 session.
+- [ ] DNS via `.p11.lan` from gabby and salmon: resolve
+      `time.bizzy.p11.lan`, `mercat.bizzy.p11.lan`,
+      `kvm.bizzy.p11.lan`.
+- [ ] Confirm the orphaned `oak_<name>` / `_info` / `_raw` udp_bridge
+      entries from 2026-04-23 are still harmless (no log noise, no
+      CPU cost on gabby).
+
+**Stretch — only if above is solid**:
+
+- [ ] Short on-water run, if conditions allow. Record a small bag
+      (cameras + IMU + GPS). Usable for validating rqt_camera_grid
+      under longer durations and wifi churn, and as baseline data for
+      future comparisons.
+- [ ] Evaluate PTP convergence on gabby (`linuxptp`) against TM2000B.
+      memory/`project_time_sync_ptp.md` claims ~10–100 μs achievable
+      — worth a spot check, not a blocker.
+
+**End of session**:
+
+- [ ] Add a "### Session: YYYY-MM-DD" entry below with what was
+      accomplished, observations, and any new open items.
+- [ ] Hydro-payload / M3 / SBG / SVS items: detail goes in the
+      hydro install log; a short summary entry mirrored here.
+
+---
+
 ## Session Log
 
 ### 2026-03-26
@@ -3002,3 +3098,350 @@ speed sensor on mercat. BT retry fix merged
 - Commit CrabbingPathFollower PID YAML
 - Commit TF extrapolation fix
 - Disable flow offloading on operator router
+
+### 2026-04-22
+
+Planning session for hydro payload integration. Boat powered off — no
+hardware activity today beyond scoping and documentation setup.
+
+- Opened two sub-issues under [#57](https://github.com/rolker/unh_echoboats_project11/issues/57):
+  - [#76](https://github.com/rolker/unh_echoboats_project11/issues/76) — *BizzyBoat hydro payload integration — M3, SBG, SVS on mercat*
+    (software bring-up, NTRIP strategy, calibration planning; lists mercat NTP as blocker)
+  - [#77](https://github.com/rolker/unh_echoboats_project11/issues/77) — *BizzyBoat hydro payload — physical install, offsets, URDF, SVG diagram*
+    (extends `bizzyboat_reference_geometry.md`, adds `bizzyboat_offsets.svg`, updates URDF)
+- Peer reference: [rolker/marine_tools#1](https://github.com/rolker/marine_tools/issues/1) (QINSy → ROS bridge)
+- [rolker/marine_tools#2](https://github.com/rolker/marine_tools/issues/2) (direct M3 ROS driver) deferred pending evaluation of marine_tools#1
+- AML winch sound speed profiler: deferred to a later issue
+- Initialized detailed install log at
+  [`bizzyboat_project11/docs/hydro_payload_install_log.md`](../../bizzyboat_project11/docs/hydro_payload_install_log.md) —
+  hardware inventory, photo index, measurement log, and manual-cross-reference TODOs
+- First measurement recorded: **SBG survey GPS antennas 2.05 m apart**
+  (wider than the Cube's 1.67 m baseline; SBG uses its own antennas at the
+  existing EchoBoat survey antenna positions)
+- Summary entries for hydro payload work will be added here as sessions
+  progress; day-to-day detail lives in the dedicated install log
+
+**Housekeeping**:
+- PR [#75](https://github.com/rolker/unh_echoboats_project11/pull/75) merged —
+  earlier 2026-04-21 deployment log updates now on jazzy
+
+### 2026-04-23
+
+H.265 / `ffmpeg_image_transport` field test on salmon. Boat at the pier,
+powered up. `oak_forward` publishing the H.265 stream and forwarded
+over the wifi `udp_bridge` at 5 fps per
+[PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79)
+(depends on [unh_marine_perception PR #5](https://github.com/rolker/unh_marine_perception/pull/5)).
+
+**End-to-end H.265 decode confirmed on salmon.** The `/ffmpeg` topic
+arrives over the wifi udp_bridge and is decodable on the operator
+station with the `ffmpeg_image_transport` plugin installed.
+
+Two operator-side gotchas worth recording:
+
+1. **`ffmpeg_image_transport` is not a rosdep on any operator-side
+   package.** Only `depthai_marine` (boat side) declares it. Installed
+   `ros-jazzy-ffmpeg-image-transport` manually on salmon for now.
+   Issue [rolker/rqt_operator_tools#20](https://github.com/rolker/rqt_operator_tools/issues/20)
+   tracks the proper fix — a new `rqt_camera_grid` plugin in
+   `rqt_operator_tools` will declare the dep so rosdep handles it on
+   future operator-station installs.
+
+2. **`rqt_image_view` does not list `image_raw/ffmpeg` topics
+   directly.** Its topic discovery only knows
+   `sensor_msgs/Image` and `sensor_msgs/CompressedImage`;
+   `ffmpeg_image_transport_msgs/FFMPEGPacket` is invisible to it.
+   The udp_bridge forwards only the `/compressed` and `/ffmpeg`
+   sibling topics, never the base `image_raw`, so the usual
+   transport-dropdown trick can't help. Workaround: run an
+   `image_transport republish` node on salmon that subscribes via
+   the `ffmpeg` transport and re-emits raw `sensor_msgs/Image`:
+
+   ```
+   ros2 run image_transport republish \
+     --ros-args \
+     -p in_transport:=ffmpeg -p out_transport:=raw \
+     --remap in/ffmpeg:=/bizzy/sensors/cameras/oak_forward/image_raw/ffmpeg \
+     --remap out:=/decoded/oak_forward/image_raw
+   ```
+
+   Then point `rqt_image_view` at `/decoded/oak_forward/image_raw`.
+   (Note: positional `republish ffmpeg raw` syntax is stale — Jazzy
+   reads `in_transport`/`out_transport` as ROS parameters. Wrong
+   ordering silently spins up an FFMPEG *encoder* instead of a
+   decoder.)
+
+   The `rqt_camera_grid` plugin from #20 will subscribe through
+   `image_transport` directly and skip the republisher entirely.
+
+**Bitrate tuning** (commits `0b7a558`, `3c4aaec` on `feature/issue-78`,
+both folded into PR #79):
+
+- 4000 kbps default → visible block artifacts during udp_bridge byte
+  drops on wifi.
+- 2000 kbps → much better, occasional hiccups.
+- 1000 kbps + `enable_video: False` (preview/JPEG/raw + camera_info
+  publishers off) on all four OAKs, plus segmentation throttle
+  (`period: 0.5`) removed from the wifi `udp_bridge` map → **solid
+  front image, no more block artifacts observed.** Other three
+  cameras pending visual confirmation as the operator UI is set up
+  for them.
+
+Orphaned udp_bridge entries from `enable_video: False` (the
+`<cam>/image_raw/compressed`, `_raw`, and `_info` siblings) are
+intentionally left in the wifi map — harmless when no publisher
+exists, and a single-line revert restores the JPEG path if needed.
+Cleanup deferred to a follow-up after a few sessions confirm we
+don't miss them.
+
+vpn `udp_bridge` sub-tree untouched — deferred per
+[PR #79](https://github.com/rolker/unh_echoboats_project11/pull/79)
+scope.
+
+**Later in the session** the scope widened well past "step 1". All four
+OAKs are now on H.265 @ 1000 kbps over both wifi and vpn (segmentation
+throttled at 1 Hz on vpn to fit its ~1 MB/s budget), `enable_video: False`
+is the default on every camera, and the orphaned `oak_<name>` /
+`oak_<name>_info` / `oak_<name>_raw` udp_bridge entries were dropped
+once the `FFMPEGPublisher`-is-not-lazy rationale made the "subscribe
+to raw image to wake up the compressed publisher" trick unnecessary.
+PR #79 merged as `ce2246f` on `jazzy`, title/body rewritten to match
+the actual rollout.
+
+### TM2000B lockup (first observed)
+
+TM2000B NTP appliance (192.168.20.123) went unreachable during this
+session — `ping` 100% loss from the boat router, ARP showing the
+"tried to resolve, got silence" marker (`00:00:00:00:00:00`), DHCP
+lease purged. L2 dead, not just L3, which ruled out firewall / lock
+state.
+
+Power-cycled the device. Came back immediately:
+
+- ping: 0% loss, 0.8–2.8 ms RTT
+- ARP: MAC `d4:e9:5e:06:15:63` resolved on `br-lan`
+- DHCP: lease restored (hostname `time`, 12 h)
+
+First lockup event since the 2026-04-10 install. Worth tracking
+frequency — if this recurs, consider a scheduled reboot or a watchdog
+on the PoE port (not available on the current unmanaged Trendnet
+TI-PG80B switch, so it'd need manual or router-driven power cycling).
+Follow-up: verify GPS 3D fix and NTP serving via the web UI and
+downstream `chronyc sources` on gabby after recovery.
+
+Gabby's `chronyc sources` later confirmed the TM2000B is back at
+Stratum 1 with one successful poll 98 s in — reach will walk up as
+polls accumulate. Also surfaced a separate, pre-existing issue:
+**gabby sees `reach 0` / `LastRx -` for both `router.lan.bizzy.p11.lan`
+and `router.lan.op.p11.lan`** — it has never had a successful NTP
+poll from either RUTX11. Not caused by today's TM2000B outage; worth
+its own investigation (likely ntpd listen-address or firewall on the
+routers). Internet stratum-1 fallback (`50.205.57.38`) was selected
+throughout, system-time offset stayed within 1 ms.
+
+### Mercat COM4 stuck after reboot
+
+Mercat rebooted during the session (Windows pending update). After
+reboot, sbgCenter couldn't see the SBG Ellipse and TeraTerm reported
+"Access denied" on COM4. A second power cycle (from the boat) did
+not clear it.
+
+Ran a layered diagnostic from the operator side over SSH to mercat:
+
+- `Win32_SerialPort` showed COM4 as `Status: OK` on native on-board
+  RS-232 (`ACPI\PNP0501\SMODULEC4`) — not a USB-adapter renumbering
+  issue.
+- `mode COM4` → "Device COM4 is not currently available."
+- `.NET SerialPort.Open()` → "Access to the port 'COM4' is denied."
+- Sysinternals `handle64.exe -accepteula -a COM4` / `Serial` /
+  `Serial4` — **no matching handles** even from an elevated SSH
+  session (`High Mandatory Level`). No user-mode process held the
+  port.
+- `lfsvc` (Windows Geolocation Service) was running and kept being
+  re-triggered on "Manual" start type. Stopped and set to
+  `StartupType Disabled` on suspicion it was probing COM ports for
+  NMEA GPS. Did not release COM4.
+
+The hold was below user-mode. Fix was a PnP device cycle:
+
+```powershell
+Disable-PnpDevice -InstanceId "ACPI\PNP0501\SMODULEC4" -Confirm:$false
+Enable-PnpDevice  -InstanceId "ACPI\PNP0501\SMODULEC4" -Confirm:$false
+```
+
+Immediately after the enable, `.NET SerialPort.Open('COM4', 9600)`
+returned `IsOpen=True`. sbgCenter able to proceed.
+
+Recipe saved to memory (`reference_mercat_com4_stuck.md`) so next
+mercat reboot that lands in the same state can go straight to the
+disable/enable cycle rather than rediscovering the problem. Worth
+opening a dedicated sub-issue under #76 if it recurs, to track whether
+it's every reboot or a sporadic condition.
+
+### Mercat service cleanup
+
+With mercat already open over SSH, surveyed its running services and
+the time-sync stack.
+
+Disabled (Stopped + `StartupType Disabled`):
+
+- **`lfsvc`** — Geolocation Service. No location-API consumer on a
+  survey PC; was a suspected COM-port holder earlier in the session.
+- **`DiagTrack`** — Connected User Experiences and Telemetry. Sends
+  diagnostic/telemetry to Microsoft. Not useful here.
+- **`CDPSvc`** — Connected Devices Platform. Pairs with phones/tablets
+  (Your Phone, Continue on PC). Nothing to pair with.
+- **`PDSSettimeService`** — Teledyne "Adjust computer time to GPS
+  time" service from the Sonar UI installer. Was actively **fighting
+  the Meinberg NTP daemon** — offset was -26.9 ms with 2.5 ms jitter
+  while it was running, since it was stepping the clock from the
+  DeltaT sonar's GPS feed behind ntpd's back.
+
+Third-party services left running (verified legitimate): Meinberg `NTP`,
+`hasplms` (QPS license), `PostgreSQL (QPS)`, `QpsHelpServer`,
+`SQLWriter`, `TeamViewer`, Microsoft Defender trio.
+
+### Mercat time-sync picture + PTP evaluation
+
+Current stack:
+
+- **Meinberg-style ISC `ntpd`** at `C:\Program Files (x86)\NTP`,
+  service name `NTP`, pointed at `time.bizzy.p11.lan` (TM2000B).
+- Config: `server time.bizzy.p11.lan iburst minpoll 6 maxpoll 7`.
+- Windows `w32time` is **Stopped** — no conflict.
+- `ntpq -pn` after the PDSSettimeService disable shows TM2000B
+  selected (`*`, refid `.GPS.`, stratum 1, reach 377, delay 0.5 ms).
+- Offset at the moment of capture was -26.9 ms (footprint of the
+  now-disabled Teledyne service); ntpd will slew to near-zero over
+  the next several polls.
+
+**PTP evaluated and deferred.** Summary of the decision (full write-up
+in `project_time_sync_ptp.md`):
+
+- NIC: Intel I211 Gigabit — IEEE 1588 HW timestamping at the silicon
+  level; Windows driver doesn't surface PTP knobs via
+  `Get-NetAdapterAdvancedProperty` (common for Intel GbE).
+- OS: Windows 11 Pro has no native PTP — that's Server-only.
+  Third-party clients (Meinberg PTP add-on, Domain Time II,
+  TimeKeeper) are commercial, ~$250-$400/seat.
+- Path: unmanaged Trendnet TI-PG80B PoE switch caps PTP accuracy at
+  ~10-100 μs (no transparent/boundary clock).
+- Current NTP accuracy (~1 ms) is already ~2 mm at 4 kt — inside
+  multibeam pulse bandwidth.
+- Revisit PTP only if a future sonar / sync requirement drops below
+  1 ms, or the PoE switch gets replaced anyway, or mercat moves to
+  Windows Server.
+
+All verification commands and the PTP decision criteria are captured
+in `reference_mercat_time_sync.md` in memory.
+
+### Other-agent PR activity on 2026-04-23
+
+While this session focused on the boat (H.265 rollout, TM2000B
+recovery, mercat COM4 + service cleanup), other agents landed /
+opened PRs worth noting for the record:
+
+- **[rolker/unh_marine_perception#5](https://github.com/rolker/unh_marine_perception/pull/5)
+  (merged, +843/-62)** — the on-device H.265 encoder in
+  `depthai_marine` that PR #79 depends on. Previously we were pulling
+  the dev branch from `gitcloud/jazzy`; as of today it's on
+  `origin/jazzy`, so a regular `git pull` on gabby (once its clock
+  resets there) pulls everything end-to-end.
+- **[rolker/rqt_operator_tools#21](https://github.com/rolker/rqt_operator_tools/pull/21)
+  (merged, +191/-6)** — fixes the long-running annunciator
+  window-resize bug (#19). The mission annunciator no longer blows out
+  the rqt window horizontally when dragged taller. (Root cause:
+  `QLabel.minimumSizeHint()` scaling with font metrics.)
+- **[rolker/rqt_operator_tools#22](https://github.com/rolker/rqt_operator_tools/pull/22)
+  (open, +3630)** — full `rqt_camera_grid` plugin implementation
+  closing the #20 issue opened earlier in this session. 3.6 k lines —
+  multi-pane grid with per-pane `(base_topic, transport_hint)` config
+  and staleness border. When this merges, salmon will subscribe to
+  `image_raw/ffmpeg` directly and the `image_transport republish`
+  workaround logged above becomes obsolete.
+- **[rolker/rqt_operator_tools#23](https://github.com/rolker/rqt_operator_tools/issues/23)
+  / #24 (open, +559/-23)** — annunciator adaptive column widths +
+  per-cell font fitting. Quality-of-life follow-up to #21.
+
+### Open item for next mercat session — NTP convergence
+
+After disabling `PDSSettimeService`, the Meinberg ntpd offset against
+TM2000B **did not converge**. Two samples ~5 min apart:
+
+- `offset -26.912 ms` (initial, right after disable)
+- `offset -32.663 ms` (5 min later)
+
+`reach 377`, `delay ~0.5 ms`, `jitter ~2.8 ms` both times — link and
+measurement quality are fine, the clock is just drifting away. Most
+likely ntpd's drift/frequency estimate got corrupted while
+PDSSettimeService was stepping the clock behind its back; restarting
+the NTP service would reset the PLL. Not pursued in this session —
+mercat is being powered down for the day. Next session:
+
+1. Check with `ntpq -pn` on boot and see what offset is.
+2. If still drifting, `Restart-Service NTP` and observe for a few
+   minutes (iburst will give 8 rapid polls).
+3. If still drifting after restart, search for another clock-setter
+   we missed (scheduled tasks, other services). `ntpq -c rv` will
+   show ntpd's internal PLL state.
+
+### 2026-04-24 — Queued for tomorrow's pier session
+
+Operator-station software day. Boat not powered. Work done on
+salmon (workspace machine) and pushed to both GitHub and gitcloud
+so gabby + salmon can `make sync` in the morning and have the
+changes.
+
+**Queued for verification** (see "Next pier session" checklist at
+the top of this log):
+
+- **`rqt_camera_grid` plugin landed on `jazzy`** via
+  [rolker/rqt_operator_tools PR #22](https://github.com/rolker/rqt_operator_tools/pull/22)
+  ([merge `fd3bb3e`](https://github.com/rolker/rqt_operator_tools/commit/fd3bb3e)).
+  Closes [rolker/rqt_operator_tools#20](https://github.com/rolker/rqt_operator_tools/issues/20).
+  Multi-stream image_transport grid with per-pane staleness border,
+  YAML perspective persistence, and a live-thumbnail config dialog
+  (direction arrows + Clear, no `+` / `-`). Tested hands-on via the
+  shipped webcam demo (`ros2 launch rqt_camera_grid demo_webcam_grid.launch.py`
+  + `config/demo_webcam_grid.yaml`). Tomorrow's operator-side
+  verification on salmon replaces the `image_transport republish`
+  workaround documented in the 2026-04-23 session — rqt_camera_grid
+  subscribes to the `ffmpeg` transport directly.
+- **`package.xml` now declares all four image_transport plugins** as
+  `exec_depend` — `compressed_image_transport`,
+  `compressed_depth_image_transport`, `theora_image_transport`,
+  `ffmpeg_image_transport`. Fresh `rosdep install` on salmon will
+  pull everything the config dialog can select, closing the "operator
+  station manual install" gap flagged on 2026-04-23.
+- **`plan-task` skill guidance for implementation-phase plan edits**
+  merged to workspace `main` via
+  [rolker/ros2_agent_workspace PR #450](https://github.com/rolker/ros2_agent_workspace/pull/450)
+  ([merge `8c92c6d`](https://github.com/rolker/ros2_agent_workspace/commit/8c92c6d)).
+  Closes [rolker/ros2_agent_workspace#449](https://github.com/rolker/ros2_agent_workspace/issues/449).
+  Documents inline-edit default + appended "Implementation Notes"
+  for design pivots + commit discipline, with a worked example from
+  PR #22's round-8 fix pass. Not a hardware change — affects how
+  future plan-first PRs stay in sync with their plans.
+
+**gitcloud push**: `./.agent/scripts/push_remote.py --remote gitcloud`
+ran clean — 32 repos, 0 errors. Gabby and salmon pull from gitcloud
+(see memory `reference_gitcloud.md`); `make sync` on either machine
+will pull today's changes including the merged rqt_camera_grid.
+
+**Also during the session**:
+
+- Added a "Next pier session" checklist at the top of this log so
+  it's the first thing a future-me sees when opening the deployment
+  log. Hydro-payload specific items stay in `hydro_payload_install_log.md`;
+  the top-of-deployment-log checklist covers boat-wide verification
+  (sync, build, camera grid, time sync, network reach).
+- Multi-round Copilot review on PR #22 (22 rounds, ~60 comments).
+  41 valid findings addressed, 2 false positives dismissed. The
+  experience prompted the workspace-level "Surface UX decisions
+  before deciding" feedback memory — don't silently pick a side
+  when a bot offers multiple reasonable UX options; ask first.
+
+**Nothing to verify on the boat from today** — all changes are
+operator-side / workflow-side. The verification happens when gabby
+and salmon sync and we exercise the camera pipeline with the boat
+powered up.
