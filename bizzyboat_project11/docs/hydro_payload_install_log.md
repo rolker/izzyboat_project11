@@ -95,39 +95,85 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
 - [ ] Capture a short QINSy log at the dock and save an index entry in
       the photo / data log below.
 
-**1PPS time-sync wiring — M3 head from SBG** (`#76` follow-up):
+**SBG ↔ gabby + M3 1PPS wiring via DB-9 #2** (`#76` follow-up):
 
 Background: the M3 head requires a 0–5 V 50%-duty 1PPS pulse on its
 breakout box plus NMEA ZDA over UDP 31100 @ 1 Hz to its IP. The
 TM2000B has no physical PPS output, so the SBG Ellipse-D's `SYNC OUT
-A` (main connector pin 6, LVTTL) is our 1PPS source.
+A` (Fischer pin 6, surfaced on DB-9 #2 pin 4 of the splitter cable)
+is our 1PPS source. The M3 stays on its isolated mercat link;
+**QINSy on mercat sources the ZDA-over-UDP feed** to the M3.
 
-- [ ] **Confirm the M3 breakout box has the 4-pin Sync/1PPS connector**
-      (the manual lists a stripped-down variant without it). Photo of
-      the breakout settles it. Block — without this connector we
-      either order the sync-capable variant or run 1PPS through the
-      main 10-pin underwater cable, which means re-terminating the
-      wet-end on a through-hull install.
+The same DB-9 #2 also gives gabby a full-duplex RS-232 link to the
+SBG via PORT E. gabby's MezIO add-in provides 4 native rear-panel
+RS-232 DB-9 (male DTE) ports, all currently free — no USB-serial
+dongle needed. PORT E carries **NMEA out + RTCM in on the same RS-232
+line** (sbgCenter Input/Output tab → PORT E mode = RS-232 → enable
+"Forward Corrections"), collapsing what would have been two cables
+into one. PORT B (DB-9 #2 pin 8) stays unused.
+
+Side benefits: gabby gets a direct SBG NMEA feed for ROS-side
+ingestion (parallel to the QINSy → ROS bridge in `marine_tools#1`),
+and gabby owns the NTRIP client for the SBG's RTK chain (independent
+of the Cube's NTRIP).
+
+**Cable plan** — single fab cable from SBG splitter's DB-9 #2,
+fanning into a DB-9 for gabby and a MIND-4 for the M3 breakout:
+
+- SBG end: **female DB-9** (mates with the splitter's male DB-9 #2)
+- gabby end: **female DB-9** (mates with gabby's male rear-panel
+  DTE port)
+- Both DB-9s are DTE → DTE; cable wiring is **null-modem** between
+  the two: SBG pin 2 ↔ gabby pin 3, SBG pin 3 ↔ gabby pin 2,
+  pin 5 ↔ pin 5 (signal ground)
+- M3 end: **SEA CON MIND-4** plug — gender depends on which variant
+  the breakout takes (MIND-4-CCP cable plug = male contacts /
+  breakout receptacle female; MIND-4-FCR cable receptacle = female
+  contacts / breakout plug male). Confirm by inspection before
+  ordering the connector
+- 1PPS leg taps SBG pin 4 (SYNC OUT A) → MIND-4 pin 4 (1PPS_SYNC);
+  SBG pin 5 (GND) → MIND-4 pin 1 (DGND); cable shield → MIND-4
+  pin 3 (DRAIN). Keep this leg < 1 m
+- gabby leg can be longer (RS-232 good to ~15 m); use shielded
+  twisted pair if running near AC or motor wiring
+
+Checklist:
+
+- [x] M3 breakout box variant confirmed sync-capable (non-triangular
+      variant — has the 4-pin Sync/1PPS connector). 2026-04-24.
+- [ ] Identify M3 breakout 4-pin connector variant (MIND-4-CCP vs
+      MIND-4-FCR) by inspection — determines the gender of the
+      MIND-4 end of the fab cable.
 - [ ] **Confirm M3 head firmware ≥ 1.5** before relying on 1PPS time
       sync mode (hard prerequisite per install manual).
 - [ ] **Set SBG Sync Out A to PPS / pulse mode** in sbgCenter (Output
       → Sync Out → pulse mode); record configured pulse width.
-- [ ] **Fabricate the PPS cable**: SEA CON MIND-4 connector on the
-      breakout-box end (Pin 1 DGND, Pin 3 DRAIN/shield, Pin 4
-      1PPS_SYNC); shielded twisted pair to the SBG's SYNC OUT A pin 6
-      and ground; keep < 1 m. Scope the pulse at the M3 end before
-      committing (SBG high-level is 3.2 V light-load / 2.6 V at 16 mA
-      — well above TTL Vih but worth verifying after the cable run).
+- [ ] **Configure SBG PORT E in sbgCenter**: mode = RS-232; NMEA out
+      enabled (GGA, ZDA, RMC, HDT at chosen rate); "Forward
+      Corrections" enabled to accept incoming RTCM on the same port.
+- [ ] **Fabricate the dual-purpose cable** per the spec above
+      (female DB-9 on SBG end, female DB-9 on gabby end with
+      null-modem wiring between them, MIND-4 on M3 end with
+      identified gender). Scope the SBG PPS pulse at the M3 end
+      before connecting (SBG high level is 3.2 V light-load / 2.6 V
+      at 16 mA — well above TTL Vih but worth verifying).
 - [ ] **Set M3 Time Sync Mode to 1PPS**: `Sonar Setup → Time Sync
       Mode → 1PPS`.
-- [ ] **Decide ZDA bridge mechanism** for ZDA → M3 head IP:31100.
-      Options: QINSy NMEA pass-through (cleanest if supported), tiny
-      Python/PowerShell forwarder on mercat reading SBG NMEA off
-      COM4, or other. Ellipse-D is serial-only — no native UDP ZDA
-      from the SBG. Capture chosen path and rationale below.
-- [ ] **Verify 1PPS lock**: M3 log should show
+- [ ] **Configure QINSy NMEA ZDA (Network) output driver** to emit
+      ZDA over UDP at 1 Hz to the M3 head IP on port 31100. QINSy
+      path: `Settings → Input/Output Ports → Output Select = NMEA →
+      enable $--ZDA at 1 Hz`. Driver: `Network NMEA ZDA (UDP) - 18`.
+- [ ] **Configure gabby NTRIP client** to forward RTCM out the
+      chosen rear-panel RS-232 port (which is wired as DTE male →
+      cable swaps it null-modem to the SBG side, so gabby's "TX"
+      pin 3 maps to SBG PORT E RX). Decide MACORS mountpoint and
+      credentials.
+- [ ] **Verify 1PPS lock** at the M3: log should show
       `INF 1PPS: 10 pulses received in 10s`. If fewer than 10, the
       pulse isn't reaching the head.
+- [ ] **Verify RTK lock on the SBG**: sbgCenter → GNSS raw
+      information tab should show RTK fixed once corrections are
+      flowing from gabby's NTRIP client.
 
 **ROS side (optional, time permitting)**:
 
