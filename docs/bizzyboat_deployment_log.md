@@ -3670,9 +3670,86 @@ or fix the underlying config:
   startup transient should be filtered out of any
   alerting/aggregation that summarizes "ever-failed" status.
 
-#### Discussing each item
+#### Per-item triage
 
-Pulling these out of the deployment log so it doesn't grow into a
-running design discussion — see the chat thread following this entry
-for per-item triage / issue creation.
+**Item 2 (Nav2 lifecycle ERROR)** — already addressed in the field;
+not chasing.
+
+**Item 3 (udp_bridge VPN/WiFi failures)** — already under
+investigation; not opening a new thread.
+
+**Item 5 (all VPN ping endpoints unreachable)** — downstream of
+item 3; folded into that investigation.
+
+**Items 4 (Starlink ~27 min degradation) and 1 (mavros Sensor health
+GPS=Fail)** — discussed below.
+
+##### Item 1 deep dive — `mavros: System "Sensor health"` GPS=Fail
+
+**Bottom line: this is diagnostic noise, not an actual GPS problem.**
+No action for now; logged so future readers don't burn cycles
+re-deriving it. Scripts used:
+`/tmp/gps_fail_timeline.py`, `/tmp/gps_rtk_correlation.py`
+(transient — not committed).
+
+The earlier "2319 s active span" framing was misleading; that was
+just first-to-last-event distance. **Each event is a 1-second blip**
+(one diagnostic publish cycle). Bag 16:47 (51 min) had 17 such blips
+scattered through the bag, including a clustered burst of 7 blips at
+~3 s spacing near the end. Bag 17:39 (37 min) had 4 blips.
+
+Receiver state during every single blip (across both bags):
+
+| Metric                | Value during GPS=Fail |
+| --------------------- | --------------------- |
+| `fix_type` (GPS_RAW)  | **6 (RTK_FIXED)**     |
+| Satellites visible    | 31–37                 |
+| Horizontal accuracy   | **19–25 mm**          |
+| Vertical accuracy     | 25–39 mm              |
+| `GPS: RTK` diagnostic | **stayed `RTK Fixed`** — never transitioned during a blip |
+
+So when the Cube briefly flags GPS unhealthy in the
+`SYS_STATUS.onboard_control_sensors_health` bitmask, the receiver
+itself is at peak performance: RTK-fixed with sub-cm accuracy.
+
+What's actually flipping: only **bit 5 (GPS) clears in `health`** for
+one cycle while staying set in `enabled`. Bitmask-triple counts in
+the 17:39 bag:
+
+```
+1617× : enabled=0x0220DC2B  health=0x0230DD2B  (normal — GPS healthy)
+ 583× : enabled=0x0220802B  health=0x0230812B  (passive control mode — GPS healthy)
+   4× : enabled=0x0220DC2B  health=0x0230DD0B  (the blip — GPS unhealthy bit clears)
+```
+
+(The two distinct `enabled` masks differ in bits 10, 11, 12, 14 — the
+position/attitude **control** loops. Those are on when the FCU is
+actively guiding, off when it's passive. Independent from the GPS
+blip and not a concern.)
+
+Likely Cube-internal causes for a one-cycle `GPS_HEALTHY=false` while
+the receiver itself stays locked:
+
+- one MAVLink GPS message timeout (a single missed packet)
+- GPS-vs-compass heading disagreement check fired briefly
+- EKF GPS innovation gate fired briefly (e.g., during a turn or
+  dynamic motion)
+- RTCM correction-delivery hiccup the EKF noticed but the receiver
+  rode through without losing fix
+
+**Three separate "GPS" diagnostics — easy to confuse.** Future
+readers, before chasing any GPS-flagged diagnostic, identify which
+one is firing:
+
+| Diagnostic                        | Watches                          | Apr 24 behavior                             |
+| --------------------------------- | -------------------------------- | ------------------------------------------- |
+| `mavros: System` "Sensor health"  | Cube `SYS_STATUS` health bitmask | 1-s blips, ~17/h, no actual receiver issue  |
+| `mavros: GPS` "No satellites"     | NavSatFix-derived sat count      | single-shot ERROR at boot only              |
+| `GPS: RTK`                        | RTK fix quality                  | mostly `RTK Fixed`; rare "3D Fix"/"RTK Float" — separate signal |
+
+If/when we want to silence the noise: add hysteresis (only ERROR if
+GPS unhealthy persists ≥3–5 s) or cross-check with receiver state
+(suppress the bit-flip when `gps1/raw.fix_type ≥ 3` and `eph` is
+small). Both would be upstream changes to the mavros diagnostic
+plugin or a wrapper. Not pursuing now.
 
