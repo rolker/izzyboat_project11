@@ -29,10 +29,18 @@ TOPICS=(
     /bizzy/sensors/cameras/oak_starboard/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_aft/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_port/image_raw/ffmpeg
+    /bizzy/sensors/cameras/oak_forward/camera_info
+    /bizzy/sensors/cameras/oak_starboard/camera_info
+    /bizzy/sensors/cameras/oak_aft/camera_info
+    /bizzy/sensors/cameras/oak_port/camera_info
     /bizzy/sensors/cameras/oak_forward/segmentation/compressed
     /bizzy/sensors/cameras/oak_starboard/segmentation/compressed
     /bizzy/sensors/cameras/oak_aft/segmentation/compressed
     /bizzy/sensors/cameras/oak_port/segmentation/compressed
+    /bizzy/sensors/cameras/oak_forward/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_starboard/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_aft/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_port/segmentation/camera_info
 )
 
 echo "=== Recording for ${DURATION}s to ${OUT_DIR} ==="
