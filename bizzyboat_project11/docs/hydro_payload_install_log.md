@@ -38,6 +38,18 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
 - [ ] Ping M3 on its factory IP (point-to-point via the spare mercat
       Ethernet port).  Record IP in "Hardware inventory" above if not
       already captured.
+- [ ] **Capture the Trimble antenna case label** (model / part number)
+      via phone photo of forward and aft pucks. Existing 2026-04-22
+      photos may already show it — check `~/bizzyboat/2026-04-22_GPS_
+      antennas_*.jpg` first. Without the model number we can't look up
+      the antenna phase-center offset above the mount base, leaving a
+      ~3–5 cm absolute Z bias in soundings (constant, not a
+      repeatability issue, but eats into the IHO Special Order TVU
+      budget). Once the model is identified, look up the phase center
+      in the Trimble datasheet or NGS antenna calibration database
+      (`https://geodesy.noaa.gov/ANTCAL/`) and update both the
+      install-log antenna z entries and the SBG lever-arm config in
+      sbgCenter.
 
 **QINSy setup — SBG IO driver**:
 
