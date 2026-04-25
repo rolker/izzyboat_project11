@@ -3593,3 +3593,86 @@ stamps (zero or >60 s in the future) force Error + `[no stamp]` label
 marker; pane label shows both ages (`rx Xs | hdr Ys`) so the operator
 can see which side is driving. 19 gtests passing. **PR held open** to
 batch with additional pier-session bug fixes before merging.
+
+### Post-session diagnostic-bag analysis (2026-04-25)
+
+Walked all five Apr 24 bizzyboat bags
+(`~/data/logs/bizzyboat/2026-04-24T{12.56,16.17,16.34,16.47,17.39}*`,
+covering ~5.6 h cumulative) and aggregated `/diagnostics` by
+`(name, level)`. Quantitative grounding for the "VPN not working" and
+"Nav stack not healthy" notes from the pier session above, plus
+several other concerns the in-session log didn't capture. Aggregation
+script saved at `/tmp/dump_diagnostics.py`; per-bag table at
+`/tmp/diagnostics_apr24.txt` (transient — will not survive reboot).
+
+#### Real concerns
+
+1. **`mavros: System "Sensor health"` ERROR — root cause `GPS=Fail`.**
+   Bitmasks `Sensor present=0x1230DC2B`, `Sensor enabled=0x0220DC2B`,
+   `Sensor health=0x0230DD0B`; key/value breakdown shows 3D gyro,
+   accelerometer, absolute pressure, and 3D angular rate control all
+   `Ok` — only **GPS=Fail**. Intermittent: 22 events / 2319 s span in
+   16:47 bag; 6 events / 1153 s span in 17:39 bag; also present in
+   12:56 morning bag. The Cube is marking GPS unhealthy in bursts
+   throughout the day. Likely the same upstream cause as
+   `GPS: RTK` degraded-to-`3D Fix` / `RTK Float` observed in the
+   same bags.
+
+2. **`lifecycle_manager_navigation: Nav2 Health` ERROR — "An error has
+   occurred during a node state transition".** In the 12:56 morning
+   bag: **10,827 ERROR samples (99 % of 10,950) over 10,897 s** —
+   Nav2 was effectively broken for the entire 3-hour morning session.
+   Then **completely absent from the 16:17+ bags** — the lifecycle
+   manager either never came back up for the field session, or was
+   intentionally not started. This is the quantitative version of
+   the "Nav stack not healthy — mission rejected" observation above.
+
+3. **`udp_bridge: bizzy: operator: vpn` and `wifi` — degraded
+   reliability.** 16:34 bag: ERROR `no rx for 100s` escalating to
+   `no rx for 134s+`, 49 % of samples non-OK over a 336 s active span.
+   17:39 bag: WARN `tx failures/drops` 78 % of WiFi samples, 55 % of
+   VPN samples; latest VPN sample showed
+   `tx_failed_bytes_per_sec=56,031.8` vs
+   `tx_ok_bytes_per_sec=49.5` — the VPN leg was effectively
+   non-functional (>99.9 % failure rate). Quantitative grounding for
+   "VPN not working" above.
+
+4. **`starlink_diagnostics: starlink.bizzy: link` — sustained ERROR
+   window.** 17:39 bag: 15 ERROR samples spanning ~27 min with
+   pop-ping drop rates of 10–40 %. Specifically at 18:10:29–18:10:49:
+   10 % → 40 % → 28 % → 25 % drops back-to-back; throughput collapses
+   into the single-digit kbps in places. Was not surfaced in the
+   in-session pier-log at all.
+
+5. **All VPN-routed endpoints unreachable from the boat for the full
+   day.** `bencloud`, `router_op_vpn`, and `salmon_vpn` all
+   `Unreachable (100 % packet loss)` across all 5 bags. By contrast,
+   `dns_cloudflare`, `dns_google`, `router_op_direct`,
+   `salmon_direct` only saw ~25 % packet loss. Direct (non-VPN)
+   routing works partially; the VPN tunnel is down or misrouted from
+   the boat side. Same root cause as item 3 (udp_bridge VPN failures).
+
+#### Diagnostic-stream noise to suppress
+
+These statuses are stuck non-OK at ~100 % across every bag and are
+drowning out real signals in `/diagnostics_agg`. Either silence them
+or fix the underlying config:
+
+- `mavros: Mount` — `Can not diagnose in this targeting mode`. No
+  mount/gimbal on bizzyboat; this is a stuck WARN.
+- `mikrotik: wifi.bizzy: interface/ether2-5` — `Not running`. Unused
+  wired ports on the WiFi router.
+- `teltonika: router.bizzy: interface/mob1s2a1`, `mwan3/mob1s2a1`,
+  `mwan3/wan1` — `Down` / `notracking`. Cellular not provisioned.
+- `mavros: Heartbeat`, `MAVROS UAS`, `Battery`, `GPS` — single-shot
+  ERROR at boot ("No events recorded", "disconnected", "No data",
+  "No satellites"). These flip to OK within a second of startup; the
+  startup transient should be filtered out of any
+  alerting/aggregation that summarizes "ever-failed" status.
+
+#### Discussing each item
+
+Pulling these out of the deployment log so it doesn't grow into a
+running design discussion — see the chat thread following this entry
+for per-item triage / issue creation.
+
