@@ -37,6 +37,10 @@ TOPICS=(
     /bizzy/sensors/cameras/oak_starboard/segmentation/compressed
     /bizzy/sensors/cameras/oak_aft/segmentation/compressed
     /bizzy/sensors/cameras/oak_port/segmentation/compressed
+    /bizzy/sensors/cameras/oak_forward/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_starboard/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_aft/segmentation/camera_info
+    /bizzy/sensors/cameras/oak_port/segmentation/camera_info
 )
 
 echo "=== Recording for ${DURATION}s to ${OUT_DIR} ==="
