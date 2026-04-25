@@ -175,6 +175,95 @@ Checklist:
       information tab should show RTK fixed once corrections are
       flowing from gabby's NTRIP client.
 
+**AML SVS via gabby — proposed architecture** (`#76` follow-up):
+
+Current install has the AML on mercat COM3. **Proposed change**:
+move the AML serial cable to one of gabby's free MezIO RS-232 ports
+and let gabby be the SV data hub. gabby publishes a ROS topic, sends
+the raw `$AML…*<cs>` line to mercat as UDP for QINSy, and emits a
+**Valeport-format** copy out a second MezIO port that connects
+back to mercat (now-free COM3) via a null-modem cable for the M3.
+
+```
+AML SVS ──serial──► gabby (Nuvo-9160GC, MezIO RS-232 #1)
+                     │
+                     ├── sv_bridge ROS 2 node ──┐
+                     │   ├─► /sound_speed (ROS topic)
+                     │   ├─► UDP datagram → mercat:port  (raw $AML line)
+                     │   └─► Valeport string → MezIO RS-232 #2
+                     │
+                     └── null-modem cable to mercat free COM3 → M3 software
+                                                                (Sensors Setup,
+                                                                 native Valeport
+                                                                 SVS protocol)
+
+QINSy on mercat
+  Network - Depth SV Temp (AML or EM1000) - 34   ← UDP from gabby
+                                                   (auto-detects format)
+```
+
+Why: clean separation between data hub (gabby) and acquisition
+machines (mercat). M3 gets native Valeport — no custom-sensor
+definition needed. SV becomes a first-class ROS signal (logging,
+operator UI, future autonomy use). Pairs with the SBG↔gabby PORT E
+plan; gabby is the consistent boat-side data integration point.
+Future AML winch SVP plugs into the same architecture.
+
+Trade-offs: introduces a software hop (bridge service), so M3 and
+QINSy now depend on gabby being up. Mitigations: run bridge as
+`systemd` service with `Restart=always`; configure a sane SV default
+(~1490 m/s) in M3's `Sound Speed Preference` so the M3 isn't
+dead-on-arrival if the bridge is late on boot. Cable reroute (AML
+mercat→gabby) is a few feet of shuffling in the same enclosure.
+
+Valeport "standard" output format (per Valeport miniSVS manual):
+leading space + 7-digit mm/s integer + CR/LF — e.g. `_1510123\r\n`
+for 1510.123 m/s. Two alternative m/s formats (2 / 3 decimals) also
+M3-acceptable.
+
+Open prerequisites:
+
+- [ ] **Capture 5 lines of the live AML stream** via TeraTerm on
+      mercat COM3 and paste below under "AML stream sample
+      (YYYY-MM-DD)". The QINSy network driver auto-detects, but the
+      bridge needs to know which field is SV — exact format also
+      pins down the AML model.
+- [ ] **Confirm M3 boot tolerance for late SV**: bench-test starting
+      M3 software with no SV stream, then start the SV stream, and
+      confirm the M3 picks it up cleanly (vs. needing a restart).
+      Decide whether a "stale-SV warning" watchdog is needed.
+- [ ] **Decide ROS message convention**: existing workspace SV
+      message type vs. `std_msgs/Float32` with frame_id vs. add a
+      new `marine_msgs/SoundSpeed`. Coordinate with `marine_tools#1`
+      (QINSy → ROS bridge) so both publish a consistent type.
+- [ ] **Decide bridge package home**: `marine_tools` (alongside the
+      QINSy → ROS bridge) vs. new `aml_sv_bridge` package. Open a
+      separate issue to track implementation once decided.
+- [ ] **Reroute AML serial cable** from mercat COM3 to a free gabby
+      MezIO RS-232 port. Record port assignment.
+- [ ] **Fabricate / source null-modem cable** for gabby MezIO #2 →
+      mercat COM3 (both ends female DB-9, pin 2/3 cross). Standard
+      off-the-shelf part.
+- [ ] **Configure M3 Sensors Setup** with the native Valeport
+      protocol on the new mercat COM port; mark as Master Reference
+      for sound speed (`Deployment → Master Reference → Sound
+      Speed`).
+- [ ] **Configure QINSy** with the `Network - Depth SV Temp (AML or
+      EM1000) - 34` driver on the matching UDP port; observation
+      type Sound Velocity at the SVS tip position
+      (x = -0.455, y = +0.25, z = -0.055).
+- [ ] **Set M3 Sound Speed Preference fallback** to ~1490 m/s for
+      the operating area so the M3 has a sane default if the SV
+      stream is late.
+- [ ] **Verify all three consumers** get matching SV values within
+      tolerance: ROS topic (`ros2 topic echo /sound_speed`), QINSy
+      Generic Display, M3 Sensors page.
+
+Fallback if architecture is rejected: AML stays on mercat COM3,
+QINSy uses serial driver `Sound Velocity - Smart SV (AML, ASCII)
+(Active) - 31`, M3 either gets a Y-cable + custom sensor definition
+or relies on a fixed Sound Speed Preference default.
+
 **ROS side (optional, time permitting)**:
 
 - [ ] Scope the QINSy → ROS bridge approach (`marine_tools#1`) — watch
