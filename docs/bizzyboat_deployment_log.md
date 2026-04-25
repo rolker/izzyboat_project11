@@ -3753,3 +3753,95 @@ GPS unhealthy persists ≥3–5 s) or cross-check with receiver state
 small). Both would be upstream changes to the mavros diagnostic
 plugin or a wrapper. Not pursuing now.
 
+##### Item 4 deep dive — `starlink.bizzy: link` ERROR window + cumulative usage
+
+**Bottom line: the link itself was fine; the puzzling Starlink-portal
+usage is from short multi-Mbps download spikes that don't match the
+boat's expected workload.** No action for now; log so future readers
+have the timeline and methodology if the pattern recurs. Script used:
+`/tmp/starlink_timeline.py` (transient).
+
+**Which Starlink:** the diagnostic name is
+`starlink_diagnostics: Starlink: starlink.bizzy: link` — the boat-side
+dish. No second Starlink appears in any of the Apr 24 bags.
+
+**The "27 min ERROR window" framing in the parent entry was wrong.**
+Same misleading first-to-last-event framing as item 1. There were 22
+ERROR segments across the day, but **each was 1–7 seconds long**;
+**cumulative ERROR time = ~50 seconds total** — the link was fine for
+~99.997 % of the 5.34 h span. Drops are isolated brief blips, not a
+sustained outage. Atmospheric / positional / scheduled-handoff jitter,
+not load-induced (see "spikes don't correlate" below).
+
+**Cumulative transfer for the day** (trapezoid integration of
+per-second `downlink_throughput_bps` / `uplink_throughput_bps`,
+12:56:13 – 18:16:22 UTC, ignoring inter-bag gaps >30 s):
+
+| Direction | Total      | Average    |
+| --------- | ---------- | ---------- |
+| Downlink  | **346 MB** | 144 kbps   |
+| Uplink    | **64 MB**  | 27 kbps    |
+
+**The puzzling part: multi-Mbps download spikes.** Probably what
+showed up as elevated usage on the Starlink portal. Peak instantaneous
+`max_dl_kbps` per minute, only listing >1 Mbps:
+
+| UTC      | Peak DL       | Peak UL  | Notes                          |
+| -------- | ------------- | -------- | ------------------------------ |
+| 13:32:13 | 6.4 Mbps      | 17 kbps  |                                |
+| 13:34:13 | 3.1 Mbps      | 24 kbps  |                                |
+| 14:00:13 | 2.0 Mbps      | 19 kbps  |                                |
+| 14:11:13 | **224.0 Mbps**| 206 kbps | 🚩 single-second monster spike  |
+| 14:14:13 | 13.9 Mbps     | 15 kbps  |                                |
+| 14:33:13 | 1.4 Mbps      | 17 kbps  |                                |
+| 14:37:13 | 1.0 Mbps      | 45 kbps  |                                |
+| 15:20:13 | 1.1 Mbps      | 13 kbps  |                                |
+| 15:35:13 | 16.6 Mbps     | 60 kbps  |                                |
+| 15:37:13 | 1.5 Mbps      | 65 kbps  |                                |
+| 15:38:13 | 1.0 Mbps      | 157 kbps |                                |
+| 15:49:13 | 1.1 Mbps      | 17 kbps  |                                |
+| 16:57:13 | 3.7 Mbps      | 24 kbps  |                                |
+| 17:18:13 | **73.8 Mbps** | 25 kbps  | 🚩 second monster spike         |
+| 17:40:13 | 9.3 Mbps      | 22 kbps  |                                |
+| 18:15:13 | 2.2 Mbps      | 15 kbps  |                                |
+
+The 14:11:13 spike alone is roughly **28 MB in one second** — about
+8 % of the day's downlink in a single sample window. The 17:18:13
+spike is another ~9 MB burst.
+
+**Spikes are not correlated with drops.** ERROR segment timestamps
+(`13:42:29–36`, `13:44:58–05:04`, etc.) and the throughput-spike
+timestamps in the table are at different times. The link handled the
+spikes cleanly; drops are a separate phenomenon, not load-induced.
+
+**What's actually consuming this on a boat that's supposed to be
+sending only telemetry?** The bag can't tell us — `/diagnostics` only
+sees aggregate Starlink throughput, not which host or process. The
+boat's expected workload is:
+
+- udp_bridge VPN to operator: rate-capped at 1 Mbps tx (and that
+  day's tx_failed numbers in the parent entry show it was barely
+  working anyway, ~50 B/s ok)
+- ROS-internal traffic (DDS heartbeats, control messages)
+- NTP, system telemetry — all should be sub-100 kbps
+
+Multi-Mbps download bursts don't fit any of those. Plausible
+suspects to chase if/when this recurs:
+
+1. **Unattended OS updates on gabby** — `unattended-upgrades`,
+   `snap refresh`, kernel images. Easily explains tens-of-MB bursts.
+2. **Container/image pulls** — `docker pull`, `apt install` triggered
+   by some background service.
+3. **Starlink dish firmware update** — Starlink pushes hundreds of MB
+   during firmware upgrades.
+4. **A speedtest** — someone running `speedtest-cli` mid-session
+   would produce one giant burst.
+5. **Background sync** — rsync, syncthing, anything that wakes up.
+
+**To pin it down next time** (when we feel the need): drop a
+periodic `iftop -t -s 60 -L 10` or `nethogs -t -c 60` sampler running
+on gabby into a log file. Then the next time the boat shows a
+multi-Mbps spike we'll know which interface and which process. For
+now: not pursuing — revisit if the pattern recurs and the data usage
+becomes a billing or operational concern.
+
