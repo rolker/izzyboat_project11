@@ -285,6 +285,12 @@
     base_frame: bizzy/base_link
     mhhw_frame: bizzy/chart_datum_mhhw
 
+/**/sea_surface_estimator:
+  ros__parameters:
+    sea_surface_frame: bizzy/map_tide
+    chart_datum_frame: bizzy/chart_datum
+    mhhw_frame: bizzy/chart_datum_mhhw
+
 /**/mikrotik_monitor:
   ros__parameters:
     host: 'wifi.bizzy.p11.lan'

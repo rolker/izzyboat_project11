@@ -1,0 +1,13 @@
+grid:
+  rows: 3
+  cols: 3
+panes:
+  - {base: /bizzy/sensors/cameras/oak_port/image_raw, transport: ffmpeg, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_forward/image_raw, transport: ffmpeg, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_starboard/image_raw, transport: ffmpeg, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_port/segmentation, transport: compressed, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_forward/segmentation, transport: compressed, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_starboard/segmentation, transport: compressed, warn_s: 2, error_s: 5}
+  - {base: /molab/johnny5/image_raw, transport: compressed, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_aft/image_raw, transport: ffmpeg, warn_s: 2, error_s: 5}
+  - {base: /bizzy/sensors/cameras/oak_aft/segmentation, transport: compressed, warn_s: 2, error_s: 5}
