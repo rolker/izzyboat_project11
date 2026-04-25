@@ -276,12 +276,128 @@ QINSy uses serial driver `Sound Velocity - Smart SV (AML, ASCII)
 (Active) - 31`, M3 either gets a Y-cable + custom sensor definition
 or relies on a fixed Sound Speed Preference default.
 
-**ROS side (optional, time permitting)**:
+**AML-3 SVP via SmartCast winch** (`#76` follow-up):
 
-- [ ] Scope the QINSy → ROS bridge approach (`marine_tools#1`) — watch
-      QINSy's external output options (broadcast, file tail, DB
-      connection?) and decide which is cheapest to consume from ROS.
-      No code expected this session — observation only.
+Two complementary SV streams are wanted for the class:
+
+- **AML at the M3 head** (already discussed above) — continuous,
+  real-time near-transducer SV. Goes into QINSy for refraction at
+  the transducer face.
+- **AML-3 LGR profiler on the SmartCast winch** — periodic full
+  water-column profiles (30 m max rope, 90% rule → ~27 m practical
+  cast depth). WiFi comms; the AML-3 logs internally during the
+  cast and is downloaded over WiFi after.
+
+Workflow (mirrors last year's IzzyBoat / blaze pattern):
+
+```
+SmartCast winch (Seafloor App on mercat) → AML-3 cast (logs internally)
+                                                ↓
+                                       AML-3 WiFi AP
+                                                ↓
+                                cast host downloads via WiFi
+                                                ↓
+                          AML SailFish or HydrOffice Sound Speed Manager
+                                                ↓
+                                profile file (.asvp / .vel / .pro / .aml)
+                                                ↓
+                                  QINSy SVP correction (file or watch)
+```
+
+The "cast host" is whatever machine has WiFi to the AML-3's SSID. On
+IzzyBoat last year that was blaze (Windows, on the boat LAN via
+ethernet, free WiFi for the AML). For BizzyBoat, mercat plays the
+same role *if* it has WiFi hardware — otherwise the simplest
+fallback is a USB WiFi dongle on mercat (~$20). Other options
+considered: router bridging via the RUTX11, gabby as cast host (if
+it has WiFi), or an operator-side laptop. None match blaze's
+simplicity.
+
+Class pedagogy: students design the cast cadence and tooling
+choice. SailFish is the AML-bundled tool; HydrOffice Sound Speed
+Manager (CCOM's own) is a common alternative — students may pick
+either.
+
+Open prerequisites:
+
+- [ ] **Verify mercat WiFi hardware**:
+      `Get-NetAdapter | Where-Object {$_.InterfaceDescription -like
+      "*Wireless*"}` in PowerShell, or just check Network
+      Connections. If absent, source a USB WiFi dongle for mercat.
+- [ ] **Bench-test the SmartCast winch end-to-end**: power up,
+      connect Seafloor SmartCast App, verify automated cast (descend
+      → pause → ascend → home), confirm the AML-3 spins up and logs.
+      Catch winch / pipeline issues before the class.
+- [ ] **Confirm AML-3 WiFi connectivity** from the cast host —
+      identify the AML-3 SSID and successfully download a test cast.
+- [ ] **Verify QINSy SVP ingestion path** — file watch folder vs.
+      manual import. Confirm the file format SailFish or SSM
+      produces is recognized by the current QINSy version.
+
+**M3 mode / range / ping-rate baseline** (`#76` follow-up):
+
+Last year used a Norbit and students chose their own settings;
+matching pedagogy this year. Our prep is just to enable that:
+
+- [ ] Confirm M3 software accessible on mercat from the operator
+      account students will use (no admin restrictions on
+      Setup → System Configuration).
+- [ ] After bench shakedown, save a known-good M3 config (Save
+      Settings in the M3 software UI) as a class-baseline restore
+      point. Store both on mercat and in this repo
+      (`bizzyboat_project11/config/m3_baseline.cfg` or similar).
+- [ ] Link / mirror the M3 reference manual from `~/m3_sonar/` into
+      the bizzyboat operator-docs area so students can find it
+      without root access.
+
+**`marine_tools#1` (QINSy → ROS bridge) — critical path for June** (`#76` follow-up):
+
+Architecture is sonar-agnostic: QINSy emits processed soundings via
+its `Network - Generic Output (User-defined ASCII) (UDP) - 15`
+driver, including TPU; a ROS 2 node on gabby parses that stream and
+publishes `sensor_msgs/PointCloud2` with TPU into the existing
+`cube_bathymetry_node` → `grid_map` → CAMP coverage / rviz
+pipeline. See [`marine_tools#1`](https://github.com/rolker/marine_tools/issues/1)
+for full scope.
+
+Why QINSy bridge over per-sonar `.all` parser: works for **any**
+QINSy-supported sonar, and inherits QINSy's real-time TPU rather
+than re-implementing uncertainty propagation in ROS. Supersedes the
+"`.all` parser on gabby" plan from `project_kongsberg_m3.md`
+memory (Stream 2).
+
+BizzyBoat-side prep (separate from the ROS-side implementation):
+
+- [ ] **In QINSy DbSetup**: add a system of type Output, driver
+      `Network - Generic Output (User-defined ASCII) (UDP) - 15`,
+      destination = gabby's boat-LAN IP, chosen UDP port.
+- [ ] **Generic Layout**: create a layout with Time, transducer-
+      node Lat/Lon/Depth, Horizontal TPU (THU), Vertical TPU (TVU);
+      save XML to `C:\Users\Public\Documents\QPS\QINSy\Drivers\
+      Definitions\Output\`. Verify TPU sub-items are available in a
+      "driver" purpose layout (open question on the issue — driver
+      purpose layouts may differ from export-purpose ones; check
+      against the deployed QINSy version).
+- [ ] **Decide vertical reference output** — ellipsoid heights
+      (matches `map` frame z directly) vs. chart datum (needs
+      `chart_datum → map` inverse from `mru_transform`'s
+      `chart_datum_node`). ERS workflow → ellipsoid. Make this an
+      explicit ROS parameter on the bridge node.
+- [ ] **Confidence-level conversion**: QINSy emits TPU at 95%
+      (~1.96σ); `cube_bathymetry_node` likely expects 1σ. Scale or
+      configure on the bridge.
+- [ ] **End-to-end smoke test before class**: simulated soundings
+      from QINSy → bridge → cube_bathymetry → CAMP coverage
+      visible. Critical-path verification that the data path works
+      independent of any actual M3 pings.
+
+**Recurring checks (post-update / pre-deployment)**:
+
+- [ ] Confirm Windows Firewall on mercat is still **off** (or that
+      the boat LAN is still classified Private with a permissive
+      profile). Windows updates can silently re-enable. UDP exports
+      from M3, UDP receives from QINSy bridge, and ZDA send to M3
+      all silently fail if firewall comes back up.
 
 **Stretch — only if above is solid**:
 
@@ -289,6 +405,14 @@ or relies on a fixed Sound Speed Preference default.
       position, SVS tip).  Tracked under `#77`.
 - [ ] Refine rail-top `z` with a proper measurement (currently
       `[EST] 0.89 m`).
+- [ ] **Patch-test prep** (for student-led patch test during class):
+      ensure all measured install offsets (M3 transducer, SBG IMU,
+      Trimble antennas, SVS tip) are committed in the QINSy template
+      and the SBG sbgCenter config **before** students walk up.
+      If offsets are unapplied, students chase phantom misalignments
+      that are really just unconverted measurements. Students design
+      and run the patch test itself (cod rock as the pingable
+      feature).
 
 **End of session**:
 
@@ -309,6 +433,16 @@ or relies on a fixed Sound Speed Preference default.
 
 **Related existing hardware (for reference, not part of this work):**
 - Cube FCU dual-antenna system: **CUAV C-RTK 2HP**, antennas at x = ±0.835 m (baseline 1.67 m). Already in `bizzyboat_reference_geometry.md`. Confirmed 2026-04-22 that these are separate from the SBG's Trimble pucks, though all four antennas share the same center rail.
+
+### Network endpoints
+
+| Host / device | Network | IP | Notes |
+|---|---|---|---|
+| mercat | boat LAN | **192.168.20.8** | Per `reference_mercat_remote_power.md`; DHCP reservation. |
+| mercat | M3-isolated link | **192.168.1.8** | Dedicated second NIC. |
+| M3 head | M3-isolated link | **192.168.1.234** | Kongsberg factory default. |
+| TM2000B (`time.bizzy.p11.lan`) | boat LAN | 192.168.20.123 | Stratum-1 GPS NTP source. |
+| gabby | boat LAN | 192.168.20.5 | DHCP reservation per `bizzyboat_network.md`. Used as destination for QINSy Generic Output UDP feed → `marine_tools#1`. |
 
 ## Install photo index (local-only)
 
