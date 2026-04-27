@@ -1,6 +1,13 @@
 #!/bin/bash
 # record_camera_topics.sh — Ad-hoc bag capture of OAK camera ffmpeg +
-# segmentation/compressed topics, plus /diagnostics and /tf[_static].
+# segmentation (raw + compressed) topics, plus TF, diagnostics, and the
+# latched robot description.
+#
+# Sufficient to replay-debug `sea_surface_segmentation::SeaSurfaceLayer`
+# (the nav2 costmap plugin) offline: it subscribes to the raw
+# `<cam>/segmentation` Image topic and the matching `camera_info`, and
+# does a TF lookup from the image header frame to the costmap global
+# frame.
 #
 # Usage: ./record_camera_topics.sh [duration_secs]
 #   duration_secs: recording length in seconds (default: 120)
@@ -25,6 +32,7 @@ TOPICS=(
     /diagnostics
     /tf
     /tf_static
+    /robot_description
     /bizzy/sensors/cameras/oak_forward/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_starboard/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_aft/image_raw/ffmpeg
@@ -33,6 +41,10 @@ TOPICS=(
     /bizzy/sensors/cameras/oak_starboard/camera_info
     /bizzy/sensors/cameras/oak_aft/camera_info
     /bizzy/sensors/cameras/oak_port/camera_info
+    /bizzy/sensors/cameras/oak_forward/segmentation
+    /bizzy/sensors/cameras/oak_starboard/segmentation
+    /bizzy/sensors/cameras/oak_aft/segmentation
+    /bizzy/sensors/cameras/oak_port/segmentation
     /bizzy/sensors/cameras/oak_forward/segmentation/compressed
     /bizzy/sensors/cameras/oak_starboard/segmentation/compressed
     /bizzy/sensors/cameras/oak_aft/segmentation/compressed
