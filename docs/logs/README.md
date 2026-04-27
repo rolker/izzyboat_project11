@@ -55,8 +55,9 @@ Then sections by topic, in chronological order within the deployment.
 
 1. User prompts the dev agent at start of day. Agent reads
    `docs/roadmap.md` and the open task issues, proposes the day's items.
-2. User confirms. Agent opens a **deployment issue** with the agreed
-   item list in the body, creates a worktree (via
+2. User confirms. Agent opens a **deployment issue** (see
+   [Deployment issue](#deployment-issue) for title format, labels, and
+   body template), creates a worktree (via
    `.agent/scripts/worktree_create.sh --issue <N>`), opens a draft PR.
 3. Agent initializes the day's log file in the worktree with the header
    above. Issue body links to the file (and to any other host files as
@@ -76,6 +77,11 @@ Then sections by topic, in chronological order within the deployment.
 - Cross-host work (e.g., dev SSHs into salmon) is logged in the
   **agent's own host's file**, not the target's. The file describes
   work done by an agent, not work done to a host.
+- **Multiple agents on one host**: parallel agent sessions on the
+  same host (separate threads of work) all append to the **same**
+  host log file. The file is per-host, not per-agent. One designated
+  **primary logger** per host coordinates with the user and may
+  summarize peer agents' work at user request.
 
 ### Wrap-up
 
@@ -99,13 +105,50 @@ If a deployment surfaces work that's:
 roadmap is the carry-over mechanism between deployments. The next
 deployment's planner reads the roadmap to pick what to fold in.
 
+## Deployment issue
+
+Each deployment gets its own GitHub issue, opened on the dev side at
+the start of the session.
+
+**Title**: `Deployment YYYY-MM-DD: <one-line scope>`
+
+The agent drafts the one-line scope from the proposed day's items;
+the user **approves the scope** before the issue is opened.
+
+**Labels**: `deployment` + `documentation`. (`deployment` is a
+repo-specific label — create it the first time if it doesn't exist.)
+
+**Body sections** (in order):
+
+- **Scope today** — the user-approved one-line scope expanded into
+  a few bullets
+- **Open task issues in scope** — links to focused issues being
+  worked on (e.g., `#76`, `#77`, `#87`)
+- **Hosts active** — which agent hosts are involved (gabby, dev,
+  salmon, mercat, etc.)
+- **Logs** — populated during the session as files appear:
+  - per-host base log files (one per active host)
+  - any task-specific deep-dive log files spun off during the session
+    (see [Task-specific deep-dive logs](#task-specific-deep-dive-logs))
+- **Wrap-up checklist** — push field logs to gitcloud, pull to dev,
+  audit for carry-forward, open follow-up task issues, update
+  `docs/roadmap.md` with anything deferred, merge the wrap-up PR
+
+### Field-side hosts have no GitHub access
+
+`gabby`, `salmon`, and other field-deployed hosts don't carry user
+GitHub credentials. Their only responsibility is to append to their
+host log file and push to gitcloud at session end. **All GitHub
+interaction** — opening the deployment issue, body updates,
+comments, follow-up task issues, the wrap-up PR, the merge —
+happens on the dev side after the dev agent pulls field logs into
+the worktree branch.
+
 ## What to write in a log
 
 The log captures **what an agent did and what it learned**, in enough
 detail that a future agent (or human) can pick up cold. Strong sample:
-[`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md) — currently
-under the legacy `gabby_2026-04-24.md` filename, will be renamed to
-match this convention on next deployment.
+[`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md).
 
 Useful sections (use what fits, skip what doesn't):
 
@@ -124,6 +167,37 @@ Avoid:
   raw data stays in `~/data/logs/`
 - Multi-paragraph design discussions — those belong on the
   deployment issue or a focused task issue
+
+### Timestamp every entry
+
+Prefix each entry — observation, action, summary — with an ISO-8601
+timestamp in **local time with the UTC offset**:
+
+```
+2026-04-27T08:42-04:00 — started charging the boat before launch
+2026-04-27T09:15-04:00 — boat in the water, FCU armed
+```
+
+Local-with-offset is unambiguous (no UTC mental conversion for the
+on-site human) and trivially correlatable to bag timestamps later.
+Even editorial summaries get timestamps — knowing **when** a
+summary was written can matter as much as the summary itself. Use
+**minute precision by default**; bump to seconds when correlating
+tightly to a bag or a ROS event.
+
+### Task-specific deep-dive logs
+
+When a single topic warrants its own running log (e.g., a multi-hour
+sonar bring-up, a deep dive on a network issue), spin off a
+deep-dive log alongside the base host log:
+
+```
+docs/logs/<year>/<YYYY-MM-DD>_<label>_<topic>_logs.md
+```
+
+The base host log gets a short summary entry pointing at the
+deep-dive rather than carrying the full detail. Link both from the
+deployment issue's **Logs** section.
 
 ## Anti-pattern: the monolithic log
 
