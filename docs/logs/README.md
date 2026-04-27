@@ -22,8 +22,12 @@ docs/logs/<year>/<YYYY-MM-DD>_<label>_logs.md
   - `hostname -s` when the agent is in a **field-origin** clone (e.g.,
     gitcloud). Stable per-machine identity (`gabby`, `mercat`, `lr30`,
     etc.).
-  - The dev-vs-field distinction matches `field_mode.sh --describe` on
-    the project repo, so the label can be derived programmatically.
+  - The dev-vs-field distinction matches `field_mode.sh --describe`
+    (provided by the parent workspace at
+    `ros2_agent_workspace/.agent/scripts/field_mode.sh`) on the project
+    repo, so the label can be derived programmatically. If reading this
+    README outside the workspace context: the rule is `dev` for
+    GitHub-origin clones, `hostname -s` otherwise.
 
 Examples:
 
@@ -43,7 +47,7 @@ Every log file starts with:
 
 **Host**: <hostname or "dev">
 **Operator**: <human> + <agent identity, e.g. "Claude Code Agent (Claude Opus 4.7)">
-**Mode**: dev (github origin) | field (gitcloud origin) | field (other)
+**Mode**: dev (GitHub origin) | field (gitcloud origin) | field (other)
 **Deployment**: #<deployment-issue-number> (link)
 ```
 
@@ -57,8 +61,9 @@ Then sections by topic, in chronological order within the deployment.
    `docs/roadmap.md` and the open task issues, proposes the day's items.
 2. User confirms. Agent opens a **deployment issue** (see
    [Deployment issue](#deployment-issue) for title format, labels, and
-   body template), creates a worktree (via
-   `.agent/scripts/worktree_create.sh --issue <N>`), opens a draft PR.
+   body template), creates a worktree (via the parent workspace's
+   `ros2_agent_workspace/.agent/scripts/worktree_create.sh --issue <N>`),
+   opens a draft PR.
 3. Agent initializes the day's log file in the worktree with the header
    above. Issue body links to the file (and to any other host files as
    they appear).
