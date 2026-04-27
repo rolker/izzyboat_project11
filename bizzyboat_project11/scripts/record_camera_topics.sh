@@ -32,7 +32,7 @@ TOPICS=(
     /diagnostics
     /tf
     /tf_static
-    /robot_description
+    /bizzy/robot_description
     /bizzy/sensors/cameras/oak_forward/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_starboard/image_raw/ffmpeg
     /bizzy/sensors/cameras/oak_aft/image_raw/ffmpeg
