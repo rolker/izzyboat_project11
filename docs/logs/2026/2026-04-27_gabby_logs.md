@@ -110,3 +110,23 @@ Lesson noted for future bag-recorder edits: **verify topic names
 against a live system before trusting documentation or assumed
 conventions** rather than just the namespacing pattern of nearby
 entries.
+
+### Inventory correction: DeltaT is not live
+
+Operator clarified that the section-3 inventory misrepresented the
+sonar state. The **DeltaT (Imagenex 837) sensor is physically removed
+from BizzyBoat.** The `/bizzy/sensors/deltat/deltat` node, the
+`cube_bathymetry` node, and the `sonar_logger` shown in
+`ros2 node list` are leftover lifecycle/launch scaffolding plus
+udp_bridge listeners waiting on UDP packets that no longer arrive.
+Verified post-hoc with `ros2 topic hz`:
+
+- `/bizzy/sensors/deltat/soundings` — no messages in 2 s
+- `/bizzy/sensors/deltat/cube_bathymetry` — no messages in 2 s
+
+Lesson: **a node appearing in `ros2 node list` does not mean its
+underlying sensor is live.** Always confirm with `ros2 topic hz`
+on a known output topic before treating a node as a live data
+source. Same caveat for any udp_bridge-fronted sensor on this
+platform — the ROS-side topic exists whether or not bytes are
+flowing across the bridge.
