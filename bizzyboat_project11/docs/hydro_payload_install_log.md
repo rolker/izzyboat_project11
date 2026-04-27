@@ -38,6 +38,19 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
 - [ ] Ping M3 on its factory IP (point-to-point via the spare mercat
       Ethernet port).  Record IP in "Hardware inventory" above if not
       already captured.
+- [ ] **Capture the Trimble antenna case label** (model / part number)
+      via phone photo of forward and aft pucks. Existing 2026-04-22
+      photos may already show it — check
+      `~/bizzyboat/2026-04-22_GPS_antennas_*.jpg` first.
+      Without the model number we can't look up the antenna
+      phase-center offset above the mount base, leaving a ~3–5 cm
+      absolute Z bias in soundings (constant, not a repeatability
+      issue, but eats into the IHO Special Order TVU budget). Once the
+      model is identified, look up the phase center in the Trimble
+      datasheet or NGS antenna calibration database
+      ([NOAA ANTCAL](https://geodesy.noaa.gov/ANTCAL/)) and update both
+      the install-log antenna z entries and the SBG lever-arm config in
+      sbgCenter.
 
 **QINSy setup — SBG IO driver**:
 
@@ -51,19 +64,343 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       mercat.  Capture rationale under the "Open questions" section
       below.
 
-**QINSy setup — M3 sonar**:
+**QINSy setup — SBG message set on COM4** (`#76` follow-up):
 
-- [ ] Configure M3 in QINSy acquisition template.
-- [ ] Verify first pings in QINSy with SBG attitude applied.
+- [ ] Confirm sbgCenter is closed on mercat before launching QINSy
+      (sbgCenter holds the unit and blocks the QINSy serial driver).
+- [ ] Enable the required SBG_ECOM logs on the COM4 output: `STATUS`
+      (1 Hz / new data), `UTC_TIME` (new data), `EKF_NAV` (50 Hz),
+      `EKF_EULER` (50 Hz), `SHIP_MOTION` (50 Hz). Heave lives in
+      SHIP_MOTION, not EULER — both must be on for vertical-motion
+      correction.
+- [ ] Enable recommended GPS logs for dual-antenna QC: `GPS1_POS`,
+      `GPS1_VEL`, `GPS1_HDT` (GNSS-native rate, 5–10 Hz).
+- [ ] In QINSy, instantiate the `SBG Systems (R-P-H) – 03` serial
+      driver — one driver feeding Position Navigation, Gyro Compass,
+      and Pitch-Roll-Heave systems. Lever arms reference Vessel CoG;
+      do **not** re-enter the SBG-side lever arms in QINSy.
+- [ ] Sanity-check the COM4 baud budget — full required+GPS set fits
+      well under 115200; only adding `IMU_DATA` at 50 Hz pushes near
+      the ceiling. Drop IMU rate or bump baud if we add it later.
+
+**QINSy setup — M3 sonar** (`#76` follow-up):
+
+- [ ] On M3 software: `File → Exporting Format → Profile Point (.all)`
+      (Kongsberg EM datagram standard; the only format the QINSy M3
+      driver decodes).
+- [ ] On M3 software: `Setup → Preferences → UDP Data Export` — set
+      `Port for .ALL format = 20002` (record exact port chosen),
+      `Remote IP Address = 127.0.0.1` (QINSy is co-located on
+      mercat), `Export to File` unchecked.
+- [ ] On M3 software: `Setup → System Configuration → Devices → Sonar
+      Setup → Override Network Link Speed = 125 Mbps`.
+- [ ] Feed the AML SVS into the M3 in parallel with QINSy (M3 uses it
+      for its own refraction model; QINSy still consumes the same
+      stream for soundings). Most SVS tools support multi-port output.
+- [ ] In QINSy, instantiate the `Kongsberg Mesotech M3 – 20` driver on
+      the matching UDP port. Verify the **Clock datagram** is in the
+      stream via QINSy's port monitor — without it, the driver decodes
+      nothing.
+- [ ] Enter the M3 mounting offsets in QINSy (from `#77` measurements:
+      x = -0.23, y = 0, z = -0.145, transducer face Down). Do **not**
+      duplicate offsets in the M3 software's Deployment dialog.
+- [ ] Verify first pings in QINSy with SBG attitude + heave applied.
 - [ ] Capture a short QINSy log at the dock and save an index entry in
       the photo / data log below.
 
-**ROS side (optional, time permitting)**:
+**SBG ↔ gabby + M3 1PPS wiring via DB-9 #2** (`#76` follow-up):
 
-- [ ] Scope the QINSy → ROS bridge approach (`marine_tools#1`) — watch
-      QINSy's external output options (broadcast, file tail, DB
-      connection?) and decide which is cheapest to consume from ROS.
-      No code expected this session — observation only.
+Background: the M3 head requires a 0–5 V 50%-duty 1PPS pulse on its
+breakout box plus NMEA ZDA over UDP 31100 @ 1 Hz to its IP. The
+TM2000B has no physical PPS output, so the SBG Ellipse-D's `SYNC OUT
+A` (Fischer pin 6, surfaced on DB-9 #2 pin 4 of the splitter cable)
+is our 1PPS source. The M3 stays on its isolated mercat link;
+**QINSy on mercat sources the ZDA-over-UDP feed** to the M3.
+
+The same DB-9 #2 also gives gabby a full-duplex RS-232 link to the
+SBG via PORT E. gabby's MezIO add-in provides 4 native rear-panel
+RS-232 DB-9 (male DTE) ports, all currently free — no USB-serial
+dongle needed. PORT E carries **NMEA out + RTCM in on the same RS-232
+line** (sbgCenter Input/Output tab → PORT E mode = RS-232 → enable
+"Forward Corrections"), collapsing what would have been two cables
+into one. PORT B (DB-9 #2 pin 8) stays unused.
+
+Side benefits: gabby gets a direct SBG NMEA feed for ROS-side
+ingestion (parallel to the QINSy → ROS bridge in `marine_tools#1`),
+and gabby owns the NTRIP client for the SBG's RTK chain (independent
+of the Cube's NTRIP).
+
+**Cable plan** — single fab cable from SBG splitter's DB-9 #2,
+fanning into a DB-9 for gabby and a MIND-4 for the M3 breakout:
+
+- SBG end: **female DB-9** (mates with the splitter's male DB-9 #2)
+- gabby end: **female DB-9** (mates with gabby's male rear-panel
+  DTE port)
+- Both DB-9s are DTE → DTE; cable wiring is **null-modem** between
+  the two: SBG pin 2 ↔ gabby pin 3, SBG pin 3 ↔ gabby pin 2,
+  pin 5 ↔ pin 5 (signal ground)
+- M3 end: **SEA CON MIND-4** plug — gender depends on which variant
+  the breakout takes (MIND-4-CCP cable plug = male contacts /
+  breakout receptacle female; MIND-4-FCR cable receptacle = female
+  contacts / breakout plug male). Confirm by inspection before
+  ordering the connector
+- 1PPS leg taps SBG pin 4 (SYNC OUT A) → MIND-4 pin 4 (1PPS_SYNC);
+  SBG pin 5 (GND) → MIND-4 pin 1 (DGND); cable shield → MIND-4
+  pin 3 (DRAIN). Keep this leg < 1 m
+- gabby leg can be longer (RS-232 good to ~15 m); use shielded
+  twisted pair if running near AC or motor wiring
+
+Checklist:
+
+- [x] M3 breakout box variant confirmed sync-capable (non-triangular
+      variant — has the 4-pin Sync/1PPS connector). 2026-04-24.
+- [ ] Identify M3 breakout 4-pin connector variant (MIND-4-CCP vs
+      MIND-4-FCR) by inspection — determines the gender of the
+      MIND-4 end of the fab cable.
+- [ ] **Confirm M3 head firmware ≥ 1.5** before relying on 1PPS time
+      sync mode (hard prerequisite per install manual).
+- [ ] **Set SBG Sync Out A to PPS / pulse mode** in sbgCenter (Output
+      → Sync Out → pulse mode); record configured pulse width.
+- [ ] **Configure SBG PORT E in sbgCenter**: mode = RS-232; NMEA out
+      enabled (GGA, ZDA, RMC, HDT at chosen rate); "Forward
+      Corrections" enabled to accept incoming RTCM on the same port.
+- [ ] **Fabricate the dual-purpose cable** per the spec above
+      (female DB-9 on SBG end, female DB-9 on gabby end with
+      null-modem wiring between them, MIND-4 on M3 end with
+      identified gender). Scope the SBG PPS pulse at the M3 end
+      before connecting (SBG high level is 3.2 V light-load / 2.6 V
+      at 16 mA — well above TTL Vih but worth verifying).
+- [ ] **Set M3 Time Sync Mode to 1PPS**: `Sonar Setup → Time Sync
+      Mode → 1PPS`.
+- [ ] **Configure QINSy NMEA ZDA (Network) output driver** to emit
+      ZDA over UDP at 1 Hz to the M3 head IP on port 31100. QINSy
+      path: `Settings → Input/Output Ports → Output Select = NMEA →
+      enable $--ZDA at 1 Hz`. Driver: `Network NMEA ZDA (UDP) - 18`.
+- [ ] **Configure gabby NTRIP client** to forward RTCM out the
+      chosen rear-panel RS-232 port (which is wired as DTE male →
+      cable swaps it null-modem to the SBG side, so gabby's "TX"
+      pin 3 maps to SBG PORT E RX). Decide MACORS mountpoint and
+      credentials.
+- [ ] **Verify 1PPS lock** at the M3: log should show
+      `INF 1PPS: 10 pulses received in 10s`. If fewer than 10, the
+      pulse isn't reaching the head.
+- [ ] **Verify RTK lock on the SBG**: sbgCenter → GNSS raw
+      information tab should show RTK fixed once corrections are
+      flowing from gabby's NTRIP client.
+
+**AML SVS via gabby — proposed architecture** (`#76` follow-up):
+
+Current install has the AML on mercat COM3. **Proposed change**:
+move the AML serial cable to one of gabby's free MezIO RS-232 ports
+and let gabby be the SV data hub. gabby publishes a ROS topic, sends
+the raw `$AML…*<cs>` line to mercat as UDP for QINSy, and emits a
+**Valeport-format** copy out a second MezIO port that connects
+back to mercat (now-free COM3) via a null-modem cable for the M3.
+
+```
+AML SVS ──serial──► gabby (Nuvo-9160GC, MezIO RS-232 #1)
+                     │
+                     ├── sv_bridge ROS 2 node ──┐
+                     │   ├─► /sound_speed (ROS topic)
+                     │   ├─► UDP datagram → mercat:port  (raw $AML line)
+                     │   └─► Valeport string → MezIO RS-232 #2
+                     │
+                     └── null-modem cable to mercat free COM3 → M3 software
+                                                                (Sensors Setup,
+                                                                 native Valeport
+                                                                 SVS protocol)
+
+QINSy on mercat
+  Network - Depth SV Temp (AML or EM1000) - 34   ← UDP from gabby
+                                                   (auto-detects format)
+```
+
+Why: clean separation between data hub (gabby) and acquisition
+machines (mercat). M3 gets native Valeport — no custom-sensor
+definition needed. SV becomes a first-class ROS signal (logging,
+operator UI, future autonomy use). Pairs with the SBG↔gabby PORT E
+plan; gabby is the consistent boat-side data integration point.
+Future AML winch SVP plugs into the same architecture.
+
+Trade-offs: introduces a software hop (bridge service), so M3 and
+QINSy now depend on gabby being up. Mitigations: run bridge as
+`systemd` service with `Restart=always`; configure a sane SV default
+(~1490 m/s) in M3's `Sound Speed Preference` so the M3 isn't
+dead-on-arrival if the bridge is late on boot. Cable reroute (AML
+mercat→gabby) is a few feet of shuffling in the same enclosure.
+
+Valeport "standard" output format (per Valeport miniSVS manual):
+leading space + 7-digit mm/s integer + CR/LF — e.g. `␠1510123\r\n`
+for 1510.123 m/s, where `␠` denotes a literal ASCII space (0x20),
+**not** an underscore. Two alternative m/s formats (2 / 3 decimals)
+also M3-acceptable.
+
+Open prerequisites:
+
+- [ ] **Capture 5 lines of the live AML stream** via TeraTerm on
+      mercat COM3 and paste below under "AML stream sample
+      (YYYY-MM-DD)". The QINSy network driver auto-detects, but the
+      bridge needs to know which field is SV — exact format also
+      pins down the AML model.
+- [ ] **Confirm M3 boot tolerance for late SV**: bench-test starting
+      M3 software with no SV stream, then start the SV stream, and
+      confirm the M3 picks it up cleanly (vs. needing a restart).
+      Decide whether a "stale-SV warning" watchdog is needed.
+- [ ] **Decide ROS message convention**: existing workspace SV
+      message type vs. `std_msgs/Float32` with frame_id vs. add a
+      new `marine_msgs/SoundSpeed`. Coordinate with `marine_tools#1`
+      (QINSy → ROS bridge) so both publish a consistent type.
+- [ ] **Decide bridge package home**: `marine_tools` (alongside the
+      QINSy → ROS bridge) vs. new `aml_sv_bridge` package. Open a
+      separate issue to track implementation once decided.
+- [ ] **Reroute AML serial cable** from mercat COM3 to a free gabby
+      MezIO RS-232 port. Record port assignment.
+- [ ] **Fabricate / source null-modem cable** for gabby MezIO #2 →
+      mercat COM3 (both ends female DB-9, pin 2/3 cross). Standard
+      off-the-shelf part.
+- [ ] **Configure M3 Sensors Setup** with the native Valeport
+      protocol on the new mercat COM port; mark as Master Reference
+      for sound speed (`Deployment → Master Reference → Sound
+      Speed`).
+- [ ] **Configure QINSy** with the `Network - Depth SV Temp (AML or
+      EM1000) - 34` driver on the matching UDP port; observation
+      type Sound Velocity at the SVS tip position
+      (x = -0.455, y = +0.25, z = -0.055).
+- [ ] **Set M3 Sound Speed Preference fallback** to ~1490 m/s for
+      the operating area so the M3 has a sane default if the SV
+      stream is late.
+- [ ] **Verify all three consumers** get matching SV values within
+      tolerance: ROS topic (`ros2 topic echo /sound_speed`), QINSy
+      Generic Display, M3 Sensors page.
+
+Fallback if architecture is rejected: AML stays on mercat COM3,
+QINSy uses serial driver `Sound Velocity - Smart SV (AML, ASCII)
+(Active) - 31`, M3 either gets a Y-cable + custom sensor definition
+or relies on a fixed Sound Speed Preference default.
+
+**AML-3 SVP via SmartCast winch** (`#76` follow-up):
+
+Two complementary SV streams are wanted for the class:
+
+- **AML at the M3 head** (already discussed above) — continuous,
+  real-time near-transducer SV. Goes into QINSy for refraction at
+  the transducer face.
+- **AML-3 LGR profiler on the SmartCast winch** — periodic full
+  water-column profiles (30 m max rope, 90% rule → ~27 m practical
+  cast depth). WiFi comms; the AML-3 logs internally during the
+  cast and is downloaded over WiFi after.
+
+Workflow (mirrors last year's IzzyBoat / blaze pattern):
+
+```
+SmartCast winch (Seafloor App on mercat) → AML-3 cast (logs internally)
+                                                ↓
+                                       AML-3 WiFi AP
+                                                ↓
+                                cast host downloads via WiFi
+                                                ↓
+                          AML SailFish or HydrOffice Sound Speed Manager
+                                                ↓
+                                profile file (.asvp / .vel / .pro / .aml)
+                                                ↓
+                                  QINSy SVP correction (file or watch)
+```
+
+The "cast host" is whatever machine has WiFi to the AML-3's SSID. On
+IzzyBoat last year that was blaze (Windows, on the boat LAN via
+ethernet, free WiFi for the AML). For BizzyBoat, mercat plays the
+same role *if* it has WiFi hardware — otherwise the simplest
+fallback is a USB WiFi dongle on mercat (~$20). Other options
+considered: router bridging via the RUTX11, gabby as cast host (if
+it has WiFi), or an operator-side laptop. None match blaze's
+simplicity.
+
+Class pedagogy: students design the cast cadence and tooling
+choice. SailFish is the AML-bundled tool; HydrOffice Sound Speed
+Manager (CCOM's own) is a common alternative — students may pick
+either.
+
+Open prerequisites:
+
+- [ ] **Verify mercat WiFi hardware**:
+      `Get-NetAdapter | Where-Object {$_.InterfaceDescription -like
+      "*Wireless*"}` in PowerShell, or just check Network
+      Connections. If absent, source a USB WiFi dongle for mercat.
+- [ ] **Bench-test the SmartCast winch end-to-end**: power up,
+      connect Seafloor SmartCast App, verify automated cast (descend
+      → pause → ascend → home), confirm the AML-3 spins up and logs.
+      Catch winch / pipeline issues before the class.
+- [ ] **Confirm AML-3 WiFi connectivity** from the cast host —
+      identify the AML-3 SSID and successfully download a test cast.
+- [ ] **Verify QINSy SVP ingestion path** — file watch folder vs.
+      manual import. Confirm the file format SailFish or SSM
+      produces is recognized by the current QINSy version.
+
+**M3 mode / range / ping-rate baseline** (`#76` follow-up):
+
+Last year used a Norbit and students chose their own settings;
+matching pedagogy this year. Our prep is just to enable that:
+
+- [ ] Confirm M3 software accessible on mercat from the operator
+      account students will use (no admin restrictions on
+      Setup → System Configuration).
+- [ ] After bench shakedown, save a known-good M3 config (Save
+      Settings in the M3 software UI) as a class-baseline restore
+      point. Store both on mercat and in this repo
+      (`bizzyboat_project11/config/m3_baseline.cfg` or similar).
+- [ ] Link / mirror the M3 reference manual from `~/m3_sonar/` into
+      the bizzyboat operator-docs area so students can find it
+      without root access.
+
+**`marine_tools#1` (QINSy → ROS bridge) — critical path for June** (`#76` follow-up):
+
+Architecture is sonar-agnostic: QINSy emits processed soundings via
+its `Network - Generic Output (User-defined ASCII) (UDP) - 15`
+driver, including TPU; a ROS 2 node on gabby parses that stream and
+publishes `sensor_msgs/PointCloud2` with TPU into the existing
+`cube_bathymetry_node` → `grid_map` → CAMP coverage / rviz
+pipeline. See [`marine_tools#1`](https://github.com/rolker/marine_tools/issues/1)
+for full scope.
+
+Why QINSy bridge over per-sonar `.all` parser: works for **any**
+QINSy-supported sonar, and inherits QINSy's real-time TPU rather
+than re-implementing uncertainty propagation in ROS. Supersedes the
+"`.all` parser on gabby" plan from `project_kongsberg_m3.md`
+memory (Stream 2).
+
+BizzyBoat-side prep (separate from the ROS-side implementation):
+
+- [ ] **In QINSy DbSetup**: add a system of type Output, driver
+      `Network - Generic Output (User-defined ASCII) (UDP) - 15`,
+      destination = gabby's boat-LAN IP, chosen UDP port.
+- [ ] **Generic Layout**: create a layout with Time, transducer-
+      node Lat/Lon/Depth, Horizontal TPU (THU), Vertical TPU (TVU);
+      save XML to
+      `C:\Users\Public\Documents\QPS\QINSy\Drivers\Definitions\Output\`.
+      Verify TPU sub-items are available in a "driver" purpose layout
+      (open question on the issue — driver purpose layouts may differ
+      from export-purpose ones; check against the deployed QINSy
+      version).
+- [ ] **Decide vertical reference output** — ellipsoid heights
+      (matches `map` frame z directly) vs. chart datum (needs
+      `chart_datum → map` inverse from `mru_transform`'s
+      `chart_datum_node`). ERS workflow → ellipsoid. Make this an
+      explicit ROS parameter on the bridge node.
+- [ ] **Confidence-level conversion**: QINSy emits TPU at 95%
+      (~1.96σ); `cube_bathymetry_node` likely expects 1σ. Scale or
+      configure on the bridge.
+- [ ] **End-to-end smoke test before class**: simulated soundings
+      from QINSy → bridge → cube_bathymetry → CAMP coverage
+      visible. Critical-path verification that the data path works
+      independent of any actual M3 pings.
+
+**Recurring checks (post-update / pre-deployment)**:
+
+- [ ] Confirm Windows Firewall on mercat is still **off** (or that
+      the boat LAN is still classified Private with a permissive
+      profile). Windows updates can silently re-enable. UDP exports
+      from M3, UDP receives from QINSy bridge, and ZDA send to M3
+      all silently fail if firewall comes back up.
 
 **Stretch — only if above is solid**:
 
@@ -71,6 +408,14 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       position, SVS tip).  Tracked under `#77`.
 - [ ] Refine rail-top `z` with a proper measurement (currently
       `[EST] 0.89 m`).
+- [ ] **Patch-test prep** (for student-led patch test during class):
+      ensure all measured install offsets (M3 transducer, SBG IMU,
+      Trimble antennas, SVS tip) are committed in the QINSy template
+      and the SBG sbgCenter config **before** students walk up.
+      If offsets are unapplied, students chase phantom misalignments
+      that are really just unconverted measurements. Students design
+      and run the patch test itself (cod rock as the pingable
+      feature).
 
 **End of session**:
 
@@ -91,6 +436,16 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
 
 **Related existing hardware (for reference, not part of this work):**
 - Cube FCU dual-antenna system: **CUAV C-RTK 2HP**, antennas at x = ±0.835 m (baseline 1.67 m). Already in `bizzyboat_reference_geometry.md`. Confirmed 2026-04-22 that these are separate from the SBG's Trimble pucks, though all four antennas share the same center rail.
+
+### Network endpoints
+
+| Host / device | Network | IP | Notes |
+|---|---|---|---|
+| mercat | boat LAN | **192.168.20.8** | Per `reference_mercat_remote_power.md`; DHCP reservation. |
+| mercat | M3-isolated link | **192.168.1.8** | Dedicated second NIC. |
+| M3 head | M3-isolated link | **192.168.1.234** | Kongsberg factory default. |
+| TM2000B (`time.bizzy.p11.lan`) | boat LAN | 192.168.20.123 | Stratum-1 GPS NTP source. |
+| gabby | boat LAN | 192.168.20.5 | DHCP reservation per `bizzyboat_network.md`. Used as destination for QINSy Generic Output UDP feed → `marine_tools#1`. |
 
 ## Install photo index (local-only)
 

@@ -3445,3 +3445,403 @@ will pull today's changes including the merged rqt_camera_grid.
 operator-side / workflow-side. The verification happens when gabby
 and salmon sync and we exercise the camera pipeline with the boat
 powered up.
+
+### 2026-04-24 — Pier session (actual)
+
+Boat deployed at the pier, station-keeping next to it for sonar and
+operator-station testing.
+
+**VPN**: not working. (Details TBD — logging the fact now, diagnosis
+pending.)
+
+**ffmpeg image_transport**: looking great. The operator-side
+verification queued yesterday is passing — `rqt_camera_grid`
+subscribes to the `ffmpeg` transport directly and the video comes
+through cleanly.
+
+**`rqt_camera_grid`: crashed a few times while configuring the
+layout.** Could not complete the intended 3x3 grid. Intended config:
+
+| Row        | Pane 1        | Pane 2       | Pane 3        |
+| ---------- | ------------- | ------------ | ------------- |
+| Top        | port video    | fwd video    | starboard video |
+| Middle     | port seg      | fwd seg      | starboard seg |
+| Bottom     | johnny5       | aft video    | aft seg       |
+
+The **port-seg and starboard-seg panes were the two that couldn't be
+added** before the plugin crashed. Fwd seg + all three video streams +
+johnny5 + aft pair apparently could be added. Repro details (sequence
+of clicks, crash stack, ROS log) not yet captured — flagged for a
+follow-up issue on `rqt_operator_tools` once we can get a stack /
+console tail from salmon.
+
+**Config dialog is a fixed size**, which clipped the topic dropdown
+narrower than the actual topic names. Operator couldn't read full
+topic paths while picking them — directly contributed to the
+configuration difficulty and likely made the layout fight worse than
+it had to be. Dialog should resize (and the combo's popup should be
+as wide as the longest topic name, not capped to the combo's own
+width). Separate bug from the crash; candidate for the same batched
+PR.
+
+#### Kongsberg M3 sonar — first-light config
+
+M3 software up, **sonar is pinging** (first confirmed pings from the
+loaner). Configuration is proving non-trivial:
+
+- **Custom sensor flow is under-instrumented.** Trying to specify the
+  sound-speed-sensor data format and the config UI is not surfacing
+  enough debug info to tell whether a given format string is being
+  accepted, rejected, or silently mis-parsed. Operator is flying
+  blind on whether the SV input is actually landing.
+- Actionable follow-up: capture which sensor flow / format paths
+  were tried and which error (or silence) each produced, so we can
+  either file with Kongsberg or, if the tooling is ours to extend,
+  add the debug surface ourselves. (See workspace memory
+  `project_kongsberg_m3.md` — M3 is Mesotech-lineage, not EM; no
+  existing ROS driver applies yet.)
+
+#### Hatch inspection at the floating dock
+
+Broke off from station-keeping to run BizzyBoat down to the floating
+dock. Tied up alongside **Ruby** (the support RHIB at the floating
+dock) and opened the hatch to eyeball the bilge — **sanity check on
+the sonar cable glands**, no specific leak suspected, just verifying
+the new penetrations are sealing under use. (Water check result not
+yet called out — if nothing further is said, assume dry.)
+
+Returned to loiter afterward — currently **FCU-controlled loiter**,
+not project11 autonomy.
+
+#### Nav stack unhealthy — mission rejected
+
+Tried to send a mission from project11 and the **nav stack is not
+healthy at the moment**, so the mission didn't take. No diagnosis
+yet — logging the fact. Follow-ups when we can look:
+
+- Is this related to the earlier VPN issue (i.e. something upstream
+  that couldn't reach gabby / the operator station), or is gabby's
+  nav stack itself in a bad state?
+- Which nav nodes are missing / faulted? (lifecycle states, TF
+  health, costmap status — whichever tooling is on hand.)
+- Does the FCU-loiter path still work cleanly while the project11
+  nav side is down? (If so, good fallback; if not, that's a
+  separate alarm.)
+
+#### Manual control sanity check
+
+Tested direct manual control with the **USB controller** — worked
+fine. Returned the boat to loiter via the **RC controller**. So the
+teleop path and the RC → FCU-loiter path are both healthy; the failure
+is scoped to the project11 autonomy / nav stack, not to the underlying
+vehicle control chain.
+
+#### Screenshooter running on salmon
+
+Activated the screenshooter on salmon to start capturing
+operator-station state for the rest of the session.
+
+#### Bag capture on gabby
+
+Recording **2-minute bags on gabby** with video data included. Will
+be useful for post-session playback to reproduce the `rqt_camera_grid`
+crash offline on salmon and to have a reference sample of the ffmpeg
+transport working end-to-end.
+
+#### Recovery
+
+Boat recovered. Session wrap-up.
+
+**Outstanding from today — pick up post-session:**
+
+- **VPN not working** — logged, no diagnosis yet.
+- **Nav stack not healthy** — project11 mission dispatch rejected;
+  FCU loiter and manual (USB/RC) paths are both clean, so the fault
+  is scoped to the project11 autonomy side. No diagnosis yet.
+- **`rqt_camera_grid` crashes during config** — port-seg and
+  starboard-seg panes were the two that couldn't be added before the
+  crash. Today's gabby bags should let us reproduce offline on salmon.
+  Candidate for a follow-up issue on `rolker/rqt_operator_tools`.
+- **`rqt_camera_grid` config dialog fixed size / narrow topic combo**
+  — operator couldn't read full topic paths while configuring.
+  Candidate for the same batched PR as the staleness fix (PR #26).
+- **Kongsberg M3 custom sensor flow** under-instrumented for
+  specifying the sound-speed-sensor data format. First pings
+  successful; capture specific format attempts + errors next
+  session so we can file with Kongsberg or extend our own tooling.
+- **Staleness PR ([rolker/rqt_operator_tools#26](https://github.com/rolker/rqt_operator_tools/pull/26))**
+  held in draft to batch with the other `rqt_camera_grid` fixes
+  above.
+
+**gitcloud push from gabby**: the on-boat agent pushed today's logs
+to gitcloud at wrap-up, so `make sync` on salmon (and any other
+gitcloud-connected machine) will pick them up.
+
+**Staleness-tracker oversight — pre-deploy**: surfaced earlier today
+that the new `rqt_camera_grid` staleness border was measuring arrival
+time only, not `header.stamp`. That means a stream whose frames get
+buffered upstream and arrive 15–30 s late would show a green/neutral
+border while the image on screen reflects what the camera saw half a
+minute ago — exactly the "trust this image or not" question the
+border is supposed to answer, and it would have answered wrong.
+Tracked in
+[rolker/rqt_operator_tools#25](https://github.com/rolker/rqt_operator_tools/issues/25).
+Fix implemented on branch `feature/issue-25`
+([draft PR #26](https://github.com/rolker/rqt_operator_tools/pull/26)):
+worst-of-both `max(arrival_age, stamp_age)` drives the border; invalid
+stamps (zero or >60 s in the future) force Error + `[no stamp]` label
+marker; pane label shows both ages (`rx Xs | hdr Ys`) so the operator
+can see which side is driving. 19 gtests passing. **PR held open** to
+batch with additional pier-session bug fixes before merging.
+
+### Post-session diagnostic-bag analysis (2026-04-25)
+
+Walked all five Apr 24 bizzyboat bags
+(`~/data/logs/bizzyboat/2026-04-24T{12.56,16.17,16.34,16.47,17.39}*`,
+covering ~5.6 h cumulative) and aggregated `/diagnostics` by
+`(name, level)`. Quantitative grounding for the "VPN not working" and
+"Nav stack not healthy" notes from the pier session above, plus
+several other concerns the in-session log didn't capture. Aggregation
+script saved at `/tmp/dump_diagnostics.py`; per-bag table at
+`/tmp/diagnostics_apr24.txt` (transient — will not survive reboot).
+
+#### Real concerns
+
+1. **`mavros: System "Sensor health"` ERROR — root cause `GPS=Fail`.**
+   Bitmasks `Sensor present=0x1230DC2B`, `Sensor enabled=0x0220DC2B`,
+   `Sensor health=0x0230DD0B`; key/value breakdown shows 3D gyro,
+   accelerometer, absolute pressure, and 3D angular rate control all
+   `Ok` — only **GPS=Fail**. Intermittent: 22 events / 2319 s span in
+   16:47 bag; 6 events / 1153 s span in 17:39 bag; also present in
+   12:56 morning bag. The Cube is marking GPS unhealthy in bursts
+   throughout the day. Likely the same upstream cause as
+   `GPS: RTK` degraded-to-`3D Fix` / `RTK Float` observed in the
+   same bags.
+
+2. **`lifecycle_manager_navigation: Nav2 Health` ERROR — "An error has
+   occurred during a node state transition".** In the 12:56 morning
+   bag: **10,827 ERROR samples (99 % of 10,950) over 10,897 s** —
+   Nav2 was effectively broken for the entire 3-hour morning session.
+   Then **completely absent from the 16:17+ bags** — the lifecycle
+   manager either never came back up for the field session, or was
+   intentionally not started. This is the quantitative version of
+   the "Nav stack not healthy — mission rejected" observation above.
+
+3. **`udp_bridge: bizzy: operator: vpn` and `wifi` — degraded
+   reliability.** 16:34 bag: ERROR `no rx for 100s` escalating to
+   `no rx for 134s+`, 49 % of samples non-OK over a 336 s active span.
+   17:39 bag: WARN `tx failures/drops` 78 % of WiFi samples, 55 % of
+   VPN samples; latest VPN sample showed
+   `tx_failed_bytes_per_sec=56,031.8` vs
+   `tx_ok_bytes_per_sec=49.5` — the VPN leg was effectively
+   non-functional (>99.9 % failure rate). Quantitative grounding for
+   "VPN not working" above.
+
+4. **`starlink_diagnostics: starlink.bizzy: link` — sustained ERROR
+   window.** 17:39 bag: 15 ERROR samples spanning ~27 min with
+   pop-ping drop rates of 10–40 %. Specifically at 18:10:29–18:10:49:
+   10 % → 40 % → 28 % → 25 % drops back-to-back; throughput collapses
+   into the single-digit kbps in places. Was not surfaced in the
+   in-session pier-log at all.
+
+5. **All VPN-routed endpoints unreachable from the boat for the full
+   day.** `bencloud`, `router_op_vpn`, and `salmon_vpn` all
+   `Unreachable (100 % packet loss)` across all 5 bags. By contrast,
+   `dns_cloudflare`, `dns_google`, `router_op_direct`,
+   `salmon_direct` only saw ~25 % packet loss. Direct (non-VPN)
+   routing works partially; the VPN tunnel is down or misrouted from
+   the boat side. Same root cause as item 3 (udp_bridge VPN failures).
+
+#### Diagnostic-stream noise to suppress
+
+These statuses are stuck non-OK at ~100 % across every bag and are
+drowning out real signals in `/diagnostics_agg`. Either silence them
+or fix the underlying config:
+
+- `mavros: Mount` — `Can not diagnose in this targeting mode`. No
+  mount/gimbal on bizzyboat; this is a stuck WARN.
+- `mikrotik: wifi.bizzy: interface/ether2-5` — `Not running`. Unused
+  wired ports on the WiFi router.
+- `teltonika: router.bizzy: interface/mob1s2a1`, `mwan3/mob1s2a1`,
+  `mwan3/wan1` — `Down` / `notracking`. Cellular not provisioned.
+- `mavros: Heartbeat`, `MAVROS UAS`, `Battery`, `GPS` — single-shot
+  ERROR at boot ("No events recorded", "disconnected", "No data",
+  "No satellites"). These flip to OK within a second of startup; the
+  startup transient should be filtered out of any
+  alerting/aggregation that summarizes "ever-failed" status.
+
+#### Per-item triage
+
+**Item 2 (Nav2 lifecycle ERROR)** — already addressed in the field;
+not chasing.
+
+**Item 3 (udp_bridge VPN/WiFi failures)** — already under
+investigation; not opening a new thread.
+
+**Item 5 (all VPN ping endpoints unreachable)** — downstream of
+item 3; folded into that investigation.
+
+**Items 4 (Starlink ~27 min degradation) and 1 (mavros Sensor health
+GPS=Fail)** — discussed below.
+
+##### Item 1 deep dive — `mavros: System "Sensor health"` GPS=Fail
+
+**Bottom line: this is diagnostic noise, not an actual GPS problem.**
+No action for now; logged so future readers don't burn cycles
+re-deriving it. Scripts used:
+`/tmp/gps_fail_timeline.py`, `/tmp/gps_rtk_correlation.py`
+(transient — not committed).
+
+The earlier "2319 s active span" framing was misleading; that was
+just first-to-last-event distance. **Each event is a 1-second blip**
+(one diagnostic publish cycle). Bag 16:47 (51 min) had 17 such blips
+scattered through the bag, including a clustered burst of 7 blips at
+~3 s spacing near the end. Bag 17:39 (37 min) had 4 blips.
+
+Receiver state during every single blip (across both bags):
+
+| Metric                | Value during GPS=Fail |
+| --------------------- | --------------------- |
+| `fix_type` (GPS_RAW)  | **6 (RTK_FIXED)**     |
+| Satellites visible    | 31–37                 |
+| Horizontal accuracy   | **19–25 mm**          |
+| Vertical accuracy     | 25–39 mm              |
+| `GPS: RTK` diagnostic | **stayed `RTK Fixed`** — never transitioned during a blip |
+
+So when the Cube briefly flags GPS unhealthy in the
+`SYS_STATUS.onboard_control_sensors_health` bitmask, the receiver
+itself is at peak performance: RTK-fixed with sub-cm accuracy.
+
+What's actually flipping: only **bit 5 (GPS) clears in `health`** for
+one cycle while staying set in `enabled`. Bitmask-triple counts in
+the 17:39 bag:
+
+```
+1617× : enabled=0x0220DC2B  health=0x0230DD2B  (normal — GPS healthy)
+ 583× : enabled=0x0220802B  health=0x0230812B  (passive control mode — GPS healthy)
+   4× : enabled=0x0220DC2B  health=0x0230DD0B  (the blip — GPS unhealthy bit clears)
+```
+
+(The two distinct `enabled` masks differ in bits 10, 11, 12, 14 — the
+position/attitude **control** loops. Those are on when the FCU is
+actively guiding, off when it's passive. Independent from the GPS
+blip and not a concern.)
+
+Likely Cube-internal causes for a one-cycle `GPS_HEALTHY=false` while
+the receiver itself stays locked:
+
+- one MAVLink GPS message timeout (a single missed packet)
+- GPS-vs-compass heading disagreement check fired briefly
+- EKF GPS innovation gate fired briefly (e.g., during a turn or
+  dynamic motion)
+- RTCM correction-delivery hiccup the EKF noticed but the receiver
+  rode through without losing fix
+
+**Three separate "GPS" diagnostics — easy to confuse.** Future
+readers, before chasing any GPS-flagged diagnostic, identify which
+one is firing:
+
+| Diagnostic                        | Watches                          | Apr 24 behavior                             |
+| --------------------------------- | -------------------------------- | ------------------------------------------- |
+| `mavros: System` "Sensor health"  | Cube `SYS_STATUS` health bitmask | 1-s blips, ~17/h, no actual receiver issue  |
+| `mavros: GPS` "No satellites"     | NavSatFix-derived sat count      | single-shot ERROR at boot only              |
+| `GPS: RTK`                        | RTK fix quality                  | mostly `RTK Fixed`; rare "3D Fix"/"RTK Float" — separate signal |
+
+If/when we want to silence the noise: add hysteresis (only ERROR if
+GPS unhealthy persists ≥3–5 s) or cross-check with receiver state
+(suppress the bit-flip when `gps1/raw.fix_type ≥ 3` and `eph` is
+small). Both would be upstream changes to the mavros diagnostic
+plugin or a wrapper. Not pursuing now.
+
+##### Item 4 deep dive — `starlink.bizzy: link` ERROR window + cumulative usage
+
+**Bottom line: the link itself was fine; the puzzling Starlink-portal
+usage is from short multi-Mbps download spikes that don't match the
+boat's expected workload.** No action for now; log so future readers
+have the timeline and methodology if the pattern recurs. Script used:
+`/tmp/starlink_timeline.py` (transient).
+
+**Which Starlink:** the diagnostic name is
+`starlink_diagnostics: Starlink: starlink.bizzy: link` — the boat-side
+dish. No second Starlink appears in any of the Apr 24 bags.
+
+**The "27 min ERROR window" framing in the parent entry was wrong.**
+Same misleading first-to-last-event framing as item 1. There were 22
+ERROR segments across the day, but **each was 1–7 seconds long**;
+**cumulative ERROR time = ~50 seconds total** — the link was fine for
+~99.997 % of the 5.34 h span. Drops are isolated brief blips, not a
+sustained outage. Atmospheric / positional / scheduled-handoff jitter,
+not load-induced (see "spikes don't correlate" below).
+
+**Cumulative transfer for the day** (trapezoid integration of
+per-second `downlink_throughput_bps` / `uplink_throughput_bps`,
+12:56:13 – 18:16:22 UTC, ignoring inter-bag gaps >30 s):
+
+| Direction | Total      | Average    |
+| --------- | ---------- | ---------- |
+| Downlink  | **346 MB** | 144 kbps   |
+| Uplink    | **64 MB**  | 27 kbps    |
+
+**The puzzling part: multi-Mbps download spikes.** Probably what
+showed up as elevated usage on the Starlink portal. Peak instantaneous
+`max_dl_kbps` per minute, only listing >1 Mbps:
+
+| UTC      | Peak DL       | Peak UL  | Notes                          |
+| -------- | ------------- | -------- | ------------------------------ |
+| 13:32:13 | 6.4 Mbps      | 17 kbps  |                                |
+| 13:34:13 | 3.1 Mbps      | 24 kbps  |                                |
+| 14:00:13 | 2.0 Mbps      | 19 kbps  |                                |
+| 14:11:13 | **224.0 Mbps**| 206 kbps | 🚩 single-second monster spike  |
+| 14:14:13 | 13.9 Mbps     | 15 kbps  |                                |
+| 14:33:13 | 1.4 Mbps      | 17 kbps  |                                |
+| 14:37:13 | 1.0 Mbps      | 45 kbps  |                                |
+| 15:20:13 | 1.1 Mbps      | 13 kbps  |                                |
+| 15:35:13 | 16.6 Mbps     | 60 kbps  |                                |
+| 15:37:13 | 1.5 Mbps      | 65 kbps  |                                |
+| 15:38:13 | 1.0 Mbps      | 157 kbps |                                |
+| 15:49:13 | 1.1 Mbps      | 17 kbps  |                                |
+| 16:57:13 | 3.7 Mbps      | 24 kbps  |                                |
+| 17:18:13 | **73.8 Mbps** | 25 kbps  | 🚩 second monster spike         |
+| 17:40:13 | 9.3 Mbps      | 22 kbps  |                                |
+| 18:15:13 | 2.2 Mbps      | 15 kbps  |                                |
+
+The 14:11:13 spike alone is roughly **28 MB in one second** — about
+8 % of the day's downlink in a single sample window. The 17:18:13
+spike is another ~9 MB burst.
+
+**Spikes are not correlated with drops.** ERROR segment timestamps
+(`13:42:29–36`, `13:44:58–05:04`, etc.) and the throughput-spike
+timestamps in the table are at different times. The link handled the
+spikes cleanly; drops are a separate phenomenon, not load-induced.
+
+**What's actually consuming this on a boat that's supposed to be
+sending only telemetry?** The bag can't tell us — `/diagnostics` only
+sees aggregate Starlink throughput, not which host or process. The
+boat's expected workload is:
+
+- udp_bridge VPN to operator: rate-capped at 1 Mbps tx (and that
+  day's tx_failed numbers in the parent entry show it was barely
+  working anyway, ~50 B/s ok)
+- ROS-internal traffic (DDS heartbeats, control messages)
+- NTP, system telemetry — all should be sub-100 kbps
+
+Multi-Mbps download bursts don't fit any of those. Plausible
+suspects to chase if/when this recurs:
+
+1. **Unattended OS updates on gabby** — `unattended-upgrades`,
+   `snap refresh`, kernel images. Easily explains tens-of-MB bursts.
+2. **Container/image pulls** — `docker pull`, `apt install` triggered
+   by some background service.
+3. **Starlink dish firmware update** — Starlink pushes hundreds of MB
+   during firmware upgrades.
+4. **A speedtest** — someone running `speedtest-cli` mid-session
+   would produce one giant burst.
+5. **Background sync** — rsync, syncthing, anything that wakes up.
+
+**To pin it down next time** (when we feel the need): drop a
+periodic `iftop -t -s 60 -L 10` or `nethogs -t -c 60` sampler running
+on gabby into a log file. Then the next time the boat shows a
+multi-Mbps spike we'll know which interface and which process. For
+now: not pursuing — revisit if the pattern recurs and the data usage
+becomes a billing or operational concern.
+
