@@ -130,3 +130,70 @@ on a known output topic before treating a node as a live data
 source. Same caveat for any udp_bridge-fronted sensor on this
 platform — the ROS-side topic exists whether or not bytes are
 flowing across the bridge.
+
+## 4. Prelaunch checks — gabby
+
+2026-04-27T10:48-04:00 — ran the full prelaunch sweep on gabby. All
+green except one gap, called out at the bottom.
+
+| Check | Status |
+|---|---|
+| Time sync (chrony → `time.lan.bizzy.p11.lan` S1) | ✅ system clock within 13 µs |
+| Timezone | ✅ `EDT (-04:00)` |
+| MAVROS ↔ FCU | ✅ connected, mode=MANUAL, disarmed, system_status=Active |
+| GPS-RTK gps1 | ✅ `fix_type=6` (RTK_FIXED), 32 sats, h_acc=21mm v_acc=27mm |
+| GPS gps2 raw | ❓ `--once` echo timed out twice; gps1 RTK-fixed so not blocking |
+| NTRIP | ✅ receiving corrections |
+| OAK cameras × 4 raw `segmentation` | ✅ ~5.0 Hz each |
+| OAK cameras × 4 `image_raw/ffmpeg` | ✅ ~5.0 Hz each |
+| `/tf` | ✅ ~33 Hz |
+| Nav2 lifecycle | ✅ "Managed nodes are active" |
+| Diagnostics aggregate | ✅ **48/48 OK**, 0 WARN/ERR/STALE |
+| Comms (WiFi/Starlink/LTE/multi-WAN/pings) | ✅ all healthy (WiFi 45 dB SNR, Starlink 20 ms 0% drop, LTE -81 dBm) |
+
+Notable diagnostics highlights from the 48-entry sweep:
+
+- `mikrotik_monitor: wifi.bizzy/wlan1`: associated 45 dB SNR
+- `starlink_diagnostics`: dish reachable, 0.0% drop, 20 ms, no
+  obstruction or thermal alerts
+- `teltonika_monitor: router.bizzy`: LTE -81 dBm, mwan3 wan online,
+  mob1s1a1 standby
+- `udp_bridge`: bizzy↔operator vpn (470 kB/s tx) + wifi (708 kB/s
+  tx, 810 B/s rx) both flowing
+
+There is **no `/diagnostics_agg` topic / no `diagnostics_aggregator`
+node** on this system — individual nodes publish to `/diagnostics`
+directly and the rqt_robot_monitor / operator UI must aggregate
+client-side. Not a problem; just an architectural fact worth knowing
+when looking for "the rolled-up status".
+
+### TF gap on OAK camera frames (note for costmap-plugin replay)
+
+`/bizzy/sensors/cameras/oak_forward/segmentation` messages carry
+`header.frame_id = oak_forward_optical_frame` — **no `bizzy/`
+namespace prefix.** That frame is **not in the TF tree**:
+
+```
+tf2_echo bizzy/base_link oak_forward_optical_frame
+  → "Invalid frame ID 'oak_forward_optical_frame'" (persistent)
+tf2_echo bizzy/odom oak_forward_optical_frame
+  → same
+```
+
+`bizzy/base_link` and `bizzy/odom` resolve fine (e.g.,
+`bizzy/odom → bizzy/base_link` is publishing at full rate, boat
+sitting at `[0.326, -0.622, -21.069]` rel. to odom origin). It's
+specifically the camera optical frames that aren't in the tree.
+
+Implication for the costmap-plugin work later: `SeaSurfaceLayer`'s
+TF lookup at `sea_surface_layer.cpp:141`
+(`segments_msg->header.frame_id` → `global_frame_id_`) would fail
+against this — consistent with `unh_marine_perception#6` (the
+`matchSize()` segfault blocker) and `#7` (end-to-end OAK→costmap
+validation, blocked on #6) being open in the roadmap. The plugin
+isn't end-to-end yet. Worth knowing when we replay from a bag —
+recording a bag won't paper over this; the upstream URDF / TF
+publisher needs to publish the camera frames before the plugin can
+function.
+
+Not blocking launch.
