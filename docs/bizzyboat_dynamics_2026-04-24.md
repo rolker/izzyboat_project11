@@ -14,9 +14,13 @@ below and a follow-up focused field experiment is tracked in
   Torqeedo throttle threshold or a planing transition. Not characterized in
   detail; only ~2400 samples land in that bin.
 - **Power-vs-speed is not measurable from this data**: the Cube reads battery
-  voltage but the Torqeedo packs do not expose current to the FCU
-  (`BATT_MONITOR=4` reports zero current). See `project_bizzyboat_autonomy_stack.md`
-  in agent memory.
+  voltage but the Torqeedo packs do not expose current to the FCU. The
+  inherited `BATT_MONITOR=4` is wrong for BizzyBoat (no analog/CAN current
+  sensor wired between the two Torqeedo Power 24-3500 packs and the Cube),
+  so reported current is ~0 A and `BatteryState.percentage` is meaningless.
+  See PR [#56](https://github.com/rolker/unh_echoboats_project11/pull/56)
+  for the corrected battery params (voltage thresholds only) and the
+  hardware inventory documenting the missing current sensor.
 - **Voltage drop under load** is used as a power proxy — useful for relative
   comparisons but noisy because the day-long battery discharge contaminates
   the per-bin baseline.
@@ -128,10 +132,10 @@ Based on what's visible in this data set (subject to revision after `#88`):
 4. **No reciprocal-pair averaging applied** to today's data. Today the boat
    ran a mix of plans / MANUAL stretches at various headings, so current
    contributes to body-x in a heading-dependent way that I don't fully
-   cancel here. The L43↔L44 reciprocal pair from session 5's late-afternoon
-   line set (analyzed in chat, not committed) gave a clean -0.046 m/s body-x
-   bias at PWM ~1700 → suggests ~5 % under-thrust at that speed, but no
-   broader sweep.
+   cancel here. A single pair of opposing-heading legs from session 5's
+   late-afternoon line set (plan-line IDs L43 and L44, analyzed in chat,
+   not committed) gave a clean −0.046 m/s body-x bias at PWM ~1700 →
+   suggests ~5 % under-thrust at that speed, but no broader sweep.
 
 ## Provenance
 
@@ -147,7 +151,8 @@ Based on what's visible in this data set (subject to revision after `#88`):
 
 - [`#88`](https://github.com/rolker/unh_echoboats_project11/issues/88) — focused
   field-experiment plan to fill in this curve
-- `project_bizzyboat_autonomy_stack.md` (agent memory) — current sensor not
-  wired; rationale for V-drop-as-proxy
+- PR [`#56`](https://github.com/rolker/unh_echoboats_project11/pull/56) —
+  corrected battery params + hardware inventory documenting the missing
+  current sensor (rationale for V-drop-as-proxy in this doc)
 - `bizzyboat_thruster_test_2026-03-31.md` — earlier static-thrust test from
   before in-water sessions
