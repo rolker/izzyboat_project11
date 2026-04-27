@@ -40,15 +40,16 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       already captured.
 - [ ] **Capture the Trimble antenna case label** (model / part number)
       via phone photo of forward and aft pucks. Existing 2026-04-22
-      photos may already show it — check `~/bizzyboat/2026-04-22_GPS_
-      antennas_*.jpg` first. Without the model number we can't look up
-      the antenna phase-center offset above the mount base, leaving a
-      ~3–5 cm absolute Z bias in soundings (constant, not a
-      repeatability issue, but eats into the IHO Special Order TVU
-      budget). Once the model is identified, look up the phase center
-      in the Trimble datasheet or NGS antenna calibration database
-      (`https://geodesy.noaa.gov/ANTCAL/`) and update both the
-      install-log antenna z entries and the SBG lever-arm config in
+      photos may already show it — check
+      `~/bizzyboat/2026-04-22_GPS_antennas_*.jpg` first.
+      Without the model number we can't look up the antenna
+      phase-center offset above the mount base, leaving a ~3–5 cm
+      absolute Z bias in soundings (constant, not a repeatability
+      issue, but eats into the IHO Special Order TVU budget). Once the
+      model is identified, look up the phase center in the Trimble
+      datasheet or NGS antenna calibration database
+      ([NOAA ANTCAL](https://geodesy.noaa.gov/ANTCAL/)) and update both
+      the install-log antenna z entries and the SBG lever-arm config in
       sbgCenter.
 
 **QINSy setup — SBG IO driver**:
@@ -229,9 +230,10 @@ dead-on-arrival if the bridge is late on boot. Cable reroute (AML
 mercat→gabby) is a few feet of shuffling in the same enclosure.
 
 Valeport "standard" output format (per Valeport miniSVS manual):
-leading space + 7-digit mm/s integer + CR/LF — e.g. `_1510123\r\n`
-for 1510.123 m/s. Two alternative m/s formats (2 / 3 decimals) also
-M3-acceptable.
+leading space + 7-digit mm/s integer + CR/LF — e.g. `␠1510123\r\n`
+for 1510.123 m/s, where `␠` denotes a literal ASCII space (0x20),
+**not** an underscore. Two alternative m/s formats (2 / 3 decimals)
+also M3-acceptable.
 
 Open prerequisites:
 
@@ -373,11 +375,12 @@ BizzyBoat-side prep (separate from the ROS-side implementation):
       destination = gabby's boat-LAN IP, chosen UDP port.
 - [ ] **Generic Layout**: create a layout with Time, transducer-
       node Lat/Lon/Depth, Horizontal TPU (THU), Vertical TPU (TVU);
-      save XML to `C:\Users\Public\Documents\QPS\QINSy\Drivers\
-      Definitions\Output\`. Verify TPU sub-items are available in a
-      "driver" purpose layout (open question on the issue — driver
-      purpose layouts may differ from export-purpose ones; check
-      against the deployed QINSy version).
+      save XML to
+      `C:\Users\Public\Documents\QPS\QINSy\Drivers\Definitions\Output\`.
+      Verify TPU sub-items are available in a "driver" purpose layout
+      (open question on the issue — driver purpose layouts may differ
+      from export-purpose ones; check against the deployed QINSy
+      version).
 - [ ] **Decide vertical reference output** — ellipsoid heights
       (matches `map` frame z directly) vs. chart datum (needs
       `chart_datum → map` inverse from `mru_transform`'s
