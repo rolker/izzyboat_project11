@@ -1,5 +1,16 @@
 # BizzyBoat Deployment Log
 
+> **Frozen as of 2026-04-25.** New per-deployment, per-host logs live
+> under [`docs/logs/<year>/`](logs/). Convention: see
+> [`docs/logs/README.md`](logs/README.md). Roadmap of long-term
+> direction: [`docs/roadmap.md`](roadmap.md). Close-out rationale:
+> [`unh_echoboats_project11#92`](https://github.com/rolker/unh_echoboats_project11/issues/92).
+>
+> The Apr 24 deployment is still being wrapped up — those entries
+> will continue landing at the bottom of this file rather than being
+> migrated. Everything from the next deployment onward goes in the
+> new structure.
+
 Tracking the deployment of ros2_agent_workspace on gabby (BizzyBoat robot computer).
 
 Parent issue: [unh_echoboats_project11#14](https://github.com/rolker/unh_echoboats_project11/issues/14)

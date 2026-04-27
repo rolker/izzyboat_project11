@@ -264,7 +264,7 @@ change + rebuild. Not fixed today.
 - `bizzyboat_project11/launch/core_launch.py` (load new mavros.yaml)
 - `bizzyboat_project11/config/mavros.yaml` (new — plugin frame-id overrides)
 - `bizzyboat_project11/config/bizzyboat.yaml` (+ `/**/sea_surface_estimator:` block)
-- `docs/logs/2026/gabby_2026-04-24.md` (this log)
+- `docs/logs/2026/2026-04-24_gabby_logs.md` (this log)
 
 **`mru_transform`**:
 
