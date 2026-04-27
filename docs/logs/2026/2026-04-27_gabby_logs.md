@@ -82,3 +82,31 @@ to ~256×256 RGB8 — `sea_surface_segmentation.cpp:38` calls
 estimate at 256×256 RGB8 × 5 Hz × 4 cams ≈ 4 MB/s, ≈ 480 MB for the
 default 120 s capture. Should be fine, but **measure on first run**
 before relying on this in the field.
+
+## 3. Pre-launch system bring-up
+
+2026-04-27T10:34-04:00 — operator ran
+`~/start_tmux_project11.bash` (symlink to the project11 install-tree
+copy). `tmux ls` shows the `project11` session (4 windows) up.
+`ros2 node list` shows the full nav2 stack
+(`/bizzy/local_costmap/local_costmap`,
+`/bizzy/global_costmap/global_costmap`, `behavior_server`,
+`controller_server`, etc.), all four OAK cameras
+(`/bizzy/sensors/cameras/oak_{forward,starboard,aft,port}`), MAVROS,
+`deltat` + `cube_bathymetry`, and `sonar_logger`.
+
+### Recorder fix: `/robot_description` is namespaced
+
+Verified topic publication while the system was up; caught a typo in
+my own commit `cc7e7fe`. The recorder edit added bare
+`/robot_description`, but on this system the URDF is published as
+`/bizzy/robot_description` — under the `bizzy` namespace, like every
+other platform-side topic. (Cross-system topics `/diagnostics`, `/tf`,
+`/tf_static` are correctly un-namespaced and the script already had
+those right.)
+
+Fixed in the script — entry now reads `/bizzy/robot_description`.
+Lesson noted for future bag-recorder edits: **verify topic names
+against a live system before trusting documentation or assumed
+conventions** rather than just the namespacing pattern of nearby
+entries.
