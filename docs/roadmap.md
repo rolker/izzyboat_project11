@@ -35,7 +35,7 @@ visible from one place.
 ### Camera obstacle avoidance
 
 - [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault (blocker)
-- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK→costmap validation (blocked on #6); per-camera `frame_ids` parameter landed in [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-27)
+- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK→costmap validation (blocked on #6); per-camera `frame_ids` parameter + URDF-aligned `<label>_optical_frame` default across all `CameraBase` publisher paths landed via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (merged 2026-04-28)
 
 ### Navigation reliability
 
@@ -65,10 +65,6 @@ Multiple network-layer issues surfaced during the same long deployment day: udp_
 - [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges (reader thread blocked, Recv-Q backup) when remote subscriber dies
 - [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplifies traffic (earlier related)
 - *(future)* End-of-day network pathology root-cause work — open once we have more signal from a future deployment with op-side diagnostics in place
-
-### FCU configuration
-
-- [`unh_echoboats_project11#55`](https://github.com/rolker/unh_echoboats_project11/issues/55) — FCU battery params recalibration (field-gated, PR [#56](https://github.com/rolker/unh_echoboats_project11/pull/56) ready). *Now also covers SOC reporting fix (`BATT_MONITOR`/percentage map) per 2026-04-27 debrief — added as additional acceptance to existing PR rather than separate issue.*
 
 ## Deferred / lower priority — no current issue
 
