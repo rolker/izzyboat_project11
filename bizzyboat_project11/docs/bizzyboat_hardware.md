@@ -42,7 +42,9 @@ before assuming shared parameter values are correct.
 ## Factory Hardware
 
 All items in this section are as-delivered from Seafloor Systems.
-References are to Figures 1–7 in the EchoBoat 240 manual (pp. 9–15).
+Hull-overview figures (Figs 1–7, pp. 9–15) give at-a-glance layouts;
+individual items below may also cite detail figures elsewhere in the
+manual.
 
 ### Hull & Structure
 
@@ -179,7 +181,6 @@ Driver: `depthai_marine` from the sensors layer
 - Requires 3D GPS fix before serving NTP
 - Feeds NTP hierarchy: TM2000B (s1) → boat router (s2) → LAN clients / operator router
 - Full NTP architecture documented in `docs/bizzyboat_ntp_investigation_2026-04-09.md`
-  (on branch `feature/issue-45`)
 
 ### Network
 
@@ -223,7 +224,7 @@ Pack: 2× **Torqeedo Power 24-3500** in parallel (factory).
 | Usable energy | 3500 Wh per pack (7000 Wh combined) |
 | Shutdown (hard protection) | 12 V |
 | IP rating | IP67 |
-| Storage range | 22.6 – 24.2 V (Manual §7.4.3, p. 81) |
+| Storage range | 22.6 – 24.2 V (Manual §7.2, p. 76) |
 | Operating ambient | -22 °F to +131 °F (-30 °C to +55 °C) |
 | Charging ambient | 32 °F to +113 °F (0 °C to +45 °C) |
 | Declared endurance | 9 h at survey speed, 1 m/s (Manual §1.3, p. 3) |
@@ -258,7 +259,7 @@ Applied via `bizzyboat_project11/config/fcu/bizzyboat_fcu_custom.param`
 | `BATT_MONITOR` | 4 | **3** | Voltage only — no current sensor |
 | `BATT_CAPACITY` | 16000 | **273000** | Document true pack capacity |
 | `BATT_CURR_PIN` | 15 | **-1** | Disable unconnected ADC |
-| `BATT_LOW_VOLT` | 0 | **22.5** | Above manufacturer storage floor 22.6 V |
+| `BATT_LOW_VOLT` | 0 | **23.0** | Head-home buffer above storage floor 22.6 V |
 | `BATT_CRT_VOLT` | 0 | **21.5** | Just above manufacturer minimum 21.0 V |
 
 `BATT_FS_LOW_ACT` and `BATT_FS_CRT_ACT` remain `0` — autonomy decisions
@@ -273,7 +274,7 @@ drive the `mavros: Battery` diagnostic and annunciator indicators only.
 | Nominal / rated | 25.64 V |
 | Storage upper bound | 24.2 V |
 | Storage lower bound | 22.6 V |
-| **Low-battery warning (WARN)** | **22.5 V** |
+| **Low-battery warning (WARN)** | **23.0 V** |
 | **Critical (ERROR)** | **21.5 V** |
 | Manufacturer minimum (damage below) | 21.0 V |
 | Hard protection shutoff | 12 V |
