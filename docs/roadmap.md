@@ -28,28 +28,47 @@ visible from one place.
 
 ### Sensor payload integration (M3 + SBG + SVS on mercat)
 
-- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up + data flow + NTRIP strategy + NTP
+- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up + data flow + NTRIP strategy + NTP. *Software pipeline live end-to-end as of 2026-04-27 (#94); first surveys recorded.*
 - [`unh_echoboats_project11#77`](https://github.com/rolker/unh_echoboats_project11/issues/77) — physical install, offsets, URDF, SVG diagram
 - [`rolker/marine_tools#1`](https://github.com/rolker/marine_tools/issues/1) — QINSy → ROS bridge for coverage / sounding feedback
 
 ### Camera obstacle avoidance
 
 - [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault (blocker)
-- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK→costmap validation (blocked on #6)
+- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK→costmap validation (blocked on #6); per-camera `frame_ids` parameter landed in [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-27)
 
 ### Navigation reliability
 
 - [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals
+- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → nav2 `/speed_limit` (per-task survey speed); deployment 2026-04-27 worked around with shared `default_speed` bump
+- [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults)
 
 ### Class-ready operator UI
 
 - [`rolker/rqt_operator_tools#2`](https://github.com/rolker/rqt_operator_tools/issues/2) — operator logbook (Phase 1 landed, not field-tested)
 - [`rolker/rqt_operator_tools#29`](https://github.com/rolker/rqt_operator_tools/issues/29) — pre-launch checklist (form factor TBD)
+- [`rolker/rqt_operator_tools#31`](https://github.com/rolker/rqt_operator_tools/issues/31) — rqt_camera_grid: harden destructor↔callback sync + audit `currentText()` reads
+- [`rolker/rqt_operator_tools#32`](https://github.com/rolker/rqt_operator_tools/issues/32) — rqt_camera_grid: `populate_topic_combo` Refresh re-leaks display label
 - [`unh_echoboats_project11#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) — student-facing operating documentation
+
+### Class-day operator observability *(new theme — 2026-04-27)*
+
+The 2026-04-27 deployment surfaced an asymmetry: boat-side instrumentation is rich, operator-side is sparse. The annunciator silently kept showing OK during an RTK loss because the udp_bridge wedge had stalled `/diagnostics`. Class operators need real-time visibility into the operator-side network + a way to know when the diagnostic stream itself is stale.
+
+- [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — run network monitor nodes on salmon + record salmon-side `/diagnostics` during deployments
+- *(future)* annunciator stale-stream indicator on `rqt_operator_tools` — distinguish "everything OK" from "stream wedged, last value stale"
+
+### Network reliability under load *(new theme — 2026-04-27)*
+
+Multiple network-layer issues surfaced during the same long deployment day: udp_bridge wedges (4×), post-recovery multi-device cycle, op-router forwarding asymmetry, gabby DNS wedge. Themes converge on (a) fix specific bugs, (b) better instrumentation (overlaps with observability theme above).
+
+- [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges (reader thread blocked, Recv-Q backup) when remote subscriber dies
+- [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplifies traffic (earlier related)
+- *(future)* End-of-day network pathology root-cause work — open once we have more signal from a future deployment with op-side diagnostics in place
 
 ### FCU configuration
 
-- [`unh_echoboats_project11#55`](https://github.com/rolker/unh_echoboats_project11/issues/55) — FCU battery params recalibration (field-gated, PR [#56](https://github.com/rolker/unh_echoboats_project11/pull/56) ready)
+- [`unh_echoboats_project11#55`](https://github.com/rolker/unh_echoboats_project11/issues/55) — FCU battery params recalibration (field-gated, PR [#56](https://github.com/rolker/unh_echoboats_project11/pull/56) ready). *Now also covers SOC reporting fix (`BATT_MONITOR`/percentage map) per 2026-04-27 debrief — added as additional acceptance to existing PR rather than separate issue.*
 
 ## Deferred / lower priority — no current issue
 
