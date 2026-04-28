@@ -49,12 +49,18 @@ INS_POS3_Z       -0.050000
 #   Final discharge:     21.00 V  (mfr minimum — damage below)
 #   Usable energy:       3500 Wh per pack × 2 = 7000 Wh
 #   At 25.64 V nominal:  7000 / 25.64 ≈ 273 Ah = 273 000 mAh
-# Storage guidance (p. 81): 22.6–24.2 VDC, never below 22.6 V.
+# Storage guidance (p. 76): 22.6–24.2 VDC, never below 22.6 V.
+#
+# Voltage thresholds account for the ~1.7 V terminal sag at the
+# field-measured 67 A peak draw (R_internal ≈ 25 mΩ — see
+# 2026-04-27 deployment debrief). LOW gives a head-home buffer
+# above the storage floor; CRT keeps margin above the 21.0 V damage
+# point even with sustained heavy load.
 #
 # FCU-side failsafes stay off (BATT_FS_LOW_ACT=0, BATT_FS_CRT_ACT=0) —
 # autonomy decisions are owned by the ROS stack, not the FCU.
 BATT_MONITOR     3             # voltage only (was 4: voltage + current)
 BATT_CAPACITY    273000        # 2× Torqeedo 24-3500 (was 16000 from IzzyBoat)
 BATT_CURR_PIN    -1            # disable unconnected ADC (was 15)
-BATT_LOW_VOLT    22.5          # above mfr storage floor 22.6 V
+BATT_LOW_VOLT    23.0          # head-home buffer above mfr storage floor 22.6 V
 BATT_CRT_VOLT    21.5          # just above mfr operating minimum 21.0 V
