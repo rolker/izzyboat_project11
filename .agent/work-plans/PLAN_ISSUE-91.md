@@ -34,10 +34,18 @@ three raw topics and will mirror once BizzyBoat is field-validated.
 1. **Edit `bizzyboat_project11/config/bizzyboat.yaml`.** Swap three topic
    names in two `mru_transform`-pattern blocks (`platform_sender.nav.sources.mru`
    at lines 23–26 and `/**/mru_transform.sensors.mru` at lines 41–44).
-2. **Decide udp_bridge forwarding** (open question — see below). Either
-   update lines 137–138 and 200–201 to forward the EKF3-fused topics so
-   CAMP shoreside reflects the same nav source the boat is using, or
-   leave them as raw and add a comment explaining the divergence.
+2. **Add fused-topic feeds to both udp_bridge blocks alongside raw**
+   (parallel-feed pattern, matching `seafloor_echoboat_project11/echoboat_project11/config/echo.yaml`):
+   keep `mavros_position` (raw) and `mavros_velocity` (raw) as-is;
+   add new labels `mavros_position_ekf` (sourced from
+   `mavros/global_position/global`) and `mavros_velocity_body`
+   (sourced from `mavros/local_position/velocity_body`) to both the
+   `topics:` definitions and the `topics_list:` arrays in each udp_bridge
+   block (boat-side wifi remote ~lines 116–143 + vpn ~lines 144–202). Raw remains a
+   shoreside diagnostic for GPS quality / RTK status / EKF3 health
+   (raw vs. fused divergence as an unhealthy-EKF tripwire); fused is
+   what autonomy-aligned operator tooling should subscribe to going
+   forward.
 3. **Field-validate on next gabby session** (separate field step, not
    in the PR diff):
    - `ros2 topic hz /bizzy/mavros/local_position/velocity_body` and
@@ -66,7 +74,7 @@ three raw topics and will mirror once BizzyBoat is field-validated.
 
 | File | Change |
 |------|--------|
-| `bizzyboat_project11/config/bizzyboat.yaml` | Three topic-name swaps in two `mru_transform` config blocks. Optional: matching swaps in two `udp_bridge` blocks pending the open question. |
+| `bizzyboat_project11/config/bizzyboat.yaml` | (a) Topic-name swaps in two `mru_transform`-pattern blocks (`platform_sender.nav.sources.mru` ~23–26 + `/**/mru_transform.sensors.mru` ~41–44): position raw → fused, velocity ENU → body, orientation unchanged. (b) Add `mavros_position_ekf` and `mavros_velocity_body` parallel feeds to both udp_bridge blocks (~116–143 + ~144–202): two new entries in each block's `topics:` map and two new entries in each block's `topics_list:` array. Raw `mavros_position` / `mavros_velocity` labels kept as-is. |
 
 ## Principles Self-Check
 
@@ -88,34 +96,45 @@ three raw topics and will mirror once BizzyBoat is field-validated.
 
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
-| `mru_transform` nav inputs (boat side) | `udp_bridge` source topics (operator side) for consistency in CAMP | **Open question** — decision deferred to user |
+| `mru_transform` nav inputs (boat side) | `udp_bridge` operator-side feeds | Yes — parallel-feed: raw labels kept, new fused labels added per echo precedent |
 | `mru_transform` nav inputs | mavros plugin allowlist (#87) — `local_position` plugin must remain loaded | Out of scope here, but noted in #87; this PR depends on `local_position` being kept |
 | BizzyBoat config | IzzyBoat config (same three raw-topic pattern) | **Out of scope** — IzzyBoat is a deliberate follow-up, mirrored after field validation |
 | `/bizzy/odom` semantics (lever-arm) | Any consumer that learned to compensate for the antenna offset (e.g., calibration scripts, costmap params with hand-tuned offsets) | None known — workspace grep confirmed no consumers reading `BatteryState.percentage`-style derived fields; nav consumers (Nav2, helm_manager, CAMP) all treat `/bizzy/odom` as ground truth |
 
-## Open Questions
+## Resolved Decisions
 
-1. **udp_bridge forwarding to operator (raw vs. fused).** Update lines
-   137–138, 200–201 to also use the EKF3-fused topics (consistent with
-   boat-side autonomy), or leave as raw and accept that CAMP shoreside
-   sees a different nav source than the boat is acting on? Lean toward
-   updating, but flagging because it expands the diff and we lose the
-   raw fix as a shoreside diagnostic signal.
-2. **`SR_POSITION` rate (resolved).** If `local_position/*` publishes
-   below 10 Hz on the boat, bump `SR0_POSITION` in
+1. **udp_bridge forwarding** — parallel-feed pattern (raw kept, fused
+   added alongside under new labels `mavros_position_ekf` and
+   `mavros_velocity_body`), matching the precedent in
+   `seafloor_echoboat_project11/echoboat_project11/config/echo.yaml`.
+   Raw stays available shoreside as a GPS-quality / EKF3-health
+   diagnostic; fused is the autonomy-aligned source for new operator
+   tooling.
+2. **`SR_POSITION` rate** — if `local_position/*` publishes below
+   10 Hz on the boat, bump `SR0_POSITION` in
    `bizzyboat_fcu_custom.param` on **this** branch as a follow-up
    commit, then field-apply in the same gabby session that validates
    the topic swap. Single source of truth dev-side, applied field-side
    — same pattern as #56's battery params. 10 Hz target reflects
    marine-vehicle dynamics (PR #90 / 2026-04-24), not Nav2's
    small-robot defaults.
-3. **IzzyBoat timing.** After BizzyBoat field-validation passes, mirror
-   to IzzyBoat as a follow-up commit on this branch (single PR for
-   both), or open a separate IzzyBoat-only issue/PR?
+3. **IzzyBoat timing** — open a separate IzzyBoat-only issue and PR
+   *after* BizzyBoat field-validation succeeds. Keeps blast radius
+   contained and the IzzyBoat mirror gated on real-world validation.
+
+## Open Questions
+
+None blocking implementation. Naming for the new udp_bridge labels
+(`mavros_position_ekf` / `mavros_velocity_body`) is a judgment call —
+position label matches echo's exact name, velocity label uses
+`_body` because the salient change there is the frame contract
+(ENU → body FLU), not just "EKF-fused." Easy to rename to
+`mavros_velocity_ekf` for echo-symmetry if preferred.
 
 ## Estimated Scope
 
-Single small PR — three lines × two blocks (six lines total) in
-`bizzyboat.yaml`, possibly six more lines if we update udp_bridge
-forwarding, plus a field-validation walkthrough. Implementation is
-~10 minutes; the gating cost is the next gabby session for validation.
+Single small PR — ~four edited lines (mru_transform-pattern blocks)
+plus ~eight new lines (parallel-feed labels added to both udp_bridge
+blocks: two `topics:` entries + two `topics_list:` entries × two
+blocks). Implementation is ~15 minutes; the gating cost is the next
+gabby session for field validation.
