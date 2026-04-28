@@ -22,6 +22,13 @@ def _oak_camera_node(name, cfg):
     params = {
         'camera_ids': [cfg['mx_id']],
         'camera_names': [name],
+        # Match the URDF-published frame in `urdf/sensors/camera_oak.xacro`
+        # (`bizzy/<name>_optical`) so the segmentation Image + CameraInfo
+        # frame_id resolves in the live TF tree. Without this the publisher
+        # falls back to the package default `<name>_optical_frame`, which
+        # is not in BizzyBoat's TF tree and breaks any consumer that does
+        # a TF lookup against the message header (e.g. SeaSurfaceLayer).
+        'frame_ids': [f'bizzy/{name}_optical'],
         'neural_network': PathJoinSubstitution([
             FindPackageShare('sea_surface_segmentation'),
             'config',
