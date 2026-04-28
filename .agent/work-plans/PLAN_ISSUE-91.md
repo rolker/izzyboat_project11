@@ -41,9 +41,12 @@ three raw topics and will mirror once BizzyBoat is field-validated.
 3. **Field-validate on next gabby session** (separate field step, not
    in the PR diff):
    - `ros2 topic hz /bizzy/mavros/local_position/velocity_body` and
-     `/bizzy/mavros/global_position/global` — confirm ≥ 20 Hz. If
-     lower, bump `SR0_POSITION` (or matching SR-stream param) on the
-     FCU. Capture before/after rates.
+     `/bizzy/mavros/global_position/global` — confirm ≥ 10 Hz. (10 Hz
+     is the marine-vehicle floor — at peak 1.75 m/s that's 17.5 cm
+     per sample, well within sub-meter XTE goals; the 2026-04-24
+     dynamics analysis already showed sub-meter XTE on the existing
+     ~5–10 Hz pipeline.) If lower, bump `SR0_POSITION` on the FCU.
+     Capture before/after rates.
    - `ros2 topic echo --once` on each new topic to confirm
      `header.frame_id` resolves in the bizzy TF tree:
      - `velocity_body.header.frame_id` should be `base_link` or a
@@ -98,11 +101,14 @@ three raw topics and will mirror once BizzyBoat is field-validated.
    sees a different nav source than the boat is acting on? Lean toward
    updating, but flagging because it expands the diff and we lose the
    raw fix as a shoreside diagnostic signal.
-2. **`SR_POSITION` rate.** If `local_position/*` publishes below 20 Hz,
-   we'll bump it during field-validation. Should that bump be captured
-   in `bizzyboat_fcu_custom.param` (this PR) or in a separate field-mode
-   commit on gitcloud? Probably the latter — the FCU param file is
-   field-applied, not a code edit.
+2. **`SR_POSITION` rate (resolved).** If `local_position/*` publishes
+   below 10 Hz on the boat, bump `SR0_POSITION` in
+   `bizzyboat_fcu_custom.param` on **this** branch as a follow-up
+   commit, then field-apply in the same gabby session that validates
+   the topic swap. Single source of truth dev-side, applied field-side
+   — same pattern as #56's battery params. 10 Hz target reflects
+   marine-vehicle dynamics (PR #90 / 2026-04-24), not Nav2's
+   small-robot defaults.
 3. **IzzyBoat timing.** After BizzyBoat field-validation passes, mirror
    to IzzyBoat as a follow-up commit on this branch (single PR for
    both), or open a separate IzzyBoat-only issue/PR?
