@@ -3,7 +3,7 @@
 # segmentation (raw + compressed) topics, plus TF, diagnostics, and the
 # latched robot description.
 #
-# Sufficient to replay-debug `sea_surface_segmentation::SeaSurfaceLayer`
+# Sufficient to replay-debug `sea_surface_layer::SeaSurfaceLayer`
 # (the nav2 costmap plugin) offline: it subscribes to the raw
 # `<cam>/segmentation` Image topic and the matching `camera_info`, and
 # does a TF lookup from the image header frame to the costmap global

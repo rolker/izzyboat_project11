@@ -1,8 +1,9 @@
-# Field log — salmon — 2026-04-27
+# BizzyBoat deployment log — salmon — 2026-04-27
 
 **Host**: salmon
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
+**Deployment**: [#94](https://github.com/rolker/unh_echoboats_project11/issues/94)
 
 ## Summary
 

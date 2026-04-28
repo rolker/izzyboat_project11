@@ -3,7 +3,7 @@
 **Host**: gabby
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: #TBD (dev-side issue not yet opened)
+**Deployment**: [#94](https://github.com/rolker/unh_echoboats_project11/issues/94)
 
 ## Scope
 
@@ -328,7 +328,7 @@ around for this recorder.
 
 ### Second capture
 
-2026-04-27T11:04-04:00 (UTC start 15:02:15) — second 120 s capture
+2026-04-27T11:02-04:00 (UTC start 15:02:15) — second 120 s capture
 at operator request.
 
 - `~/data/logs/bizzy_images/bag_2026-04-27T15.02.15_ffmpeg_seg/`
