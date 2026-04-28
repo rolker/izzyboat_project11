@@ -75,6 +75,7 @@ three raw topics and will mirror once BizzyBoat is field-validated.
 | File | Change |
 |------|--------|
 | `bizzyboat_project11/config/bizzyboat.yaml` | (a) Topic-name swaps in two `mru_transform`-pattern blocks (`platform_sender.nav.sources.mru` ~23–26 + `/**/mru_transform.sensors.mru` ~41–44): position raw → fused, velocity ENU → body, orientation unchanged. (b) Add `mavros_position_ekf` and `mavros_velocity_body` parallel feeds to both udp_bridge blocks (~116–143 + ~144–202): two new entries in each block's `topics:` map and two new entries in each block's `topics_list:` array. Raw `mavros_position` / `mavros_velocity` labels kept as-is. |
+| `bizzyboat_project11/config/mavros.yaml` | Add `child_frame_id: "bizzy/base_link"` to the `/**/local_position:` block. The `global_position` block already has it; `local_position` was missing it, causing `velocity_body` to publish with bare `base_link` (which doesn't resolve in the bizzy TF tree). Field-discovered during Phase-A diagnostics on 2026-04-28. |
 
 ## Principles Self-Check
 
@@ -136,5 +137,20 @@ position label matches echo's exact name, velocity label uses
 Single small PR — ~four edited lines (mru_transform-pattern blocks)
 plus ~eight new lines (parallel-feed labels added to both udp_bridge
 blocks: two `topics:` entries + two `topics_list:` entries × two
-blocks). Implementation is ~15 minutes; the gating cost is the next
-gabby session for field validation.
+blocks), plus one added line in `mavros.yaml` (`child_frame_id` for
+the local_position plugin, discovered during Phase-A field
+diagnostics). Implementation is ~15 minutes; the gating cost is the
+next gabby session for field validation.
+
+## Implementation Notes
+
+- 2026-04-28 Phase-A field diagnostics on gabby revealed that
+  `mavros/local_position/velocity_body.header.frame_id` was bare
+  `base_link` while every other mavros topic used `bizzy/base_link`.
+  Root cause: `bizzyboat_project11/config/mavros.yaml`'s
+  `/**/local_position:` block set `frame_id` but not `child_frame_id`.
+  Added the missing `child_frame_id` line so the body twist publishes
+  with the correctly namespaced frame_id and resolves in the bizzy
+  TF tree. Without this fix, mru_transform's `lookupTransform`
+  would have failed for every velocity sample and produced silent
+  degradation (throttled WARN, no `/bizzy/odom.twist` updates).
