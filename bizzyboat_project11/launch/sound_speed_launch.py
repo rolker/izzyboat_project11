@@ -52,7 +52,15 @@ def generate_launch_description():
                     parameters=[{
                         'device': device,
                         'baud': baud,
-                        'parser': 'aml',
+                        # Probe emits NMEA-style sentences, e.g.
+                        #   $AML,SVM,1479.029,SN,205937*01\r\n
+                        # The first-class AMLParser expects bare decimal
+                        # values (older AML config?), so use the generic
+                        # regex parser to extract the SVM value.
+                        'parser': 'regex',
+                        'regex_pattern': r'\$AML,SVM,(?P<sound_speed>\d+\.\d+)',
+                        'regex_line_terminator': 'crlf',
+                        'regex_sound_speed_scale': 1.0,
                         'frame_id': [frame_prefix, 'sound_speed_sensor'],
                         # Valeport-format UDP to M3 (built-in Valeport listener on mercat).
                         # Replaces the interim PowerShell stand-in (aml_bridge.ps1).
