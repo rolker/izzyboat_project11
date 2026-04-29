@@ -12,9 +12,11 @@ The SBG, which needs bidirectional comms for ECom + RTCM, owns ttyS1.
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.actions import GroupAction
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
+from launch_ros.actions import PushRosNamespace
 
 
 def generate_launch_description():
@@ -36,24 +38,33 @@ def generate_launch_description():
         device_arg,
         baud_arg,
 
-        Node(
-            package='sound_speed_bridge',
-            executable='sound_speed_bridge',
-            name='sound_speed_bridge',
-            parameters=[{
-                'device': device,
-                'baud': baud,
-                'parser': 'aml',
-                'frame_id': [frame_prefix, 'sound_speed_sensor'],
-                # Valeport-format UDP to M3 (built-in Valeport listener on mercat).
-                # Replaces the interim PowerShell stand-in (aml_bridge.ps1).
-                'udp_hosts': ['mercat'],
-                'udp_ports': [20003],
-                'udp_formats': ['valeport'],
-                'udp_templates': [''],
-            }],
-            respawn=True,
-            respawn_delay=2.0,
-            emulate_tty=True
+        GroupAction(
+            actions=[
+                # Topics land at /<namespace>/sensors/sound_speed/<topic>
+                # (sound_speed, temperature, fluid_pressure) — matches the
+                # /<ns>/sensors/<sensor>/<topic> convention used by the
+                # SBG, deltat, ntrip, and oak camera nodes.
+                PushRosNamespace('sensors/sound_speed'),
+                Node(
+                    package='sound_speed_bridge',
+                    executable='sound_speed_bridge',
+                    name='sound_speed_bridge',
+                    parameters=[{
+                        'device': device,
+                        'baud': baud,
+                        'parser': 'aml',
+                        'frame_id': [frame_prefix, 'sound_speed_sensor'],
+                        # Valeport-format UDP to M3 (built-in Valeport listener on mercat).
+                        # Replaces the interim PowerShell stand-in (aml_bridge.ps1).
+                        'udp_hosts': ['mercat'],
+                        'udp_ports': [20003],
+                        'udp_formats': ['valeport'],
+                        'udp_templates': [''],
+                    }],
+                    respawn=True,
+                    respawn_delay=2.0,
+                    emulate_tty=True
+                ),
+            ]
         ),
     ])
