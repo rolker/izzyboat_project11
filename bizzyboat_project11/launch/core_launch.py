@@ -238,6 +238,21 @@ def generate_launch_description():
                         ])
                     ),
                 ),
+
+                # Sound-speed bridge (AML SVS on gabby /dev/ttyS1
+                # -> ROS topic + Valeport UDP to M3 on mercat:20003)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'sound_speed_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'frame_prefix': frame_prefix,
+                    }.items()
+                ),
             ]
         ),
 
