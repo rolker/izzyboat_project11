@@ -310,6 +310,99 @@ The underlying `bencloud:bencloud.wg.p11.lan` target in
 `ping_targets_operator.yaml` is left alone — it still serves as a
 data-collection record, just not as an annunciator indicator.
 
+## 9. CAMP frozen → full op-stack restart → pre-launch sweep
+
+### Symptom
+
+Roland reported CAMP frozen.  Process inspection (PID 765427):
+
+- Main thread at 90–99 % CPU, state `Rl+`, with all 17 worker/Qt
+  threads parked on `futex_wait_queue` — classic spin-on-lock
+  pattern (main holds a lock it isn't releasing while spinning).
+- Last CAMP log line was 7678 s (≈ 2 h 8 min) old; before going
+  silent, repeated `[rmw_zenoh_cpp] SubscriberCallback triggered
+  over 0/bizzy/marine/heartbeat/...` and `.../mission_manager/...`
+  errors.
+- `ros2 topic info /tf_static` timed out under Zenoh — strong
+  signal of discovery sickness.
+
+Same failure mode the deployment log already documented (Zenoh
+subscriber-callback storm freezing CAMP on salmon).  Likely
+trigger this time: gabby's `eec0f28` TF-bridge launch (afternoon
+gabby commit) added new static transforms, which churned
+`/tf_static` under Zenoh and starved CAMP.
+
+### CAMP-only restart was not enough
+
+Roland killed CAMP and `operator_ui_launch.py` respawned it.
+CAMP came back, but a follow-up sweep showed `udp_bridge` was now
+in a half-broken state of its own:
+
+| Layer | State |
+|---|---|
+| Process (PID 765546) | alive, 5 h+ uptime |
+| UDP sockets in `/proc/.../fd/` | bound, 10+ visible |
+| NIC `enp3s0` RX rate | **3.47 MB/s** — boat actively shipping |
+| `/operator/udp_bridge` in `ros2 node list` | **missing** |
+| Fresh `ros2 topic echo` on stats topic | **timed out** |
+| Bag recorder mtime | **102 s stale** — recorder alive, starving |
+
+Bridge was forwarding packets at the wire level but its ROS-side
+publisher registrations had gone stale under Zenoh.  CAMP coming
+back didn't fix the underlying Zenoh state, and the recorder + any
+fresh subscriber were equally affected.
+
+### Full restart
+
+Roland ran `~/stop_tmux_project11.bash` then
+`~/start_tmux_operator_project11.bash`.  Cycled `zenohd`, then
+`operator_core_launch`, then `operator_ui_launch`.
+
+Post-restart verification:
+
+- All 5 tmux windows back: `zenoh`, `core`, `ui`, `rqt-diag`,
+  `johnny5`.
+- `/operator/udp_bridge` visible in `ros2 node list` again; full
+  expected node set present.
+- Fresh `ros2 topic echo` on `/operator/udp_bridge/remotes/bizzy/topic_statistics`
+  returns immediately — Zenoh discovery healthy.
+- New bag started: `~/data/logs/operator/2026-04-29/diagnostics_17.47.54/`,
+  growing.  The frozen morning bag (`diagnostics_11.57.56`,
+  ~114 MB) is preserved as the pre-freeze record.
+
+### Pre-launch sanity sweep
+
+Boat is going in the water.  Final operator-side state immediately
+before launch:
+
+| Check | Result |
+|---|---|
+| `failed_bytes_per_second` / `dropped_bytes_per_second` on bridge | 0.0 across all topics, both wifi and raw |
+| `/bizzy/marine/heartbeat` | 1 Hz, fresh stamp |
+| `/bizzy/joy` | publishing, axes 0 (stick centered) |
+| `ping gabby.bizzy.p11.lan` | 1.5 ms (direct WiFi bridge) |
+| Bag `diagnostics_17.47.54_0.mcap` | actively writing |
+| `/diagnostics` publishers | 5 (boat aggregator forwarding) |
+
+### Things to watch in-water
+
+- **Op annunciator**: red on `Internet (DNS)` or any UDP
+  indicator → link issue, not salmon.
+- **udp_bridge tx_failed climbing on wifi** = link degrading
+  before any other symptom.
+- **Bag mtime**: if it stops moving, the Zenoh-discovery sickness
+  is back (recurring failure mode).  Recovery is a full
+  stop+start as above.
+
+### Things deliberately deferred
+
+- Camera-grid `TransportHints` verification (PR #30) — UI
+  exercise, not pre-launch critical.
+- Persistent `bizzyboat.yaml` global-costmap removal — the
+  runtime disable doesn't survive a boat-side bridge restart, so
+  if `gabby` reboots its bridge mid-run, the costmap forwarding
+  comes back.
+
 ## Commits
 
 - `rqt_operator_tools` `2811fb0` — `fix(rqt_annunciator):
