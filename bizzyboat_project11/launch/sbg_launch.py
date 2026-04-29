@@ -25,10 +25,14 @@ def generate_launch_description():
         GroupAction(
             actions=[
                 PushRosNamespace(namespace),
-                PushRosNamespace('sensors/sbg'),
+                PushRosNamespace('sensors'),
 
                 # SBG INS driver. Subscribes to RTCM via the remapping below
-                # so it shares /bizzy/sensors/sbg/rtcm with rtcm_relay.
+                # so it shares /bizzy/sensors/rtcm with rtcm_relay. The
+                # `sensors` namespace (not `sensors/sbg`) leaves the
+                # driver's internal `sbg/` topic prefix to land output
+                # topics at /bizzy/sensors/sbg/<name> instead of the
+                # doubled /bizzy/sensors/sbg/sbg/<name>.
                 Node(
                     package='sbg_driver',
                     executable='sbg_device',
