@@ -26,6 +26,8 @@
   <exec_depend>rmw_zenoh_cpp</exec_depend>
   <depend>robot_state_publisher</depend>
   <depend>rosbag2_transport</depend>
+  <exec_depend>rtcm_msgs</exec_depend>
+  <exec_depend>sbg_driver</exec_depend>
   <exec_depend>sound_speed_bridge</exec_depend>
   <exec_depend>starlink_stats</exec_depend>
   <exec_depend>teltonika_monitor</exec_depend>

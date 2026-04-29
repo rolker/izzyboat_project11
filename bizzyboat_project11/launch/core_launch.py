@@ -280,5 +280,23 @@ def generate_launch_description():
                     'ntrip_launch.py'
                 ])
             ),
+            launch_arguments={
+                'namespace': namespace,
+            }.items()
+        ),
+
+        # SBG Ellipse-D INS (gabby's PORT_E). Logs nav data for FCU
+        # parity comparison and forwards NTRIP RTCM to the SBG.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'sbg_launch.py'
+                ])
+            ),
+            launch_arguments={
+                'namespace': namespace,
+            }.items()
         ),
     ])
