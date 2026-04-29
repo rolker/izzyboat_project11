@@ -30,6 +30,26 @@ def generate_launch_description():
                     src='rtcm',
                     dst=['/', namespace, '/mavros/gps_rtk/send_rtcm']
                 ),
+
+                # GGA echoback throttle. Network/iMAX NTRIP mountpoints
+                # require the rover to publish GGA back so the caster can
+                # compute the virtual base. mavros's NavSatFix is ~10 Hz —
+                # well above what casters expect (0.1–1 Hz) — so we throttle
+                # before feeding ntrip_client. The output topic name lines
+                # up with the relative `fix` subscription that
+                # ntrip_ros_base.py:101 creates inside the ntrip_client node.
+                Node(
+                    package='topic_tools',
+                    executable='throttle',
+                    name='gga_throttle',
+                    arguments=[
+                        'messages',
+                        ['/', namespace, '/mavros/global_position/raw/fix'],
+                        '1.0',
+                        ['/', namespace, '/sensors/ntrip/fix'],
+                    ],
+                ),
+
                 Node(
                     name='ntrip_client',
                     namespace='sensors/ntrip',
