@@ -48,7 +48,6 @@ package's `config/` install runs.
 | Ping Gabby (VPN) | `Ping: ping.op: gabby_vpn` |
 | Ping Boat Router (WiFi) | `Ping: ping.op: router_bizzy_direct` |
 | Ping Boat Router (VPN) | `Ping: ping.op: router_bizzy_vpn` |
-| Internet (bencloud) | `Ping: ping.op: bencloud` |
 | Internet (DNS) | `Ping: ping.op: dns_cloudflare` |
 | UDP WiFi | `udp_bridge operator: bizzy: wifi` |
 | UDP VPN | `udp_bridge operator: bizzy: vpn` |
@@ -56,6 +55,24 @@ package's `config/` install runs.
 The two UDP indicators currently live on the boat panel; once we add the
 op panel, they belong here (they're op-bridge state, not boat state). Move
 them in a follow-up commit so we don't break the boat-panel layout mid-deployment.
+
+### What we deliberately don't include: `Ping: ping.op: bencloud`
+
+The `bencloud` ping target in `ping_targets_operator.yaml` resolves to
+`bencloud.wg.p11.lan` (the raw WireGuard mesh endpoint, `10.132.146.1`).
+Salmon has no WG client of its own — its WG-bound traffic is mediated by
+the op router, which NETMAPs salmon-LAN traffic onto specific WG-tunneled
+subnets. Direct addressing of the `10.132.146.0/24` mesh is not exposed
+to salmon-side hosts by design. So the bencloud-WG ping always reads as
+"no link" from salmon, regardless of whether the WG transport is
+actually healthy.
+
+Don't add it to the annunciator until either (a) the ping target moves to
+a NETMAP'd address that does land at bencloud, or (b) salmon is given a
+direct WG client. Until then, "is the VPN/WG transport up?" is best
+inferred indirectly from `Ping Boat Router (VPN)` (`router_bizzy_vpn` —
+192.168.21.1, NETMAP'd through WG) — a successful round-trip there proves
+the tunnel carries data.
 
 ## Tier 2 — small new monitors (deferred)
 

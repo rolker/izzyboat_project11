@@ -39,12 +39,6 @@ indicators:
     stale_timeout: 30.0
 
   # --- Op-side internet (so we can tell if a remote-data outage is ours or theirs) ---
-  - name: Internet (bencloud)
-    source: diagnostics
-    diagnostic_name: "Ping: ping.op: bencloud"
-    format: "{}"
-    stale_timeout: 30.0
-
   - name: Internet (DNS)
     source: diagnostics
     diagnostic_name: "Ping: ping.op: dns_cloudflare"
