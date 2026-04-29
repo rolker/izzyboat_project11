@@ -265,6 +265,9 @@ def generate_launch_description():
                     'ntrip_launch.py'
                 ])
             ),
+            launch_arguments={
+                'namespace': namespace,
+            }.items()
         ),
 
         # SBG Ellipse-D INS (gabby's PORT_E). Logs nav data for FCU
