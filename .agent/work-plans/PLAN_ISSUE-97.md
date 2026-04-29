@@ -27,17 +27,23 @@ So the remaining work is just the recorder + wiring it into `operator_core_launc
    now = datetime.now()
    day_dir = now.strftime('%Y-%m-%d')
    bag_name = now.strftime('diagnostics_%H.%M.%S')
-   out_dir = os.path.expanduser(f'~/data/logs/operator_diag/{day_dir}/{bag_name}')
+   out_dir = os.path.expanduser(f'~/data/logs/operator/{day_dir}/{bag_name}')
    ```
 
-   Per-day parent so multiple deployments in a day land grouped; per-launch bag dir inside.
+   Per-day parent so multiple deployments in a day land grouped; per-launch bag dir inside. Path is `~/data/logs/operator/...` — generic enough to host non-diag operator-side bags later (camera, NMEA tap, etc.) without renaming.
 
-2. **Topic list** (per issue body + scope-expansion comment):
+2. **Topic list** (per issue body + scope-expansion comment + udp_bridge stats):
    - `/diagnostics` — picks up both boat-side diag forwarded over `udp_bridge` and salmon-local op-side diagnostics from the four monitor nodes.
    - `/bizzy/marine/command` — operator-originated CAMP commands (from `operator.yaml:18,32`).
    - `/bizzy/piloting_mode/manual/helm` — operator-originated joystick helm (from `operator.yaml:19,33`).
+   - `/operator/udp_bridge/topic_statistics` — operator-side bridge top-level stats (per-topic byte/packet counters across all remotes).
+   - `/operator/udp_bridge/bridge_info` — operator-side bridge config snapshot (latched; one message per launch, captures the connection topology).
+   - `/operator/udp_bridge/remotes/bizzy/topic_statistics` — per-remote stats for the boat link (the one we actually care about during a wedge).
+   - `/operator/udp_bridge/remotes/bizzy/bridge_info` — per-remote latched config snapshot.
    - `/rosout` — universal log; cheap; useful for op-side stack debugging.
-   - `/tf`, `/tf_static` — usually empty on salmon, but recording adds zero cost if absent. Skip unless they actually publish on op-side; default to including so we don't have to revisit.
+   - `/tf`, `/tf_static` — usually empty on salmon, but recording adds zero cost if absent. Default to including so we don't have to revisit.
+
+   The four udp_bridge topics are the wedge-investigation gold: when `udp_bridge#10` stalled, only inside-the-bridge stats can show the stall as it's happening. `/diagnostics` alone misses it because the bridge is *also* the transport that delivers boat-side diag — a stalled bridge silently freezes the diag stream.
 
 3. **Storage profile**: `-s mcap --storage-preset-profile zstd_fast` (matches `record_camera_topics.sh`). Diagnostics is low-rate so compression fidelity doesn't matter, but consistency with the existing pattern eases later mcap tooling work.
 
@@ -53,8 +59,7 @@ So the remaining work is just the recorder + wiring it into `operator_core_launc
 |------|--------|
 | `bizzyboat_project11/launch/bag_recorder_operator_launch.py` | **New.** ExecuteProcess running `ros2 bag record` with launch-computed date-stamped output dir, mcap+zstd_fast storage, the seven topics, SIGINT shutdown, `record_diagnostics` arg gate. |
 | `bizzyboat_project11/launch/operator_core_launch.py` | Add `IncludeLaunchDescription` for the new recorder launch, sibling to the existing `network_monitor_operator_launch.py` include at lines 75-83. |
-| `bizzyboat_project11/CMakeLists.txt` | Confirm `launch/` install rule already covers new file (it should — the rule typically globs `launch/*.py`). Verify and update if needed. |
-| `docs/logs/2026/2026-04-29_dev_logs.md` (or current dev log) | One-paragraph entry: what landed, what's still field-untested, where the bags will go (`~/data/logs/operator_diag/<date>/diagnostics_HH.MM.SS/`). |
+| `bizzyboat_project11/CMakeLists.txt` | No change — verified `install(DIRECTORY launch DESTINATION ...)` already covers the new file. |
 
 ## Principles Self-Check
 
@@ -78,12 +83,17 @@ So the remaining work is just the recorder + wiring it into `operator_core_launc
 |---|---|---|
 | Recorder topic list | This plan, the launch file's docstring, the dev log entry. | Yes — all three sit in this PR. |
 | `operator.yaml` udp_bridge topics | Recorder topic list (so post-incident bags can answer "did the operator send X?"). | **Out of scope here** — call this out in the PR body so future udp_bridge config edits remember to revisit. |
-| `~/data/logs/operator_diag/` path convention | The shell script `record_camera_topics.sh` uses `~/data/logs/bizzy_images/`; document this divergence in the recorder launch's module docstring and the dev log so the two patterns don't drift further. | Yes — call out the convention boundary in the docstring. |
+| `~/data/logs/operator/` path convention | The shell script `record_camera_topics.sh` uses `~/data/logs/bizzy_images/`; document this divergence in the recorder launch's module docstring and the dev log so the two patterns don't drift further. | Yes — call out the convention boundary in the docstring. |
 
 ## Open Questions
 
-- **Should `/tf`/`/tf_static` be in the topic list?** They're listed as "optional, if cheap" in the issue comment. My read: include them — zero-cost when absent on salmon, instantly useful if any future op-side TF publisher appears (e.g., operator-side world-frame estimator). Will include unless objected.
-- **Per-day parent dir or flat?** Plan picks `~/data/logs/operator_diag/<YYYY-MM-DD>/diagnostics_HH.MM.SS/`. Alternative: flat `~/data/logs/operator_diag/diagnostics_<full-iso>/` with no per-day grouping. Picking grouped because typical deployments cluster (ferry day → 3 launches → 3 bags grouped is more browseable). Easy to revisit.
+(Resolved by user during plan review — kept here for audit trail.)
+
+- ~~Path: `operator_diag/` vs `operator/`~~ → `operator/` (generic root for all op-side bags, not just diag).
+- ~~Include `/tf`/`/tf_static`?~~ → Yes (zero cost when absent).
+- ~~Per-day parent dir or flat?~~ → Per-day grouped: `~/data/logs/operator/<YYYY-MM-DD>/diagnostics_<HH.MM.SS>/`.
+- ~~Add udp_bridge stats topics?~~ → Yes — added the four `/operator/udp_bridge/...` topics to the list. These are the wedge-investigation core.
+- ~~`record_diagnostics` default~~ → `'true'` (record by default during deployment launches).
 
 ## Estimated Scope
 
