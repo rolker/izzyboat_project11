@@ -314,11 +314,197 @@ TF lookups resolve. Verified after relaunch:
   follow-up commit that re-adds the bit (`git update-index
   --chmod=+x`).
 
+## 6. SBG Ellipse-D RTK bring-up — UART fault, NTRIP upgrade, RTK fix achieved
+
+The afternoon's main task was getting RTCM corrections actually flowing
+into the SBG so it could compute RTK. Started simple, ended up
+uncovering and routing around a hardware UART fault on gabby.
+
+### 6.1 NTRIP source upgrade — legacy → MSM iMAX
+
+Initial state had NTRIP wired to MaCORS port 31000 (`RTCM3_MASA`),
+which streams legacy GPS+GLO L1/L2-only RTCM3.0 messages
+(1004/1012/1006/1008/1013/1033/1230). The internal u-blox ZED-F9P
+inside the Ellipse-D works much better with multi-constellation MSM4
+corrections. Switched to MaCORS port 10000 with the `RTCM3MSM_IMAX`
+mountpoint — full MSM4 GPS+GLO+GAL+BDS (1074/1084/1094/1124 + 1006).
+
+The new mountpoint is a network iMAX solution requiring GGA echoback
+at ~1 Hz. Wired that up in `ntrip_launch.py` via a `topic_tools
+throttle` node that downsamples `mavros/global_position/raw/fix` from
+10 Hz to 1 Hz and republishes to `/bizzy/sensors/ntrip/fix`. The
+microstrain `ntrip_client` already auto-converts NavSatFix → GPGGA
+per `ntrip_ros_base.py:101`, so no NMEA-conversion code needed.
+
+Verified via raw-byte capture of the topic that the new caster
+delivers the expected MSM4 set; the old mountpoint did not.
+
+### 6.2 SBG output config — `log_*` params + namespace cleanup
+
+Independently of RTCM, the SBG driver wasn't publishing any output
+topics earlier in the day (only `/parameter_events` and `/rosout`).
+Disassembling the shipped `sbg_device` binary symbol table revealed
+the cause: `SbgDevice::initSubscribers` routes through
+`MessagePublisher::initPublisher(rclcpp::Node&, uint8_t,
+_SbgEComOutputMode, std::string)` and only creates a publisher when
+the corresponding `output.log_*` yaml param is non-zero. Bizzy's
+`sbg_ellipse_d.yaml` had none of them set, so no publishers existed
+even though the driver was decoding the binary stream.
+
+Added the trimmed unified set (`log_status`, `log_imu_data`,
+`log_ekf_quat`, `log_ekf_nav`, `log_utc_time`, `log_mag`,
+`log_gps1_pos`, `log_gps1_vel`, `log_gps1_hdt`); all topics came up.
+
+While restructuring the SBG launch, also fixed the doubled `sbg/`
+segment in topic paths (`/bizzy/sensors/sbg/sbg/imu_data` →
+`/bizzy/sensors/sbg/imu_data`). The driver adds its own internal
+`sbg/` topic prefix, so the launch should push only `sensors` and
+let the prefix complete the namespace. See `sbg_launch.py:28`.
+
+### 6.3 RTCM-not-ingesting — the long debug
+
+With NTRIP and output topics both fixed, the chain *appeared*
+healthy end-to-end: rtcm_relay republishing `/bizzy/sensors/rtcm` at
+~5 Hz (valid MSM4 framing), sbg_device subscribed, kernel `write()`
+syscalls returning success. But `gps_pos` continued to show
+`base_station_id: 65535` and `diff_age: 65535` — the "no RTCM ever
+ingested" sentinel. RTK was never engaging.
+
+Detour through the SBG configuration system: built up a
+version-controlled `sbg_ellipse_d_configure.yaml` template (with
+`confWithRos: true`) intending to push device config from gabby. To
+do that, gabby needed to be on PORT_A (the only `portAConfMode`-flagged
+port). Cable-swapped temporarily — gabby on PORT_A, mercat on PORT_E.
+Push partially succeeded — driver logged `[Config] Aiding assignement
+updated`, `[Config] IMU alignement updated`, etc. — but
+`SAVE_SETTINGS` failed with `SBG_INVALID_PARAMETER`. RTCM still
+didn't ingest. Attributed ambiguously to PORT_A/PORT_E differences or
+fw/driver schema mismatches.
+
+### 6.4 The actual root cause: gabby's ttyS0 UART line driver is dead
+
+Loopback test, SBG-end-of-cable bridge of pins 2↔3, gabby tries to
+echo via `/dev/ttyS0` — sent 20 bytes, got 0 back. Two retries with
+two different null-modem adapters: same. Then a cross-machine test
+running gabby's cable to mercat's TeraTerm:
+
+| Path | Result |
+|---|---|
+| mercat → gabby (via ttyS0) | ✓ received cleanly |
+| gabby → mercat (via ttyS0, adapter A) | ✗ nothing |
+| gabby → mercat (via ttyS0, adapter B) | ✗ nothing |
+| gabby → mercat (via ttyS1, AML SVS port) | ✓ received cleanly |
+
+The fault is gabby's onboard ttyS0 RS-232 line-driver IC — TX side
+silicon-dead, RX still works. Classic asymmetric transceiver failure
+(usually from an ESD event or over-voltage on a pin).
+
+Modem-control-line state and termios were healthy on the kernel side
+(`DTR=ON, RTS=ON, CTS=ON`, `-crtscts`); earlier strace had confirmed
+the kernel was clocking bytes out the UART register. The fault is
+below the kernel — the line-driver IC silently drops TX.
+
+(YAMA gotcha along the way: had to set `kernel.yama.ptrace_scope=0`
+to attach strace to a launch-supervised child process. Made the
+relaxation persistent in `/etc/sysctl.d/99-ptrace-allow.conf`.)
+
+### 6.5 Final wiring + production yaml
+
+Repurposed gabby's ttyS1 (which was the AML SVS port) for the SBG.
+The AML SVS is RX-only — it just emits sound-velocity sentences and
+doesn't accept commands — so it can use the broken-TX ttyS0 with no
+functional impact.
+
+gabby panel rewire (one-time):
+
+- `ttyS1` panel jack ← SBG cable (was AML SVS)
+- `ttyS0` panel jack ← AML SVS cable (was SBG)
+
+SBG splitter side, end state:
+
+- PORT_A ← mercat (back to original; sbgCenter access restored)
+- PORT_E ← gabby ttyS1 (RTCM input, binary output stream consumer)
+
+This is essentially the original-intended SBG-side wiring, just
+with a working gabby UART for the first time today.
+
+Yaml updates:
+
+- `bizzyboat_project11/config/sbg_ellipse_d.yaml` — `portName:
+  /dev/ttyS1`, `portID: 4` (PORT_E), header rewritten to document
+  the new wiring + ttyS0 fault context for future readers.
+- `bizzyboat_project11/launch/sound_speed_launch.py` — `device:
+  /dev/ttyS0`, docstring explains why a dead-TX UART is fine here.
+- `bizzyboat_project11/config/sbg_ellipse_d_configure.yaml` (NEW)
+  — version-controlled config-push template kept as an artifact
+  for any future situation where gabby (or a successor host)
+  ends up on PORT_A again. Not used in production today.
+
+### 6.6 The airData inconsistency — partial diagnosis, deferred
+
+When mercat tried to flip `aiding.diffCorr.source` from comA back to
+comE in sbgCenter, the save failed with **"air data model source
+inconsistency"** — the same root cause as our ROS-driver
+`SBG_INVALID_PARAMETER` on `SAVE_SETTINGS`. The Ellipse-D's airData
+fields (`model: internal, source: internal, useAirSpeed: never,
+useAltitude: never`) are pre-existing config from an older firmware
+that fw 3.0.3949-stable validates more strictly. The airData panel
+isn't reachable in sbgCenter on this Ellipse-D variant (no air-data
+sensor → GUI hides the controls), so the inconsistency can't be
+fixed through any channel we have on the boat today.
+
+**Important update on the airData hypothesis**: had theorized
+mid-debug that airData inconsistency was *gating RTK functionality*
+(defensive degraded-mode behavior in the firmware). **Wrong.** RTK
+locked within seconds of the cable rewire + sbgCenter runtime flip,
+even with the airData inconsistency unresolved and SAVE continuing
+to fail. The airData issue **only blocks `SAVE_SETTINGS`** — a real
+but isolated problem, not a critical-path concern for the
+deployment.
+
+### 6.7 RTK FIX achieved
+
+After the rewire + sbgCenter runtime flip of `aiding.diffCorr.source`
+from comA back to comE:
+
+```
+status.status:    0    (SOL_COMPUTED)
+status.type:      7    (SBG_ECOM_GPS_POS_RTK_INT — Integer fix)
+base_station_id:  42   (real MaCORS station — no longer 65535 sentinel)
+diff_age:         ~35  (0.35 s — fresh corrections being applied)
+```
+
+Topic rates all nominal: 50 Hz IMU/EKF, 5 Hz GPS / RTCM.
+
+### Follow-up for a future bench session
+
+- **SBG support ticket**: send the sbgCenter JSON dump
+  (`/tmp/ELLIPSE-D-G4A2-B1_000034256_20260429_181248.json`) plus
+  the airData inconsistency error and driver SBG_INVALID_PARAMETER
+  logs. Ask for either a CLI / import path that reaches the airData
+  fields on this Ellipse-D variant, or a firmware-level rule to set
+  airData to a consistent disabled state.
+- **Hardware**: gabby's onboard ttyS0 line driver is dead. Worth
+  capturing in the boat's hardware doc; plan a board swap or
+  permanent USB-serial dongle next bench session. The current
+  workaround (SBG on ttyS1, AML SVS on ttyS0) is functional and
+  permanent until then.
+- **QINSy**: mercat is back on PORT_A, but PORT_A's output set
+  hasn't been re-tuned since the day's trim. QINSy may or may not
+  be receiving everything it expects — separate audit needed.
+
 ## Files touched
 
 - `bizzyboat_project11/launch/perception_launch.py`
 - `bizzyboat_project11/launch/core_launch.py`
+- `bizzyboat_project11/launch/ntrip_launch.py`
+- `bizzyboat_project11/launch/sbg_launch.py`
+- `bizzyboat_project11/launch/sound_speed_launch.py`
 - `bizzyboat_project11/scripts/start_tmux_project11.bash`
 - `bizzyboat_project11/scripts/rtcm_relay_node.py` (mode change)
+- `bizzyboat_project11/config/bizzyboat.yaml`
+- `bizzyboat_project11/config/sbg_ellipse_d.yaml`
+- `bizzyboat_project11/config/sbg_ellipse_d_configure.yaml` (new)
 - `config/repos/core.repos`
+- `ccomjhc_project11/configuration/bizzyboat_ntrip.yaml` (cross-repo)
 - `docs/logs/2026/2026-04-29_gabby_logs.md` (this file)
