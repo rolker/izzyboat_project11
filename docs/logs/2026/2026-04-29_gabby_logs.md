@@ -572,6 +572,50 @@ Info : SBG_TIME_OUT` at sbg_device startup — expected on PORT_E
 (no `portAConfMode` feature). Driver continues to parse the binary
 log stream normally; cosmetic only.
 
+### 7.5 In-water surprise: AML SVS parser mismatch — `aml` → `regex`
+
+Once the boat went in the water `sound_speed` *should* have switched
+from NaN to a real ~1479 m/s value, but it stayed NaN. The
+`sound_speed_bridge` diagnostic was loud about it:
+
+    parser_rate_hz: 24.00
+    parse_error_count: 64068
+    message: "Last reading is NaN (parse failed)"
+
+Bytes were arriving at the right rate but every sentence failed
+parsing. Briefly killed the bridge (respawn=True, ~2 s gap) and
+captured `/dev/ttyS0` raw — the probe emits NMEA-style sentences:
+
+    $AML,SVM,1479.029,SN,205937*01\r\n
+    $AML,SVM,1479.026,SN,205937*0E
+    $AML,SVM,1479.022,SN,205937*0A
+
+The `'aml'` parser in
+`marine_tools/sound_speed_bridge/parsers.py:101-104` expects bare
+decimal values (`1479.029\r\r\n`) — it does literally
+`Decimal(stripped.decode('ascii'))` on the whole line. Fed an NMEA
+string, `Decimal("$AML,SVM,1479.029,SN,205937*01")` raises
+InvalidOperation, parser returns NaN.
+
+Switched the bridge to the generic `'regex'` parser with:
+
+    regex_pattern: \$AML,SVM,(?P<sound_speed>\d+\.\d+)
+    regex_line_terminator: crlf
+    regex_sound_speed_scale: 1.0
+
+Restarted core; sound_speed immediately reported 1479.043 m/s —
+clean, matches the on-the-wire values. M3's Valeport listener also
+started seeing the values (per mercat operator confirmation:
+"sonar got sound speed!").
+
+Open question for the marine_tools side: AMLParser's docstring
+claims AML SVS terminates with CRCRLF, but our probe clearly uses
+CRLF and emits NMEA-style sentences. Either AMLParser was written
+against a different firmware variant or it's an incomplete
+implementation. Worth filing on the marine_tools repo with a
+sample of the probe's actual output for either a docstring
+correction or a per-variant subclass.
+
 ## Files touched
 
 - `bizzyboat_project11/launch/perception_launch.py`
