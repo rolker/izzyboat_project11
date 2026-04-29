@@ -72,8 +72,9 @@ parent dir keep their original names.
 
 ### Commit
 
-`df8c2c2 feat(perception_launch): self-contained log dir + datetime
-subdir` on `jazzy`. Local only — Roland asked to hold the push.
+`feat(perception_launch): self-contained log dir + datetime subdir`
+on `jazzy`. (Originally `df8c2c2`; rebased onto post-sync origin/jazzy
+in §3 below — current SHA `7027c67`.)
 
 ## 2. `make sync` — incoming commits for today's testing
 
@@ -164,8 +165,160 @@ for camera frame_ids). The two cross-repo pairs (`SoundSpeed.msg` ↔
 `sound_speed_bridge`, `frame_ids` plumbing ↔ camera defaults) need
 both sides built before the dependent code path is exercised.
 
+## 3. Rebase + build + manifest gap → `marine_tools` added
+
+2026-04-29T11:30-04:00 — Committed log §1 + §2 (`ee8867a`, later
+rebased) and re-ran `make sync` to integrate the project repo's
+40-commit incoming chain. Clean rebase: our two local commits
+replayed on top, ending at `d64bd34` (log) + `7027c67`
+(perception_launch).
+
+`make build` ran clean across all five layers — synced fixes compiled
+in (frame_ids work in `depthai_marine` + `sea_surface_segmentation`,
+SoundSpeed.msg generated, etc.).
+
+`rosdep check` afterwards flagged three gaps:
+
+- `apt: ros-jazzy-ffmpeg-image-transport` — runtime dep for
+  `depthai_marine`'s FFMPEG H.265 publishers (Roland resolved with
+  `rosdep install`).
+- `apt: ros-jazzy-sbg-driver` — runtime dep for the synced SBG
+  bring-up commits (Roland resolved with `rosdep install`).
+- `sound_speed_bridge` — declared in `bizzyboat_project11/package.xml`
+  (`<exec_depend>`), used by `sound_speed_launch.py` from synced
+  commit `22ef651`. Not in any `.repos` manifest. Per the launch
+  file's docstring, it lives in `rolker/marine_tools` as a sibling
+  package alongside the planned QINSy → ROS bridge (`marine_tools#1`).
+
+Added `marine_tools` to `config/repos/core.repos`. Subtlety: the
+workspace's `configs/manifest/` is a symlink into this project repo's
+`config/` — so the manifest edit shows up here as `M
+config/repos/core.repos`, not as a workspace-repo change.
+
+`make sync` alone doesn't initial-clone repos new in the manifest
+(`Skipping marine_tools: could not resolve repository path`); a
+`make build` re-runs `setup_layers.sh core` because the layer-stamp
+mtime is now older than `core.repos`. That import brought in two new
+packages:
+
+- `marine_tools` — sonar/QINSy code (PolynomialRegression,
+  marine_sonar_to_pointcloud)
+- `sound_speed_bridge` — what we needed
+
+Final `make build` after the apt deps landed: clean, fully cached, no
+stderr.
+
+## 4. First launch crash: `rtcm_relay_node.py` exec bit (upstream regression)
+
+2026-04-29T12:03-04:00 — Roland kicked off `start_tmux_project11.bash`.
+Core launch (`core_launch.py`) crashed immediately with:
+
+> `[ERROR] [launch]: Caught exception ... executable 'rtcm_relay_node.py'
+> not found on the libexec directory '.../bizzyboat_project11/lib/...'`
+
+Cascading SIGINT to all 22 other nodes. mavros caught a SIGABRT (exit
+code -6) on the way down — collateral from rcl shutting down while
+mavros was mid-init. nav window's `controller_server` then aborted
+because `bizzy/map_tide` disappeared with `sea_surface_estimator`.
+Perception window held through the cascade and kept recording.
+
+Root cause: the synced commit `7c85212 fix(sbg): respawn the RTCM
+relay; namespace-track its input topic` added
+`bizzyboat_project11/scripts/rtcm_relay_node.py` without the
+executable bit (`-rw-rw-r--`). Its peers (`gps_rtk_diagnostics_node.py`,
+`ntrip_diagnostics_node.py`) have `-rwxrwxr-x`. Symlink-install
+preserves source perms, so ROS's `Node` action fails the executable
+check and trips the launch exception immediately.
+
+Fixed with `chmod +x`. **This is an upstream regression** — anyone
+syncing 7c85212 fresh will hit the same wall. Worth flagging back to
+the dev side for a follow-up fix on the source commit.
+
+## 5. mavros TF tree split — `local_position` plugin gap (d40845e is a no-op)
+
+2026-04-29T12:11-04:00 — After the chmod fix, core stayed up cleanly,
+but `mru_transform` started spamming a TF lookup failure every 5 s:
+
+> `velocity: TF 'base_link' -> 'bizzy/base_link' lookup failed: Could
+> not find a connection between 'bizzy/base_link' and 'base_link'
+> because they are not part of the same tree.`
+
+Investigated. The synced commit `d40845e mavros: namespace local_position
+velocity_body frame_id` was supposed to fix this — its message claimed
+it added a missing `child_frame_id` to the local_position config block
+in `bizzyboat_project11/config/mavros.yaml`, mirroring what
+global_position has.
+
+But `local_position` doesn't actually expose a `child_frame_id`
+parameter. Verified live:
+
+```
+$ ros2 param list /bizzy/mavros/local_position
+  frame_id                  ← present, set to bizzy/map ✓
+  tf.child_frame_id         ← present, but tf.send is false
+  tf.frame_id
+  tf.send
+  ... (no plain child_frame_id)
+
+$ ros2 param get /bizzy/mavros/local_position child_frame_id
+Parameter not set
+```
+
+`global_position` does expose the param (its `local` Odometry has
+`child_frame_id: bizzy/base_link`). The two plugins aren't symmetric;
+d40845e's yaml override is silently dropped on `local_position`.
+Live confirmation:
+
+- `local_position/velocity_body.header.frame_id` → bare `base_link`
+- `local_position/odom.child_frame_id` → bare `base_link`
+- `/tf_static` carries 3 disconnected fragments rooted in bare names:
+  `map → map_ned`, `odom → odom_ned`, `base_link → base_link_frd`
+  (mavros's NED/FRD conversion frames; published regardless of
+  `tf.send`)
+
+These bare-name fragments never connect to the bizzy/-prefixed URDF
+tree, so `mru_transform`'s velocity lookup fails forever.
+
+### Workaround applied
+
+Added three identity `static_transform_publisher` bridges to
+`core_launch.py`, just before the MAVROS group:
+
+- `bizzy/map → map`
+- `bizzy/odom → odom`
+- `bizzy/base_link → base_link`
+
+This stitches the bare-name fragments under the bizzy/ tree so all
+TF lookups resolve. Verified after relaunch:
+
+- `tf2_echo bizzy/base_link base_link` → identity ✓
+- `tf2_echo bizzy/map map` → identity ✓
+- `tf2_echo bizzy/odom odom` → identity ✓
+- 0 `mru_transform` lookup-failed warnings in the last 2000 lines of
+  scrollback (was every 5 s before)
+- nav lifecycle reached `Managed nodes are active. Creating bond timer`
+- both costmaps doing tide-corrected lookups: `Tide offset updated:
+  2.36 m (water above chart datum)` repeating
+
+### Follow-up needed (not done today)
+
+- **`d40845e` should be reverted or amended** in
+  `unh_echoboats_project11`. As-is it's misleading: the commit
+  message claims the bug is fixed, but the yaml override is a no-op.
+- **Right fix is upstream**: patch mavros's `local_position` plugin
+  to expose `child_frame_id` like `global_position` does. The
+  workaround can stay as a belt-and-suspenders even after that
+  lands (identity transforms are cheap), or be removed once the
+  upstream fix is in.
+- **`7c85212` exec-bit regression** — flag to dev side for a
+  follow-up commit that re-adds the bit (`git update-index
+  --chmod=+x`).
+
 ## Files touched
 
 - `bizzyboat_project11/launch/perception_launch.py`
+- `bizzyboat_project11/launch/core_launch.py`
 - `bizzyboat_project11/scripts/start_tmux_project11.bash`
+- `bizzyboat_project11/scripts/rtcm_relay_node.py` (mode change)
+- `config/repos/core.repos`
 - `docs/logs/2026/2026-04-29_gabby_logs.md` (this file)
