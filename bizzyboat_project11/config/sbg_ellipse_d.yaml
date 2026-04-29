@@ -45,5 +45,8 @@
 
     rtcm:
       subscribe: true
-      # Defaults (namespace="ntrip_client", topic_name="rtcm") are
-      # remapped to "rtcm" in sbg_launch.py.
+      # Pin to today's driver defaults so sbg_launch.py's
+      # ('ntrip_client/rtcm', 'rtcm') remap stays valid even if a
+      # future sbg_driver release changes its built-in defaults.
+      namespace: "ntrip_client"
+      topic_name: "rtcm"
