@@ -11,20 +11,22 @@ topics: `mavros/global_position/raw/fix` (forward-antenna NavSatFix),
 `mavros/imu/data` (EKF3 attitude — already CG-referenced), and
 `mavros/global_position/raw/gps_vel` (antenna ENU velocity). The position
 and velocity inputs sit at the **forward GPS antenna phase center**, not
-at base_link / CG. With `GPS_POS1 = (+0.835, 0, +0.89 ENU)` (per
-`bizzyboat_fcu_custom.param`) the reported XY is biased ~0.84 m forward
-of CG in a heading-dependent way; RTK noise is cm-class so the lever
-arm dominates absolute position error.
+at base_link / CG. Per `bizzyboat_fcu_custom.param`,
+`GPS_POS1 = (+0.835, 0.0, -0.89)` in ArduPilot's body/NED convention
+(Z down, so the antenna is +0.89 m above the body origin); the reported
+XY is biased ~0.84 m forward of CG in a heading-dependent way, and RTK
+noise is cm-class so the lever arm dominates absolute position error.
 
 ArduPilot's EKF3 already lever-arm-corrects every measurement back to
 the body origin (CG on BizzyBoat, per the configured `GPS_POS*` /
 `INS_POS*` offsets). Switching `mru_transform`'s inputs to EKF3-fused
 topics stops double-handling the lever arm without changing the
 `/bizzy/odom` contract or the TF tree. This is **config-only**:
-`mru_transform`'s `updateVelocity`
-(`mru_transform/src/mru_transform.cpp:246`) is already transform-aware
-on its TwistStamped input — it looks up `base_frame_ ← header.frame_id`
-via tf2 and rotates linear velocity + covariance into base_frame.
+`mru_transform`'s `updateVelocity` (in the
+[`rolker/mru_transform`](https://github.com/rolker/mru_transform) repo,
+`src/mru_transform.cpp:246`) is already transform-aware on its
+TwistStamped input — it looks up `base_frame_ ← header.frame_id` via
+tf2 and rotates linear velocity + covariance into base_frame.
 
 IzzyBoat is intentionally out of scope for this PR — it uses the same
 three raw topics and will mirror once BizzyBoat is field-validated.
@@ -64,8 +66,9 @@ three raw topics and will mirror once BizzyBoat is field-validated.
        or empty so `mru_transform`'s position handler treats it as
        already-at-CG (no double lever-arm correction).
    - Compare `/bizzy/odom` to a recorded 2026-04-27 known-good track —
-     position should shift by the GPS1 lever arm (~0.84 m forward of
-     where it was) in the heading-correlated direction.
+     today's position is at the forward GPS antenna, so after the
+     switch the reported position should shift ~0.84 m **aft** (back
+     toward CG) in the heading-correlated direction.
    - CAMP visualization: confirm boat icon position matches RTK truth
      within RTK noise (sub-decimeter), not the previous ~0.84 m offset.
 4. **Mark PR ready and merge** once field-validation passes.
@@ -111,7 +114,7 @@ three raw topics and will mirror once BizzyBoat is field-validated.
    Raw stays available shoreside as a GPS-quality / EKF3-health
    diagnostic; fused is the autonomy-aligned source for new operator
    tooling.
-2. **`SR_POSITION` rate** — if `local_position/*` publishes below
+2. **`SR0_POSITION` rate** — if `local_position/*` publishes below
    10 Hz on the boat, bump `SR0_POSITION` in
    `bizzyboat_fcu_custom.param` on **this** branch as a follow-up
    commit, then field-apply in the same gabby session that validates
