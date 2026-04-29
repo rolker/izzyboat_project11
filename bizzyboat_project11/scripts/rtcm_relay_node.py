@@ -19,6 +19,10 @@ class RtcmRelayNode(Node):
     def __init__(self):
         super().__init__('rtcm_relay')
 
+        # Default assumes the bizzyboat namespace; sbg_launch.py overrides
+        # this with the live LaunchConfiguration so the relay follows the
+        # configured namespace. Override the parameter for direct
+        # `ros2 run` invocations on a non-bizzy boat.
         self.declare_parameter('input_topic', '/bizzy/mavros/gps_rtk/send_rtcm')
         self.declare_parameter('output_topic', 'rtcm')
 

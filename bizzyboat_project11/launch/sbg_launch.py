@@ -48,9 +48,11 @@ def generate_launch_description():
                     executable='rtcm_relay_node.py',
                     name='rtcm_relay',
                     parameters=[{
-                        'input_topic': '/bizzy/mavros/gps_rtk/send_rtcm',
+                        'input_topic': ['/', namespace, '/mavros/gps_rtk/send_rtcm'],
                         'output_topic': 'rtcm',
                     }],
+                    respawn=True,
+                    respawn_delay=5,
                     emulate_tty=True
                 ),
             ]
