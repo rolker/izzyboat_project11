@@ -493,6 +493,85 @@ Topic rates all nominal: 50 Hz IMU/EKF, 5 Hz GPS / RTCM.
   hasn't been re-tuned since the day's trim. QINSy may or may not
   be receiving everything it expects — separate audit needed.
 
+## 7. Post-RTK polish: sound-speed namespace + bag coverage
+
+After RTK fix was confirmed and before the boat went in the water, a
+few cleanups landed.
+
+### 7.1 Sound-speed UDP NaN handling — verified, no change needed
+
+With the AML SVS probe stowed (out of water) the bridge publishes
+`sound_speed: NaN`. Verified the Valeport UDP formatter
+(`marine_tools/sound_speed_bridge/sinks.py:42-44`) short-circuits with
+`return None` on NaN, and the dispatcher loop
+(`node.py:222-223`) skips targets that return None. So mercat's M3
+Valeport listener never receives garbage values from a stowed probe.
+ROS topic `sound_speed` does still publish the NaN — downstream
+subscribers handle it. Diagnostic at `/diagnostics` raises a WARN
+("Last reading is NaN (parse failed)") on each NaN reading.
+
+### 7.2 Sound-speed topics moved into `sensors/sound_speed/`
+
+Was: `/bizzy/sound_speed`, `/bizzy/temperature`, `/bizzy/fluid_pressure`
+(top-level under the bizzy namespace). Now:
+`/bizzy/sensors/sound_speed/<topic>` — matches the
+`<ns>/sensors/<sensor>/<topic>` convention used by SBG, deltat, ntrip,
+and the OAK cameras.
+
+The doubled `sound_speed` segment in the path
+(`/bizzy/sensors/sound_speed/sound_speed`) is mildly awkward but
+deliberately kept — switching to `sensors/aml/...`, `sensors/svp/...`,
+or `sensors/svs/...` was considered and rejected; "sound_speed" as
+the namespace makes the role unambiguous from the topic tree alone,
+matching how `ntrip` is named by role rather than vendor.
+
+Implementation: `sound_speed_launch.py` now wraps the node in a
+GroupAction with `PushRosNamespace('sensors/sound_speed')`.
+
+### 7.3 Bag coverage — main + sonar loggers updated
+
+The two recorders had been blind to the SBG outputs (the topics didn't
+exist when the original logger config was written) and to the
+sound-speed bridge. Added to `bizzyboat.yaml`:
+
+**Main `logger`** (operations bag) gets all 9 SBG topics
+(`imu_data`, `ekf_nav`, `ekf_quat`, `mag`, `gps_pos/vel/hdt`, `status`,
+`utc_time`) plus the 3 sound-speed topics.
+
+**`sonar_logger`** (bathy bag) gets a focused subset:
+- `sensors/sound_speed/sound_speed` — sound-velocity correction for
+  bathy post-processing (critical)
+- `sensors/sbg/imu_data` — motion compensation
+- `sensors/sbg/ekf_quat` — attitude
+
+Verified live: `/bizzy/logger` and `/bizzy/sonar_logger` both have all
+the expected subscriptions, both bags growing at ~30-40 KB/s.
+
+### 7.4 Pre-launch verification
+
+Final sweep before water:
+
+| Check | Result |
+|---|---|
+| RTK status | `type=7` (RTK_INT), `base_station_id=42`, `diff_age=0.59 s` |
+| Sound-speed namespace | All 3 topics under `/bizzy/sensors/sound_speed/` |
+| SBG namespace | All 9 topics under `/bizzy/sensors/sbg/` (single segment) |
+| `imu_data` rate | 25.0 Hz |
+| `ekf_nav` rate | 24.9 Hz |
+| `gps_pos` rate | 5.0 Hz |
+| RTCM in | 6.0 Hz (MaCORS MSM4) |
+| `/bizzy/odom` | 10.4 Hz — mru_transform OK, TF tree intact |
+| `sound_speed` rate | 19.8 Hz (NaN until probe in water) |
+| Nav lifecycle | Tide offsets updating, costmaps active |
+| Both bag recorders | Subscribed + writing |
+
+Boat went in.
+
+One non-issue noted but not fixed: `[ERROR] Unable to get the device
+Info : SBG_TIME_OUT` at sbg_device startup — expected on PORT_E
+(no `portAConfMode` feature). Driver continues to parse the binary
+log stream normally; cosmetic only.
+
 ## Files touched
 
 - `bizzyboat_project11/launch/perception_launch.py`
