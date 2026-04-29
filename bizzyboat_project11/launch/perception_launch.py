@@ -22,22 +22,29 @@ def generate_launch_description():
     )
 
     log_directory = LaunchConfiguration('log_directory')
-    log_directory_arg = DeclareLaunchArgument('log_directory')
+    log_directory_arg = DeclareLaunchArgument(
+        'log_directory',
+        default_value=EnvironmentVariable(
+            'P11_LOG_DIR',
+            default_value='/home/field/data/logs/bizzyboat'
+        )
+    )
 
     sonar_log_directory = LaunchConfiguration('sonar_log_directory')
-    sonar_log_directory_arg = DeclareLaunchArgument(
-        'sonar_log_directory',
-        default_value=TextSubstitution(text='/home/field/project11/logs/bizzyboat_sonar')
-    )
     sonar_log_directory_arg = DeclareLaunchArgument(
         'sonar_log_directory',
         default_value=EnvironmentVariable(
             'P11_SONAR_LOG_DIR',
             default_value='/home/field/data/logs/bizzyboat_sonar'
         )
-    )      
+    )
     datetime_str = datetime.datetime.now(datetime.timezone.utc).isoformat(
         timespec='seconds').replace(':', '-')
+    log_subdirectory = LaunchConfiguration('log_subdirectory')
+    log_subdirectory_arg = DeclareLaunchArgument(
+        'log_subdirectory',
+        default_value=TextSubstitution(text=datetime_str)
+    )
     sonar_log_subdirectory = LaunchConfiguration('sonar_log_subdirectory')
     sonar_log_subdirectory_arg = DeclareLaunchArgument(
         'sonar_log_subdirectory',
@@ -47,6 +54,7 @@ def generate_launch_description():
     return LaunchDescription([
         namespace_arg,
         log_directory_arg,
+        log_subdirectory_arg,
         sonar_log_directory_arg,
         sonar_log_subdirectory_arg,
 
@@ -136,7 +144,10 @@ def generate_launch_description():
                             'config',
                             'bizzyboat.yaml'
                         ]),
-                        {'storage.uri': log_directory}
+                        {'storage.uri': PathJoinSubstitution([
+                            log_directory,
+                            log_subdirectory
+                        ])}
                     ],
                     emulate_tty=True
                 ),
