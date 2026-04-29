@@ -15,6 +15,7 @@ install(PROGRAMS
   scripts/stop_tmux_project11.bash
   scripts/gps_rtk_diagnostics_node.py
   scripts/ntrip_diagnostics_node.py
+  scripts/rtcm_relay_node.py
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(
