@@ -1,0 +1,232 @@
+# SBG Ellipse-D — one-shot configuration push template (gabby / BizzyBoat).
+#
+# Use this with `confWithRos: true` to push the device's flash configuration
+# from a checked-in source of truth — i.e., the alternative to running
+# sbgCenter on a Windows host. NOT loaded by the production launch.
+#
+# ⚠ READ BEFORE RUNNING — this WRITES to the device's flash and can brick
+# a misconfigured Ellipse until recovered with sbgCenter. Always back up
+# the current config (sbgCenter → "Save Settings to File...") before
+# pushing. The 2026-04-29 dump for this device is at
+# /tmp/ELLIPSE-D-G4A2-B1_000034256_20260429_181248.json — keep a copy.
+#
+# Workflow
+# --------
+# Post-2026-04-29 rewire, gabby is permanently on the SBG's PORT_A via
+# its ttyS1 panel jack. PORT_A is the only port that accepts
+# configuration commands (it carries the `portAConfMode` feature),
+# so config pushes from gabby work directly with no temporary cabling.
+#
+# 1. Stop the production core launch — its sbg_device on /dev/ttyS1
+#    will conflict with this push.
+#
+# 2. Run the driver one-shot pointing at this yaml. Use the source
+#    path — the install directory only carries files that existed at
+#    build time, so a freshly added template won't be in install/share
+#    until the package is rebuilt:
+#
+#      ros2 run sbg_driver sbg_device --ros-args \
+#          --params-file /home/field/project11/layers/main/platforms_ws/src/unh_echoboats_project11/bizzyboat_project11/config/sbg_ellipse_d_configure.yaml
+#
+#    Or after a `colcon build --packages-select bizzyboat_project11`,
+#    the same file will be available at the matching install path.
+#
+#    Watch the driver log. On success it prints "[Config] ..." entries
+#    for each section it pushed. On failure it prints
+#    "[Reconfig] Unable to ..." with an SBG_ECOM_ERROR code.
+#
+# 3. Stop the temporary driver, restart the production core launch.
+#
+# Limitation: the driver pushes the `output.log_*` block for the port
+# `uartConf.portID` opens. Per-port output sets cannot be configured in
+# one yaml pass. To configure both PORT_A's NMEA suite and PORT_E's
+# binary set, run this template twice — once with portID=0 and the
+# PORT_A column of the output block, once with portID=4 and the PORT_E
+# column. Global settings (motion profile, lever arms, GNSS, magnetometer,
+# aidingAssignment.*) apply device-wide regardless of port.
+#
+# Source of truth for the values below
+# ------------------------------------
+# The sbgCenter JSON dump captured 2026-04-29 from this device
+# (S/N 000034256, fw 3.0.3949-stable, ECOM 5.1). Keep this yaml and the
+# JSON in lockstep — if you change the device via sbgCenter, capture a
+# new dump and update this file.
+#
+# Verified values
+# ---------------
+# - `sensorParameters.motionProfile: 3` — `SbgEComMotionProfileStdIds`
+#   enum in `sbgEComCmdSensor.h:96-111`. sbgCenter's "marineSurface"
+#   label maps to underlying `MARINE=3`; no separate surface variant
+#   in the firmware enum.
+# - `aidingAssignment.rtcmPortAssignment: 4` — `SbgEComModulePortAssignment`
+#   enum in `sbgEComCmdSensor.h:56-65`. Same encoding as `uartConf.portID`:
+#   0=A, 1=B, 2=C, 3=D, 4=E, 5=internal, 0xFF=disabled. The example
+#   yaml's "for Ellipse-N DGPS" comment is misleading — the enum is
+#   shared across the Ellipse line.
+
+/**:
+  ros__parameters:
+    driver:
+      # ≥2x the highest device output rate.
+      frequency: 400
+
+    # ⚠ Production yaml has this `false`. Setting to true means the
+    # driver writes settings to device flash on startup.
+    confWithRos: true
+
+    odometry:
+      enable: false
+      publishTf: false
+      odomFrameId: "odom"
+      baseFrameId: "base_link"
+      initFrameId: "map"
+
+    uartConf:
+      # gabby's ttyS1 panel jack reaches SBG splitter PORT_A — the only
+      # port accepting ECom config commands. ttyS0's TX driver is dead
+      # (see production yaml header), so this template uses ttyS1 too.
+      portName: "/dev/ttyS1"
+      baudRate: 115200
+      portID: 0    # 0=PORT_A, 1=B, 2=C, 3=D, 4=PORT_E
+
+    sensorParameters:
+      # Local startup reference, mirroring sbgCenter's localParam in
+      # the JSON dump.
+      initLat: 43.135
+      initLong: -70.939
+      initAlt: 40.0
+      year: 2025
+      month: 8
+      day: 21
+      # 3 = MARINE per SbgEComMotionProfileStdIds enum
+      # (sbgEComCmdSensor.h:96-111). sbgCenter's "marineSurface" label
+      # is just UI sugar for this same underlying value.
+      motionProfile: 3
+
+    imuAlignementLeverArm:
+      # Dump's mechanicalSetup.alignment.rough: ["forward", "right"]
+      axisDirectionX: 0   # forward
+      axisDirectionY: 3   # right
+      misRoll: 0.0
+      misPitch: 0.0
+      misYaw: 0.0
+      # IMU at vehicle reference (no separate IMU lever arm in dump).
+      leverArmX: 0.0
+      leverArmY: 0.0
+      leverArmZ: 0.0
+
+    aidingAssignment:
+      # GNSS1 internal (Ellipse-D has internal dual-antenna GNSS).
+      gnss1ModulePortAssignment: 5
+      gnss1ModuleSyncAssignment: 5
+      # RTCM input port — same encoding as uartConf.portID.
+      # Set to 0 (PORT_A) to match the post-cable-swap wiring where
+      # gabby is on PORT_A and rtcm_relay writes corrections to
+      # /dev/ttyS0 → PORT_A. Was 4 (PORT_E) pre-swap.
+      rtcmPortAssignment: 0
+      odometerPinAssignment: 0   # disabled
+
+    magnetometer:
+      # Dump: aiding.magnetometer.model: "internalNormal"
+      magnetometerModel: 201
+      magnetometerRejectMode: 1
+      # Calibration sub-block only matters during a calibration run.
+      calibration:
+        mode: 2        # 3D
+        bandwidth: 2   # HIGH_BW
+
+    gnss:
+      gnss_model_id: 107   # Ellipse-D default (internal dual-antenna)
+
+      # Primary antenna in IMU frame — dump's gnss1.leverArmPrimary.
+      primaryLeverArmX: -0.488
+      primaryLeverArmY: 0.0
+      primaryLeverArmZ: -0.881
+      primaryLeverPrecise: false
+
+      # Secondary antenna in IMU frame — dump's gnss1.leverArmSecondary.
+      secondaryLeverArmX: 1.567
+      secondaryLeverArmY: 0.0
+      secondaryLeverArmZ: -0.881
+      # 4 = lever arm accurately entered. Dump:
+      # gnss1.headingMode: "dualAntennaKnownLeverArm".
+      secondaryLeverMode: 4
+
+      posRejectMode: 2
+      velRejectMode: 2
+      hdtRejectMode: 2
+
+    odom:
+      # Wheel odometer disabled per dump (aiding.odometer.source: "none").
+      gain: 4800.0
+      gain_error: 5
+      direction: false
+      leverArmX: 0.0
+      leverArmY: 0.0
+      leverArmZ: 0.0
+      rejectMode: 1
+
+    output:
+      time_reference: "ros"
+      ros_standard: true
+      use_enu: false
+      frame_id: "imu_link_ned"
+
+      # Rate-code mapping:
+      #   0     = off
+      #   1     = 200 Hz
+      #   2     = 100 Hz
+      #   4     =  50 Hz   ("20ms")
+      #   8     =  25 Hz   ("40ms")
+      #   10    =  20 Hz
+      #   20    =  10 Hz   ("100ms")
+      #   40    =   5 Hz   ("200ms")
+      #   200   =   1 Hz   ("1000ms")
+      #   10001 = onChange / when new data
+      #
+      # Trimmed unified set — only what ROS / mavros / mru_transform
+      # actually consume, plus what's worth keeping for QINSy when we
+      # re-tune that side later. Pre-trim PORT_A had a NMEA suite
+      # (gnssGGA/HDT/RMC/VTG) that was vestigial from the original
+      # sbgCenter setup and never actually used by QINSy's binary
+      # driver. Pre-trim PORT_E had a similar binary set at lower
+      # rates (mostly 25 Hz). This unified set runs the inertial /
+      # attitude / nav at 50 Hz so the INS solution doesn't bottleneck
+      # downstream filters.
+      #
+      # The driver pushes this output block for the port `uartConf.portID`
+      # opens. To configure the other port too, re-run with the same
+      # yaml, just change portID, and re-push.
+      log_imu_data:        4    # 50 Hz — full IMU
+      log_ekf_quat:        4    # 50 Hz — attitude (use quat over euler)
+      log_ekf_nav:         4    # 50 Hz — pos + NED velocity + accuracies
+      log_ship_motion:     4    # 50 Hz — heave / surge / sway (bathy)
+      log_mag:             8    # 25 Hz — magnetic field + accel pair
+      log_status:        200    #  1 Hz — unit / GNSS / aiding flags
+      log_utc_time:      200    #  1 Hz — UTC time reference
+      log_gps1_pos:    10001    # onChange — base position + diff_age + RTK type
+      log_gps1_vel:    10001    # onChange — GPS-derived velocity
+      log_gps1_hdt:    10001    # onChange — dual-antenna heading
+
+      # Off — replaced by full imuData / ekfQuat or genuinely unused:
+      log_imu_short:       0
+      log_ekf_euler:       0
+      log_ekf_vel_body:    0
+      log_ekf_rot_accel_body: 0
+      log_ekf_rot_accel_ned:  0
+      log_mag_calib:       0
+      log_gps1_raw:        0
+      log_odo_vel:         0
+      log_air_data:        0
+      log_event_a:         0
+      log_event_b:         0
+      log_event_c:         0
+      log_event_d:         0
+
+      # NMEA outputs (gnssGGA, gnssHDT, gnssRMC, gnssVTG) plus
+      # sessionInfo / diag are NOT in the sbg_driver yaml schema —
+      # confirmed via `strings /opt/ros/jazzy/lib/sbg_driver/sbg_device`
+      # — so a push leaves those assignments untouched at whatever
+      # sbgCenter has them. To turn the NMEA suite OFF, do it via
+      # sbgCenter on a Windows host; this yaml can't reach those
+      # output channels.

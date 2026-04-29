@@ -1,16 +1,27 @@
-# SBG Ellipse-D driver config for gabby's PORT_E.
+# SBG Ellipse-D driver config for gabby's PORT_E connection.
 #
-# QINSy on mercat owns PORT_A and the device-global configuration via
-# sbgCenter (motion profile, lever arms, aiding assignment, GNSS model,
-# magnetometer model, output assignments per port). This driver runs in
-# read-only mode (`confWithRos: false`) to avoid stomping that config.
+# Wiring (post-2026-04-29 final layout): SBG splitter PORT_E → gabby's
+# ttyS1 panel jack. mercat is on PORT_A (its original assignment, with
+# sbgCenter access). The original config had gabby on ttyS0/PORT_E,
+# but gabby's onboard ttyS0 line driver TX side is dead (transceiver
+# IC fault — proved via loopback + cross-boat tests 2026-04-29). The
+# fix is purely the ttyS0→ttyS1 panel reroute on gabby; PORT_E remains
+# the right SBG-side port because it's the one configured for RTCM
+# input in flash (`aiding.diffCorr.source: comE`) and we couldn't
+# reliably persist a rtcmPortAssignment flip via the driver's
+# `confWithRos: true` path on this firmware (SBG_INVALID_PARAMETER
+# on SAVE_SETTINGS — likely fw 3.0.3949 ↔ driver-3.3.2 schema gap).
 #
-# Output messages on PORT_E must be enabled in sbgCenter once before
-# this node will see anything.
+# This driver runs in read-only mode (`confWithRos: false`). Use
+# sbgCenter on mercat (now back on PORT_A) for any device-side
+# configuration changes.
+#
+# Output messages on PORT_E must be enabled in sbgCenter before
+# this node will see them.
 #
 # RTCM corrections arrive from the FCU's NTRIP stream via rtcm_relay_node;
 # launch remaps "ntrip_client/rtcm" -> "rtcm" so both nodes meet at
-# /bizzy/sensors/sbg/rtcm.
+# /bizzy/sensors/rtcm.
 
 /**:
   ros__parameters:
@@ -29,8 +40,8 @@
       initFrameId: "map"
 
     uartConf:
-      # Built-in serial on gabby; matches PORT_E config in sbgCenter.
-      portName: "/dev/ttyS0"
+      # gabby's ttyS1 panel jack (ttyS0's TX driver is dead, see header).
+      portName: "/dev/ttyS1"
       baudRate: 115200
       # 0 PORT_A | 1 PORT_B | 2 PORT_C | 3 PORT_D | 4 PORT_E
       portID: 4
@@ -42,6 +53,22 @@
       use_enu: false
       # TODO: align with URDF frame once an SBG link is added.
       frame_id: "imu_link_ned"
+
+      # Per-log output-mode params. With confWithRos: false above, these are
+      # NOT pushed to the device — the device-side flash is the authority
+      # for what PORT_E actually emits. The values here only gate ROS
+      # publisher creation: 0 means no publisher (driver decodes the bytes
+      # and drops them); non-zero creates the publisher and the actual
+      # emit rate is whatever the device's flash has configured.
+      log_status:    8
+      log_imu_data:  8
+      log_ekf_quat:  8
+      log_ekf_nav:   8
+      log_utc_time:  8
+      log_mag:       8
+      log_gps1_pos:  10001
+      log_gps1_vel:  10001
+      log_gps1_hdt:  10001   # dual-antenna heading
 
     rtcm:
       subscribe: true

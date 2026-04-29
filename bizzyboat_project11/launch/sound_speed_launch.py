@@ -1,8 +1,13 @@
 """Sound-speed bridge launch for BizzyBoat.
 
-AML SVS on gabby /dev/ttyS1 -> ROS topic + Valeport-format UDP fan-out to
+AML SVS on gabby /dev/ttyS0 -> ROS topic + Valeport-format UDP fan-out to
 M3 (mercat:20003). The driver is in the rolker/marine_tools repo as the
 sound_speed_bridge package.
+
+Wiring: AML SVS is RX-only (the probe just emits sound-velocity sentences;
+nothing is sent back to it), so it lives on gabby's ttyS0 even though
+ttyS0's TX line driver is dead — that fault is irrelevant to this device.
+The SBG, which needs bidirectional comms for ECom + RTCM, owns ttyS1.
 """
 
 from launch import LaunchDescription
@@ -20,7 +25,7 @@ def generate_launch_description():
 
     device = LaunchConfiguration('device')
     device_arg = DeclareLaunchArgument(
-        'device', default_value=TextSubstitution(text='/dev/ttyS1')
+        'device', default_value=TextSubstitution(text='/dev/ttyS0')
     )
 
     baud = LaunchConfiguration('baud')
