@@ -1,0 +1,52 @@
+# SBG Ellipse-D driver config for gabby's PORT_E.
+#
+# QINSy on mercat owns PORT_A and the device-global configuration via
+# sbgCenter (motion profile, lever arms, aiding assignment, GNSS model,
+# magnetometer model, output assignments per port). This driver runs in
+# read-only mode (`confWithRos: false`) to avoid stomping that config.
+#
+# Output messages on PORT_E must be enabled in sbgCenter once before
+# this node will see anything.
+#
+# RTCM corrections arrive from the FCU's NTRIP stream via rtcm_relay_node;
+# launch remaps "ntrip_client/rtcm" -> "rtcm" so both nodes meet at
+# /bizzy/sensors/sbg/rtcm.
+
+/**:
+  ros__parameters:
+    driver:
+      # Should be at least 2x the highest output frequency.
+      frequency: 400
+
+    # Don't push YAML to device — sbgCenter is the config authority.
+    confWithRos: false
+
+    odometry:
+      enable: false
+      publishTf: false
+      odomFrameId: "odom"
+      baseFrameId: "base_link"
+      initFrameId: "map"
+
+    uartConf:
+      # Built-in serial on gabby; matches PORT_E config in sbgCenter.
+      portName: "/dev/ttyS0"
+      baudRate: 115200
+      # 0 PORT_A | 1 PORT_B | 2 PORT_C | 3 PORT_D | 4 PORT_E
+      portID: 4
+
+    output:
+      time_reference: "ros"
+      ros_standard: true
+      # NED matches QINSy/FCU; flip to ENU only if downstream expects REP-103.
+      use_enu: false
+      # TODO: align with URDF frame once an SBG link is added.
+      frame_id: "imu_link_ned"
+
+    rtcm:
+      subscribe: true
+      # Pin to today's driver defaults so sbg_launch.py's
+      # ('ntrip_client/rtcm', 'rtcm') remap stays valid even if a
+      # future sbg_driver release changes its built-in defaults.
+      namespace: "ntrip_client"
+      topic_name: "rtcm"
