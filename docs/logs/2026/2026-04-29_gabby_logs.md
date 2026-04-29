@@ -616,6 +616,90 @@ implementation. Worth filing on the marine_tools repo with a
 sample of the probe's actual output for either a docstring
 correction or a per-variant subclass.
 
+## 8. Deployment wrap-up
+
+### 8.1 Bag inventory
+
+10 bags written today, all closed cleanly (each has a `metadata.yaml`):
+
+**Main bag** (`/home/field/data/logs/bizzyboat/`) — 4 sessions reflecting
+the day's core-launch restarts during debug:
+
+| Start (UTC) | Size | Context |
+|---|---|---|
+| `2026-04-29T14-54-18` | 17 MB | first launch this morning — no SBG topics yet (pre-`log_*` trim), nav couldn't activate (TF gap) |
+| `2026-04-29T16-03-55` | 65 MB | post rtcm_relay chmod fix, post mavros TF bridges |
+| `2026-04-29T17-49-56` | 138 MB | post namespace cleanups (sbg/sbg → sbg, sound_speed under sensors) |
+| `2026-04-29T21-43-29` | 251 MB | **survey session** — RTK held throughout, sound speed real after parser fix |
+
+**Sonar bag** (`/home/field/data/logs/bizzyboat_sonar/`) — paired sessions:
+
+| Start (UTC) | Size |
+|---|---|
+| `2026-04-29T14-54-18` | 5.8 MB |
+| `2026-04-29T16-03-55` | 21 MB |
+| `2026-04-29T17-49-56` | 43 MB |
+| `2026-04-29T21-43-29` | 87 MB |
+
+**Camera bags** (`/home/field/data/logs/bizzy_images/`) — ad-hoc OAK
+ffmpeg + segmentation captures during the survey:
+
+| Bag | Duration | Size |
+|---|---|---|
+| `bag_2026-04-29T18.45.22_ffmpeg_seg` | 30 min | 1.2 GB |
+| `bag_2026-04-29T19.35.07_ffmpeg_seg` | 15 min | 927 MB |
+
+Day total: ~2.8 GB. Disk after session: 23 GB used / 1.8 TB free.
+
+### 8.2 Final state at shutdown
+
+- RTK held `type=7` (RTK_INT) for the entire survey, ±1.4 cm horizontal
+  / ±1 cm vertical, 32 sats, base_station 42.
+- Sound speed flowed real values (~1479 m/s) once probe was in water.
+- Boat moved at survey speed (~3 kn) on the 21:43 session.
+- No process deaths, no `[ERROR]` lines beyond the cosmetic
+  `SBG_TIME_OUT` on PORT_E `Get-Device-Info` (well-understood; PORT_E
+  doesn't carry `portAConfMode`).
+
+### 8.3 Open follow-ups for the dev side
+
+Three items worth carrying forward from today's debug — none of them
+deployment-blocking, all already documented in their own sections
+above:
+
+1. **SBG support ticket** (per §6.6) — fix the airData-inconsistency
+   `SAVE_SETTINGS` failure on this Ellipse-D / fw 3.0.3949 combo. JSON
+   dump at `/tmp/ELLIPSE-D-G4A2-B1_000034256_20260429_181248.json`
+   captures the device state.
+2. **Hardware doc update** — gabby's onboard ttyS0 RS-232 line driver
+   TX side is silicon-dead. Current workaround (SBG on ttyS1, AML SVS
+   on ttyS0) is functional and permanent until a board swap or
+   permanent USB-serial dongle is added.
+3. **marine_tools issue** (per §7.5) — file with the `sound_speed_bridge`
+   package. AMLParser docstring claims AML SVS terminates with CRCRLF
+   and emits bare decimals; our probe emits NMEA-style `$AML,SVM,*`
+   with CRLF. Either docstring needs correction or a per-variant
+   subclass that handles SVM sentences natively. We have a known-good
+   regex pattern (`\$AML,SVM,(?P<sound_speed>\d+\.\d+)` with
+   `crlf` terminator) that works with the current `RegexParser`; sample
+   raw bytes captured at `/tmp/aml_bytes.bin` from today.
+
+### 8.4 What worked end-to-end at shutdown
+
+- gabby's working ttyS1 ↔ SBG PORT_E (the simple, original-intended
+  wiring, just routed around the dead ttyS0 line driver)
+- MaCORS NTRIP via port 10000 / RTCM3MSM_IMAX with 1 Hz GGA echoback
+  feeding the SBG; RTK INT engaged within seconds
+- M3 sonar receiving Valeport-format SV over UDP from the AML SVS via
+  the `sound_speed_bridge` regex parser
+- mru_transform velocity TF lookup happy through the static
+  bizzy/* ↔ * bridges in core_launch.py (workaround for mavros's
+  bare-named NED/FRD frames)
+- Both rosbag2 recorders (main + sonar) capturing the full new SBG +
+  sound_speed topic set
+- 45 minutes of OAK camera replay-debug bags captured cleanly during
+  survey
+
 ## Files touched
 
 - `bizzyboat_project11/launch/perception_launch.py`
