@@ -29,9 +29,9 @@
       initFrameId: "map"
 
     uartConf:
-      # Set per cable when PORT_E breakout exists. Placeholder until then.
-      portName: "/dev/ttyUSB_sbg"
-      baudRate: 921600
+      # Built-in serial on gabby; matches PORT_E config in sbgCenter.
+      portName: "/dev/ttyS0"
+      baudRate: 115200
       # 0 PORT_A | 1 PORT_B | 2 PORT_C | 3 PORT_D | 4 PORT_E
       portID: 4
 
