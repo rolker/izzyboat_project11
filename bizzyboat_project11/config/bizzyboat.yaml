@@ -71,7 +71,6 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            - global_costmap
             - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
@@ -105,7 +104,6 @@
             topics:
               command_response: {source: marine/response}
               diagnostics: {source: /diagnostics}
-              global_costmap: {source: global_costmap/costmap, period: 3.0}
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
