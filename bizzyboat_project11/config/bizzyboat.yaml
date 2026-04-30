@@ -250,8 +250,6 @@
       - /bizzy/sensors/sbg/utc_time
       # AML SVS sound-speed probe (out-of-water → NaN; expected when stowed)
       - /bizzy/sensors/sound_speed/sound_speed
-      - /bizzy/sensors/sound_speed/temperature
-      - /bizzy/sensors/sound_speed/fluid_pressure
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
       - /bizzy/udp_bridge/remotes/operator/bridge_info
