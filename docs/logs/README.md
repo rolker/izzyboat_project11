@@ -53,6 +53,24 @@ Every log file starts with:
 
 Then sections by topic, in chronological order within the deployment.
 
+### Ordering — append, forward-chronological
+
+Within a section, entries are **forward-chronological**: oldest at
+the top, newest at the bottom. New entries get **appended** to the
+end of the relevant section. Reading top-to-bottom should track the
+deployment's actual progression.
+
+When working on a wrap-up later (e.g., the next day on dev pulling
+the field bag for analysis), append the new entries to the existing
+Timeline using the same convention — the latest analysis lands at
+the bottom, not the top.
+
+Numbered topic sections (`## 1. ...`, `## 2. ...`, as in the gabby
+sample at [`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md))
+follow the same rule: section numbering reflects the order things
+happened during the session, and content within each section reads
+top-to-bottom in time.
+
 ## Lifecycle
 
 ### Deployment start
