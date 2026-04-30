@@ -52,5 +52,7 @@ sleep 2
 
 # Screenshooter: full-screen captures into ~/data/logs/operator_raw/...
 # Ctrl-C in this window prompts to encode the day's PNGs to HEVC.
+# SCREENSHOOTER_LABEL labels the encoded files so survey/other stations
+# don't collide when archived together.
 /usr/bin/tmux new-window -t project11 -n screenshooter
-/usr/bin/tmux send-keys "/home/field/project11/layers/main/site_ws/install/ccomjhc_project11/share/ccomjhc_project11/scripts/screenshooter.bash" C-m
+/usr/bin/tmux send-keys "SCREENSHOOTER_LABEL=operator /home/field/project11/layers/main/site_ws/install/ccomjhc_project11/share/ccomjhc_project11/scripts/screenshooter.bash" C-m
