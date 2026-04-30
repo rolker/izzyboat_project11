@@ -1,15 +1,5 @@
 #!/bin/bash
 
-# called from cron @reboot (or by hand) on the operator station
-
-DAY=$(date "+%Y-%m-%d")
-NOW=$(date "+%Y-%m-%dT%H.%M.%S.%N")
-LOGDIR="${P11_LOG_DIR:-/home/field/data/logs/operator}"
-
-mkdir -p "$LOGDIR"
-LOG_FILE="${LOGDIR}/autostart_${NOW}.txt"
-{
-
 echo ""
 echo "#############################################"
 echo "Running start_tmux_operator_project11.bash"
@@ -60,4 +50,7 @@ sleep 2
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
 /usr/bin/tmux send-keys "ros2 launch molab_hardware johnny5_launch.py" C-m
 
-} >> "${LOG_FILE}" 2>&1
+# Screenshooter: full-screen captures into ~/data/logs/operator_raw/...
+# Ctrl-C in this window prompts to encode the day's PNGs to HEVC.
+/usr/bin/tmux new-window -t project11 -n screenshooter
+/usr/bin/tmux send-keys "/home/field/project11/layers/main/site_ws/install/ccomjhc_project11/share/ccomjhc_project11/scripts/screenshooter.bash" C-m
