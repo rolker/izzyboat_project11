@@ -85,7 +85,16 @@ top-to-bottom in time.
 3. Agent initializes the day's log file in the worktree with the header
    above. Issue body links to the file (and to any other host files as
    they appear).
-4. On any field machine that wakes up, the user tells the agent
+4. **Pre-flight section: ask the user about tides and weather** before
+   pulling them — the user often already has the local conditions in
+   mind and can save the agent a lookup or correct stale assumptions
+   about the deployment site / station / time window. Only fetch
+   independently if the user defers.
+   - **Tide heights are recorded in metres** (not feet) regardless of
+     the source's native units — convert at lookup time. Other marine
+     measures keep their conventional units (knots, nautical miles,
+     °F/°C as the source provides).
+5. On any field machine that wakes up, the user tells the agent
    "continue with existing log" or "start new". Agent acts accordingly.
    Field machines do not open GitHub issues themselves; the dev side's
    deployment issue is the single source of truth.
