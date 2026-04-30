@@ -43,6 +43,14 @@ visible from one place.
 - [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → nav2 `/speed_limit` (per-task survey speed); deployment 2026-04-27 worked around with shared `default_speed` bump
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults)
 
+### Both nav systems report at base_link *(new theme — 2026-04-29)*
+
+The 2026-04-29 in-water bag exposed that neither the SBG nor the FCU is reporting position at `base_link` — each publishes at its own GNSS antenna (0.64 m fore-aft body-frame offset between them). The URDF doesn't model the SBG IMU/antennas at all, and the EKF3-fused mavros streams aren't being recorded, so cross-checks have to fall back to downstream `/bizzy/odom`. These three issues are a unit: pick a contract, model the geometry, and capture the streams that prove it's working.
+
+- [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — model SBG INS, GNSS antenna(s), and IMU mounting alignment on bizzyboat (URDF gap)
+- [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — define lever-arm/base_link contract for SBG and mavros position streams (decision + implementation)
+- [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record `mavros/global_position/global` + EKF3-fused `local_position/*` + `altitude` (recording-only; lets the next deployment verify the contract holds)
+
 ### Class-ready operator UI
 
 - [`rolker/rqt_operator_tools#2`](https://github.com/rolker/rqt_operator_tools/issues/2) — operator logbook (Phase 1 landed, not field-tested)

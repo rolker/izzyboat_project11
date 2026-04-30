@@ -1,16 +1,31 @@
-# SBG Ellipse-D driver config for gabby's PORT_E.
+# SBG Ellipse-D driver config for gabby's PORT_E connection.
 #
-# QINSy on mercat owns PORT_A and the device-global configuration via
-# sbgCenter (motion profile, lever arms, aiding assignment, GNSS model,
-# magnetometer model, output assignments per port). This driver runs in
-# read-only mode (`confWithRos: false`) to avoid stomping that config.
+# Wiring (post-2026-04-29 final layout): SBG splitter PORT_E → gabby's
+# ttyS1 panel jack. mercat is on PORT_A (its original assignment, with
+# sbgCenter access). The original config had gabby on ttyS0/PORT_E,
+# but the ttyS0 path on gabby has a TX-side fault — narrowed via
+# loopback + cross-machine tests 2026-04-29 to "TX side of the
+# gabby↔SBG ttyS0 path is broken; RX still works". The actual culprit
+# (gabby's onboard line-driver IC vs the SBG cable itself) is NOT
+# isolated — gabby is mounted in the boat and a cable-swap test
+# wasn't practical mid-session. The fix is the ttyS0→ttyS1 panel
+# reroute on gabby; PORT_E remains the right SBG-side port because
+# it's the one configured for RTCM input in flash
+# (`aiding.diffCorr.source: comE`) and we couldn't reliably persist
+# a rtcmPortAssignment flip via the driver's `confWithRos: true` path
+# on this firmware (SBG_INVALID_PARAMETER on SAVE_SETTINGS — likely
+# fw 3.0.3949 ↔ driver-3.3.2 schema gap).
 #
-# Output messages on PORT_E must be enabled in sbgCenter once before
-# this node will see anything.
+# This driver runs in read-only mode (`confWithRos: false`). Use
+# sbgCenter on mercat (now back on PORT_A) for any device-side
+# configuration changes.
+#
+# Output messages on PORT_E must be enabled in sbgCenter before
+# this node will see them.
 #
 # RTCM corrections arrive from the FCU's NTRIP stream via rtcm_relay_node;
 # launch remaps "ntrip_client/rtcm" -> "rtcm" so both nodes meet at
-# /bizzy/sensors/sbg/rtcm.
+# /bizzy/sensors/rtcm.
 
 /**:
   ros__parameters:
@@ -29,8 +44,8 @@
       initFrameId: "map"
 
     uartConf:
-      # Built-in serial on gabby; matches PORT_E config in sbgCenter.
-      portName: "/dev/ttyS0"
+      # gabby's ttyS1 panel jack (ttyS0 path has a TX-side fault — see header).
+      portName: "/dev/ttyS1"
       baudRate: 115200
       # 0 PORT_A | 1 PORT_B | 2 PORT_C | 3 PORT_D | 4 PORT_E
       portID: 4
@@ -42,6 +57,26 @@
       use_enu: false
       # TODO: align with URDF frame once an SBG link is added.
       frame_id: "imu_link_ned"
+
+      # Per-log output-mode params. With confWithRos: false above, these
+      # are NOT pushed to the device — the device-side flash is the
+      # authority for what PORT_E actually emits. Locally these gate ROS
+      # publisher creation only (0 = no publisher, non-zero = publisher).
+      #
+      # Use semantically correct rates here so the file stays
+      # self-consistent and safe under either confWithRos setting (a
+      # future flip to true would push these values to flash). Driver
+      # output-mode enum: 1=200 Hz (main loop), 2=100 Hz, 4=50 Hz,
+      # 8=25 Hz, 40=5 Hz, 200=1 Hz, 10001=on-change.
+      log_status:    200    # 1 Hz
+      log_imu_data:  1      # 200 Hz (main loop)
+      log_ekf_quat:  4      # 50 Hz
+      log_ekf_nav:   4      # 50 Hz
+      log_utc_time:  200    # 1 Hz
+      log_mag:       8      # 25 Hz
+      log_gps1_pos:  10001  # on-change (1 Hz typical)
+      log_gps1_vel:  10001  # on-change
+      log_gps1_hdt:  10001  # on-change — dual-antenna heading
 
     rtcm:
       subscribe: true

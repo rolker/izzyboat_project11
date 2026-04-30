@@ -71,7 +71,6 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            - global_costmap
             - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
@@ -105,7 +104,6 @@
             topics:
               command_response: {source: marine/response}
               diagnostics: {source: /diagnostics}
-              global_costmap: {source: global_costmap/costmap, period: 3.0}
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
@@ -240,6 +238,21 @@
       - /bizzy/sensors/cameras/oak_aft/rgb/image_raw/compressed
       - /bizzy/sensors/cameras/oak_port/rgb/camera_info
       - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
+      # SBG Ellipse-D INS — 50 Hz IMU/EKF, 5 Hz GPS, 1 Hz status/UTC
+      - /bizzy/sensors/sbg/imu_data
+      - /bizzy/sensors/sbg/ekf_nav
+      - /bizzy/sensors/sbg/ekf_quat
+      - /bizzy/sensors/sbg/mag
+      - /bizzy/sensors/sbg/gps_pos
+      - /bizzy/sensors/sbg/gps_vel
+      - /bizzy/sensors/sbg/gps_hdt
+      - /bizzy/sensors/sbg/status
+      - /bizzy/sensors/sbg/utc_time
+      # AML SVS sound-speed probe. Out-of-water → 0.0 m/s with the
+      # current `regex` parser (probe firmware emits literal `0.000` when
+      # the head is dry; the regex matches it). Parse failures → NaN.
+      # See unh_echoboats_project11#104 wrap-up + marine_tools#7.
+      - /bizzy/sensors/sound_speed/sound_speed
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
       - /bizzy/udp_bridge/remotes/operator/bridge_info
@@ -279,6 +292,11 @@
       - /bizzy/odom
       - /bizzy/robot_description
       - /bizzy/sensors/deltat/soundings
+      # Sound-speed for bathy correction in post-processing.
+      - /bizzy/sensors/sound_speed/sound_speed
+      # SBG INS for sonar motion compensation + georeferencing.
+      - /bizzy/sensors/sbg/imu_data
+      - /bizzy/sensors/sbg/ekf_quat
       - /tf
       - /tf_static
     storage:

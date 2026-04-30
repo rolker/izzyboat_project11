@@ -1,0 +1,59 @@
+diagnostics_topic: /diagnostics
+indicators:
+  # --- Op-side network path (does our station have the link?) ---
+  - name: Op WiFi Bridge
+    source: diagnostics
+    diagnostic_name: "MikroTik: bizzy.wifi.op: wireless/"
+    format: "{}"
+    stale_timeout: 15.0
+
+  - name: Op Starlink
+    source: diagnostics
+    diagnostic_name: "Starlink: starlink.op"
+    format: "{}"
+    stale_timeout: 5.0
+
+  # --- Op→boat reachability (is the path through to gabby?) ---
+  - name: Ping Gabby (WiFi)
+    source: diagnostics
+    diagnostic_name: "Ping: ping.op: gabby_direct"
+    format: "{}"
+    stale_timeout: 30.0
+
+  - name: Ping Gabby (VPN)
+    source: diagnostics
+    diagnostic_name: "Ping: ping.op: gabby_vpn"
+    format: "{}"
+    stale_timeout: 30.0
+
+  - name: Ping Boat Router (WiFi)
+    source: diagnostics
+    diagnostic_name: "Ping: ping.op: router_bizzy_direct"
+    format: "{}"
+    stale_timeout: 30.0
+
+  - name: Ping Boat Router (VPN)
+    source: diagnostics
+    diagnostic_name: "Ping: ping.op: router_bizzy_vpn"
+    format: "{}"
+    stale_timeout: 30.0
+
+  # --- Op-side internet (so we can tell if a remote-data outage is ours or theirs) ---
+  - name: Internet (DNS)
+    source: diagnostics
+    diagnostic_name: "Ping: ping.op: dns_cloudflare"
+    format: "{}"
+    stale_timeout: 30.0
+
+  # --- UDP bridge state (the actual ROS link, op→boat) ---
+  - name: UDP WiFi
+    source: diagnostics
+    diagnostic_name: "udp_bridge operator: bizzy: wifi"
+    format: "{}"
+    stale_timeout: 5.0
+
+  - name: UDP VPN
+    source: diagnostics
+    diagnostic_name: "udp_bridge operator: bizzy: vpn"
+    format: "{}"
+    stale_timeout: 5.0

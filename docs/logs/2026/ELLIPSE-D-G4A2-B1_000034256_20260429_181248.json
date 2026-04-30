@@ -1,0 +1,472 @@
+{
+    "device": {
+        "apiVersion": "2.3",
+        "btVersion": "2.0.9-stable",
+        "eComVersion": "5.1",
+        "features": [
+            "base",
+            "vg",
+            "ahrs",
+            "nav",
+            "shipMotion",
+            "portARx",
+            "portATx",
+            "portBRx",
+            "portERx",
+            "portETx",
+            "portAConfMode",
+            "syncInA",
+            "syncInB",
+            "syncOutA",
+            "syncOutDirectPps",
+            "generatorPortA",
+            "generatorPortE",
+            "mag",
+            "gnss1",
+            "odometer",
+            "airData",
+            "dvl",
+            "internalGnss",
+            "internalGnssHdt",
+            "internalGnssRaw"
+        ],
+        "fmwVersion": "3.0.3949-stable",
+        "gnss": {
+            "augmAuthCode": "",
+            "augmService": "",
+            "augmUserId": "",
+            "features": {
+                "clas": false,
+                "dualAnt": true,
+                "im": true,
+                "nato": false,
+                "osnma": false,
+                "ppp": false,
+                "raim": false,
+                "raw": true,
+                "rtk": true
+            },
+            "hwCode": "ZED-F9P",
+            "hwVersion": "00190000",
+            "model": "UBlox ZED-F9P",
+            "outputRate": 5,
+            "ppp": {
+                "expirationDate": "1970-01-01T00:00:00.000Z",
+                "subscribedMode": "none"
+            },
+            "serial": "",
+            "signals": {
+                "bdsB1": true,
+                "bdsB2": true,
+                "bdsB3": false,
+                "galE1": true,
+                "galE5": true,
+                "galE6": false,
+                "gloL1": true,
+                "gloL2": true,
+                "gloL3": false,
+                "gpsL1": true,
+                "gpsL2": true,
+                "gpsL5": false,
+                "lband": false,
+                "navicL5": false,
+                "navicS": false,
+                "qzssL1": false,
+                "qzssL2": false,
+                "qzssL5": false,
+                "qzssL6": false,
+                "sbas": true
+            },
+            "state": "ready",
+            "swVersion": "HPG 1.51"
+        },
+        "hwRevision": "3.2.0.0",
+        "imu": {
+            "fmwVersion": "3.0.3949-stable",
+            "hwRevision": "3.2.0.0",
+            "id": "ellipseV3",
+            "productCode": "ELLIPSE-D-G4A2-B1",
+            "serialNumber": "000034256"
+        },
+        "mnfVersion": "1.4.1919-rc",
+        "productCode": "ELLIPSE-D-G4A2-B1",
+        "serialNumber": "000034256"
+    },
+    "id": "sbgSettings",
+    "settings": {
+        "aiding": {
+            "airData": {
+                "leverArm": [
+                    0,
+                    0,
+                    0
+                ],
+                "model": "internal",
+                "source": "internal",
+                "useAirSpeed": "never",
+                "useAltitude": "never"
+            },
+            "diffCorr": {
+                "ggaInterval": "off",
+                "source": "comE"
+            },
+            "dvl": {
+                "alignment": {
+                    "fine": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rough": [
+                        "forward",
+                        "right"
+                    ]
+                },
+                "leverArm": [
+                    0,
+                    0,
+                    0
+                ],
+                "model": "PD6",
+                "source": "none",
+                "sync": "none",
+                "useBottomVel": "auto",
+                "useWaterVel": "auto"
+            },
+            "gnss1": {
+                "antenna": "GENERIC",
+                "headingMode": "dualAntennaKnownLeverArm",
+                "leverArmPrimary": [
+                    -0.4880000054836273,
+                    0,
+                    -0.880999982357025
+                ],
+                "leverArmSecondary": [
+                    1.5670000314712524,
+                    0,
+                    -0.880999982357025
+                ],
+                "model": "internal",
+                "source": "internal",
+                "sync": "internal",
+                "useDualAntenna": "auto",
+                "usePosition": "auto"
+            },
+            "magnetometer": {
+                "alignment": {
+                    "fine": [
+                        0,
+                        0,
+                        0
+                    ],
+                    "rough": [
+                        "forward",
+                        "right"
+                    ]
+                },
+                "calibrationMode": "3d",
+                "hardIronCorrection": [
+                    0,
+                    0,
+                    0
+                ],
+                "model": "internalNormal",
+                "softIronCorrection": [
+                    1,
+                    0,
+                    0,
+                    0,
+                    1,
+                    0,
+                    0,
+                    0,
+                    1
+                ],
+                "source": "internal",
+                "useMagData": "never"
+            },
+            "odometer": {
+                "gain": 1,
+                "gainError": 100,
+                "leverArm": [
+                    0,
+                    0,
+                    0
+                ],
+                "model": "pulse",
+                "reverse": false,
+                "source": "none",
+                "useVelocity": "auto"
+            }
+        },
+        "clock": {
+            "leapSec": 18,
+            "mode": "scaled",
+            "source": "gnss"
+        },
+        "events": {
+            "eventInA": {
+                "delay": 0,
+                "trigger": "off"
+            },
+            "eventInB": {
+                "delay": 0,
+                "trigger": "off"
+            },
+            "eventOutA": {
+                "distance": 1,
+                "duration": 100,
+                "polarity": "falling",
+                "trigger": "off"
+            }
+        },
+        "insFilter": {
+            "motionProfile": "marineSurface",
+            "validityThresholds": {
+                "heading": 1.9999999845072665,
+                "position": 3,
+                "rollPitch": 0.4999999961268166,
+                "velocity": 1.5
+            }
+        },
+        "localParam": {
+            "date": "2025-08-21",
+            "height": 40,
+            "latitude": 43.135,
+            "longitude": -70.939,
+            "magneticRef": [
+                0,
+                0,
+                0
+            ],
+            "useOnBoardWMM": true
+        },
+        "mechanicalSetup": {
+            "alignment": {
+                "fine": [
+                    0,
+                    0,
+                    0
+                ],
+                "rough": [
+                    "forward",
+                    "right"
+                ]
+            },
+            "leverArms": {
+                "cog": [
+                    0.58,
+                    0,
+                    0.03
+                ],
+                "output1": [
+                    0,
+                    0,
+                    0
+                ]
+            },
+            "outputFrames": {
+                "output1": {
+                    "rotation": {
+                        "fine": [
+                            0,
+                            0,
+                            0
+                        ],
+                        "rough": [
+                            "forward",
+                            "right"
+                        ]
+                    }
+                }
+            },
+            "vehicleSize": {
+                "customSize": false,
+                "size": [
+                    3,
+                    1,
+                    1
+                ]
+            }
+        },
+        "oem": {
+            "label": ""
+        },
+        "output": {
+            "comA": {
+                "leverArm": "cog",
+                "messages": {
+                    "ADA_01": "off",
+                    "AHRS500": "off",
+                    "AT_ITINS": "off",
+                    "DOLOGHRP": "off",
+                    "GGA": "off",
+                    "GGK": "off",
+                    "GST": "off",
+                    "GSV": "off",
+                    "HDT": "off",
+                    "INDYN": "off",
+                    "KMB": "off",
+                    "KVH": "off",
+                    "PASHR": "off",
+                    "PD0": "off",
+                    "PHINF": "off",
+                    "PHLIN": "off",
+                    "PHOCT": "off",
+                    "PHTRO": "off",
+                    "PPS": "off",
+                    "PRDID": "off",
+                    "PSBGA": "off",
+                    "PSBGB": "off",
+                    "PSBGI": "off",
+                    "RMC": "off",
+                    "ROT": "off",
+                    "SEAPATHB26": "off",
+                    "SIMRAD1000": "off",
+                    "SIMRAD3000": "off",
+                    "TSS1": "off",
+                    "VBW": "off",
+                    "VTG": "off",
+                    "WASSP": "off",
+                    "ZDA": "off",
+                    "airData": "onChange",
+                    "diag": "onChange",
+                    "dvlBottomTrack": "off",
+                    "dvlWaterTrack": "off",
+                    "ekfDebug": "off",
+                    "ekfEuler": "20ms",
+                    "ekfNav": "20ms",
+                    "ekfQuat": "100ms",
+                    "ekfRotAccelBody": "off",
+                    "ekfRotAccelNed": "off",
+                    "ekfVelBody": "off",
+                    "eventA": "off",
+                    "eventB": "off",
+                    "eventOutA": "off",
+                    "gnssGGA": "onChange",
+                    "gnssHDT": "onChange",
+                    "gnssRMC": "onChange",
+                    "gnssVTG": "onChange",
+                    "gps1Hdt": "onChange",
+                    "gps1Pos": "onChange",
+                    "gps1Raw": "off",
+                    "gps1Sat": "off",
+                    "gps1Vel": "onChange",
+                    "imuData": "off",
+                    "imuShort": "100ms",
+                    "mag": "100ms",
+                    "magCalib": "off",
+                    "odoVel": "off",
+                    "rtcmRaw": "off",
+                    "sessionInfo": "onChange",
+                    "shipMotion": "20ms",
+                    "status": "1000ms",
+                    "utcTime": "1000ms"
+                },
+                "nmea": {
+                    "alwaysOutputTime": true,
+                    "hdtOffset": 0,
+                    "mode": "extended",
+                    "talkerId": "GP"
+                },
+                "startThreshold": "powerOn"
+            },
+            "comE": {
+                "leverArm": "cog",
+                "messages": {
+                    "ADA_01": "off",
+                    "AHRS500": "off",
+                    "AT_ITINS": "off",
+                    "DOLOGHRP": "off",
+                    "GGA": "off",
+                    "GGK": "off",
+                    "GST": "off",
+                    "GSV": "off",
+                    "HDT": "off",
+                    "INDYN": "off",
+                    "KMB": "off",
+                    "KVH": "off",
+                    "PASHR": "off",
+                    "PD0": "off",
+                    "PHINF": "off",
+                    "PHLIN": "off",
+                    "PHOCT": "off",
+                    "PHTRO": "off",
+                    "PPS": "off",
+                    "PRDID": "off",
+                    "PSBGA": "off",
+                    "PSBGB": "off",
+                    "PSBGI": "off",
+                    "RMC": "off",
+                    "ROT": "off",
+                    "SEAPATHB26": "off",
+                    "SIMRAD1000": "off",
+                    "SIMRAD3000": "off",
+                    "TSS1": "off",
+                    "VBW": "off",
+                    "VTG": "off",
+                    "WASSP": "off",
+                    "ZDA": "off",
+                    "airData": "off",
+                    "diag": "onChange",
+                    "dvlBottomTrack": "off",
+                    "dvlWaterTrack": "off",
+                    "ekfDebug": "off",
+                    "ekfEuler": "off",
+                    "ekfNav": "40ms",
+                    "ekfQuat": "40ms",
+                    "ekfRotAccelBody": "off",
+                    "ekfRotAccelNed": "off",
+                    "ekfVelBody": "off",
+                    "eventA": "off",
+                    "eventB": "off",
+                    "eventOutA": "off",
+                    "gnssGGA": "off",
+                    "gnssHDT": "off",
+                    "gnssRMC": "off",
+                    "gnssVTG": "off",
+                    "gps1Hdt": "onChange",
+                    "gps1Pos": "onChange",
+                    "gps1Raw": "off",
+                    "gps1Sat": "off",
+                    "gps1Vel": "onChange",
+                    "imuData": "40ms",
+                    "imuShort": "off",
+                    "mag": "40ms",
+                    "magCalib": "onChange",
+                    "odoVel": "off",
+                    "rtcmRaw": "off",
+                    "sessionInfo": "onChange",
+                    "shipMotion": "40ms",
+                    "status": "1000ms",
+                    "utcTime": "1000ms"
+                },
+                "nmea": {
+                    "alwaysOutputTime": true,
+                    "hdtOffset": 0,
+                    "mode": "extended",
+                    "talkerId": "GP"
+                },
+                "startThreshold": "powerOn"
+            }
+        },
+        "ports": {
+            "comA": {
+                "baudrate": 115200,
+                "mode": "rs232",
+                "parity": "none"
+            },
+            "comB": {
+                "baudrate": 115200,
+                "mode": "off",
+                "parity": "none"
+            },
+            "comE": {
+                "baudrate": 115200,
+                "mode": "rs232",
+                "parity": "none"
+            }
+        }
+    },
+    "version": "1.1.0.0"
+}

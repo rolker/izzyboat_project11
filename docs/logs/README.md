@@ -53,6 +53,24 @@ Every log file starts with:
 
 Then sections by topic, in chronological order within the deployment.
 
+### Ordering — append, forward-chronological
+
+Within a section, entries are **forward-chronological**: oldest at
+the top, newest at the bottom. New entries get **appended** to the
+end of the relevant section. Reading top-to-bottom should track the
+deployment's actual progression.
+
+When working on a wrap-up later (e.g., the next day on dev pulling
+the field bag for analysis), append the new entries to the existing
+Timeline using the same convention — the latest analysis lands at
+the bottom, not the top.
+
+Numbered topic sections (`## 1. ...`, `## 2. ...`, as in the gabby
+sample at [`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md))
+follow the same rule: section numbering reflects the order things
+happened during the session, and content within each section reads
+top-to-bottom in time.
+
 ## Lifecycle
 
 ### Deployment start
@@ -67,7 +85,20 @@ Then sections by topic, in chronological order within the deployment.
 3. Agent initializes the day's log file in the worktree with the header
    above. Issue body links to the file (and to any other host files as
    they appear).
-4. On any field machine that wakes up, the user tells the agent
+4. **Pre-flight section: ask the user about tides and weather** before
+   pulling them — the user often already has the local conditions in
+   mind and can save the agent a lookup or correct stale assumptions
+   about the deployment site / station / time window. Only fetch
+   independently if the user defers.
+   - **Tide heights are recorded in metres** (not feet) regardless of
+     the source's native units — convert at lookup time. Other marine
+     measures keep their conventional units (knots, nautical miles,
+     °F/°C as the source provides).
+   - **Tide times must explicitly mark the time zone**, e.g.
+     `L 04:23 EDT` or `L 08:23 UTC`. NOAA defaults to local "LDT"/"LST"
+     which agents and downstream readers misread; ambiguity here is a
+     class-day hazard. If in doubt, give both: `L 04:23 EDT (08:23 UTC)`.
+5. On any field machine that wakes up, the user tells the agent
    "continue with existing log" or "start new". Agent acts accordingly.
    Field machines do not open GitHub issues themselves; the dev side's
    deployment issue is the single source of truth.
@@ -157,12 +188,27 @@ detail that a future agent (or human) can pick up cold. Strong sample:
 
 Useful sections (use what fits, skip what doesn't):
 
-- **Summary** — 2–3 sentences at the top
+- **Summary** — 2–3 sentences at the top. **User-curated** —
+  agents draft, but this section reads with strong user voice. It is
+  what a human would say if asked "what was today about?" with the
+  benefit of hindsight.
+- **Lessons Learned** — durable operator-level take-home messages
+  the user wants to remember from this deployment. **User-curated** —
+  agents may propose entries, but the user makes the call about what
+  belongs and how it's worded. Distinct from the Timeline (event
+  narrative) and from Issues encountered (failure-mode diagnoses).
+  An entry here is something an experienced operator would say "yes,
+  remember this" about — short, generalisable, opinionated.
 - **Numbered topic sections** — actual work done, with file paths and
   line numbers
 - **Issues encountered + diagnoses**
 - **Pending on operator** / **Handoff** — cross-host coordination
 - **Files touched** — repos and paths changed (helps future grep)
+
+The first two — **Summary** and **Lessons Learned** — sit at the top
+of the document and are filled in last (during wrap-up), with the
+user's voice driving the content. Everything else can be appended in
+real time during the session.
 
 Avoid:
 
@@ -176,12 +222,12 @@ Avoid:
 ### Timestamp every entry
 
 Prefix each entry — observation, action, summary — with an ISO-8601
-timestamp in **local time with the UTC offset**:
+timestamp in **local time with the UTC offset**, with the timestamp
+in bold so it stands out when scanning:
 
-```
-2026-04-27T08:42-04:00 — started charging the boat before launch
-2026-04-27T09:15-04:00 — boat in the water, FCU armed
-```
+> **2026-04-27T08:42-04:00** — started charging the boat before launch
+>
+> **2026-04-27T09:15-04:00** — boat in the water, FCU armed
 
 Local-with-offset is unambiguous (no UTC mental conversion for the
 on-site human) and trivially correlatable to bag timestamps later.
