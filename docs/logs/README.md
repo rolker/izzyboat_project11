@@ -94,6 +94,10 @@ top-to-bottom in time.
      the source's native units — convert at lookup time. Other marine
      measures keep their conventional units (knots, nautical miles,
      °F/°C as the source provides).
+   - **Tide times must explicitly mark the time zone**, e.g.
+     `L 04:23 EDT` or `L 08:23 UTC`. NOAA defaults to local "LDT"/"LST"
+     which agents and downstream readers misread; ambiguity here is a
+     class-day hazard. If in doubt, give both: `L 04:23 EDT (08:23 UTC)`.
 5. On any field machine that wakes up, the user tells the agent
    "continue with existing log" or "start new". Agent acts accordingly.
    Field machines do not open GitHub issues themselves; the dev side's
