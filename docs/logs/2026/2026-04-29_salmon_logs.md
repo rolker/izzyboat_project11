@@ -403,6 +403,74 @@ before launch:
   if `gabby` reboots its bridge mid-run, the costmap forwarding
   comes back.
 
+## 10. In-water session — wrap-up
+
+Session ran from launch (~17:48 EDT) to recovery (~20:00 EDT),
+~2 h 14 min on the water.  Roland's debrief: things went quite
+well; only real annoyance was RDP dropouts (operator's remote
+desktop session into salmon — network-side, not ROS-side).
+
+Operator-side state at recovery:
+
+- Bag `diagnostics_17.47.54_0.mcap` = 72 MB, growing through end
+  of run.
+- `failed_bytes_per_second` / `dropped_bytes_per_second` stayed
+  at 0.0 across raw + wifi + vpn for the whole run.
+- No errors / warns in the tmux `core` window during the run
+  — the Zenoh-discovery sickness from earlier did **not** recur.
+  The morning's full stop+start of the operator stack held.
+- No CAMP freeze recurrence.
+
+### De-facto soak coverage
+
+Three pending verifications from the morning ran through the
+in-water session without explicit symptoms — calling them
+"presumed-OK by silence" rather than formally verified:
+
+- **rqt_camera_grid `TransportHints` fix** (PR #30): camera grid
+  was up the whole run with all four OAK ffmpeg streams flowing;
+  no `subscribe()` exception spam in the tmux UI window.
+- **mavros `velocity_body` frame_id** (d40845e): gabby's `eec0f28`
+  TF-bridge mitigation was live during this run.  Roland's "things
+  went quite well" implies CAMP's velocity rendering looked sane,
+  but the underlying mavros config fix on gabby still hasn't been
+  proven in isolation — that needs gabby's own resync + restart
+  on a future bench session before we declare d40845e formally
+  verified end-to-end.
+- **Op-side annunciator panel**: ran the whole session as a
+  second widget under bizzyboat-diagnostics.  No reported red
+  cells beyond expected ones.  The label-clipping fix
+  (rqt_operator_tools `2811fb0`) was in effect and confirmed
+  clean by Roland.
+
+### To-do for next bench session
+
+- Gabby `make sync` + `make build` (with the `marine_tools`
+  stale-cache fix pre-baked) + relaunch — verify d40845e
+  natively (not via the TF-bridge workaround) and that SBG
+  topics appear.
+- Persistent removal of `/bizzy/global_costmap/costmap` from the
+  bridge — `bizzyboat_project11/config/bizzyboat.yaml` lines 74
+  + 108 — to make the runtime disable survive a restart.
+  Includes a check that nothing on the operator side actually
+  consumes the global costmap.
+- RDP dropout investigation — separate diagnostic, owner TBD.
+  Worth a short side-investigation next bench session: is it
+  WiFi to op router, internet path, or bandwidth contention with
+  the bridge?
+- Tier-2 op-side annunciator monitors (deferred from this
+  session): joystick liveness, recorder health, disk free,
+  chrony lock, zenohd liveness — see
+  `bizzyboat_project11/docs/operator_annunciator_design.md`.
+
+### Wrap-up
+
+`stop_tmux_project11.bash` sends SIGINT through the launch
+hierarchy; rosbag2's `sigterm_timeout: '15'` (set in
+`bag_recorder_operator_launch.py`) gives the recorder time to
+flush the mcap cleanly before it gets killed.  Ride the script,
+don't `kill -9`.
+
 ## Commits
 
 - `rqt_operator_tools` `2811fb0` — `fix(rqt_annunciator):
