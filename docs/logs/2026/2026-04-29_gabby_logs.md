@@ -3,7 +3,7 @@
 **Host**: gabby
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: #TBD (dev-side issue not yet opened)
+**Deployment**: [#104](https://github.com/rolker/unh_echoboats_project11/issues/104)
 
 ## Scope
 

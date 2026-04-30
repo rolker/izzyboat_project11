@@ -96,8 +96,8 @@ several lightweight nodes). Not in scope for the preliminary panel.
 - Two annunciator widgets in the same `bizzyboat-diagnostics` rqt perspective:
   boat panel on top (where eyes default), operator panel beneath. Glance
   pattern: red on top → boat issue; red on bottom → operator/link issue;
-  red on both → look first at "Internet (bencloud)" to see whether we still
-  have any path off the dock.
+  red on both → look first at "Internet (DNS)" and "Ping Boat Router (VPN)"
+  to see whether we still have any path off the dock.
 - Aggregator config is already correct for Tier 1; no edits needed.
 
 ## What I deliberately skipped

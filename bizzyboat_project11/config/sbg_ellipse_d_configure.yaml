@@ -12,10 +12,20 @@
 #
 # Workflow
 # --------
-# Post-2026-04-29 rewire, gabby is permanently on the SBG's PORT_A via
-# its ttyS1 panel jack. PORT_A is the only port that accepts
-# configuration commands (it carries the `portAConfMode` feature),
-# so config pushes from gabby work directly with no temporary cabling.
+# Production wiring (post-2026-04-29): gabby is on the SBG's **PORT_E**
+# via its ttyS1 panel jack; mercat owns PORT_A. PORT_A is the only port
+# that accepts configuration commands (it carries the `portAConfMode`
+# feature) — PORT_E does NOT — so a config push from gabby requires a
+# TEMPORARY rewire for the duration of the push:
+#
+#   - Disconnect mercat from PORT_A.
+#   - Move gabby's cable from PORT_E to PORT_A.
+#   - Run the push (steps below).
+#   - Revert: gabby's cable back to PORT_E, mercat reconnected to PORT_A.
+#
+# Alternative (no rewire): use sbgCenter on mercat (which is already on
+# PORT_A) to apply the desired settings interactively. This template
+# exists for the case where you want a checked-in, repeatable push.
 #
 # 1. Stop the production core launch — its sbg_device on /dev/ttyS1
 #    will conflict with this push.

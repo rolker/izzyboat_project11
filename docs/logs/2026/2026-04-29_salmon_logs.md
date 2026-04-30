@@ -3,7 +3,7 @@
 **Host**: salmon
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: TBD (pre-deployment bench session)
+**Deployment**: [#104](https://github.com/rolker/unh_echoboats_project11/issues/104)
 
 ## Summary
 
