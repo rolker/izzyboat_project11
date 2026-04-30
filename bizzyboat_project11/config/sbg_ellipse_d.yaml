@@ -3,14 +3,18 @@
 # Wiring (post-2026-04-29 final layout): SBG splitter PORT_E → gabby's
 # ttyS1 panel jack. mercat is on PORT_A (its original assignment, with
 # sbgCenter access). The original config had gabby on ttyS0/PORT_E,
-# but gabby's onboard ttyS0 line driver TX side is dead (transceiver
-# IC fault — proved via loopback + cross-boat tests 2026-04-29). The
-# fix is purely the ttyS0→ttyS1 panel reroute on gabby; PORT_E remains
-# the right SBG-side port because it's the one configured for RTCM
-# input in flash (`aiding.diffCorr.source: comE`) and we couldn't
-# reliably persist a rtcmPortAssignment flip via the driver's
-# `confWithRos: true` path on this firmware (SBG_INVALID_PARAMETER
-# on SAVE_SETTINGS — likely fw 3.0.3949 ↔ driver-3.3.2 schema gap).
+# but the ttyS0 path on gabby has a TX-side fault — narrowed via
+# loopback + cross-machine tests 2026-04-29 to "TX side of the
+# gabby↔SBG ttyS0 path is broken; RX still works". The actual culprit
+# (gabby's onboard line-driver IC vs the SBG cable itself) is NOT
+# isolated — gabby is mounted in the boat and a cable-swap test
+# wasn't practical mid-session. The fix is the ttyS0→ttyS1 panel
+# reroute on gabby; PORT_E remains the right SBG-side port because
+# it's the one configured for RTCM input in flash
+# (`aiding.diffCorr.source: comE`) and we couldn't reliably persist
+# a rtcmPortAssignment flip via the driver's `confWithRos: true` path
+# on this firmware (SBG_INVALID_PARAMETER on SAVE_SETTINGS — likely
+# fw 3.0.3949 ↔ driver-3.3.2 schema gap).
 #
 # This driver runs in read-only mode (`confWithRos: false`). Use
 # sbgCenter on mercat (now back on PORT_A) for any device-side
@@ -40,7 +44,7 @@
       initFrameId: "map"
 
     uartConf:
-      # gabby's ttyS1 panel jack (ttyS0's TX driver is dead, see header).
+      # gabby's ttyS1 panel jack (ttyS0 path has a TX-side fault — see header).
       portName: "/dev/ttyS1"
       baudRate: 115200
       # 0 PORT_A | 1 PORT_B | 2 PORT_C | 3 PORT_D | 4 PORT_E

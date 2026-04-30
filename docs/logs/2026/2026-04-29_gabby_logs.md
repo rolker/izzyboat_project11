@@ -381,7 +381,7 @@ updated`, `[Config] IMU alignement updated`, etc. — but
 didn't ingest. Attributed ambiguously to PORT_A/PORT_E differences or
 fw/driver schema mismatches.
 
-### 6.4 The actual root cause: gabby's ttyS0 UART line driver is dead
+### 6.4 Narrowed-but-not-isolated: TX-side fault on the ttyS0 path
 
 Loopback test, SBG-end-of-cable bridge of pins 2↔3, gabby tries to
 echo via `/dev/ttyS0` — sent 20 bytes, got 0 back. Two retries with
@@ -395,14 +395,25 @@ running gabby's cable to mercat's TeraTerm:
 | gabby → mercat (via ttyS0, adapter B) | ✗ nothing |
 | gabby → mercat (via ttyS1, AML SVS port) | ✓ received cleanly |
 
-The fault is gabby's onboard ttyS0 RS-232 line-driver IC — TX side
-silicon-dead, RX still works. Classic asymmetric transceiver failure
-(usually from an ESD event or over-voltage on a pin).
+What this proves: **TX side of the gabby↔SBG ttyS0 path is faulty;
+RX direction works**. Likely culprits are gabby's onboard ttyS0
+RS-232 line driver IC (an asymmetric transceiver failure consistent
+with an ESD event on the TX pin) **or** the gabby↔SBG cable itself
+(a broken TX conductor). The two adapters control for the adapter,
+and the ttyS1 path proves the mercat side and a different gabby port
+both work, but **none of these tests swap the cable** — gabby is
+mounted in the boat and pulling the cable for a known-good
+substitution wasn't practical mid-session.
+
+So the data narrows it to "TX-side fault somewhere on the ttyS0
+path"; isolating gabby-port vs cable is a follow-up bench task. Both
+remain candidates.
 
 Modem-control-line state and termios were healthy on the kernel side
 (`DTR=ON, RTS=ON, CTS=ON`, `-crtscts`); earlier strace had confirmed
-the kernel was clocking bytes out the UART register. The fault is
-below the kernel — the line-driver IC silently drops TX.
+the kernel was clocking bytes out the UART register, so the fault is
+below the kernel. That's consistent with both the line-driver-IC
+hypothesis and the broken-cable hypothesis.
 
 (YAMA gotcha along the way: had to set `kernel.yama.ptrace_scope=0`
 to attach strace to a launch-supervised child process. Made the
@@ -412,8 +423,9 @@ relaxation persistent in `/etc/sysctl.d/99-ptrace-allow.conf`.)
 
 Repurposed gabby's ttyS1 (which was the AML SVS port) for the SBG.
 The AML SVS is RX-only — it just emits sound-velocity sentences and
-doesn't accept commands — so it can use the broken-TX ttyS0 with no
-functional impact.
+doesn't accept commands — so it can use the TX-faulty ttyS0 path
+with no functional impact, regardless of whether the fault turns out
+to be the gabby UART or the SBG cable.
 
 gabby panel rewire (one-time):
 
@@ -434,7 +446,8 @@ Yaml updates:
   /dev/ttyS1`, `portID: 4` (PORT_E), header rewritten to document
   the new wiring + ttyS0 fault context for future readers.
 - `bizzyboat_project11/launch/sound_speed_launch.py` — `device:
-  /dev/ttyS0`, docstring explains why a dead-TX UART is fine here.
+  /dev/ttyS0`, docstring explains why a TX-faulty path is fine
+  for an RX-only sensor regardless of where the fault actually is.
 - `bizzyboat_project11/config/sbg_ellipse_d_configure.yaml` (NEW)
   — version-controlled config-push template kept as an artifact
   for any future situation where gabby (or a successor host)
@@ -484,11 +497,15 @@ Topic rates all nominal: 50 Hz IMU/EKF, 5 Hz GPS / RTCM.
   logs. Ask for either a CLI / import path that reaches the airData
   fields on this Ellipse-D variant, or a firmware-level rule to set
   airData to a consistent disabled state.
-- **Hardware**: gabby's onboard ttyS0 line driver is dead. Worth
-  capturing in the boat's hardware doc; plan a board swap or
-  permanent USB-serial dongle next bench session. The current
-  workaround (SBG on ttyS1, AML SVS on ttyS0) is functional and
-  permanent until then.
+- **Hardware**: gabby's ttyS0 path has a TX-side fault, **not
+  isolated** to gabby's UART vs the SBG cable (cable-swap test wasn't
+  practical mid-session — gabby is boat-mounted). Bench task: pull
+  the cable, swap with a known-good one, and test gabby's ttyS0
+  directly. Worth capturing in the boat's hardware doc with both
+  candidates listed; plan a board swap **or** cable replacement
+  **or** a permanent USB-serial dongle next bench session. The
+  current workaround (SBG on ttyS1, AML SVS on ttyS0) is functional
+  regardless of which culprit it turns out to be.
 - **QINSy**: mercat is back on PORT_A, but PORT_A's output set
   hasn't been re-tuned since the day's trim. QINSy may or may not
   be receiving everything it expects — separate audit needed.
@@ -671,10 +688,12 @@ above:
    `SAVE_SETTINGS` failure on this Ellipse-D / fw 3.0.3949 combo. JSON
    dump at `/tmp/ELLIPSE-D-G4A2-B1_000034256_20260429_181248.json`
    captures the device state.
-2. **Hardware doc update** — gabby's onboard ttyS0 RS-232 line driver
-   TX side is silicon-dead. Current workaround (SBG on ttyS1, AML SVS
-   on ttyS0) is functional and permanent until a board swap or
-   permanent USB-serial dongle is added.
+2. **Hardware doc update** — gabby's ttyS0 path has a TX-side fault.
+   Not isolated between gabby's UART line driver and the SBG cable;
+   the cable-swap test couldn't be done mid-session because gabby is
+   boat-mounted. Bench task: substitute a known-good cable to
+   isolate. Current workaround (SBG on ttyS1, AML SVS on ttyS0) is
+   functional regardless of which side actually has the fault.
 3. **marine_tools issue** (per §7.5) — file with the `sound_speed_bridge`
    package. AMLParser docstring claims AML SVS terminates with CRCRLF
    and emits bare decimals; our probe emits NMEA-style `$AML,SVM,*`
@@ -687,7 +706,7 @@ above:
 ### 8.4 What worked end-to-end at shutdown
 
 - gabby's working ttyS1 ↔ SBG PORT_E (the simple, original-intended
-  wiring, just routed around the dead ttyS0 line driver)
+  wiring, just routed around the TX-faulty ttyS0 path)
 - MaCORS NTRIP via port 10000 / RTCM3MSM_IMAX with 1 Hz GGA echoback
   feeding the SBG; RTK INT engaged within seconds
 - M3 sonar receiving Valeport-format SV over UDP from the AML SVS via

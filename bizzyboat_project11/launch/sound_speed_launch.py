@@ -5,9 +5,11 @@ M3 (mercat:20003). The driver is in the rolker/marine_tools repo as the
 sound_speed_bridge package.
 
 Wiring: AML SVS is RX-only (the probe just emits sound-velocity sentences;
-nothing is sent back to it), so it lives on gabby's ttyS0 even though
-ttyS0's TX line driver is dead — that fault is irrelevant to this device.
-The SBG, which needs bidirectional comms for ECom + RTCM, owns ttyS1.
+nothing is sent back to it), so it lives on gabby's ttyS0 even though the
+ttyS0 path has a TX-side fault — that fault (whether it's gabby's UART
+line driver or the previously-attached SBG cable; not isolated 2026-04-29)
+is irrelevant to a one-way RX-only device. The SBG, which needs
+bidirectional comms for ECom + RTCM, owns ttyS1.
 """
 
 from launch import LaunchDescription
