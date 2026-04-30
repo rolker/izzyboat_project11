@@ -188,12 +188,27 @@ detail that a future agent (or human) can pick up cold. Strong sample:
 
 Useful sections (use what fits, skip what doesn't):
 
-- **Summary** — 2–3 sentences at the top
+- **Summary** — 2–3 sentences at the top. **User-curated** —
+  agents draft, but this section reads with strong user voice. It is
+  what a human would say if asked "what was today about?" with the
+  benefit of hindsight.
+- **Lessons Learned** — durable operator-level take-home messages
+  the user wants to remember from this deployment. **User-curated** —
+  agents may propose entries, but the user makes the call about what
+  belongs and how it's worded. Distinct from the Timeline (event
+  narrative) and from Issues encountered (failure-mode diagnoses).
+  An entry here is something an experienced operator would say "yes,
+  remember this" about — short, generalisable, opinionated.
 - **Numbered topic sections** — actual work done, with file paths and
   line numbers
 - **Issues encountered + diagnoses**
 - **Pending on operator** / **Handoff** — cross-host coordination
 - **Files touched** — repos and paths changed (helps future grep)
+
+The first two — **Summary** and **Lessons Learned** — sit at the top
+of the document and are filled in last (during wrap-up), with the
+user's voice driving the content. Everything else can be appended in
+real time during the session.
 
 Avoid:
 
