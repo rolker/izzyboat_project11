@@ -94,6 +94,48 @@ def generate_launch_description():
                     ),
                 ),
 
+                # MAVROS frame bridges (workaround)
+                #
+                # mavros's local_position plugin lacks a `child_frame_id`
+                # parameter (only global_position has one), so its messages
+                # and static TFs use bare names — `map`, `odom`, `base_link`
+                # — disconnected from the bizzy/ URDF tree. Identity transforms
+                # here connect the bare frames under bizzy/ so TF lookups
+                # (e.g. mru_transform's velocity body) resolve.
+                Node(
+                    package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='mavros_frame_bridge_map',
+                    arguments=[
+                        '--x', '0', '--y', '0', '--z', '0',
+                        '--roll', '0', '--pitch', '0', '--yaw', '0',
+                        '--frame-id', [frame_prefix, 'map'],
+                        '--child-frame-id', 'map',
+                    ],
+                ),
+                Node(
+                    package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='mavros_frame_bridge_odom',
+                    arguments=[
+                        '--x', '0', '--y', '0', '--z', '0',
+                        '--roll', '0', '--pitch', '0', '--yaw', '0',
+                        '--frame-id', [frame_prefix, 'odom'],
+                        '--child-frame-id', 'odom',
+                    ],
+                ),
+                Node(
+                    package='tf2_ros',
+                    executable='static_transform_publisher',
+                    name='mavros_frame_bridge_base_link',
+                    arguments=[
+                        '--x', '0', '--y', '0', '--z', '0',
+                        '--roll', '0', '--pitch', '0', '--yaw', '0',
+                        '--frame-id', [frame_prefix, 'base_link'],
+                        '--child-frame-id', 'base_link',
+                    ],
+                ),
+
                 # MAVRos
                 GroupAction(
                     actions=[
@@ -238,6 +280,21 @@ def generate_launch_description():
                         ])
                     ),
                 ),
+
+                # Sound-speed bridge (AML SVS on gabby /dev/ttyS1
+                # -> ROS topic + Valeport UDP to M3 on mercat:20003)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'sound_speed_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'frame_prefix': frame_prefix,
+                    }.items()
+                ),
             ]
         ),
 
@@ -265,5 +322,23 @@ def generate_launch_description():
                     'ntrip_launch.py'
                 ])
             ),
+            launch_arguments={
+                'namespace': namespace,
+            }.items()
+        ),
+
+        # SBG Ellipse-D INS (gabby's PORT_E). Logs nav data for FCU
+        # parity comparison and forwards NTRIP RTCM to the SBG.
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'sbg_launch.py'
+                ])
+            ),
+            launch_arguments={
+                'namespace': namespace,
+            }.items()
         ),
     ])

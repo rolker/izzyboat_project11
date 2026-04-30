@@ -8,7 +8,6 @@ LOGDIR="${P11_LOG_DIR:-/home/field/data/logs/bizzyboat}"
 
 mkdir -p "$LOGDIR"
 LOG_FILE="${LOGDIR}/autostart_${NOW}.txt"
-LOGDIR_BAG="${LOGDIR}/${NOW}"
 {
 
 echo ""
@@ -49,7 +48,7 @@ sleep 2
 # Perception: cameras, sonar, logging
 /usr/bin/tmux new-window -t project11 -n perception
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
-/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 perception_launch.py log_directory:=${LOGDIR_BAG}" C-m
+/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 perception_launch.py" C-m
 
 # Nav: autonomy, helm, s57, nav2
 /usr/bin/tmux new-window -t project11 -n nav

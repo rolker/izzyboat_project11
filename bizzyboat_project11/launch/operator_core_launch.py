@@ -84,6 +84,15 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'bag_recorder_operator_launch.py'
+                ])
+            ),
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
                     FindPackageShare('marine_autonomy'),
                     'launch',
                     'operator_core_launch.py'

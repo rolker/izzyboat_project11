@@ -22,8 +22,8 @@
         mru:
           topics:
             orientation: "mavros/imu/data"
-            position: "mavros/global_position/raw/fix"
-            velocity: "mavros/global_position/raw/gps_vel"
+            position: "mavros/global_position/global"
+            velocity: "mavros/local_position/velocity_body"
 
 /**/deltat:
   ros__parameters:
@@ -40,8 +40,8 @@
       mru:
         topics:
           orientation: "mavros/imu/data"
-          position: "mavros/global_position/raw/fix"
-          velocity: "mavros/global_position/raw/gps_vel"
+          position: "mavros/global_position/global"
+          velocity: "mavros/local_position/velocity_body"
     sensor_names:
     - mru
 
@@ -71,7 +71,6 @@
             - hover_viz
             - local_costmap
             - local_costmap_footprint
-            - global_costmap
             - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
@@ -96,6 +95,8 @@
             - mavros_position
             - mavros_orientation
             - mavros_velocity
+            - mavros_position_ekf
+            - mavros_velocity_body
             - tf
             - tf_static
             - usb_camera
@@ -103,7 +104,6 @@
             topics:
               command_response: {source: marine/response}
               diagnostics: {source: /diagnostics}
-              global_costmap: {source: global_costmap/costmap, period: 3.0}
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
@@ -136,6 +136,8 @@
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
+              mavros_position_ekf: {source: mavros/global_position/global}
+              mavros_velocity_body: {source: mavros/local_position/velocity_body}
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
               usb_camera: {source: sensors/cameras/usb/image_raw/compressed}
@@ -167,6 +169,8 @@
             - mavros_position
             - mavros_orientation
             - mavros_velocity
+            - mavros_position_ekf
+            - mavros_velocity_body
             - tf
             - tf_static
             topics:
@@ -199,6 +203,8 @@
               mavros_orientation: {source: mavros/imu/data}
               mavros_position: {source: mavros/global_position/raw/fix}
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
+              mavros_position_ekf: {source: mavros/global_position/global}
+              mavros_velocity_body: {source: mavros/local_position/velocity_body}
               tf: {source: /tf}
               tf_static: {source: /tf_static}
 
@@ -232,6 +238,20 @@
       - /bizzy/sensors/cameras/oak_aft/rgb/image_raw/compressed
       - /bizzy/sensors/cameras/oak_port/rgb/camera_info
       - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
+      # SBG Ellipse-D INS — 50 Hz IMU/EKF, 5 Hz GPS, 1 Hz status/UTC
+      - /bizzy/sensors/sbg/imu_data
+      - /bizzy/sensors/sbg/ekf_nav
+      - /bizzy/sensors/sbg/ekf_quat
+      - /bizzy/sensors/sbg/mag
+      - /bizzy/sensors/sbg/gps_pos
+      - /bizzy/sensors/sbg/gps_vel
+      - /bizzy/sensors/sbg/gps_hdt
+      - /bizzy/sensors/sbg/status
+      - /bizzy/sensors/sbg/utc_time
+      # AML SVS sound-speed probe (out-of-water → NaN; expected when stowed)
+      - /bizzy/sensors/sound_speed/sound_speed
+      - /bizzy/sensors/sound_speed/temperature
+      - /bizzy/sensors/sound_speed/fluid_pressure
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
       - /bizzy/udp_bridge/remotes/operator/bridge_info
@@ -271,6 +291,11 @@
       - /bizzy/odom
       - /bizzy/robot_description
       - /bizzy/sensors/deltat/soundings
+      # Sound-speed for bathy correction in post-processing.
+      - /bizzy/sensors/sound_speed/sound_speed
+      # SBG INS for sonar motion compensation + georeferencing.
+      - /bizzy/sensors/sbg/imu_data
+      - /bizzy/sensors/sbg/ekf_quat
       - /tf
       - /tf_static
     storage:
