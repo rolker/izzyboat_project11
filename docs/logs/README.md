@@ -197,8 +197,8 @@ Prefix each entry — observation, action, summary — with an ISO-8601
 timestamp in **local time with the UTC offset**:
 
 ```
-2026-04-27T08:42-04:00 — started charging the boat before launch
-2026-04-27T09:15-04:00 — boat in the water, FCU armed
+**2026-04-27T08:42-04:00** — started charging the boat before launch
+**2026-04-27T09:15-04:00** — boat in the water, FCU armed
 ```
 
 Local-with-offset is unambiguous (no UTC mental conversion for the

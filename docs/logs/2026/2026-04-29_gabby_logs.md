@@ -11,7 +11,7 @@ TBD as work proceeds.
 
 ## 1. Self-contained `perception_launch.py` log directory
 
-2026-04-29T10:50-04:00 — Roland flagged that re-launching
+**2026-04-29T10:50-04:00** — Roland flagged that re-launching
 `perception_launch.py` on its own (without rerunning
 `start_tmux_project11.bash`) required hand-crafting a fresh date-based
 bag dir, because `log_directory` was a required arg with no default and
@@ -44,14 +44,14 @@ Side effect: the duplicate `sonar_log_directory_arg` declaration in
 overrode the first, so the first was dead code. It fell out of the
 restructured arg block.
 
-2026-04-29T10:54-04:00 — Roland started ROS via
+**2026-04-29T10:54-04:00** — Roland started ROS via
 `start_tmux_project11.bash`. Both bag dirs created at the expected
 launch-time UTC timestamp (shared between loggers, as designed):
 
 - `/home/field/data/logs/bizzyboat/2026-04-29T14-54-18+00-00/2026-04-29T14-54-18+00-00_0.mcap`
 - `/home/field/data/logs/bizzyboat_sonar/2026-04-29T14-54-18+00-00/2026-04-29T14-54-18+00-00_0.mcap`
 
-2026-04-29T10:56-04:00 — 30 s sample on both mcap files confirmed
+**2026-04-29T10:56-04:00** — 30 s sample on both mcap files confirmed
 active writes:
 
 - main: 1.64 MB → 1.91 MB (+264 KB)
@@ -78,7 +78,7 @@ in §3 below — current SHA `7027c67`.)
 
 ## 2. `make sync` — incoming commits for today's testing
 
-2026-04-29T11:14-04:00 — Roland flagged that fixes are landing for
+**2026-04-29T11:14-04:00** — Roland flagged that fixes are landing for
 today's testing; ran `make sync` to pull them and triage which apply
 to the bizzyboat-on-gabby deployment. Three repos updated cleanly,
 one skipped (project repo, dirty from this log file being untracked).
@@ -167,7 +167,7 @@ both sides built before the dependent code path is exercised.
 
 ## 3. Rebase + build + manifest gap → `marine_tools` added
 
-2026-04-29T11:30-04:00 — Committed log §1 + §2 (`ee8867a`, later
+**2026-04-29T11:30-04:00** — Committed log §1 + §2 (`ee8867a`, later
 rebased) and re-ran `make sync` to integrate the project repo's
 40-commit incoming chain. Clean rebase: our two local commits
 replayed on top, ending at `d64bd34` (log) + `7027c67`
@@ -210,7 +210,7 @@ stderr.
 
 ## 4. First launch crash: `rtcm_relay_node.py` exec bit (upstream regression)
 
-2026-04-29T12:03-04:00 — Roland kicked off `start_tmux_project11.bash`.
+**2026-04-29T12:03-04:00** — Roland kicked off `start_tmux_project11.bash`.
 Core launch (`core_launch.py`) crashed immediately with:
 
 > `[ERROR] [launch]: Caught exception ... executable 'rtcm_relay_node.py'
@@ -236,7 +236,7 @@ the dev side for a follow-up fix on the source commit.
 
 ## 5. mavros TF tree split — `local_position` plugin gap (d40845e is a no-op)
 
-2026-04-29T12:11-04:00 — After the chmod fix, core stayed up cleanly,
+**2026-04-29T12:11-04:00** — After the chmod fix, core stayed up cleanly,
 but `mru_transform` started spamming a TF lookup failure every 5 s:
 
 > `velocity: TF 'base_link' -> 'bizzy/base_link' lookup failed: Could

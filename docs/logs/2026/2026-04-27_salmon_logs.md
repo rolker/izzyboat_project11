@@ -16,7 +16,7 @@ changes that are today's first work item.
 
 ## 1. NVIDIA driver check
 
-2026-04-27T09:51-04:00 — verified NVIDIA driver currency on salmon.
+**2026-04-27T09:51-04:00** — verified NVIDIA driver currency on salmon.
 
 - Running `580.126.09` on RTX 3070 Ti Laptop GPU
 - `apt-cache policy nvidia-driver-580`: candidate matches installed
@@ -31,7 +31,7 @@ No driver update needed.
 
 ## 2. Workspace sync + build
 
-2026-04-27T09:53-04:00 — `make sync` then `make build`.
+**2026-04-27T09:53-04:00** — `make sync` then `make build`.
 
 Sync pulled:
 
@@ -48,7 +48,7 @@ ui, site), 90 packages OK, no warnings or errors.
 
 ## 3. Zenoh router + diagnostic rqt wrapper
 
-2026-04-27T10:15-04:00 — set up isolated tmux session for today's
+**2026-04-27T10:15-04:00** — set up isolated tmux session for today's
 camera-grid debugging instead of bringing up the full operator stack.
 
 ### Zenoh router
@@ -168,7 +168,7 @@ gdb --args rqt --force-discover --standalone rqt_camera_grid
 
 ### Teardown
 
-2026-04-27T10:35-04:00 — stopped the dedicated `rqt-debug` tmux
+**2026-04-27T10:35-04:00** — stopped the dedicated `rqt-debug` tmux
 session (zenoh router C-c'd cleanly, then `tmux kill-session`).
 Operator switching to the project's normal start script
 (`bizzyboat_project11/scripts/start_tmux_*.bash`) for the live-data
@@ -176,7 +176,7 @@ repro attempt — it brings up its own zenoh in its own tmux session.
 
 ## 5. Live-data repro — crash IS still there, and it's an abort not a segfault
 
-2026-04-27T10:33-04:00 — operator launched the normal start script,
+**2026-04-27T10:33-04:00** — operator launched the normal start script,
 opened the bizzyboat rqt (`project11:ui` window, `rqt_gui -p
 bizzyboat`), used the config dialog to add the **two side segmentation
 streams**, closed the dialog. rqt died.
@@ -321,7 +321,7 @@ that bypasses our save-side validation will keep tripping
 
 ### Both fixes landed; partial result; moved on
 
-2026-04-27T10:55-04:00 — applied both edits to
+**2026-04-27T10:55-04:00** — applied both edits to
 `rqt_operator_tools/rqt_camera_grid/`, rebuilt
 (`colcon build --symlink-install --packages-select rqt_camera_grid`,
 8.4 s, clean), committed as two atomic commits and pushed to
@@ -363,7 +363,7 @@ slot was freed earlier). `apport-unpack /var/crash/_opt_ros_jazzy_bin_rqt.1001.c
 
 ## 6. Post-fix SIGSEGV — diagnosed via gdb-wrapped diag session
 
-2026-04-27T11:18-04:00 — to capture the post-fix SIGSEGV with a
+**2026-04-27T11:18-04:00** — to capture the post-fix SIGSEGV with a
 proper backtrace (no apport rate-limit games), wrote a gdb-wrapped
 companion to the diag wrapper:
 
@@ -495,7 +495,7 @@ Camera grid line item is closed. Moving to sonar.
 
 ## 7. Boat deployed — on-water phase
 
-2026-04-27T12:35-04:00 — boat in the water. Sonar bring-up was
+**2026-04-27T12:35-04:00** — boat in the water. Sonar bring-up was
 prepped on a separate machine while the camera-grid fix was being
 applied (§6). On-water testing phase begins.
 

@@ -42,18 +42,18 @@ Carry-forward and follow-up issues are listed in §10.
 
 ## 1. Session start
 
-2026-04-27T10:02-04:00 — `make sync` + `make build` clean on gabby. Sync
+**2026-04-27T10:02-04:00** — `make sync` + `make build` clean on gabby. Sync
 pulled in the new `docs/logs/README.md` deployment-logging convention
 (7 files, +1273 lines on `unh_echoboats_project11`). Build report: 5
 layers, 45 packages, all green.
 
-2026-04-27T10:02-04:00 — system timezone was `Etc/UTC`; set to
+**2026-04-27T10:02-04:00** — system timezone was `Etc/UTC`; set to
 `America/New_York` (`timedatectl set-timezone America/New_York`). Local
 time now reads `EDT (-0400)` so log timestamps match the on-site clock.
 
 ## 2. Camera-recorder coverage for SeaSurfaceLayer replay-debug
 
-2026-04-27T10:18-04:00 — audited
+**2026-04-27T10:18-04:00** — audited
 `bizzyboat_project11/scripts/record_camera_topics.sh` against what the
 nav2 costmap plugin
 `sea_surface_layer::SeaSurfaceLayer` (in
@@ -112,7 +112,7 @@ before relying on this in the field.
 
 ## 3. Pre-launch system bring-up
 
-2026-04-27T10:34-04:00 — operator ran
+**2026-04-27T10:34-04:00** — operator ran
 `~/start_tmux_project11.bash` (symlink to the project11 install-tree
 copy). `tmux ls` shows the `project11` session (4 windows) up.
 `ros2 node list` shows the full nav2 stack
@@ -160,7 +160,7 @@ flowing across the bridge.
 
 ## 4. Prelaunch checks — gabby
 
-2026-04-27T10:48-04:00 — ran the full prelaunch sweep on gabby. All
+**2026-04-27T10:48-04:00** — ran the full prelaunch sweep on gabby. All
 green except one gap, called out at the bottom.
 
 | Check | Status |
@@ -227,7 +227,7 @@ Not blocking launch.
 
 ## 5. OAK segmentation frame_id fix
 
-2026-04-27T11:05-04:00 — closed the TF gap from §4. The publisher
+**2026-04-27T11:05-04:00** — closed the TF gap from §4. The publisher
 hardcoded its frame_id at
 `unh_marine_perception/sea_surface_segmentation/src/sea_surface_segmentation.cpp:35`:
 
@@ -282,7 +282,7 @@ this is dead code until the plugin can run.
 
 ## 6. On-water
 
-2026-04-27T11:13-04:00 — operator deployed BizzyBoat. Boat is in
+**2026-04-27T11:13-04:00** — operator deployed BizzyBoat. Boat is in
 the water.
 
 Open thread paused: USB serial check (asked at 11:09) — no new
@@ -290,7 +290,7 @@ device enumerated when checked; deferred until it's relevant again.
 
 ## 7. First on-water bag with the updated recorder
 
-2026-04-27T11:25-04:00 — operator triggered a 120 s capture with
+**2026-04-27T11:25-04:00** — operator triggered a 120 s capture with
 `record_camera_topics.sh 120`. First real exercise of the recorder
 edits from §2 + §5 (raw `/segmentation` × 4 with the corrected
 `bizzy/<name>_optical` frame_ids, plus `/bizzy/robot_description`).
@@ -461,7 +461,7 @@ trust a single target.**
 
 ## 10. Wrap-up
 
-2026-04-27T20:28-04:00 — operator signaled boat recovered; closing
+**2026-04-27T20:28-04:00** — operator signaled boat recovered; closing
 out the deployment.
 
 ### 45-min capture (the in-flight one when recovery started)

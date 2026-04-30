@@ -14,7 +14,7 @@ preliminary config that landed live during the same session.
 
 ## 1. Workspace sync + build
 
-2026-04-29T11:30-04:00 — `make sync`, then `make build`.
+**2026-04-29T11:30-04:00** — `make sync`, then `make build`.
 
 Sync pulled six repos.  Operator-relevant headlines:
 
@@ -61,7 +61,7 @@ pre-existing CAMP unused-parameter warnings.
 
 ## 2. Operator stack — startup script verification
 
-2026-04-29T11:57-04:00 — Roland ran `start_tmux_operator_project11.bash`.
+**2026-04-29T11:57-04:00** — Roland ran `start_tmux_operator_project11.bash`.
 Verified everything came up clean from logs and live ROS state:
 
 - Zenoh router up, advertising on `192.168.13.142:7447` (op LAN),
