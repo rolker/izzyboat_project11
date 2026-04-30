@@ -215,6 +215,7 @@
       topics:
       - /diagnostics
       - /bizzy/mavros/battery
+      - /bizzy/mavros/global_position/global
       - /bizzy/mavros/global_position/raw/fix
       - /bizzy/mavros/global_position/raw/gps_vel
       - /bizzy/mavros/gpsstatus/gps1/raw
