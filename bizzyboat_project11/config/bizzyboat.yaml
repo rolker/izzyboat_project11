@@ -228,6 +228,16 @@
       # controller is working to follow cmd_vel (nav_controller_output).
       - /bizzy/mavros/rc/out
       - /bizzy/mavros/nav_controller_output
+      # FCU EKF3-fused nav at CG (mavros local_position plugin). These
+      # are the FCU-side counterparts to SBG's ekf_nav / ekf_quat /
+      # imu_data so SBG-vs-FCU comparison at base_link is reproducible
+      # from the bag. velocity_body is also what mru_transform consumes
+      # to produce /bizzy/odom.
+      - /bizzy/mavros/local_position/odom
+      - /bizzy/mavros/local_position/pose
+      - /bizzy/mavros/local_position/velocity_local
+      - /bizzy/mavros/local_position/velocity_body
+      - /bizzy/mavros/local_position/accel
       - /bizzy/odom
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
