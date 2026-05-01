@@ -9,7 +9,7 @@ The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
 the same way every other operator subsystem is. Layout:
 
-    ~/data/logs/operator/<YYYY-MM-DD>/diagnostics_<HH.MM.SS>/
+    ~/data/logs/operator/<YYYY-MM-DD>/bags/operator_<YYYY-MM-DDTHH.MM.SS>/
 
 Per-day parent dir so multiple deployments in a day group naturally; one
 bag-dir per launch. Path under ${HOME} so this runs without root.
@@ -62,9 +62,9 @@ def generate_launch_description():
 
     now = datetime.now()
     day_dir = now.strftime('%Y-%m-%d')
-    bag_name = now.strftime('diagnostics_%H.%M.%S')
+    bag_name = now.strftime('operator_%Y-%m-%dT%H.%M.%S')
     out_dir = os.path.expanduser(
-        f'~/data/logs/operator/{day_dir}/{bag_name}')
+        f'~/data/logs/operator/{day_dir}/bags/{bag_name}')
 
     record_cmd = [
         'ros2', 'bag', 'record',
