@@ -20,16 +20,23 @@ def generate_launch_description():
         'namespace', default_value='bizzy'
     )
 
-    device = LaunchConfiguration('device')
+    # Argument names are prefixed `zda_` so this launch composes cleanly
+    # alongside sound_speed_launch.py. ROS 2 launch's LaunchConfiguration
+    # namespace is global within a launch tree, so a bare `device`/`baud`
+    # arg here would inherit whatever an earlier-included launch already
+    # declared (sound_speed_launch declares `device` defaulting to
+    # /dev/ttyS0).
+    device = LaunchConfiguration('zda_device')
     device_arg = DeclareLaunchArgument(
-        'device', default_value=TextSubstitution(text='/dev/ttyS2')
+        'zda_device', default_value=TextSubstitution(text='/dev/ttyS2')
     )
 
-    baud = LaunchConfiguration('baud')
-    baud_arg = DeclareLaunchArgument('baud', default_value='9600')
+    baud = LaunchConfiguration('zda_baud')
+    baud_arg = DeclareLaunchArgument('zda_baud', default_value='9600')
 
-    talker_id = LaunchConfiguration('talker_id')
-    talker_id_arg = DeclareLaunchArgument('talker_id', default_value='GP')
+    talker_id = LaunchConfiguration('zda_talker_id')
+    talker_id_arg = DeclareLaunchArgument(
+        'zda_talker_id', default_value='GP')
 
     return LaunchDescription([
         namespace_arg,
