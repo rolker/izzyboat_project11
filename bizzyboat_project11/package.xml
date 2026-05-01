@@ -29,6 +29,7 @@
   <exec_depend>rtcm_msgs</exec_depend>
   <exec_depend>sbg_driver</exec_depend>
   <exec_depend>sound_speed_bridge</exec_depend>
+  <exec_depend>zda_serial_bridge</exec_depend>
   <exec_depend>starlink_stats</exec_depend>
   <exec_depend>teltonika_monitor</exec_depend>
   <exec_depend>topic_tools</exec_depend>
