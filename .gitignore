@@ -1,2 +1,3 @@
 config/camera_calibration/
 config/nn/*.blob
+__pycache__/
