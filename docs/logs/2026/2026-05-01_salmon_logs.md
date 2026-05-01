@@ -162,3 +162,36 @@ applies them — coordinated redeploy is the supported configuration.
   — three default-expectation tests updated (same commit).
 - `layers/main/core_ws/src/udp_bridge/udp_bridge/doc/qos_design.md`
   — operational note added (same commit).
+
+## 5. Session wrap-up
+
+2026-05-01T18:47-04:00 — Boat recovered. Session ending without
+operational verification of the bridge fix on running hardware: the
+fix was pushed to gitcloud but gabby's bridge would have needed
+`git pull && colcon build && restart` to pick it up. Whether that
+happened during this session is not visible from salmon. Carry-
+forwards for the dev side to handle on the wrap-up PR:
+
+- **Verify the fix on the next deployment** — restart bridges on
+  both sides on the new code and confirm CAMP nav widgets populate
+  for bizzy. If they still don't, NavSource's `trySubscribe`
+  discovery-gate logic itself is worth revisiting (subscribe
+  unconditionally and let ROS deliver when a publisher appears,
+  rather than polling `get_topic_names_and_types`).
+- **Address the pre-existing
+  `BestEffortPublisher_DoesNotMatchReliableSubscriber` test
+  failure** in `udp_bridge/test/test_qos_matching_integration.cpp` —
+  under `rmw_zenoh_cpp` 0.2.9 the match succeeds, contradicting the
+  matrix in `qos_design.md:60-65`. Either an rmw bug to upstream or a
+  doc correction.
+- **Decide the long-term policy on the BEST_AVAILABLE default** —
+  this commit's flip to RELIABLE is operational. Once
+  `rmw_zenoh_cpp` handles BEST_AVAILABLE keyexpr correctly, revert
+  to `qos.reliability_best_available()` so the design doc's
+  intended behavior is restored.
+- **CAMP `nav_source.cpp` `SensorDataQoS().reliability_best_available()`
+  edits** are uncommitted on salmon. Harmless either way; if useful
+  longer-term they can be picked up via `import-field-changes` from
+  salmon's working tree.
+
+End of salmon session.
