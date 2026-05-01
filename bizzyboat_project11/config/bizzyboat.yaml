@@ -110,22 +110,22 @@
               local_costmap: {source: local_costmap/costmap, period: 3.0}
               local_costmap_footprint: {source: local_costmap/published_footprint}
               odom: {source: odom}
-              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg}
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
-              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0}
-              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg}
+              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 100}
+              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed}
               oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
-              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0}
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg}
+              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 100}
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed}
               oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
-              oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0}
-              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg}
+              oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0, queue_size: 100}
+              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed}
               oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
-              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0}
+              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 100}
               path_follower_visualization: {source: path_follower_visualization}
               deltat: {source: sensors/deltat/soundings}
               deltat_grid: {source: sensors/deltat/grid}
@@ -158,7 +158,10 @@
             - oak_segmentation_forward_raw
             - oak_starboard_ffmpeg
             - oak_segmentation_starboard
-            - oak_aft_ffmpeg
+            # oak_aft_ffmpeg dropped from VPN to free uplink bandwidth
+            # against the Starlink ceiling (still on WiFi). The aft
+            # segmentation overlay stays — it's 1 Hz / ~42 kbps and
+            # operator wants situational awareness behind the boat.
             - oak_segmentation_aft
             - oak_port_ffmpeg
             - oak_segmentation_port
@@ -180,22 +183,20 @@
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
               odom: {source: odom}
-              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg}
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 1.0}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
-              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0}
-              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg}
+              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 100}
+              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, period: 1.0}
               oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
-              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0}
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg}
+              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 100}
+              # oak_aft_ffmpeg removed from VPN (still in wifi block above).
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: 1.0}
-              oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
-              oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0}
-              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg}
+              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, period: 1.0}
               oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
-              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0}
+              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 100}
               battery: {source: /bizzy/mavros/battery}
               plan: {source: plan}
               platforms: {source: /marine/platforms}

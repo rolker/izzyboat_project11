@@ -8,7 +8,7 @@ from launch_ros.substitutions import FindPackageShare
 # optional flags; absent flags fall back to sea_surface_segmentation defaults.
 CAMERAS = {
     'oak_forward':   {'mx_id': '19443010D117872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 1000},
+                      'h265_enable': True, 'h265_bitrate_kbps': 800},
     'oak_starboard': {'mx_id': '19443010E11A872D00', 'enable_video': False,
                       'h265_enable': True, 'h265_bitrate_kbps': 800},
     'oak_aft':       {'mx_id': '14442C10917D8DD700', 'enable_video': False,
