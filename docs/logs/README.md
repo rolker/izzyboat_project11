@@ -218,6 +218,11 @@ Avoid:
   raw data stays in `~/data/logs/`
 - Multi-paragraph design discussions — those belong on the
   deployment issue or a focused task issue
+- Naming components or mechanisms that aren't in the actual stack
+  as candidate causes (e.g., listing GStreamer as a buffer-bloat
+  candidate when video isn't GStreamer-piped). When proposing
+  diagnoses, list only components you've verified are deployed;
+  ask the operator or omit if unsure.
 
 ### Timestamp every entry
 
@@ -235,6 +240,35 @@ Even editorial summaries get timestamps — knowing **when** a
 summary was written can matter as much as the summary itself. Use
 **minute precision by default**; bump to seconds when correlating
 tightly to a bag or a ROS event.
+
+### Logging during live field operations
+
+During an active deployment the operator is steering the boat —
+their attention is on the helm, traffic, and wind, not on producing
+tidy log copy. Two patterns recur:
+
+**Operator notes are often quick and incomplete.** The operator
+drops short observations into the session ("the boat went into
+HOLD", "~60 s of latency", "pressed Standby") for
+capture-and-later-review. The agent's job is to record these
+faithfully and add **only factual context** — timestamps, current
+mode/state, references to prior log entries. Do **not** invent
+mechanisms, attribute causes the operator didn't state, or fill in
+missing detail with plausible-sounding speculation. If the picture
+is unclear, log the observation as-is and flag it for follow-up.
+
+**Troubleshooting suggestions are conversation, not log entries.**
+The agent should proactively suggest diagnostic steps in real time
+("want me to grab `dmesg` on gabby?", "should we check the
+udp_bridge stats topic?"). The operator may be too busy to try
+them, or already running something else. **Log only what was
+actually attempted and its outcome** — skip suggestions that
+didn't get acted on.
+
+Together these mean: the agent is a real-time scribe and a
+conversational helper. The scribe captures verified facts; the
+helper offers options without polluting the log with proposals
+that weren't picked up.
 
 ### Task-specific deep-dive logs
 
