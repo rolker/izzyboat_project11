@@ -28,7 +28,7 @@ visible from one place.
 
 ### Sensor payload integration (M3 + SBG + SVS on mercat)
 
-- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up + data flow + NTRIP strategy + NTP. *Software pipeline live end-to-end as of 2026-04-27 (#94); first surveys recorded.*
+- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up + data flow + NTRIP strategy + NTP. *Software pipeline live end-to-end as of 2026-04-27 (#94); first surveys recorded. M3 1PPS time-sync chain completed 2026-05-01 (#121) — after discovering that the M3 software's Device Properties → Time Sync Mode dropdown was the real gating switch, not the cable / SBG / pulse parameters that occupied most of the morning. QINSy SBG hookup live (position + attitude + heading + heave + GPS QC).*
 - [`unh_echoboats_project11#77`](https://github.com/rolker/unh_echoboats_project11/issues/77) — physical install, offsets, URDF, SVG diagram
 - [`rolker/marine_tools#1`](https://github.com/rolker/marine_tools/issues/1) — QINSy → ROS bridge for coverage / sounding feedback
 
@@ -43,13 +43,13 @@ visible from one place.
 - [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → nav2 `/speed_limit` (per-task survey speed); deployment 2026-04-27 worked around with shared `default_speed` bump
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults)
 
-### Both nav systems report at base_link *(new theme — 2026-04-29)*
+### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01)*
 
-The 2026-04-29 in-water bag exposed that neither the SBG nor the FCU is reporting position at `base_link` — each publishes at its own GNSS antenna (0.64 m fore-aft body-frame offset between them). The URDF doesn't model the SBG IMU/antennas at all, and the EKF3-fused mavros streams aren't being recorded, so cross-checks have to fall back to downstream `/bizzy/odom`. These three issues are a unit: pick a contract, model the geometry, and capture the streams that prove it's working.
+The 2026-04-29 in-water bag exposed that neither the SBG nor the FCU was reporting position at `base_link` — each published at its own GNSS antenna (0.64 m fore-aft body-frame offset between them). The URDF didn't model the SBG IMU/antennas, and the EKF3-fused mavros streams weren't being recorded, so cross-checks had to fall back to downstream `/bizzy/odom`. These three issues are a unit: pick a contract, model the geometry, and capture the streams that prove it's working.
 
-- [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — model SBG INS, GNSS antenna(s), and IMU mounting alignment on bizzyboat (URDF gap)
-- [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — define lever-arm/base_link contract for SBG and mavros position streams (decision + implementation)
-- [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record `mavros/global_position/global` + EKF3-fused `local_position/*` + `altitude` (recording-only; lets the next deployment verify the contract holds)
+- [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — model SBG INS, GNSS antenna(s), and IMU mounting alignment on bizzyboat (URDF gap). **Still open** — today's fixes addressed the *config* side; the URDF gap (no SBG body / Trimble antennas modeled) remains.
+- [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — define lever-arm/base_link contract for SBG and mavros position streams. **Resolved live 2026-05-01** — the SBG sbgCenter Output Location was the missing config; with it set, both SBG and FCU now report at `base_link`. gabby agent confirmed agreement live; quantitative verification is post-mission ([#124](https://github.com/rolker/unh_echoboats_project11/issues/124)).
+- [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record `mavros/global_position/global` + EKF3-fused `local_position/*` + `altitude`. **Fixed in [#123](https://github.com/rolker/unh_echoboats_project11/pull/123)**, awaiting merge.
 
 ### Class-ready operator UI
 
@@ -72,7 +72,32 @@ Multiple network-layer issues surfaced during the same long deployment day: udp_
 
 - [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges (reader thread blocked, Recv-Q backup) when remote subscriber dies
 - [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplifies traffic (earlier related)
+- [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) — *(2026-05-01)* forwarding-throughput regression from PR #12 + `rmw_zenoh_cpp` 0.2.9 BEST_AVAILABLE keyexpr workaround
+- [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) — *(2026-05-01)* operator-side QoS fix complementing the bridge default change
 - *(future)* End-of-day network pathology root-cause work — open once we have more signal from a future deployment with op-side diagnostics in place
+
+### Over-horizon operations capability *(new theme — 2026-05-01)*
+
+The 2026-05-01 deployment ran the boat past visual range with the new comms stack and surfaced the saturation envelope. Even on Starlink-only at moderate distance, the current ROS topic stack saturates the link, producing 30–60 s latency episodes. Asymmetric resilience worked: control commands and SSH stayed reliable through saturation; situational awareness did not. RC failsafe stack now configured for over-horizon use (`FS_THR_ENABLE = 0`, `FS_GCS_ENABLE = 0`, GUIDED stale-setpoint HOLD).
+
+- **Topic-budget cull** — required, not optional. Identify which topics dominate the link, cull or rate-limit accordingly.
+- **VPN-path indicator** (Starlink vs. cellular vs. WiFi) — operator awareness gap; today we lost significant diagnostic time guessing which path was carrying traffic. See [#124](https://github.com/rolker/unh_echoboats_project11/issues/124).
+- **Bench stress-test rig** — synth topics + mininet + CAMP-stub harness so the next saturation question can be answered at the desk, not on the water. See [#124](https://github.com/rolker/unh_echoboats_project11/issues/124).
+- **RC mode-switch fringe-range hardening** — pin to AUTO/GUIDED, disable channel via FCU params, or power off RC entirely during autonomous runs. See memory `project_bizzyboat_rc_mode_switch_at_fringe_range.md`.
+- **Low-bandwidth status fallback** — text/heartbeat/minimal-telemetry path that survives when the full topic stream doesn't (today's gabby SSH access bridged the gap manually).
+
+### Autonomy robustness *(new theme — 2026-05-01)*
+
+2026-05-01 deployment surfaced a real BT design issue and validated the GUIDED stale-setpoint failsafe.
+
+- **BT `SkipUnknownTaskType` catchall masks execution failures** — top-level `ReactiveFallback` can't distinguish "no script condition matched" from "matching subtree's execution failed", so the catchall fires on action ABORTs and silently marks tracklines done. Forensic match for the 2026-05-01 15:09 HOLD episode (FollowPath ABORTED → SurveyLineTask sequence failed → catchall fired → trackline marked done → `done_hover` activated). Needs a new task issue against the BT / mission_manager. See gabby log §11.
+- **GUIDED stale-setpoint HOLD verified working** — when `cmd_vel` publication stops, FCU correctly enters HOLD. Confirmed Nav2-crash failsafe behaves as intended.
+
+### Perception → costmap *(new theme — 2026-05-01)*
+
+The 2026-05-01 mooring ball near-miss made this concrete: cameras can see surface obstacles, but segmentation output is not feeding the Nav2 costmap, so the autonomy planner has no awareness. This is a real survey-readiness blocker — any autonomous survey will be in waters with mooring balls, debris, and other vessels.
+
+Existing tracker: [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) (end-to-end OAK → costmap validation). Currently blocked on [`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) (`SeaSurfaceLayer::matchSize()` segfault). Today reinforces the priority — without this, autonomous survey requires constant manual override for surface-obstacle avoidance.
 
 ## Deferred / lower priority — no current issue
 
