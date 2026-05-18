@@ -295,6 +295,21 @@ def generate_launch_description():
                         'frame_prefix': frame_prefix,
                     }.items()
                 ),
+
+                # ZDA serial bridge (SBG SbgUtcTime -> $GPZDA on
+                # gabby /dev/ttyS2 -> M3 sonar serial input)
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'zda_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'namespace': namespace,
+                    }.items()
+                ),
             ]
         ),
 
