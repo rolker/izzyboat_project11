@@ -18,7 +18,7 @@ restart of CAMP to verify.
 
 ## 1. Symptom and graph snapshot
 
-2026-05-01T17:55-04:00 — CAMP on salmon (`/operator/camp`, PID 35757)
+**2026-05-01T17:55-04:00** — CAMP on salmon (`/operator/camp`, PID 35757)
 shows heartbeat / mission-status / platforms updating, but the
 per-platform nav widgets are not displaying boat position, heading,
 or speed. Operator-side `udp_bridge` topic statistics show the
@@ -75,7 +75,7 @@ seems to make it through.
 
 ## 3. Workaround on CAMP
 
-2026-05-01T17:58-04:00 — In `layers/main/ui_ws/src/camp/` (gitcloud
+**2026-05-01T17:58-04:00** — In `layers/main/ui_ws/src/camp/` (gitcloud
 origin, branch `jazzy`):
 
 - Edited `src/camp/nav_source.cpp` lines 40, 45, 50, 62, 67, 79, 84:
@@ -96,7 +96,7 @@ publisher offers (RELIABLE or BEST_EFFORT). With both ends
 effective semantics as the prior `SensorDataQoS()`, no regression
 for non-bridged local sensor publishers.
 
-2026-05-01T18:05-04:00 — CAMP restarted. Nav widgets still not
+**2026-05-01T18:05-04:00** — CAMP restarted. Nav widgets still not
 populating. `/operator/camp` node info confirms the broader symptom:
 **zero `NavSatFix` / `Imu` / `Twist*` subscribers** in the graph at
 all. The CAMP-side QoS swap was a misdiagnosis: the issue isn't that
@@ -114,7 +114,7 @@ bridge.
 
 ## 4. Bridge fix — switch resolver default to RELIABLE
 
-2026-05-01T18:10-04:00 — In `layers/main/core_ws/src/udp_bridge/`
+**2026-05-01T18:10-04:00** — In `layers/main/core_ws/src/udp_bridge/`
 (gitcloud origin, branch `jazzy`):
 
 - Edited `udp_bridge/include/udp_bridge/qos_resolution.h:35-37`:
@@ -165,7 +165,7 @@ applies them — coordinated redeploy is the supported configuration.
 
 ## 5. Session wrap-up
 
-2026-05-01T18:47-04:00 — Boat recovered. Session ending without
+**2026-05-01T18:47-04:00** — Boat recovered. Session ending without
 operational verification of the bridge fix on running hardware: the
 fix was pushed to gitcloud but gabby's bridge would have needed
 `git pull && colcon build && restart` to pick it up. Whether that
