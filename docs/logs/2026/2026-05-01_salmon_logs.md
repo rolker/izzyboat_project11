@@ -169,8 +169,8 @@ applies them — coordinated redeploy is the supported configuration.
 operational verification of the bridge fix on running hardware: the
 fix was pushed to gitcloud but gabby's bridge would have needed
 `git pull && colcon build && restart` to pick it up. Whether that
-happened during this session is not visible from salmon. Carry-
-forwards for the dev side to handle on the wrap-up PR:
+happened during this session is not visible from salmon.
+Carry-forwards for the dev side to handle on the wrap-up PR:
 
 - **Verify the fix on the next deployment** — restart bridges on
   both sides on the new code and confirm CAMP nav widgets populate

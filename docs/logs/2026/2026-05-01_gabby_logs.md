@@ -121,6 +121,10 @@ across both packages rather than churning a one-line commit now.
   bumping `min_utc_status` default from 1 to 2 once we're sure all
   downstream M3 / sounder consumers care about leap-second-correct
   time. Conservative default for now.
+  *(Update 2026-05-18: bumped to 2 in `marine_tools#9` and in this
+  PR's `zda_launch.py` — leap-second-correct time is now the
+  default, downgrade to 1 only if a consumer prefers degraded time
+  over no time.)*
 - Future: harmonize the rclpy shutdown pattern in `zda_serial_bridge`
   and `sound_speed_bridge` to avoid the cosmetic shutdown traceback
   (e.g. `if rclpy.ok(): rclpy.shutdown()` in `main()`'s finally).
