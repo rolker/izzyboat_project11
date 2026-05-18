@@ -189,14 +189,14 @@
               oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 100}
               oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, period: 1.0}
-              oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
-              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 100}
+              # oak_segmentation_starboard_info / _raw not in VPN topics_list
+              # (uplink budget — overlay only).
               # oak_aft_ffmpeg removed from VPN (still in wifi block above).
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: 1.0}
               oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, period: 1.0}
-              oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
-              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 100}
+              # oak_segmentation_port_info / _raw not in VPN topics_list
+              # (uplink budget — overlay only).
               battery: {source: /bizzy/mavros/battery}
               plan: {source: plan}
               platforms: {source: /marine/platforms}
