@@ -28,15 +28,26 @@ issue: 122
   are false positives: the asymmetry is pre-existing on jazzy, and
   `topics:` is a lookup pool that's not 1:1 with `topics_list`.
   Replies posted; threads resolved via GraphQL `resolveReviewThread`.
-- [ ] **Deferred (optional)** suggestions from the self-review:
-  expose `min_utc_status` / `require_utc_sync` as launch args in
-  `bizzyboat_project11/launch/zda_launch.py`; clean up dead
-  starboard/port VPN `_info`/`_raw` mappings for symmetry; tighten
-  PR body framing of the QoS rule (consistency with udp_bridge#16 /
-  camp#51 wording).
+- [x] **Suggestion 3** — expose `zda_min_utc_status` /
+  `zda_require_utc_sync` as launch args in
+  `bizzyboat_project11/launch/zda_launch.py` + wrap typed
+  substitutions (`baud`, `min_utc_status`, `require_utc_sync`) with
+  `ParameterValue(value_type=...)` so rclpy's strict typing is
+  honoured without relying on launch-side YAML coercion (commit
+  `f7d43c5`).
+- [x] **Suggestion 4** — drop dead starboard/port `_info`/`_raw`
+  mappings from the VPN `topics:` block; they were never in
+  `topics_list`. Replace with brief comments noting the uplink-budget
+  rationale (commit `94ad894`).
+- [x] **Suggestion 5** — PR body refreshed: added "Review-cycle
+  follow-ups" section documenting `aa8c894` / `f7d43c5` / `94ad894`;
+  refreshed cross-repo dependency table to reflect today's merges of
+  `marine_tools#9` and `camp#51`. Body has no QoS-rule statement to
+  invert (the inversion the self-review flagged must have been in an
+  earlier body that already got cleaned up).
 - [ ] **Blocked on** [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16)
   (another agent is finishing review/merge). Once that merges,
-  optional final pass through this PR + take out of draft + merge.
+  final review pass through this PR + take out of draft + merge.
 
 ### Cross-repo dependency status
 - [`rolker/marine_tools#9`](https://github.com/rolker/marine_tools/pull/9): ✅ merged 2026-05-18
