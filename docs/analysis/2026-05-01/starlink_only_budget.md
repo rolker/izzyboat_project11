@@ -59,16 +59,39 @@ spike combined demand to 30–40 Mbps on a link with ~10 Mbps "no-significant-lo
 capacity — which is exactly what produced the §1.1 starboard 1.06 MB/s peak drop in
 the deployment data.
 
-Keyframe-burst mitigations (lowest to highest effort):
+Current encoder config (verified 2026-05-19 in
+[`bizzyboat_project11/launch/oak_cameras_launch.py`](../../../bizzyboat_project11/launch/oak_cameras_launch.py)
+L9–18): **all four OAK cameras are at `h265_bitrate_kbps: 800`**, default
+`h265_keyframe_frequency_frames: 30` and **`fps: 5`** (`camera_base.hpp:21`
+default, no override) → **6 s GOP**, profile `H265_MAIN`. Rate control mode
+is not set, inherits depthai property default **CBR**. The 2.27 Mbps VPN
+average matches the configured target faithfully — the encoder is hitting
+CBR, the peaks are IDR-keyframe bursts within the CBR budget (depthai's
+CBR averages over a window, not per-frame; at 5 fps each frame carries
+~160 kbits mean, and IDRs for busy scenes can run many ×).
 
-1. **Stagger keyframes** across cameras — OAK encoder config tweak; doesn't change
-   bitrates, just decorrelates the spikes.
-2. **Longer GOP** — fewer keyframes per second; same total bytes, smoother in time.
-3. **CBR / capped-VBR** instead of unconstrained VBR — flattens peaks at the cost of
-   some motion-scene quality.
-4. **Lower per-camera bitrate** — current target is ~800 kbps each (PR #123 set
-   forward to 800; others may differ). 500 kbps × 3 = 1.5 Mbps avg, proportionally
-   smaller peaks.
+Keyframe-burst mitigations:
+
+1. **Stagger keyframes** across cameras via coprime
+   `h265_keyframe_frequency_frames` — the depthai v2.x API has no explicit
+   GOP-phase offset, but coprime intervals make IDR coincidences essentially
+   impossible. Doesn't change average bitrate. At fps=5 this is **the
+   primary lever**. **Landed in PR
+   [#134](https://github.com/rolker/unh_echoboats_project11/pull/134)**
+   (issue [#133](https://github.com/rolker/unh_echoboats_project11/issues/133))
+   with per-camera intervals 23/29/31/37 frames (forward shortest, aft
+   longest).
+2. **Longer GOP** — already at 6 s. Going further (12+ s) is unattractive
+   because viewer-recovery on packet loss is already at the upper edge of
+   usable.
+3. **CBR strictness** — already on CBR by default. No `capped-VBR` mode
+   exists in depthai's API (`VideoEncoderProperties::RateControlMode` is
+   `{CBR, VBR}` only; `maxBitrate` field exists but has no setter). No
+   further lever here.
+4. **Lower per-camera bitrate** — diminishing returns given averages already
+   match the 800 kbps target. The win would be proportionally smaller IDR
+   keyframes (rough rule of thumb: IDR ≈ 5–15× per-frame mean), not lower
+   averages.
 
 ## Decision matrix — Starlink-only operating modes
 

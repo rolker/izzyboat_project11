@@ -104,6 +104,21 @@ Full timeline CSV: `/tmp/q3a.csv`.
 
 **Key insight**: PR #123's `queue_size: 100` tuning addresses publisher-queue overflow drops, but `send_dropped_bps` here is the **rate-limiter-killed** bytes — a different mechanism. The ffmpeg streams are competing for the per-link bandwidth budget and the limiter is throwing away over 1 MB/s of starboard camera data at peak.
 
+**Configured bitrate context**: all four OAK cameras are set to
+`h265_bitrate_kbps: 800` in
+[`bizzyboat_project11/launch/oak_cameras_launch.py`](../../../bizzyboat_project11/launch/oak_cameras_launch.py)
+(L9–18), running at the camera_base default **fps=5** (no override). The
+88–100 kB/s observed averages above are ~800 kbps — the encoder is
+faithfully hitting its CBR target. The 1.06 MB/s starboard peak drop is
+therefore an **IDR-keyframe burst within a CBR budget**, not encoder
+runaway. At fps=5 the default `h265_keyframe_frequency_frames=30` is a
+**6 s GOP**, and depthai's CBR averages over a window — single IDR frames
+can still be many × the per-frame mean. (Rate-control mode is not set in
+the launch, so it inherits the depthai property default — `CBR`.)
+See [#133](https://github.com/rolker/unh_echoboats_project11/issues/133)
+and PR [#134](https://github.com/rolker/unh_echoboats_project11/pull/134)
+for the coprime-stagger remediation.
+
 ### §1.5 Resend-layer activity
 
 **~1/3 of wire bandwidth was retransmits, not original messages**:
