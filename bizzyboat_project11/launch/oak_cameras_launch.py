@@ -6,15 +6,29 @@ from launch_ros.substitutions import FindPackageShare
 
 # BizzyBoat OAK camera MXIDs (verified 2026-03-30). Each entry may carry
 # optional flags; absent flags fall back to sea_surface_segmentation defaults.
+#
+# Coprime `h265_keyframe_frequency_frames` (23/29/31/37) decorrelate H.265
+# IDR keyframes across cameras so simultaneous IDR bursts don't overrun the
+# Starlink uplink (~5 Mbps lossy knee). The depthai v2.x VideoEncoder has
+# no GOP-phase offset or runtime forceIntraRequest, so pairwise-coprime
+# intervals are the only API-supported decorrelation. Aft has the longest
+# GOP since slower error-recovery hurts least on the least-critical view;
+# forward (primary nav view) has the shortest. At fps=5 the per-camera
+# GOPs are 4.6 / 5.8 / 6.2 / 7.4 s; the joint period (LCM) is ~42 hours,
+# so coincidences are effectively eliminated within a single deployment.
 CAMERAS = {
     'oak_forward':   {'mx_id': '19443010D117872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800},
+                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_keyframe_frequency_frames': 23},
     'oak_starboard': {'mx_id': '19443010E11A872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800},
+                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_keyframe_frequency_frames': 31},
     'oak_aft':       {'mx_id': '14442C10917D8DD700', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800},
+                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_keyframe_frequency_frames': 37},
     'oak_port':      {'mx_id': '194430106121872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800},
+                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_keyframe_frequency_frames': 29},
 }
 
 
