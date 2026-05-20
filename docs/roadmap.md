@@ -176,19 +176,32 @@ parts. Documentation for student operators is the only must-finish.
 
 ### Class-day operator observability *(new theme — 2026-04-27; major expansion 2026-05-19)*
 
-The 2026-04-27 deployment surfaced an asymmetry: boat-side instrumentation is rich, operator-side is sparse. The annunciator silently kept showing OK during an RTK loss because the udp_bridge wedge had stalled `/diagnostics`. Class operators need real-time visibility into the operator-side network + a way to know when the diagnostic stream itself is stale.
+Student operators won't intuit silent failures the way an expert does.
+The 2026-05-19 deployment surfaced three silent-failure shapes —
+Nav2 lifecycle bringup aborted without alert, network monitors crashed
+silently at startup, bridge stats publication stalled for 1h17m —
+sharing the same gap: operator finds out by accident, not by alert.
 
-The 2026-05-19 deployment surfaced three more silent-failure shapes from one session: (a) Nav2 lifecycle bringup aborted with no operator alert until a goal was rejected, (b) operator-side `mikrotik_monitor` + `teltonika_monitor` crashed at startup with no alert (just showed STALE in the aggregator), (c) operator-side udp_bridge stats publication stalled for ≈1h17m while data plane stayed healthy. All three share the same gap: the operator finds out by accident or by failed user action, not by an alert. The brainstorm response settled on a defense-in-depth approach using existing ROS 2 primitives (`DiagnosticStatus`, `~/transition_event`, built-in `topic_statistics`) rather than a new lifecycle manager.
+**Architecture decision**: the diagnostic aggregator is not in the
+operator UI path — the annunciator subscribes to `/diagnostics`
+directly. Aggregator output has no user-facing consumer; the rqt
+aggregator view plugin caused problems and isn't used. Direction is
+"publishers → /diagnostics → annunciator," no aggregator middleman.
 
-- [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — run network monitor nodes on salmon + record salmon-side `/diagnostics` during deployments
-- [`rolker/ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5) — *(2026-05-19)* add observability mode: emit `DiagnosticStatus` for tracked processes and lifecycle nodes (`~/transition_event` subscription + process-death detection + `ros2launch_session run` CLI for per-host adoption). **Main vehicle** for closing the silent-failure gap; should ship before the June 2026 class.
-- [`rolker/ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) — *(2026-05-19)* `mikrotik_monitor` + `teltonika_monitor` crash silently on startup if initial connect fails — needs try/except + backoff. Symptom that would have shown up via `ros2launch_session#5` even before the underlying try/except fix.
-- [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) — *(2026-05-19)* `/Operator/*` diagnostics aggregator buckets STALE because publishers live under `/Other/*` (config drift). Aggregator-config cleanup.
-- [`unh_echoboats_project11#142`](https://github.com/rolker/unh_echoboats_project11/issues/142) — *(2026-05-19)* host thermals as `DiagnosticStatus` (lm-sensors + NVMe SMART). Investigate-and-integrate (likely off-the-shelf package available).
-- [`unh_echoboats_project11#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) — *(2026-05-19)* replace `output='screen'` with `output='both'` in BizzyBoat launches — multiplies the value of any of the above by making crash output recoverable post-mission.
-- [`unh_echoboats_project11#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) — *(2026-05-19)* remove stale `bencloud` ping target (doesn't reflect WG link). Small but contributes to "toplevel ERROR is always lit" noise.
-- *(future)* annunciator stale-stream indicator on `rqt_operator_tools` — distinguish "everything OK" from "stream wedged, last value stale"
-- *(future)* topic-staleness layer using built-in ROS 2 `topic_statistics` + aggregator analyzers — sibling concern to `ros2launch_session#5`; addresses the udp_bridge stats-stall failure shape. Most natural home `unh_marine_autonomy`; deferred to its own session.
+**Must finish before June 4 — small easy wins, do these first:**
+- [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) reframed — **remove** the `diagnostic_aggregator` from operator launches. Strip the Node from `operator_core_launch.py` + delete the unused aggregator config in `diagnostics.yaml`. Eliminates the "STALE bucket / config drift" misdirection 2026-05-19 surfaced.
+- [`unh_echoboats_project11#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) — `output='screen'` → `output='both'` in BizzyBoat launches. One-line change. Crash output recoverable post-mission.
+- [`unh_echoboats_project11#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) — remove stale `bencloud` ping target. Trivial. Reduces the chronic alert-fatigue noise.
+- [`rolker/ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) — try/except + backoff for `mikrotik_monitor` / `teltonika_monitor`. Small fix; prevents the silent-startup-crash failure shape directly (without needing ros2launch_session#5 to catch it as a generalization).
+- [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — run network monitor nodes on salmon + record salmon-side `/diagnostics` during deployments. Already in the deployment process intent; confirm it's actually wired up and recording.
+
+**Desirable, defer if needed:**
+- [`rolker/ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5) — observability mode. Substantial implementation. Catches the lifecycle-abort + silent-process-death failure shapes as a general mechanism. Would close the biggest remaining observability hole, but the rest of the easy wins above already deliver most operator-visible value. Treat as stretch goal — if it ships before June 4 great, otherwise the workaround is documented manual checks at launch time + students drilled to recognize "I queued a goal and nothing happened" as a system problem requiring expert help.
+- [`unh_echoboats_project11#142`](https://github.com/rolker/unh_echoboats_project11/issues/142) — host thermals as `DiagnosticStatus` (lm-sensors + NVMe SMART). Off-the-shelf package available; do if quick, defer if not.
+
+**Future:**
+- annunciator stale-stream indicator on `rqt_operator_tools`.
+- topic-staleness layer via `topic_statistics` + aggregator analyzers (the analyzer module — doesn't require running the aggregator node).
 
 ### Network reliability under load *(new theme — 2026-04-27)*
 
