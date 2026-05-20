@@ -3,7 +3,7 @@
 **Host**: gabby
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: git-bug `e3c373a` — *Deployment 2026-05-19: Starlink-only operation + OTH survey test* (shared one-way via gitcloud; GitHub counterpart on dev side)
+**Deployment**: [#135](https://github.com/rolker/unh_echoboats_project11/issues/135) — *Deployment 2026-05-19: Starlink-only operation + OTH survey test* (git-bug `e3c373a`; field-host shared one-way via gitcloud at write-time; GitHub link added dev-side at wrap-up)
 
 ## Summary *(agent-drafted, Roland to revise to user voice)*
 
