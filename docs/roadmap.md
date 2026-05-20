@@ -61,10 +61,42 @@ visible from one place.
 - [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up. Software pipeline live 2026-04-27 (#94); M3 1PPS time-sync chain completed 2026-05-01 (#121); QINSy SBG hookup live.
 - NTRIP — MassDOT source tested at Lake Massabesic; works with current configuration.
 
-### Camera obstacle avoidance
+### Surface-obstacle awareness — camera + costmap
 
-- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault (blocker)
-- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK→costmap validation (blocked on #6); per-camera `frame_ids` parameter + URDF-aligned `<label>_optical_frame` default across all `CameraBase` publisher paths landed via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (merged 2026-04-28)
+The 2026-05-01 mooring-ball near-miss made this concrete: cameras see
+surface obstacles, but segmentation output is not feeding the Nav2
+costmap, so the autonomy planner has no awareness. With student
+operators driving the boat at Lake Massabesic — where the obstacle set
+is recreational boats and kayaks (no swimmers; the lake is a
+drinking-water reservoir) and drifting debris — the operational gap
+matters.
+
+**Two-tier delivery — display first, planning second.** The display
+path has a lower bar because it doesn't have to be perfect to be useful
+— an operator looking at a noisy costmap still gets situational
+awareness value. The planning path is much higher bar: the autonomous
+planner needs the costmap to be trustworthy before it'll improve
+autonomy quality.
+
+**Priority for June 4** (display path):
+- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. High priority but not yet on the active "next-item-to-do" list. Hard blocker on everything downstream of segmentation → costmap fusion. Needs to land on someone's plate.
+- [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK → costmap validation. Blocked on #6. End state for display-first: "a costmap is being published, populated by segmentation, and the operator can see it."
+- [`rolker/unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) — operator-side local costmap display. Becomes critical-to-have once #6 / #7 ship. 2026-05-19 measured ~78% loss on the wifi path for the costmap topic; bandwidth budget needs to fit.
+- Per-camera `frame_ids` + URDF-aligned `<label>_optical_frame` default via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-28). *(Done.)*
+
+**Defer past June 4** (planning path):
+- Using the costmap for autonomous planning. Requires costmap quality
+  to be much higher than the display-only bar. Maintenance-mode work.
+
+**Fallback plan if the display path doesn't ship in time:**
+- Vigilant camera-watching — current SOP. Multi-operator station means
+  multiple eyes (you + 3–4 students + engineer helpers).
+- Pre-plan exclusion zones around docks, traffic lanes, shoreline.
+- Manual override / RC takeover drilled with student operators before
+  going autonomous.
+- (See also Navigation reliability — [`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24)
+  lets the operator drop survey speed on demand for any reason,
+  including obstacle reaction time.)
 
 ### Navigation reliability
 
@@ -135,14 +167,6 @@ The 2026-05-01 deployment ran the boat past visual range with the new comms stac
 
 - **BT `SkipUnknownTaskType` catchall masks execution failures** — top-level `ReactiveFallback` can't distinguish "no script condition matched" from "matching subtree's execution failed", so the catchall fires on action ABORTs and silently marks tracklines done. Forensic match for the 2026-05-01 15:09 HOLD episode (FollowPath ABORTED → SurveyLineTask sequence failed → catchall fired → trackline marked done → `done_hover` activated). Needs a new task issue against the BT / mission_manager. See gabby log §11.
 - **GUIDED stale-setpoint HOLD verified working** — when `cmd_vel` publication stops, FCU correctly enters HOLD. Confirmed Nav2-crash failsafe behaves as intended.
-
-### Perception → costmap *(new theme — 2026-05-01)*
-
-The 2026-05-01 mooring ball near-miss made this concrete: cameras can see surface obstacles, but segmentation output is not feeding the Nav2 costmap, so the autonomy planner has no awareness. This is a real survey-readiness blocker — any autonomous survey will be in waters with mooring balls, debris, and other vessels.
-
-Existing tracker: [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) (end-to-end OAK → costmap validation). Currently blocked on [`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) (`SeaSurfaceLayer::matchSize()` segfault). Today reinforces the priority — without this, autonomous survey requires constant manual override for surface-obstacle avoidance.
-
-**Companion concern**: [`rolker/unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) — *(2026-05-19)* operator-side local costmap display: characterize transmission cost + design path to CAMP. 2026-05-19 measured ~78% loss on `/bizzy/local_costmap/costmap` over WiFi (small fragmented topics fine, large multi-fragment topic punishing). Becomes operationally critical the moment perception→costmap fusion lands — operator needs to see the obstacles the boat is reasoning about, especially for OOL ops where direct visual is impossible.
 
 ## Deferred / lower priority — no current issue
 
