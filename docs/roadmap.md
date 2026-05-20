@@ -155,11 +155,24 @@ still load-bearing for sonar processing.)
 
 ### Class-ready operator UI
 
-- [`rolker/rqt_operator_tools#2`](https://github.com/rolker/rqt_operator_tools/issues/2) — operator logbook (Phase 1 landed, not field-tested)
-- [`rolker/rqt_operator_tools#29`](https://github.com/rolker/rqt_operator_tools/issues/29) — pre-launch checklist (form factor TBD)
-- [`rolker/rqt_operator_tools#31`](https://github.com/rolker/rqt_operator_tools/issues/31) — rqt_camera_grid: harden destructor↔callback sync + audit `currentText()` reads
-- [`rolker/rqt_operator_tools#32`](https://github.com/rolker/rqt_operator_tools/issues/32) — rqt_camera_grid: `populate_topic_combo` Refresh re-leaks display label
-- [`unh_echoboats_project11#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) — student-facing operating documentation
+The interactive surface (logbook, checklist, camera grid) is in
+good-enough shape — Phase-1 plugins exist or the current config works,
+and students can fall back to text editor / paper for the recording
+parts. Documentation for student operators is the only must-finish.
+
+**Must finish before June 4:**
+- [`unh_echoboats_project11#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) — student-facing deployment guide. Students operate without an expert next to them. Draft from the BizzyBoat deployment logs.
+
+**Nice-to-have / acceptable workaround:**
+- [`rolker/rqt_operator_tools#2`](https://github.com/rolker/rqt_operator_tools/issues/2) — operator logbook Phase 1. Field-untested but acceptable. Students can use a text editor for shift logs if the plugin isn't yet trusted.
+- [`rolker/rqt_operator_tools#29`](https://github.com/rolker/rqt_operator_tools/issues/29) — pre-launch checklist. Paper or text-file checklist is acceptable for the class. Promote to active dev if capacity opens up; otherwise capture the checklist content in #18.
+- [`rolker/rqt_operator_tools#31`](https://github.com/rolker/rqt_operator_tools/issues/31) / [`#32`](https://github.com/rolker/rqt_operator_tools/issues/32) — rqt_camera_grid hardening. Current grid configuration is working and not being reconfigured; the bugs only manifest under reconfiguration. Don't touch unless reconfiguration becomes necessary.
+
+**Operator-side background map** *(from background-data theme split)*:
+- Students will find a suitable background map (NHGranIT contours,
+  aerial imagery, etc.) before June 15 as part of their integration
+  work. No developer-side starter needed.
+- *(See companion: [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) operator-side local costmap display — only matters once camera→costmap fusion ships.)*
 
 ### Class-day operator observability *(new theme — 2026-04-27; major expansion 2026-05-19)*
 
