@@ -22,8 +22,8 @@
         mru:
           topics:
             orientation: "mavros/imu/data"
-            position: "mavros/global_position/global"
-            velocity: "mavros/local_position/velocity_body"
+            position: "mavros/global_position/raw/fix"
+            velocity: "mavros/global_position/raw/gps_vel"
 
 /**/deltat:
   ros__parameters:
@@ -40,8 +40,8 @@
       mru:
         topics:
           orientation: "mavros/imu/data"
-          position: "mavros/global_position/global"
-          velocity: "mavros/local_position/velocity_body"
+          position: "mavros/global_position/raw/fix"
+          velocity: "mavros/global_position/raw/gps_vel"
     sensor_names:
     - mru
 
@@ -231,8 +231,10 @@
       # FCU EKF3-fused nav at CG (mavros local_position plugin). These
       # are the FCU-side counterparts to SBG's ekf_nav / ekf_quat /
       # imu_data so SBG-vs-FCU comparison at base_link is reproducible
-      # from the bag. velocity_body is also what mru_transform consumes
-      # to produce /bizzy/odom.
+      # from the bag. velocity_body was the mru_transform velocity
+      # input under the 2026-04-28 config; the 2026-05-19 field revert
+      # restored raw/gps_vel (see mru_transform block above). Durable
+      # nav-input choice tracked in #138 (FCU reconfig).
       - /bizzy/mavros/local_position/odom
       - /bizzy/mavros/local_position/pose
       - /bizzy/mavros/local_position/velocity_local
