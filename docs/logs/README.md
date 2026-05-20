@@ -124,11 +124,20 @@ top-to-bottom in time.
 1. User signals: "wrap up the deployment" / "close out".
 2. Field machines push their logs to gitcloud at end of session.
 3. Dev pulls those into the worktree branch.
-4. Dev agent reviews the full deployment, opens follow-up task issues
+4. **Dev integrates brief summaries of significant field-agent log
+   entries into the dev log's Timeline** so the dev log alone provides
+   an at-a-glance view of the full deployment. Each integrated entry
+   stays one sentence (drill-down lives in the source log) and tags
+   its origin, e.g. `gabby agent (gabby log §N): …`. Avoid restating
+   what the dev log already covers via the operator's real-time
+   observations — only fill gaps. Cross-host observations that
+   contradict each other deserve an inline reconciliation entry, not
+   silent overwrites.
+5. Dev agent reviews the full deployment, opens follow-up task issues
    for any genuine carry-forward, updates `docs/roadmap.md` with
    anything that's "do this someday but not now".
-5. Dev pushes, gets the PR ready for review, merges.
-6. Merging closes the deployment issue.
+6. Dev pushes, gets the PR ready for review, merges.
+7. Merging closes the deployment issue.
 
 ### Deferred / no-issue items → roadmap
 
@@ -167,6 +176,7 @@ repo-specific label — create it the first time if it doesn't exist.)
   - any task-specific deep-dive log files spun off during the session
     (see [Task-specific deep-dive logs](#task-specific-deep-dive-logs))
 - **Wrap-up checklist** — push field logs to gitcloud, pull to dev,
+  integrate brief field-agent timeline entries into the dev log,
   audit for carry-forward, open follow-up task issues, update
   `docs/roadmap.md` with anything deferred, merge the wrap-up PR
 
