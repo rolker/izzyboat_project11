@@ -3,11 +3,7 @@
 **Host**: salmon
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: git-bug `e3c373a` — "Deployment 2026-05-19: Starlink-only
-operation + OTH survey test" (created dev-side
-2026-05-19T11:01:22-04:00; no GitHub bridge configured field-side, so
-the GH issue number is not resolved here — dev side holds the
-canonical link)
+**Deployment**: [#135](https://github.com/rolker/unh_echoboats_project11/issues/135) — "Deployment 2026-05-19: Starlink-only operation + OTH survey test" (git-bug `e3c373a`; created dev-side 2026-05-19T11:01:22-04:00; no GitHub bridge configured field-side at write-time, so the GH link was added dev-side at wrap-up)
 
 ## Summary
 
