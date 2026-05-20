@@ -119,14 +119,39 @@ autonomy quality.
 **Defer past June 4:**
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults). Not critical for single-boat ops; promote when joint Bizzy + Izzy ops come into scope.
 
-### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01)*
+### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01; FCU side outstanding)*
 
-The 2026-04-29 in-water bag exposed that neither the SBG nor the FCU was reporting position at `base_link` — each published at its own GNSS antenna (0.64 m fore-aft body-frame offset between them). The URDF didn't model the SBG IMU/antennas, and the EKF3-fused mavros streams weren't being recorded, so cross-checks had to fall back to downstream `/bizzy/odom`. These three issues are a unit: pick a contract, model the geometry, and capture the streams that prove it's working.
+The 2026-04-29 in-water bag exposed that neither the SBG nor the FCU
+was reporting position at `base_link` — each published at its own GNSS
+antenna (0.64 m fore-aft body-frame offset). 2026-05-01 closed the SBG
+side via sbgCenter Output Location. The mavros side and the durable
+EKF Z reference both remain — and both can land via a single FCU
+reconfiguration.
 
-- [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — model SBG INS, GNSS antenna(s), and IMU mounting alignment on bizzyboat (URDF gap). **Still open** — today's fixes addressed the *config* side; the URDF gap (no SBG body / Trimble antennas modeled) remains.
-- [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — define lever-arm/base_link contract for SBG and mavros position streams. **Resolved live 2026-05-01** — the SBG sbgCenter Output Location was the missing config; with it set, both SBG and FCU now report at `base_link`. gabby agent confirmed agreement live; quantitative verification is post-mission ([#124](https://github.com/rolker/unh_echoboats_project11/issues/124)).
-- [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record `mavros/global_position/global` + EKF3-fused `local_position/*` + `altitude`. **Fixed in [#123](https://github.com/rolker/unh_echoboats_project11/pull/123)**, awaiting merge.
-- [`unh_echoboats_project11#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) — *(2026-05-19)* `mru_transform`: choose durable nav-input source after the ellipsoidal-vs-EKF discovery that aborted the nav stack mid-deployment. Field-side revert to `mavros/global_position/raw/fix` (commit `c36acfa`, cherry-picked onto PR #136 as `ece31dc`) is mission-enabling but a workaround; the proper design choice (mavros raw vs SBG vs mavros + geoid compensation) hooks into `#110` lever-arm work.
+**Why getting this right matters operationally**: tide / water-level
+estimation depends on it. The 2026-05-19 nav-stack abort was driven
+exactly by this chain — mavros `/global` Z was wrong (baro tracking
+weather pressure, not GPS altitude), so `sea_surface_estimator`
+produced implausible water-level estimates, so `map → map_tide` was
+never broadcast, so `local_costmap` couldn't activate, so
+`bt_task_navigator` rejected goals. A correct base_link reference and
+correct Z source are not just lever-arm hygiene — they're a prerequisite
+for the tide / water-level / chart-datum chain to function. (For Lake
+Massabesic that chain becomes a "lake-level / chart-datum" chain;
+mathematically the same, no tidal variation but reference geometry
+still load-bearing for sonar processing.)
+
+**Must finish before June 4:**
+- [`unh_echoboats_project11#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) — `mru_transform` durable nav-input choice + FCU reconfig. Set `EK3_SRC1_POSZ = 3` (GPS) so the FCU EKF Z stops tracking atmospheric pressure. Combine with `EK3_GPS_OFFS` / `GPS_POS1_X/Y/Z` so the mavros position output reports at `base_link` rather than the GPS antenna. This single FCU reconfiguration delivers both the durable nav-input answer AND the outstanding mavros half of #111. Field-side revert to `mavros/global_position/raw/fix` is a workaround; FCU reconfig is the durable answer. Needs bench check + at least one deployment to validate before June 4 — schedule accordingly.
+
+**Wrap-up / housekeeping:**
+- [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — lever-arm / base_link contract. SBG half resolved live 2026-05-01; FCU half folds into #138's reconfig. Plan: fold the remaining FCU-side scope into #138's body, then close #111 with a pointer.
+
+**Defer past June 4:**
+- [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — URDF gap (SBG INS + GNSS antennas + IMU mounting). Becomes load-bearing when the camera-image → costmap pipeline ships (need accurate geometric placement for segmentation projection), but it's not on the critical path for the tide / chart-datum chain — which uses the position+altitude topics directly. Until then, documentation-correctness work that can live in maintenance mode.
+
+**Done:**
+- [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record EKF3 streams. **CLOSED** ([PR #123](https://github.com/rolker/unh_echoboats_project11/pull/123) merged 2026-05-18).
 
 ### Class-ready operator UI
 
