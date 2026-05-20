@@ -100,9 +100,24 @@ autonomy quality.
 
 ### Navigation reliability
 
-- [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals
-- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → nav2 `/speed_limit` (per-task survey speed); deployment 2026-04-27 worked around with shared `default_speed` bump
-- [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults)
+**Must finish before June 4:**
+- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → `/speed_limit`. High priority operational item — per-task speed from a CAMP-sent mission is needed for normal operations (different survey speeds for different segments / line types), not just as a safety fallback. Current `default_speed` bump workaround from deployment 2026-04-27 doesn't support per-task variation.
+- [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals. No fix landed; 2026-05-19 deployment logs likely still show TF-lookup-out-of-time errors. Survey patterns at the lake will repeatedly trigger this. Verify still occurring, then fix.
+
+**Investigate before June 4:**
+- [`rolker/unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) — costmap-update timeout too aggressive at 1.0s. Open and currently unscheduled. Likely matters once the costmap is populated (Surface-obstacle awareness theme). Check if it's a real bottleneck under realistic load before deciding to fix vs defer.
+- **Boat-side bathy costmap** *(placeholder — needs issue or existing
+  agent-branch link)*. Lake Massabesic has no S57 ENC coverage, so the
+  Nav2 costmap won't have any depth-derived "don't go here" data unless
+  external bathymetry is ingested. Likely consumes NHGranIT contours via
+  [`unh_marine_autonomy#86`](https://github.com/rolker/unh_marine_autonomy/issues/86)'s GGGS data store as a Processed source. Roland recalls
+  possible work on this from another computer — confirm location, then
+  either link existing issue/branch or open new. Borrowable code in
+  `s57_tools`/`marine_charts` for the depth-data → costmap layer
+  plumbing.
+
+**Defer past June 4:**
+- [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults). Not critical for single-boat ops; promote when joint Bizzy + Izzy ops come into scope.
 
 ### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01)*
 
