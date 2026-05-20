@@ -3,6 +3,14 @@
 Per-deployment, per-host log files. Each agent writes its own file; no
 coordination needed for parallel agents on different hosts.
 
+> **Prototype notice**: This convention is the proven prototype for a
+> workspace-level deployment-logging capability tracked in
+> [`rolker/ros2_agent_workspace#477`](https://github.com/rolker/ros2_agent_workspace/issues/477).
+> When updating this file — adding steps, refining wording, adjusting
+> the lifecycle — please also append the change (or a link to the
+> commit/PR) as a comment on that issue, so the workspace design
+> discussion stays in sync with what's proven in BizzyBoat practice.
+
 ## File layout
 
 ```
