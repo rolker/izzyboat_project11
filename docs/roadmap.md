@@ -205,15 +205,24 @@ aggregator view plugin caused problems and isn't used. Direction is
 
 ### Network reliability under load *(new theme — 2026-04-27)*
 
-Multiple network-layer issues surfaced during the same long deployment day: udp_bridge wedges (4×), post-recovery multi-device cycle, op-router forwarding asymmetry, gabby DNS wedge. Themes converge on (a) fix specific bugs, (b) better instrumentation (overlaps with observability theme above).
+2026-05-19 cross-deployment analysis ([`#144`](https://github.com/rolker/unh_echoboats_project11/issues/144) + [`udp_bridge#22`](https://github.com/rolker/udp_bridge/issues/22) comment thread) showed the bridge is in good operational shape: resend storms on wifi loss are by-design behavior, milder than 2026-05-01's worst, and stay within configured rate limits. The remaining items here are real but not class-critical — defer to maintenance mode unless one of them recurs during class prep.
 
-- [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges (reader thread blocked, Recv-Q backup) when remote subscriber dies
-- [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplifies traffic (earlier related)
-- [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) — *(2026-05-01)* forwarding-throughput regression from PR #12 + `rmw_zenoh_cpp` 0.2.9 BEST_AVAILABLE keyexpr workaround
-- [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) — *(2026-05-01)* operator-side QoS fix complementing the bridge default change
-- [`rolker/udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20) — *(2026-05-19)* operator-side stats-timer publication stalls during Starlink-only ops while data-republish keeps working (≈1h17m blind on operator panels). Specific to stats path — video, costmap, heartbeat unaffected.
-- [`rolker/udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21) — *(2026-05-19)* resend-give-up "after N attempts" value varies 5/6/1 across the session — meaningful or counter glitch?
-- *(future)* End-of-day network pathology root-cause work — open once we have more signal from a future deployment with op-side diagnostics in place
+**Track during class prep:**
+- [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges when remote subscriber dies. Real bug; not observed during 2026-05-01 or 2026-05-19. If it surfaces during student-led ops it could be operationally bad, but track rather than promote unless it recurs.
+
+**Maintenance mode after June 4:**
+- [`rolker/udp_bridge#22`](https://github.com/rolker/udp_bridge/issues/22) — "Giving up on resend" WARN log too loud. Concrete fix proposed (demote to DEBUG + `DiagnosticStatus` per remote). Small, easy follow-up, but cosmetic during class itself.
+- [`rolker/udp_bridge#23`](https://github.com/rolker/udp_bridge/issues/23) — restrict resend response to requesting connection. Wire-format change (`connection_id` field). Modest impl, reduces resend amplification under loss. Filed 2026-05-20.
+- [`rolker/udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20) — stats-timer publication stalls. Made operator panels blind for 1h17m during 2026-05-19 (data plane unaffected). Stats are observability — not data path. Less urgent than the observability theme's main vehicle.
+- [`rolker/udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21) — "after N attempts" value varies 5/6/1. Counter interpretation question. Investigate when convenient.
+
+**Future (post-June-4):**
+- [`unh_echoboats_project11#145`](https://github.com/rolker/unh_echoboats_project11/issues/145) — concurrent Starlink + cell with safety-critical traffic pinned to cell. Today's RUTX11-failover model causes a brief outage at every Starlink↔cell switch, blinding the operator before they can react. udp_bridge already supports per-topic-per-connection assignment, so this is primarily a network setup question — router config, possibly a second VPN endpoint for the cell-side path. Pin heartbeat / position / command to a cell-backed connection; let video / costmap / etc. stay on Starlink.
+
+**Done:**
+- [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplification. **CLOSED** via the #13 resend-logic work (exponential backoff + TTL alignment + debounce).
+- [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) — forwarding-throughput regression. **MERGED** 2026-05-01.
+- [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) — operator-side QoS fix complementing the bridge default change. **MERGED** 2026-05-18.
 
 ### Over-horizon operations capability *(new theme — 2026-05-01; update 2026-05-19)*
 
