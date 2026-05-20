@@ -13,16 +13,16 @@ issue: 135
 **CI**: no checks configured for this PR (matches existing project repo pattern)
 
 ### Actions
-- [ ] **C1-3** — Update `bizzyboat_project11/config/bizzyboat.yaml` line 234 comment to reflect the current `gps_vel` config (or strike the velocity-body claim; the durable answer rides on #138 reconfig)
-- [ ] **C16-20** — Add `#135` GitHub link to `docs/logs/2026/2026-05-19_gabby_logs.md` `**Deployment**:` header (dev-side curator action; field-mode host couldn't add it at write-time)
-- [ ] **C25-29** — Add `#135` GitHub link to `docs/logs/2026/2026-05-19_salmon_logs.md` `**Deployment**:` header (same as gabby)
-- [ ] **C23-24** — Reconcile gabby log's Phase 2 "complete / first-OTH" outcome wording (line 56) + `~14:30` mission timestamp (line 549) with dev-log reframe (line-of-sight, partial credit, recovered 14:09). Either edit gabby log directly or add a curator's reconciliation note pointing to dev log 20:48.
-- [ ] **C21-22** — Decide: operator-curate gabby Summary (line 18) + Lessons Learned (line 46), OR accept as agent-draft state
-- [ ] **C30-31** — Decide: operator-curate salmon Summary (line 14) + Lessons Learned (line 18), OR accept as agent-draft state
-- [ ] **C32** — Add to `docs/logs/README.md` near line 13: brief clarification that field-host logs without GitHub credentials may use the git-bug ID alone, with the GitHub link added at wrap-up
-- [ ] **C33** — Clarify `docs/logs/README.md` wrap-up step 3 (line 134): cherry-pick field-host commits from gitcloud into the deployment PR branch (`make sync` alone only updates the local `gitcloud/jazzy` ref, doesn't publish to GitHub)
-- [ ] (Optional) Address editorial nits C6-C10 (tide/current heights + TZ tagging convention), C13-C15 (forward-references / wrap-up bullet predating reframe)
-- [ ] (Optional) Dismiss C11 on the PR (false-positive flag against the canonical agent-team email)
+- [x] **C1-3** — bizzyboat.yaml line 234 comment reconciled (commit `d563ca4`)
+- [x] **C16-20** — gabby log header gains `#135` link (commit `23161c1`)
+- [x] **C25-29** — salmon log header gains `#135` link (commit `9859a58`)
+- [x] **C23-24** — gabby log Phase 2 reconciliation notes appended (commit `8d7308d`)
+- [ ] **C21-22** — Decide: operator-curate gabby Summary (line 18) + Lessons Learned (line 46), OR accept as agent-draft state — deferred (accept as living-record state for merge)
+- [ ] **C30-31** — Decide: operator-curate salmon Summary (line 14) + Lessons Learned (line 18), OR accept as agent-draft state — deferred (accept as living-record state for merge)
+- [ ] **C32** — Add to `docs/logs/README.md` near line 13: brief clarification that field-host logs without GitHub credentials may use the git-bug ID alone, with the GitHub link added at wrap-up — deferred to follow-up
+- [ ] **C33** — Clarify `docs/logs/README.md` wrap-up step 3 (line 134): cherry-pick field-host commits from gitcloud into the deployment PR branch — deferred to follow-up
+- [ ] (Deferred) Editorial nits C6-C10, C13-C15 — historical-author-voice, leave
+- [ ] (Optional) Dismiss C11 on the PR — false-positive flag against canonical agent-team email
 
 ### Already addressed (no action needed)
 - C4, C5 — dev log Summary + Lessons Learned (populated in commit `df40805`)
