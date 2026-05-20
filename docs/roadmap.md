@@ -16,9 +16,18 @@ to the pier — all without user intervention.
 
 ## Forcing function
 
-**Field hydrography class — June 2026.** Students plan surveys, monitor
-execution, configure sonar software, and measure offsets. The system
-must be reliable and novice-friendly by then.
+**Summer Hydro 2026 — class + real lake survey.**
+- **June 4**: Class starts. Roland teaches boat operation; students learn
+  survey-component integration in parallel. Heavy development should be
+  **done by this date** — switch to maintenance mode thereafter.
+- **June 15 → ~June 29**: Two-week real survey at Lake Massabesic, NH.
+  10 students rotate in 3 daily groups (3–4 students/day) plus engineer
+  / intern helpers.
+
+This is a real survey for a real customer, not a class exercise — the
+system must work, not just demonstrate. Hydrographic-quality output is
+the educational goal even though the operational bar is lower. The
+system must support multi-operator handoff across daily cohorts.
 
 ## Active threads (have task issues)
 
