@@ -37,10 +37,29 @@ visible from one place.
 
 ### Sensor payload integration (M3 + SBG + SVS on mercat)
 
-- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up + data flow + NTRIP strategy + NTP. *Software pipeline live end-to-end as of 2026-04-27 (#94); first surveys recorded. M3 1PPS time-sync chain completed 2026-05-01 (#121) — after discovering that the M3 software's Device Properties → Time Sync Mode dropdown was the real gating switch, not the cable / SBG / pulse parameters that occupied most of the morning. QINSy SBG hookup live (position + attitude + heading + heave + GPS QC).*
-- [`unh_echoboats_project11#77`](https://github.com/rolker/unh_echoboats_project11/issues/77) — physical install, offsets, URDF, SVG diagram
-- [`rolker/marine_tools#1`](https://github.com/rolker/marine_tools/issues/1) — QINSy → ROS bridge for coverage / sounding feedback
-- [`unh_echoboats_project11#137`](https://github.com/rolker/unh_echoboats_project11/issues/137) — *(2026-05-19)* M3 sonar: investigate intermittent missing pings (suspected ping-rate × depth correlation). Historical observation — 2026-05-19 was the first time the M3 software's log window was open during ops and the explicit error messages were visible. **Load-bearing for the June 2026 class** if missing pings scale up at the ping-rate × depth combos used for survey grids.
+**Verify before June 4:**
+- AML SVS bridge — believed complete (gabby-side); confirm data is
+  actually being captured in deployment bag files. Some past
+  deployments used the mercat-side PowerShell stand-in
+  (`aml_bridge.ps1`); class cohort handoff shouldn't depend on that.
+- Mercat NTP — believed configured. Promote verification (`ntpq.exe -pn`)
+  to in-class teaching content for students.
+
+**Open decision (decide before June 4):**
+- Sidescan imagery option — install Garmin sidescan (colleague has
+  headless protocol implementation) vs run M3 in imagery mode. Tradeoff
+  is install effort vs imagery quality. *(Needs an issue.)*
+
+**Student-led / deferred:**
+- [`unh_echoboats_project11#137`](https://github.com/rolker/unh_echoboats_project11/issues/137) — M3 sonar intermittent missing pings. Basics work; tuning is in-class student work, not a class-blocker.
+- [`rolker/marine_tools#1`](https://github.com/rolker/marine_tools/issues/1) — QINSy → ROS bridge. Nice-to-have, not class-critical. Students can use QINSy's native display for survey planning.
+
+**Track:**
+- [`unh_echoboats_project11#77`](https://github.com/rolker/unh_echoboats_project11/issues/77) — physical install / offsets / URDF / SVG diagram. Cross-references the URDF gap in [`#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) (both-nav-at-base_link theme).
+
+**Done:**
+- [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up. Software pipeline live 2026-04-27 (#94); M3 1PPS time-sync chain completed 2026-05-01 (#121); QINSy SBG hookup live.
+- NTRIP — MassDOT source tested at Lake Massabesic; works with current configuration.
 
 ### Camera obstacle avoidance
 
