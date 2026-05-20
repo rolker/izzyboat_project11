@@ -294,8 +294,9 @@ they become relevant.
 - **DNS-over-HTTPS on RUTX11** — exploration item, not urgent
 - **WiFi bridge: static routes → default gateway approach** — current
   static-route setup works; cleaner default-gateway redesign deferred
-- **IzzyBoat WireGuard return path fix** — IzzyBoat is parked, fix
-  this before next IzzyBoat deployment
+- **IzzyBoat WireGuard return path fix** — IzzyBoat is parked; tracked
+  under [`unh_echoboats_project11#120`](https://github.com/rolker/unh_echoboats_project11/issues/120) (IzzyBoat parity tracker) for batched
+  migration before the next IzzyBoat deployment.
 
 ### Testing
 
