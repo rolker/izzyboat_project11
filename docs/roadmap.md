@@ -329,6 +329,143 @@ they become relevant.
   couple of months without any pull toward them, they're probably
   dropped, not deferred. Edit them out.
 
+## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20)*
+
+This appendix tags every "Must finish before June 4" item from the
+Active-threads sections above with effort, where it can be worked, and
+critical-path notes — and uses that to size the agent count needed to
+clear the list. Refresh or remove this appendix as items land; it's a
+working sizing document, not durable direction.
+
+**Where coding**: `BF` = boat-free (implement + test off-boat) · `DI` =
+desk-implement, validate on a deployment · `BI` = needs boat to
+implement at all (e.g. apply FCU params, on-water test required to
+exercise the change).
+
+**Effort**: `XS` <2h · `S` 2–8h · `M` 1–3 days · `L` 3–7 days · `XL`
+>7 days or unknown.
+
+### Item-by-item
+
+| # | Item | Effort | Where | Critical-path notes |
+|---|---|---|---|---|
+| **Sensor payload** | | | | |
+| 1 | AML SVS bridge data capture verify | S | BF | Bag analysis; cross-confirm in next deployment |
+| 2 | Mercat NTP verify (`ntpq.exe -pn`) | XS | BF | SSH to mercat |
+| 3 | Sidescan decision (M3 imagery vs Garmin) | S | BF | Decision only |
+| 3b | Sidescan install (if Garmin chosen) | M–L | BI | Physical install + protocol integration |
+| **Surface-obstacle** | | | | |
+| 4 | [`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) segfault | L | BF | **UNOWNED.** Blocks #5 → #6 → display path |
+| 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | Blocked on #6; replay bags for impl, validate live |
+| 6 | [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) op-side costmap display | L | DI | 78% loss measured — bandwidth budget tight; replay-driven impl, validate live |
+| **Navigation reliability** | | | | |
+| 7 | [`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit` | M | DI | Sim/bag wire-up, verify in deployment |
+| 8 | [`unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) TF extrapolation fix | M | DI | Bag-debug, verify in deployment |
+| 9 | [`unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) costmap timeout investigate | S | BF | Bag analysis; decide fix-or-defer |
+| 10 | Boat-side bathy costmap | L–XL | BF | **Triage first** — Roland's "other computer" branch may exist |
+| **Both nav at base_link** | | | | |
+| 11 | [`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) FCU reconfig + validation | S prep + **boat day** | BI | Bench param-write OK; sea_surface chain validation needs water |
+| **Class-ready UI** | | | | |
+| 12 | [`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) student deployment guide | M | BF | Writing-heavy; draft from logs |
+| **Observability — small wins** | | | | |
+| 13 | [`#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) remove `diagnostic_aggregator` | XS | BF | Node delete + YAML cleanup |
+| 14 | [`#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) `output='both'` in launches | XS | BF | One-line |
+| 15 | [`#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) remove `bencloud` ping target | XS | BF | Trivial |
+| 16 | [`ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) try/except + backoff | S | BF | Defensive code |
+| 17 | [`#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) salmon `/diagnostics` recording wiring | XS | BF | Verify |
+| **OTH** | | | | |
+| 18 | [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) OTH field validation | **boat day** | BI | Combinable with #11 |
+| 19 | Topic-budget cull (measure + cull + verify) | M + **boat verify** | DI | Bag-driven measurement BF; verify under load DI |
+| 20 | Low-bandwidth status fallback | L | DI | New node + UI plugin; unit-test BF, real-link DI |
+| 21 | VPN-path indicator | M | DI | Cheaper than #20; UI surface for [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124) |
+| **Autonomy robustness** | | | | |
+| 22 | [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) BT catchall fix | M | BF | Sim/bag testable; review-first recommended |
+| 23 | Broader BT review of `run_tasks.xml` | M | BF | Should precede #22 to scope it |
+
+### Totals
+
+- **Boat-free implementable**: 14 items, ~25–35 agent-days
+- **Desk-implement, boat-validate**: 6 items, ~10–15 agent-days impl + 1–2 boat days for validation
+- **Boat-required to do at all**: 2–3 items (#11, #18 OTH val., optional #3b), need 1–2 boat days
+- **Grand total**: ~40–50 agent-days + 1–2 boat days
+
+### Parallelism — how many agents
+
+Window: 15 calendar days to June 4, ~10 working days × N agents.
+
+| Agents | Capacity | Coverage |
+|---|---|---|
+| 1 | 10 agent-days | ~25% — small wins only; everything else slips |
+| 2 | 20 agent-days | ~45% — small wins + 2–3 mediums; large items mostly slip |
+| 3 | 30 agent-days | ~70% — most Must-finish; 1 large item slips |
+| **4** | **40 agent-days** | **~90% — full Must-finish list with thin margin** |
+| 5 | 50 agent-days | 100% with comfortable margin |
+
+**Recommendation: 4 parallel agents** to clear Must-finish with thin
+margin; **5** if you want room for the broader BT review surfacing
+rework or `#6` debugging exploding.
+
+Hard caps on parallelism that more agents wouldn't relax:
+
+1. **Reviewer bandwidth.** Each agent needs a human reviewer at PR
+   time. You cannot review N PRs per day every day. This is the real
+   ceiling.
+2. **The #4 → #5 → #6 chain.** `unh_marine_perception#6` blocks #5
+   blocks #6. Throwing agents at the chain doesn't speed it up; only
+   at the segfault can things start. One focused agent on #6 + one on
+   #127's bandwidth design (proceeding in parallel against stub
+   costmap data) is the right shape.
+3. **Boat days are serial.** One boat day = one slot for #11 + #18 +
+   #19-verify + #20/#21-verify + #5-validate + #6-validate. Not
+   parallel.
+4. **#11 FCU reconfig blocks tide-chain validation.** Apply FCU params
+   first, then everything that depends on a correct chart-datum chain
+   (#19, OTH validation, costmap reliability) validates on the SAME
+   boat day.
+
+### Suggested agent allocation
+
+| Agent | Focus | Items |
+|---|---|---|
+| **A — Perception** | Display path | #4 segfault → #5 OAK→costmap validation → support #6 design |
+| **B — Comms / OTH** | New operator UI | #21 VPN-path indicator + #19 topic-budget cull measure phase + #20 fallback impl (stretch) |
+| **C — Autonomy / BT** | Safety-critical | #23 broader BT review → #22 catchall fix → #7 BT `target_speed` wire-up → #8 TF fix |
+| **D — Operability / docs / sweeps** | Class readiness | #13–17 small wins (1 day) → #12 student deployment guide → #10 bathy-costmap triage → #1/2 verifies → #3 sidescan decision |
+| **You** | Boat-implement + review + decisions | #11 FCU reconfig prep, #18 OTH validation boat day, sidescan install if chosen, all PR reviews, scope decisions |
+
+### Critical-path sequencing
+
+1. **This week** (day 1–3): Agent D ships all small wins + sets up
+   #12; Agent A starts #6 debug; Agent C does BT review; Agent B
+   starts VPN-path indicator. You triage #10 bathy-costmap
+   immediately and decide #3 sidescan.
+2. **Mid window** (day 4–8): A finishes #6 → starts #5; B finishes
+   #21 → starts topic-budget cull; C finishes review → fixes #22 →
+   wires #24; D drafts #18.
+3. **Boat day** (day 9–10): Apply #11 FCU reconfig, run #18 OTH
+   validation, validate #20/#21/#7/#8/#19 + check #127 bandwidth fit
+   if it's ready. One combined deployment validates everything
+   DI-tagged.
+4. **Buffer** (day 11–15): Address findings from boat day, finish
+   #12 student guide, decide whether #6 planning-path or #20
+   low-bandwidth fallback or the broader BT review needs to absorb
+   the slip.
+
+### Risk callout
+
+Plan assumes:
+- `#6` segfault is debuggable in ~3–5 days. If it's actually XL, the
+  display path slips → Agent A pivots to support #127 bandwidth work
+  and the fallback (vigilant watching + exclusion zones) becomes the
+  class plan.
+- `#10` bathy costmap triage finds existing work. If it's net-new XL
+  effort, drop it from Must-finish and accept "no depth-derived
+  costmap data at the lake."
+- Boat days can be scheduled — weather + access. Need 1, ideally 2 in
+  the window.
+
+---
+
 This document was seeded from the milestone content of
 [`unh_echoboats_project11#57`](https://github.com/rolker/unh_echoboats_project11/issues/57)
 (BizzyBoat field ops umbrella) when that issue was closed in favor of
