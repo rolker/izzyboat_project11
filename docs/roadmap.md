@@ -265,10 +265,17 @@ OTH-specific work below is therefore **class-priority**, not deferred.
 
 ### Autonomy robustness *(new theme — 2026-05-01)*
 
-2026-05-01 deployment surfaced a real BT design issue and validated the GUIDED stale-setpoint failsafe.
+The 2026-05-01 deployment surfaced a real BT design issue (now filed)
+and validated the GUIDED stale-setpoint failsafe.
 
-- **BT `SkipUnknownTaskType` catchall masks execution failures** — top-level `ReactiveFallback` can't distinguish "no script condition matched" from "matching subtree's execution failed", so the catchall fires on action ABORTs and silently marks tracklines done. Forensic match for the 2026-05-01 15:09 HOLD episode (FollowPath ABORTED → SurveyLineTask sequence failed → catchall fired → trackline marked done → `done_hover` activated). Needs a new task issue against the BT / mission_manager. See gabby log §11.
-- **GUIDED stale-setpoint HOLD verified working** — when `cmd_vel` publication stops, FCU correctly enters HOLD. Confirmed Nav2-crash failsafe behaves as intended.
+**Must finish before June 4:**
+- [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) — `SkipUnknownTaskType` catchall in `run_tasks.xml` silently marks tracklines done when a matching subtree's execution fails (e.g. `FollowPath` ABORT). Forensic match for the 2026-05-01 15:09 HOLD episode. Class-significant: a silently-marked-done line at OTH range means the operator sees a "complete" trackline and the boat parked in `done_hover` with no alert — coverage holes show up only post-mission.
+
+**Track during class prep:**
+- **Broader BT review of `marine_nav_bt_task_navigator/behavior_trees/run_tasks.xml`** — the catchall issue (`#25`) is one concrete failure mode; the tree has other shape choices a non-BT-native author may have made differently (e.g. nested `RetryUntilSuccessful num_attempts=3` around `Sequence`, `ReactiveFallback` semantics with stateful subtrees, multiple `_autoremap="true"` blackboard scopes, `KeepRunningUntilFailure`+`Inverter` patterns). Worth a Nav2-BT-experienced second pass before June 4. *(No issue yet — promote to one if the review surfaces concrete findings.)*
+
+**Done:**
+- **GUIDED stale-setpoint HOLD verified working** — when `cmd_vel` publication stops, FCU correctly enters HOLD. Confirmed Nav2-crash failsafe behaves as intended on 2026-05-01.
 
 ## Deferred / lower priority — no current issue
 
