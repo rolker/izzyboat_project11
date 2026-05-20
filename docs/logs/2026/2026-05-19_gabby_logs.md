@@ -56,6 +56,14 @@ mission completed). Boat recovered without incident. Mid-deployment
 incident on `map_tide` / nav stack was diagnosed and fixed in-field
 (see section 13).
 
+> **Editor's note (wrap-up reconciliation 2026-05-20)**: Subsequent
+> dev-side review reframed Phase 2 as *partial credit* — the
+> Starlink-only data-path was validated under sustained autonomous
+> load including an initial survey pattern, but the boat stayed in
+> line of sight visually, so the literal over-horizon element didn't
+> happen. See dev log [`2026-05-19_dev_logs.md`](./2026-05-19_dev_logs.md)
+> 20:48 wrap-up entry. Recovery time per dev log: 14:09 EDT.
+
 ## 1. git-bug bring-up on gabby
 
 **2026-05-19T11:14-04:00** — Roland asked to verify `git-bug` was installed.
@@ -554,6 +562,18 @@ well enough under loss for an OTH autonomous mission. The 2026-05-01
 fixes (coprime keyframe stagger #134, udp_bridge throughput
 regression fix #16, NavSource QoS workaround camp#51) and today's
 in-field `mru_transform` revert all held.
+
+> **Editor's note (wrap-up reconciliation 2026-05-20)**: Dev log
+> records recovery by 14:09 EDT, so this entry's approximate ~14:30
+> timestamp post-dates recovery and is inaccurate. The actual
+> autonomous Starlink-only run is captured in
+> [`2026-05-19_dev_logs.md`](./2026-05-19_dev_logs.md) timeline
+> entries around 13:13–13:47 EDT (cross-harbour trackline on
+> Starlink-only, with the boat staying in line of sight visually).
+> Subsequent dev-side review reframed the result as *line-of-sight
+> Starlink-only with partial Phase-2 credit*, not literal OTH — see
+> dev log 20:48 entry. The "headline result" framing stands for the
+> comms-stack validation; the OTH descriptor here is overstated.
 
 ## Follow-up candidates (for wrap-up)
 
