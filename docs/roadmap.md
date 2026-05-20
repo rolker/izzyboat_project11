@@ -224,17 +224,44 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) — forwarding-throughput regression. **MERGED** 2026-05-01.
 - [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) — operator-side QoS fix complementing the bridge default change. **MERGED** 2026-05-18.
 
-### Over-horizon operations capability *(new theme — 2026-05-01; update 2026-05-19)*
+### Over-horizon operations capability *(new theme — 2026-05-01; updates 2026-05-19, 2026-05-20)*
 
-The 2026-05-01 deployment ran the boat past visual range with the new comms stack and surfaced the saturation envelope. Even on Starlink-only at moderate distance, the current ROS topic stack saturates the link, producing 30–60 s latency episodes. Asymmetric resilience worked: control commands and SSH stayed reliable through saturation; situational awareness did not. RC failsafe stack now configured for over-horizon use (`FS_THR_ENABLE = 0`, `FS_GCS_ENABLE = 0`, GUIDED stale-setpoint HOLD).
+The 2026-05-01 deployment ran the boat past direct-comms range with the
+new comms stack and surfaced the saturation envelope. Even on
+Starlink-only at moderate distance, the current ROS topic stack
+saturates the link, producing 30–60 s latency episodes. Asymmetric
+resilience worked: control commands and SSH stayed reliable through
+saturation; situational awareness did not. RC failsafe stack now
+configured for OTH ops (`FS_THR_ENABLE = 0`, `FS_GCS_ENABLE = 0`,
+GUIDED stale-setpoint HOLD).
 
-**2026-05-19 update**: Phase 1 (operator-side WiFi disabled, Starlink-only at close range) and a partial Phase 2 (Starlink-only autonomous trackline + initial survey pattern, cut short on time, in-harbor) both completed without losing control — the post-2026-05-01 fixes ([#134](https://github.com/rolker/unh_echoboats_project11/pull/134) coprime keyframe stagger, [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) throughput regression fix, [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) NavSource QoS workaround) held under load. The data-path half of Phase 2's intent is validated. **The literal OOL element + a completed survey are still pending** — tracked in [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) (Field validation: over-horizon Starlink-only operation), which stays open. New observability findings from 2026-05-19 ([`rolker/udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20) stats-timer stall masked operator-side bridge health throughout, [`rolker/udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21) resend-N interpretation question) are the kind of thing a future OOL attempt needs better instrumentation for — see the observability theme below.
+**2026-05-19 update**: Phase 1 (operator-side WiFi disabled,
+Starlink-only at close range) and a partial Phase 2 (Starlink-only
+autonomous trackline + initial survey pattern, cut short on time,
+in-harbor) both completed without losing control — the post-2026-05-01
+fixes ([`#134`](https://github.com/rolker/unh_echoboats_project11/pull/134)
+coprime keyframe stagger,
+[`udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16)
+throughput regression fix,
+[`camp#51`](https://github.com/rolker/camp/pull/51) NavSource QoS
+workaround) held under load. The data-path half of Phase 2's intent is
+validated. The literal OTH element + a completed survey are still
+pending.
 
-- **Topic-budget cull** — required, not optional. Identify which topics dominate the link, cull or rate-limit accordingly.
-- **VPN-path indicator** (Starlink vs. cellular vs. WiFi) — operator awareness gap; today we lost significant diagnostic time guessing which path was carrying traffic. See [#124](https://github.com/rolker/unh_echoboats_project11/issues/124).
-- **Bench stress-test rig** — synth topics + mininet + CAMP-stub harness so the next saturation question can be answered at the desk, not on the water. See [#124](https://github.com/rolker/unh_echoboats_project11/issues/124).
-- **RC mode-switch fringe-range hardening** — pin to AUTO/GUIDED, disable channel via FCU params, or power off RC entirely during autonomous runs. See memory `project_bizzyboat_rc_mode_switch_at_fringe_range.md`.
-- **Low-bandwidth status fallback** — text/heartbeat/minimal-telemetry path that survives when the full topic stream doesn't (today's gabby SSH access bridged the gap manually).
+**Class scope reassessment (2026-05-20)**: Lake Massabesic surveys go
+OTH routinely from a shore-based operator station — the lake is large
+enough that the boat is regularly outside direct comms range. The
+OTH-specific work below is therefore **class-priority**, not deferred.
+
+**Must finish before June 4:**
+- [`unh_echoboats_project11#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) — field validation of OTH Starlink-only operation including a completed survey. The lake survey IS the test — but going in without a controlled validation first is the kind of risk we don't take with students aboard. Schedule a deliberate OTH validation between now and June 15.
+- **Topic-budget cull** — operating OTH at lake scale is exactly the saturation scenario from 2026-05-01. Identify which topics dominate the link, cull or rate-limit accordingly. Don't wait for a future OTH attempt to re-hit the 30–60 s latency episodes.
+- **Low-bandwidth status fallback** — text/heartbeat/minimal-telemetry path that survives when the full topic stream doesn't. May overlap with [`#145`](https://github.com/rolker/unh_echoboats_project11/issues/145)'s safety-critical-pinned-to-cell concept. 2026-05-01 worked around this with manual gabby SSH; the class scenario needs the fallback in the operator UI.
+- **VPN-path indicator** (Starlink vs. cellular vs. WiFi) — operator awareness gap; on 2026-05-01 we lost significant diagnostic time guessing which path was carrying traffic. See [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124).
+
+**Defer past June 4:**
+- **Bench stress-test rig** — synth topics + mininet + CAMP-stub harness so the next saturation question can be answered at the desk. The lake survey itself will produce real-water OTH data; pre-survey budget is better spent on the topic cull and the fallback channel. Revisit post-survey. See [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124).
+- **RC mode-switch fringe-range hardening** — RC handheld stays at the operator station; controller doesn't follow the boat to OTH range. Captured in memory `project_bizzyboat_rc_mode_switch_at_fringe_range.md` for future relevance.
 
 ### Autonomy robustness *(new theme — 2026-05-01)*
 
