@@ -350,6 +350,7 @@
     use_ssl: true
     poll_interval: 5.0
     hardware_id: 'router.bizzy'
+    ignored_interfaces: ['mob1s2a1', 'wan1']
 
 /**/starlink_diagnostics:
   ros__parameters:
