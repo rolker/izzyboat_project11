@@ -52,24 +52,6 @@ def generate_launch_description():
                     ),
                     condition=IfCondition(enable_bridge)
                 ),
-                Node(
-                    package='diagnostic_aggregator',
-                    executable='aggregator_node',
-                    name='diagnostic_aggregator',
-                    parameters=[
-                        PathJoinSubstitution([
-                            FindPackageShare('bizzyboat_project11'),
-                            'config',
-                            'diagnostics.yaml'
-                        ])
-                    ],
-                    remappings=[
-                        ('diagnostics', '/diagnostics'),
-                        ('diagnostics_agg', '/diagnostics_agg'),
-                        ('diagnostics_toplevel_state', '/diagnostics_toplevel_state'),
-                    ],
-                    output='both',
-                ),
             ]
         ),
         IncludeLaunchDescription(
