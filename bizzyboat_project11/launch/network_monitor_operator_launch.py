@@ -29,14 +29,14 @@ def generate_launch_description():
             executable='mikrotik_monitor_node',
             name='mikrotik_monitor',
             parameters=[mikrotik_config],
-            output='screen',
+            output='both',
         ),
         Node(
             package='teltonika_monitor',
             executable='teltonika_monitor_node',
             name='teltonika_monitor',
             parameters=[teltonika_config],
-            output='screen',
+            output='both',
         ),
         Node(
             package='starlink_stats',
@@ -47,13 +47,13 @@ def generate_launch_description():
                 'poll_rate': 1.0,
                 'hardware_id': 'starlink.op',
             }],
-            output='screen',
+            output='both',
         ),
         Node(
             package='network_tools',
             executable='ping_monitor_node',
             name='ping_monitor',
             parameters=[ping_config],
-            output='screen',
+            output='both',
         ),
     ])

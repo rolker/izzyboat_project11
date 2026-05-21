@@ -68,7 +68,7 @@ def generate_launch_description():
                         ('diagnostics_agg', '/diagnostics_agg'),
                         ('diagnostics_toplevel_state', '/diagnostics_toplevel_state'),
                     ],
-                    output='screen',
+                    output='both',
                 ),
             ]
         ),

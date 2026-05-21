@@ -78,7 +78,7 @@ def generate_launch_description():
     bag_recorder = ExecuteProcess(
         cmd=record_cmd,
         name='operator_bag_recorder',
-        output='screen',
+        output='both',
         # Send SIGINT first so rosbag2 flushes the mcap cleanly. Generous
         # SIGTERM timeout because mcap finalization on a large bag can
         # take a few seconds.
