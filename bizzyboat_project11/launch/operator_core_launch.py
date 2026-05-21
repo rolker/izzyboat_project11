@@ -7,7 +7,6 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
-from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParametersFromFile
 from launch_ros.substitutions import FindPackageShare
