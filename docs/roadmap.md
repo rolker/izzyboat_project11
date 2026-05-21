@@ -174,6 +174,37 @@ parts. Documentation for student operators is the only must-finish.
   work. No developer-side starter needed.
 - *(See companion: [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) operator-side local costmap display — only matters once camera→costmap fusion ships.)*
 
+**Design thread — defer past June 4** *(surfaced 2026-05-21 from
+deployment debrief)*:
+
+Platform-aware speed override + on-the-fly trackline editing. From the
+2026-05-21 collision incident: when the boat is following a trackline
+and an obstacle appears, the operator's current options are *(a)* slow
+the boat manually via RC / USB controller, *(b)* full manual override
++ steer around + re-engage autonomy (the path that caused today's
+collision — cross-track-error correction pulled the boat through the
+obstacle when the manual override was disengaged with the boat beside,
+not past, the obstacle). Two CAMP-side enhancements could give the
+operator gentler intermediate options:
+
+- **Platform-aware speed override**: have the platform message that
+  tells CAMP about the boat also carry `default_speed` and `max_speed`,
+  and surface a slider (or similar) for instant override of the
+  current commanded speed. Multi-piece scope: (a) message-schema
+  addition, (b) CAMP UI control, (c) FCU / autonomy plumbing for the
+  override path.
+- **On-the-fly trackline editing**: let the operator drag a trackline
+  waypoint past an obstacle instead of taking the helm. Removes the
+  "reposition fully past the obstacle before re-engaging" procedural
+  trap entirely. May become moot once a planner can do obstacle-aware
+  trackline modification itself, but that's a much further-out
+  capability; this is a near-term UI addition that works alongside the
+  current by-design collision-avoidance-free trackline model.
+
+Not promoted to issues yet — both pieces want scoping conversations
+about where the message-schema change lands and what CAMP's plugin
+surface for these controls looks like.
+
 ### Class-day operator observability *(new theme — 2026-04-27; major expansion 2026-05-19)*
 
 Student operators won't intuit silent failures the way an expert does.
