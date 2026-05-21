@@ -13,6 +13,4 @@ issue: 140
 **CI**: all pass (copilot-pull-request-reviewer success)
 
 ### Actions
-- [ ] Decide doc path for `bizzyboat_project11/docs/operator_annunciator_design.md` L59–75 "What we deliberately don't include: `Ping: ping.op: bencloud`" section. Sub-agent review (PR comment #4504056328) flags it as incoherent once the active target is removed. Two options:
-  - **A (inline, bundle)**: add a 2-line note to the section saying it was removed entirely in #140; section retained as historical context. Keeps doc honest at near-zero cost.
-  - **B (defer)**: file a follow-up issue that explicitly names this file and section (not a handwave at "docs").
+- [x] Refresh `bizzyboat_project11/docs/operator_annunciator_design.md` per sub-agent review (PR comment #4504056328). Picked option A (inline + bundle): added an "Update (#140)" callout to the L59 "What we deliberately don't include" section, and amended the L27 publish-list to note the removal. Section retained as historical context for why the target previously read red.
