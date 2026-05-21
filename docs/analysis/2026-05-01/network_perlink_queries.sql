@@ -149,14 +149,24 @@ flagged AS (
   WHERE t_ns BETWEEN win.lo AND win.hi
     AND sample_origin = 'boat'
     AND remote_name = 'operator'
+),
+runs AS (
+  -- Tabibitosan run-grouping: per_link_stats publishes at ~1 Hz, so
+  -- t_ns - ROW_NUMBER()*1e9 is constant across consecutive samples in
+  -- a run. Matches the pattern in network_queries.sql Q4a (line 95).
+  -- Computed in a CTE because SQLite doesn't allow window functions
+  -- directly inside GROUP BY expressions.
+  SELECT t_ns, connection_id,
+         t_ns - ROW_NUMBER() OVER (PARTITION BY connection_id ORDER BY t_ns) * 1000000000 AS run_key
+  FROM flagged
+  WHERE hot = 1
 )
 SELECT
   connection_id,
   MIN(t_ns) AS start_t_ns,
   MAX(t_ns) AS end_t_ns,
   ROUND((MAX(t_ns) - MIN(t_ns)) / 1e9, 1) AS duration_s
-FROM flagged
-WHERE hot = 1
-GROUP BY connection_id, (t_ns - ROW_NUMBER() OVER (PARTITION BY connection_id, hot ORDER BY t_ns))
+FROM runs
+GROUP BY connection_id, run_key
 HAVING duration_s >= 30
 ORDER BY start_t_ns;

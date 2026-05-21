@@ -21,10 +21,16 @@ SELECT * FROM _bags;
 -- ============================================================================
 -- §1.6  Bridge bandwidth vs. configured cap (SQLite-only)
 -- ============================================================================
--- bizzyboat.yaml caps:
+-- bizzyboat.yaml caps as of the 2026-05-01 deployment snapshot:
 --   wifi:     1_500_000 B/s (12 Mbps)
---   vpn:        300_000 B/s ( 2.4 Mbps)   -- TODO: confirm exact figure
---   cellular:    50_000 B/s (   0.4 Mbps) -- TODO: confirm exact figure
+--   vpn:        300_000 B/s ( 2.4 Mbps)
+--   cellular:    50_000 B/s (   0.4 Mbps)
+-- These reflect the config that was actually deployed on 2026-05-01;
+-- the live `bizzyboat.yaml` has since drifted (vpn raised to
+-- 1_000_000 B/s post-2026-05-01). For reproducibility, check out the
+-- repo at the 2026-05-01 deployment commit when re-running these
+-- queries against this bag, or update the values to the snapshot
+-- you're actually analysing.
 -- wire_out_bytes_per_second already excludes the rate-limiter's dropped
 -- bytes (per extractor docstring), so this is what actually hit the wire.
 
