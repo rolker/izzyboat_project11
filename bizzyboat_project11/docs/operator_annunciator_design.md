@@ -16,17 +16,21 @@ when the operator station is healthy regardless of the boat.
 
 ## What's already wired
 
-`bizzyboat_project11/config/diagnostics.yaml` already declares an
-`operator:` analyzer group with sub-analyzers for op-side mikrotik,
-teltonika, starlink, and ping. Salmon is publishing the matching
-diagnostics today (verified live via `ros2 topic echo /diagnostics`):
+> **Update (#141)**: The `diagnostic_aggregator` is no longer launched on
+> the operator station — the annunciator subscribes to `/diagnostics`
+> directly. The "operator-prefix" grouping below is now a property of
+> the annunciator config (and of how publishers name their statuses),
+> not of an analyzer group. The publisher list still applies.
+
+Salmon is publishing the following operator-side diagnostics (verified
+live via `ros2 topic echo /diagnostics`):
 
 - `MikroTik: bizzy.wifi.op: …` — op-side WiFi bridge to boat
 - `Starlink: starlink.op: {state, link, comms, alerts, obstruction, thermal}`
 - `Ping: ping.op: {gabby_direct, gabby_vpn, router_bizzy_direct, router_bizzy_vpn,
   dns_cloudflare, dns_google}` (`bencloud` removed in #140 — see section below)
 
-Aggregator-side it's all there. The display side is the only thing missing.
+The display side is the only thing missing.
 
 Note: `Teltonika: router.op` is configured (the op-side teltonika monitor node
 exists in `network_monitor_operator_launch.py`) but is not on the wire in the
