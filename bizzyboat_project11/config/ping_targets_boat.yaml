@@ -6,7 +6,6 @@ ping_monitor:
       - "salmon_vpn:salmon.vpn.bizzy.p11.lan"
       - "router_op_direct:router.op.p11.lan"
       - "router_op_vpn:router.vpn-op.bizzy.p11.lan"
-      - "bencloud:bencloud.wg.p11.lan"
       - "dns_google:8.8.8.8"
       - "dns_cloudflare:1.1.1.1"
     poll_interval: 10.0

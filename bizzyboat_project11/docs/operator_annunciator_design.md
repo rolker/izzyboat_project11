@@ -24,7 +24,7 @@ diagnostics today (verified live via `ros2 topic echo /diagnostics`):
 - `MikroTik: bizzy.wifi.op: …` — op-side WiFi bridge to boat
 - `Starlink: starlink.op: {state, link, comms, alerts, obstruction, thermal}`
 - `Ping: ping.op: {gabby_direct, gabby_vpn, router_bizzy_direct, router_bizzy_vpn,
-  bencloud, dns_cloudflare, dns_google}`
+  dns_cloudflare, dns_google}` (`bencloud` removed in #140 — see section below)
 
 Aggregator-side it's all there. The display side is the only thing missing.
 
@@ -57,6 +57,13 @@ op panel, they belong here (they're op-bridge state, not boat state). Move
 them in a follow-up commit so we don't break the boat-panel layout mid-deployment.
 
 ### What we deliberately don't include: `Ping: ping.op: bencloud`
+
+> **Update (#140)**: the `bencloud` ping target was removed entirely from
+> `ping_targets_operator.yaml`, `ping_targets_boat.yaml`, and `bizzyboat.yaml`
+> because it stayed permanently red and lit the toplevel ERROR rollup from
+> baseline. This section is retained as historical context for why the target
+> previously read red and why re-adding it would still be wrong without one of
+> the changes in the closing paragraph.
 
 The `bencloud` ping target in `ping_targets_operator.yaml` resolves to
 `bencloud.wg.p11.lan` (the raw WireGuard mesh endpoint, `10.132.146.1`).
