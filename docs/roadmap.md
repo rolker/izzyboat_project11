@@ -79,7 +79,7 @@ planner needs the costmap to be trustworthy before it'll improve
 autonomy quality.
 
 **Priority for June 4** (display path):
-- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. High priority but not yet on the active "next-item-to-do" list. Hard blocker on everything downstream of segmentation → costmap fusion. Needs to land on someone's plate.
+- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. **Status (2026-05-21)**: [`PR #11`](https://github.com/rolker/unh_marine_perception/pull/11) shipped and fixes single-instance, but **multi-instance still segfaults** — discovered live during 2026-05-21 bring-up when [`seafloor_echoboat_project11#19`](https://github.com/rolker/seafloor_echoboat_project11/pull/19)'s 4-camera config triggered the crash on `controller_server` activation. Active field workaround: forward-only via [`seafloor_echoboat_project11#21`](https://github.com/rolker/seafloor_echoboat_project11/pull/21). Multi-instance root-cause pending — may need #6 reopened or a new issue against `unh_marine_perception`.
 - [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK → costmap validation. Blocked on #6. End state for display-first: "a costmap is being published, populated by segmentation, and the operator can see it."
 - [`rolker/unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) — operator-side local costmap display. Becomes critical-to-have once #6 / #7 ship. 2026-05-19 measured ~78% loss on the wifi path for the costmap topic; bandwidth budget needs to fit.
 - Per-camera `frame_ids` + URDF-aligned `<label>_optical_frame` default via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-28). *(Done.)*
@@ -142,7 +142,7 @@ mathematically the same, no tidal variation but reference geometry
 still load-bearing for sonar processing.)
 
 **Must finish before June 4:**
-- [`unh_echoboats_project11#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) — `mru_transform` durable nav-input choice + FCU reconfig. Set `EK3_SRC1_POSZ = 3` (GPS) so the FCU EKF Z stops tracking atmospheric pressure. Combine with `EK3_GPS_OFFS` / `GPS_POS1_X/Y/Z` so the mavros position output reports at `base_link` rather than the GPS antenna. This single FCU reconfiguration delivers both the durable nav-input answer AND the outstanding mavros half of #111. Field-side revert to `mavros/global_position/raw/fix` is a workaround; FCU reconfig is the durable answer. Needs bench check + at least one deployment to validate before June 4 — schedule accordingly.
+- [`unh_echoboats_project11#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) — `mru_transform` durable nav-input choice + FCU reconfig. **Substantive FCU change is only `EK3_SRC1_POSZ = 3`** (GPS), so the FCU EKF Z stops tracking atmospheric pressure. (Earlier brief drafts also called for an `EK3_GPS_OFFS_*` family — those params don't exist on ArduPilot Rover; the GPS antenna lever-arm goes through `GPS_POS1_*` only, which was already at the right values from #91.) Field-side revert to `mavros/global_position/raw/fix` is a workaround; FCU reconfig is the durable answer. **Status (2026-05-21)**: bench-side validation passed — `/global` altitude back in chart-datum band, `tide_estimate` plausible, suppression warnings gone — and `mru_transform` switched back from `raw/fix` → `/global` in field commit `f348f66`. In-water trackline validation didn't run (nav stack unhealthy — see [`#150`](https://github.com/rolker/unh_echoboats_project11/issues/150) topic 6); offline bag analysis pending in [`#150 topic 1`](https://github.com/rolker/unh_echoboats_project11/issues/150). **Caveat pending bag review**: gabby agent's in-water cross-check found a likely lever-arm double-count in the downstream `mru_transform`/`sea_surface_estimator` chain (1.78 m systematic bias = 2 × \|GPS_POS1_Z\|; sign-flipped result is within 24 cm of NOAA forecast). Not deploy-blocking — plausibility band still passes — but downgrades #138's closure from "delivered" to "FCU side delivered, downstream lever-arm regression pending bag review".
 
 **Wrap-up / housekeeping:**
 - [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — lever-arm / base_link contract. SBG half resolved live 2026-05-01; FCU half folds into #138's reconfig. Plan: fold the remaining FCU-side scope into #138's body, then close #111 with a pointer.
@@ -211,8 +211,7 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges when remote subscriber dies. Real bug; not observed during 2026-05-01 or 2026-05-19. If it surfaces during student-led ops it could be operationally bad, but track rather than promote unless it recurs.
 
 **Maintenance mode after June 4:**
-- [`rolker/udp_bridge#22`](https://github.com/rolker/udp_bridge/issues/22) — "Giving up on resend" WARN log too loud. Concrete fix proposed (demote to DEBUG + `DiagnosticStatus` per remote). Small, easy follow-up, but cosmetic during class itself.
-- [`rolker/udp_bridge#23`](https://github.com/rolker/udp_bridge/issues/23) — restrict resend response to requesting connection. Wire-format change (`connection_id` field). Modest impl, reduces resend amplification under loss. Filed 2026-05-20.
+- [`rolker/udp_bridge#23`](https://github.com/rolker/udp_bridge/issues/23) — restrict resend response to requesting connection. Wire-format change (`connection_id` field). Modest impl, reduces resend amplification under loss. Filed 2026-05-20; `[PLAN]` PR [`#25`](https://github.com/rolker/udp_bridge/pull/25) merged 2026-05-21 (plan document only — implementation still pending).
 - [`rolker/udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20) — stats-timer publication stalls. Made operator panels blind for 1h17m during 2026-05-19 (data plane unaffected). Stats are observability — not data path. Less urgent than the observability theme's main vehicle.
 - [`rolker/udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21) — "after N attempts" value varies 5/6/1. Counter interpretation question. Investigate when convenient.
 
@@ -223,6 +222,7 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`rolker/udp_bridge#9`](https://github.com/rolker/udp_bridge/issues/9) — resend loop amplification. **CLOSED** via the #13 resend-logic work (exponential backoff + TTL alignment + debounce).
 - [`rolker/udp_bridge#16`](https://github.com/rolker/udp_bridge/pull/16) — forwarding-throughput regression. **MERGED** 2026-05-01.
 - [`rolker/camp#51`](https://github.com/rolker/camp/pull/51) — operator-side QoS fix complementing the bridge default change. **MERGED** 2026-05-18.
+- [`rolker/udp_bridge#22`](https://github.com/rolker/udp_bridge/issues/22) — "Giving up on resend" WARN log too loud. **CLOSED** via [`udp_bridge#24`](https://github.com/rolker/udp_bridge/pull/24) (merged 2026-05-21). End-to-end evidence from 2026-05-21: operator bag 99 MB vs 296 MB on 2026-05-19 over similar duration; give-up rate held 1.8/s background through the mission.
 
 ### Over-horizon operations capability *(new theme — 2026-05-01; updates 2026-05-19, 2026-05-20)*
 
@@ -252,6 +252,20 @@ pending.
 OTH routinely from a shore-based operator station — the lake is large
 enough that the boat is regularly outside direct comms range. The
 OTH-specific work below is therefore **class-priority**, not deferred.
+
+**2026-05-21 update**: Attempted an OTH trackline during the 2026-05-21
+deployment. Transit out worked; ended early on collision (camera mast
+knocked loose against a floating platform — the trackline followed
+its surveyor-defined path through it because tracklines are
+by-design collision-avoidance-free, and the operator's mid-trackline
+manual override was disengaged with the boat positioned *beside*, not
+*past*, the obstacle, so the path follower correctly closed the
+cross-track-error back into the obstacle). Operationally the partial
+OTH validated: transit-out, RC-at-range, and Ruby-RHIB-plus-RC
+recovery all worked. Bandwidth / saturation analysis pending in
+[`#150 topic 3`](https://github.com/rolker/unh_echoboats_project11/issues/150).
+[`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)
+remains open — the OTH-with-completed-survey criterion isn't met yet.
 
 **Must finish before June 4:**
 - [`unh_echoboats_project11#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) — field validation of OTH Starlink-only operation including a completed survey. The lake survey IS the test — but going in without a controlled validation first is the kind of risk we don't take with students aboard. Schedule a deliberate OTH validation between now and June 15.
