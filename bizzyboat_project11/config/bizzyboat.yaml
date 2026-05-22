@@ -158,10 +158,7 @@
             - oak_segmentation_forward_raw
             - oak_starboard_ffmpeg
             - oak_segmentation_starboard
-            # oak_aft_ffmpeg dropped from VPN to free uplink bandwidth
-            # against the Starlink ceiling (still on WiFi). The aft
-            # segmentation overlay stays — it's 1 Hz / ~42 kbps and
-            # operator wants situational awareness behind the boat.
+            - oak_aft_ffmpeg
             - oak_segmentation_aft
             - oak_port_ffmpeg
             - oak_segmentation_port
@@ -191,7 +188,7 @@
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, period: 1.0}
               # oak_segmentation_starboard_info / _raw not in VPN topics_list
               # (uplink budget — overlay only).
-              # oak_aft_ffmpeg removed from VPN (still in wifi block above).
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: 1.0}
               oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, period: 1.0}
