@@ -241,6 +241,9 @@
       - /bizzy/mavros/local_position/velocity_body
       - /bizzy/mavros/local_position/accel
       - /bizzy/odom
+      - /bizzy/tide_estimate
+      - /bizzy/mllw_offset
+      - /bizzy/mhhw_offset
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
       - /bizzy/robot_description
