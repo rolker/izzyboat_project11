@@ -754,6 +754,25 @@ The remaining 73 cm after switching to `/global` is almost
 certainly **`base_link`-to-waterline freeboard** — a URDF-side
 calibration, not an estimator bug.
 
+> **Wrap-up correction (2026-05-22 bag review)** — the ~0.7 m
+> freeboard guess in the table above is too high. Per the URDF
+> (`bizzyboat.urdf.xacro:235-236`), the DeltaT sonar is mounted
+> at `z = −0.18 m` from base_link with the housing flipped, so
+> the active face is at approximately `z = −0.22 m`. Operator
+> confirms the sonar face is definitely submerged in service,
+> which caps freeboard at ≤ ~0.22 m. Recomputed: after switching
+> to `/global` (this section's row 2) the residual is still
+> ~+0.5 m vs the NOAA forecast (0.73 m raw − ≤0.22 m freeboard),
+> **not** the +0.03 m claimed in row 3. The §10 mechanism (`raw/fix`
+> → `/global` switch fixes the missing lever-arm) is still right;
+> the closure claim is what's revised. Candidate causes for the
+> remaining ~0.5 m: VDatum-grid-MLLW vs Fort-Point-gauge-MLLW
+> reference mismatch (very small at the pier — both anchored to
+> the same gauge), small unmodeled tilts/lever-arms, or forecast-
+> vs-actual on the day (NOAA forecasts have their own ±10-20 cm
+> uncertainty). Leaving the original row 3 intact as a lesson
+> in unverified assumptions.
+
 ## 11. SBG vs MAV comparison — 0.64 m offset persists (brief Phase 1 criterion NOT met)
 
 **2026-05-21T13:01-04:00** — Roland: *"compare the sbg with
