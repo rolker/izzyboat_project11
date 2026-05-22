@@ -435,3 +435,151 @@ re-verify naturally once the boat is moving in Phase 1.
 | `d555d45` | same | Split test — preview reverted, video stays 4:3 |
 | `a5d9e22` | same | Full revert — both back to defaults |
 | `7b6d8f3` | `bizzyboat_project11/config/bizzyboat.yaml` | Add tide/datum topics to logger |
+
+## 5. In-water phase observations
+
+### 5a. AML SVS still silent in-water; serial line producing all-NUL bytes
+
+**2026-05-22T17:35-04:00** — With the boat in the water, checked
+whether sound speed was being delivered to mercat over UDP. Result:
+**no**. `/bizzy/sensors/sound_speed/sound_speed` was at 0 Hz, no UDP
+sockets bound on port 20003 (the bridge's `tx-0`/`net-0` threads are
+ready, just have nothing to forward).
+
+Diagnostic chain (verified, in order):
+- `sound_speed_bridge` process is healthy — 12 threads, dedicated
+  `rx-104` thread sitting in `ep_poll` on fd 104 (= `/dev/ttyS0`).
+  Not frozen; just waiting on bytes.
+- Serial line settings at 9600 raw match the bridge config.
+- TIOCM lines: CD asserted, CTS asserted, DSR not asserted.
+- Direct concurrent peek of `/dev/ttyS0` for 5 s (non-exclusive open
+  alongside the bridge): **5335 bytes received, every byte 0x00**.
+- Bridge's regex parser correctly rejects all-NUL frames → no parse
+  → no publish → no UDP forward.
+
+**Diagnosis**: serial RX line is stuck low. Per Roland: the unit was
+working at 9600 baud at the last deployment, so config is not the
+issue. Most consistent with a power / wiring / connector problem at
+the AML head — kernel sees continuous "start bit + 8 zero data bits"
+and reports `0x00` at the framing rate. Operator-side checks
+(power-cycle, connector / cable, supply voltage) deferred to post-
+recovery — boat is on a productive run, not worth interrupting.
+
+Implication for the deployment-issue "verify before June 4" item
+(AML SVS present in boat-side bag with real non-zero values): **does
+not pass this deployment** unless the line recovers spontaneously
+or the operator finds a quick fix. Will continue to monitor.
+
+### 5b. Local costmap saturation — lethal % bounces frame-to-frame
+
+**2026-05-22T17:55-04:00** — Roland noted the segmentation sometimes
+"covers a lot of the costmap." Confirmed with a 15-sample sweep over
+12 s on `/bizzy/local_costmap/costmap`:
+
+| Metric | Value |
+|---|---|
+| Map size | 1600 × 1600 cells @ 0.25 m/cell = 400 × 400 m |
+| Frame | `bizzy/map_tide` (rolling window — origin shifts ~1 m/s with boat motion) |
+| Lethal cells (=100) | **16.7% – 28.1%** across the 15 samples (mean ~21%) |
+| Inflated (1–99) | 72–83% |
+| Free (=0) | **0%** across all samples |
+| Unknown (−1) | 0% across all samples |
+| `/local_costmap/costmap` rate | 1.05 Hz |
+| `/local_costmap/published_footprint` | 2.17 Hz |
+| `/local_costmap/costmap_updates` | 0 Hz (full `/costmap` republish, no deltas — likely rolling-window-driven) |
+
+Two notable items:
+
+1. **Lethal % is non-stationary** (16.7 → 28.1, ~3300-cell swing) at
+   ~1 Hz cadence — the 4 `sea_surface_layer` instances disagree or
+   the NN gives inconsistent classifications between adjacent frames.
+   Matches Roland's eyeball observation.
+2. **Zero free cells** anywhere in the 400 m frame — the inflation
+   propagation from every lethal cell saturates the entire map.
+   Functionally that means *every* path-planning cell has non-zero
+   cost; the planner is choosing among gradients, not free space.
+
+Carry-forward for `unh_marine_perception#14` / `#10` discussion: the
+multi-instance fix is durable (no segfault, all four layers active),
+but in-water classification stability + inflation tuning are open
+questions worth addressing before the next deployment.
+
+### 5c. Speed override attempt — `default_speed=2.0` set, not picked up live
+
+**2026-05-22T18:15-04:00** — Roland: bump autonomous survey speed
+from 1.5 to 2.0 m/s "easily" without a restart. Investigated the
+chain:
+
+- `FollowPath.default_speed = 1.5` on `/bizzy/controller_server`
+  → set to **2.0** via `ros2 param set`; read-back confirmed.
+- `/bizzy/helm_manager.max_speed = 2.0` (already; not the cap).
+- `/bizzy/cmd_vel_nav` shows `Publisher count: 0` — i.e.
+  `controller_server` is not publishing to the conventional Nav2
+  output topic; instead its `cmd_vel` is **remapped directly to
+  `/bizzy/piloting_mode/autonomous/cmd_vel`** (controller_server is
+  one of the 9 publishers on that topic).
+
+After the param set, sampled `autonomous/cmd_vel` for 10 s:
+`x ∈ [1.500, 1.522], mean 1.507` — **no change**.
+
+Tried the Nav2 standard runtime-override path:
+- Published a `nav2_msgs/msg/SpeedLimit{speed_limit: 2.0,
+  percentage: false}` to `/bizzy/speed_limit` (subscriber present on
+  `controller_server`). Resampled `autonomous/cmd_vel` after a 3 s
+  wait: `x ∈ [1.500, 1.537], mean 1.513` — **also no change**.
+
+Enumerated all `FollowPath.*` params; the only speed knob is
+`default_speed`. Plugin is
+**`marine_nav_crabbing_path_follower::CrabbingPathFollower`**.
+
+**Conclusion**: `CrabbingPathFollower` neither honors live `param set`
+of `default_speed` nor responds to the Nav2 `setSpeedLimit()` callback
+during an active task — both interfaces appear no-op'd. The speed is
+captured at plugin-activate time (and/or baked into the path).
+
+**Workaround paths that would work**:
+- Cancel the active task and re-issue (plugin re-reads
+  `default_speed=2.0` on next `activate()`).
+- Restart `controller_server` (heavier; restarts the whole
+  navigation stack lifecycle).
+- Edit YAML, restart launch, accept it for the next task.
+
+For today, none applied — Roland chose to leave the boat at 1.5 m/s
+rather than interrupt a productive run.
+
+**Follow-up for the wrap-up dev side**: `CrabbingPathFollower` should
+implement either the parameter-callback or the `setSpeedLimit()`
+interface (or both) so runtime speed override is possible without a
+task restart. Worth a focused issue on `unh_marine_autonomy` (or
+wherever the plugin lives).
+
+### 5d. 45-minute camera-bag recording
+
+**2026-05-22T18:05-04:00** — Roland: capture 45 min of OAK ffmpeg +
+segmentation + local_costmap to a bag for offline `SeaSurfaceLayer`
+replay-debugging (in light of the 5b classification-stability
+question). Used the existing
+`bizzyboat_project11/scripts/record_camera_topics.sh` script with
+`DURATION=2700`.
+
+| Outcome |  |
+|---|---|
+| Path | `~/data/logs/bizzy_images/bag_2026-05-22T18.05.48_ffmpeg_seg/` |
+| Storage | mcap, zstd_fast |
+| Duration | 2699 s (clean full-window exit via `timeout --signal=INT`) |
+| Size | 2.1 GiB |
+| Messages | 340,306 |
+| Topics captured | 21 (the 4 RGB `camera_info` topics in the script don't exist with `enable_video=False`, same as prior runs) |
+
+All four cameras' `image_raw/ffmpeg`, `segmentation` (raw + compressed
++ camera_info), `local_costmap/costmap`, `tf`/`tf_static`,
+`diagnostics`, and `robot_description` are in the bag — sufficient
+to feed the costmap chain offline.
+
+## Files touched (in-water phase, gabby-side)
+
+| Action | Path | Why |
+|---|---|---|
+| Runtime param set | `/bizzy/controller_server.FollowPath.default_speed` 1.5 → **2.0** | Speed override attempt (no live effect — see §5c) |
+| Runtime topic publish | `/bizzy/speed_limit` (Nav2 SpeedLimit) | Speed override attempt #2 (no effect — see §5c) |
+| Bag created | `~/data/logs/bizzy_images/bag_2026-05-22T18.05.48_ffmpeg_seg/` | 45-min camera + costmap capture for offline analysis (§5d) |
