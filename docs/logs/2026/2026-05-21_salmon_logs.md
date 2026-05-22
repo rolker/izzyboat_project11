@@ -3,7 +3,7 @@
 **Host**: salmon
 **Operator**: Roland + Claude Code Agent (Claude Opus 4.7, 1M context)
 **Mode**: field (gitcloud origin)
-**Deployment**: git-bug `7d5b52c` — "Deployment 2026-05-21: validate small-wins PRs + udp_bridge WARN demote + FCU EK3 Z-source reconfig" (opened dev-side 2026-05-20T22:03-04:00; hard stop on water 14:00 EDT). GitHub issue number to be backfilled dev-side at wrap-up.
+**Deployment**: [#149](https://github.com/rolker/unh_echoboats_project11/issues/149) — "Deployment 2026-05-21: validate small-wins PRs + udp_bridge WARN demote + FCU EK3 Z-source reconfig" (opened dev-side 2026-05-20T22:03-04:00; hard stop on water 14:00 EDT). Field-side git-bug ref: `7d5b52c`.
 
 ## Summary
 
