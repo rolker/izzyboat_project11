@@ -1,13 +1,15 @@
 #!/bin/bash
 # record_camera_topics.sh — Ad-hoc bag capture of OAK camera ffmpeg +
-# segmentation (raw + compressed) topics, plus TF, diagnostics, and the
-# latched robot description.
+# segmentation (raw + compressed) topics, plus TF, diagnostics, the
+# latched robot description, and the local costmap output.
 #
 # Sufficient to replay-debug `sea_surface_layer::SeaSurfaceLayer`
 # (the nav2 costmap plugin) offline: it subscribes to the raw
 # `<cam>/segmentation` Image topic and the matching `camera_info`, and
 # does a TF lookup from the image header frame to the costmap global
-# frame.
+# frame. The local costmap output (`/bizzy/local_costmap/costmap`) is
+# also recorded so the segmentation-vs-costmap chain can be verified
+# end-to-end against what the planner actually saw.
 #
 # Usage: ./record_camera_topics.sh [duration_secs]
 #   duration_secs: recording length in seconds (default: 120)
@@ -53,6 +55,7 @@ TOPICS=(
     /bizzy/sensors/cameras/oak_starboard/segmentation/camera_info
     /bizzy/sensors/cameras/oak_aft/segmentation/camera_info
     /bizzy/sensors/cameras/oak_port/segmentation/camera_info
+    /bizzy/local_costmap/costmap
 )
 
 echo "=== Recording for ${DURATION}s to ${OUT_DIR} ==="
