@@ -583,3 +583,120 @@ to feed the costmap chain offline.
 | Runtime param set | `/bizzy/controller_server.FollowPath.default_speed` 1.5 → **2.0** | Speed override attempt (no live effect — see §5c) |
 | Runtime topic publish | `/bizzy/speed_limit` (Nav2 SpeedLimit) | Speed override attempt #2 (no effect — see §5c) |
 | Bag created | `~/data/logs/bizzy_images/bag_2026-05-22T18.05.48_ffmpeg_seg/` | 45-min camera + costmap capture for offline analysis (§5d) |
+
+## 6. Per-task speed plumbing — implemented and field-tested
+
+Followup to §5c (the failed runtime speed override). Roland asked
+what would be needed to make CAMP's per-task `speed` field actually
+reach the controller. Investigation showed the BT already extracts
+`task.speed` into the `{target_speed}` blackboard variable
+(`GetTaskDataDouble` in `UpdateCurrentTaskData`) but never consumes
+it — `FollowPath` has no speed input port and no other node reads
+the blackboard variable.
+
+### 6a. Implementation
+
+Field-mode commits on `layers/main/core_ws/src/unh_marine_navigation`
+(gitcloud origin, default branch `jazzy`):
+
+| Commit | Scope |
+|---|---|
+| `c7a5e34` | `CrabbingPathFollower::configure()` — `on_set_parameters_callback` updates `desired_speed_` live when `FollowPath.default_speed` changes (was captured-once at configure). |
+| `50bf66a` | New BT plugin `SetControllerSpeed` (`marine_nav_behavior_tree`) — `SetParameters` against a target controller from the `{target_speed}` blackboard. Async, fire-callback. |
+| `f53ef7d` | `run_tasks.xml` — invoke `SetControllerSpeed` just before `FollowPath` in both `NavigateThroughWaypoints` (PipelineSequence) and `SurveyLine` (ReactiveSequence). |
+| `930a43e` | Review-feedback patch: dedup against `last_pushed_speed_` (BT ticks at ~5 Hz; no point re-pushing on every tick); completion callback on `SetParameters` logs WARN on rejection (silent misconfig on motion-control = safety-relevant); `desired_speed_` → `std::atomic<double>` (param-callback thread writes / compute thread reads); log only when value actually changes. |
+| `8100131` | Second iteration after first field test: XML `target_node="/bizzy/controller_server"` (the BT plugin's default `/controller_server` was missing the deployment namespace — verified service path is `/bizzy/controller_server/set_parameters`); switch the "service not ready" WARN to `RCLCPP_WARN_THROTTLE(5s)` so a misconfig doesn't drown the log. |
+
+### 6b. Local review found the bugs before the boat did
+
+Ran `/review-code` (Standard tier) before the first build. Adversarial
+agent flagged 4 must-fix items, all valid:
+
+- Fire-and-forget `set_parameters()` at BT tick rate leaks pending
+  requests in rmw (rclcpp client requires future consumption).
+- INFO log on every param update floods at BT tick rate.
+- Non-atomic concurrent read/write on `desired_speed_` (UB per C++
+  memory model; TSan would flag).
+- Silent SetParameters failure swallows misconfiguration (would let
+  the boat run on whatever default the controller has).
+
+Patched in `930a43e`. Local static analysis (cppcheck) clean on the
+new lines; xmllint clean.
+
+### 6c. First field test — fixed a real bug
+
+Built `marine_nav_crabbing_path_follower` + `marine_nav_behavior_tree`,
+restarted `nav_launch.py`. Lifecycle came up clean (`controller_server
+active [3]`, `lifecycle_manager_navigation/is_active=True`). But the
+`bt_navigator` log flooded with WARNs:
+
+```
+SetControllerSpeed: parameter service on /controller_server not ready
+```
+
+Diagnosis: the plugin's default `target_node` was `/controller_server`
+(absolute path, no namespace). Actual service is
+`/bizzy/controller_server/set_parameters` (verified via
+`ros2 service list`). Direct test confirmed the controller-side
+callback works regardless:
+
+```
+$ ros2 param set /bizzy/controller_server FollowPath.default_speed 2.0
+Set parameter successful
+# controller_server log:
+[INFO] CrabbingPathFollower: default_speed updated 1.500 -> 2.000 m/s
+```
+
+Patched in `8100131`. Rebuilt (BT plugin only), Roland restarted nav.
+
+### 6d. End-to-end test passes
+
+Roland sent a mission with `task.speed = 1 knot` (= 0.5144 m/s).
+Observed:
+
+| Signal | Value |
+|---|---|
+| `bt_navigator` "service not ready" count | **0** (was 100+/min before fix) |
+| `SetControllerSpeed` WARN / rejection | **none** |
+| `controller_server` log | `CrabbingPathFollower: default_speed updated 1.500 -> 0.514 m/s` (one line) |
+| `ros2 param get /bizzy/controller_server FollowPath.default_speed` | `0.514444` |
+| `autonomy/cmd_vel.linear.x` (10 s window) | `0.515 ± 0.001` m/s = **1.00 knot** ✓ |
+
+Full chain confirmed: **`CAMP task.speed` → `{target_speed}`
+blackboard → `SetControllerSpeed` BT plugin → `SetParameters` on
+`/bizzy/controller_server` → `CrabbingPathFollower::on_set_parameters_callback`
+→ `desired_speed_` (atomic) → `target_speed` in
+`computeVelocityCommands` → `cmd_vel.linear.x`**.
+
+### 6e. Design finding: `desired_speed_` wins over path-encoded for this task
+
+Earlier review iteration noted the controller has a path-encoded
+speed mechanism (`crabbing_path_follower.cpp:240-246`): if path poses
+have non-zero timestamps with `end > start`, `target_speed` is set
+from `segment_distance / dt`, overriding `desired_speed_`. Empirical
+result on this 1-knot test: `cmd_vel.linear.x = 0.515` matches
+`desired_speed_ = 0.514` precisely (the +0.001 is the crab-angle
+divisor `1/cos_crab`). The path-encoded branch **did not** activate —
+the current path generator (`manda_coverage` for survey tasks /
+`ComputePathThroughPoses` for navigate-through-waypoints) doesn't
+populate per-pose stamps. So `desired_speed_` is the correct knob and
+the BT plumbing is the correct fix. Worth re-checking with
+sonar-coverage tasks separately in case that path generator behaves
+differently.
+
+### 6f. Followups not addressed here
+
+- Push the 5 commits to gitcloud. Deferred until end of session.
+- Consider whether `target_node` should be derivable from the BT
+  plugin's own namespace rather than passed via XML (eliminates the
+  one-line wart in `run_tasks.xml`). Cosmetic; not blocking.
+- The path-encoded mechanism is dormant but live. If a future path
+  generator starts populating per-pose stamps, `desired_speed_` (and
+  this whole plumbing) gets silently shadowed. Worth a comment in
+  `crabbing_path_follower.cpp:240` noting the precedence and the
+  motivation for keeping both knobs.
+- Multi-task transition test: today only confirmed the first task's
+  speed lands; haven't verified that a second task with a different
+  speed retriggers the param update. The dedup + completion-callback
+  paths in `SetControllerSpeed` are designed for this; needs an
+  actual back-to-back observation to close the loop.
