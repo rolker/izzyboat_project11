@@ -744,3 +744,95 @@ Per the dev agent, those are captured in
 the post-recovery voltage point and defers timing to the dev log at
 wrap-up. (Dev log not on gitcloud yet at write-time; dev will pull
 gabby's log + integrate at wrap-up per the convention.)
+
+## 8. Shutdown noise — zenoh + controller_server SIGSEGV (both pre-existing)
+
+**2026-05-22T20:40-04:00** — Roland: "noticed some zenoh errors while
+shutting down the stack." Investigated.
+
+### 8a. Runtime middleware is zenoh, not CycloneDDS
+
+Surprise that I hadn't internalised earlier: this deployment runs on
+`RMW_IMPLEMENTATION=rmw_zenoh_cpp` (verified via env). The earlier
+CMake build banners (`-- Using RMW implementation 'rmw_cyclonedds_cpp'
+as default`) are build-time defaults, not runtime — runtime RMW is
+whatever the env var says when nodes launch. Worth flagging because
+the diagnostic posture is different for zenoh vs DDS (failure modes,
+config files, router/peer topology, etc.). Saved as a memory so
+future agents on this stack don't make the same mistake.
+
+### 8b. Zenoh `close operation timed out` on shutdown — pre-existing, not blocking
+
+Across every launch shutdown today the affected processes emit:
+
+```
+ERROR zenoh::api::session  error=close operation timed out!
+  at /home/buildfarm/.cargo/git/checkouts/zenoh-cc237f2570fab813/b81e253/zenoh/src/api/builders/close.rs:122
+```
+
+| Launch (dir tail) | Zenoh-close-timeout count |
+|---|---|
+| 12:09 PIDs 3114 / 3115 | 12 / 5 |
+| 16:09 PID 22906 (core_launch) | 12 |
+| 17:05 PID 36822 (perception_launch) | 5 |
+| 19:46 / 19:51 nav_launch shutdowns | similar |
+
+This is the rmw_zenoh session-close mechanism timing out when many
+nodes shut down simultaneously — a known stability gap in
+rmw_zenoh_cpp on jazzy. Cosmetic for our purposes (no data loss in
+the bag, lifecycle still tears down). Worth tracking but not
+deployment-blocking.
+
+### 8c. `controller_server` SIGSEGV on shutdown — pre-existing, not from today's code
+
+Both nav_launch shutdowns after the speed-plumbing work showed:
+
+```
+[ERROR] [controller_server-1]: process has died
+  [pid 55620, exit code -11, ...]
+```
+
+I worried briefly this was caused by the new `params_cb_handle_`
+lambda capture being torn down across shutdown ordering. Checked the
+**original** nav_launch from this morning (PID 22907,
+`/home/field/.ros/log/2026-05-22-16-09-47-639858-gabby-22907/launch.log`)
+— controller_server PID 23129 exited the same way:
+
+```
+[ERROR] [controller_server-1]: process has died
+  [pid 23129, exit code -11, ...]
+```
+
+That was the **un-modified** controller code, so today's param-callback
+addition is not the cause. Pre-existing across `controller_server-1`
+crashes on shutdown in `/home/field/.ros/log/2026-04-14-*`,
+`2026-04-20-*`, etc. — at least intermittent on jazzy + zenoh, with a
+handful of older-deployment dirs (early April) showing clean exits.
+Worth a focused follow-up issue against `controller_server` shutdown
+behaviour, independent of today's per-task speed work.
+
+### 8d. Also seen at shutdown, also pre-existing, also cosmetic
+
+From the `core_launch.py` shutdown (`2026-05-22-17-05-06-713510`):
+
+- `class_loader.ClassLoader: SEVERE WARNING!!! Attempting to unload
+  library while objects created by this loader exist in the heap!`
+  — pluginlib teardown ordering issue, multiple instances per
+  shutdown. Cosmetic.
+- `[depthai] error Callback with id: 1 throwed an exception: could
+  not count subscribers: rcl node's context is invalid` — DepthAI
+  async callback racing rclcpp context destruction. Cosmetic.
+
+Both pre-date today's work and are not affected by it.
+
+### 8e. Carry-forward
+
+| Item | Severity |
+|---|---|
+| Zenoh `close operation timed out` (8b) | low — cosmetic shutdown noise; would be worth tracking upstream rmw_zenoh fixes |
+| `controller_server` SIGSEGV on shutdown (8c) | **medium** — pre-existing, intermittent, but a SIGSEGV is never great; would benefit from a focused issue with a core-dump capture next time it happens |
+| pluginlib unload-while-heap-objects (8d) | low — cosmetic |
+| DepthAI rclcpp-context cleanup race (8d) | low — cosmetic |
+
+None caused by today's code. Filing as a §8 record for the wrap-up
+to consider issue-tracking each separately.
