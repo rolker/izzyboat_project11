@@ -914,6 +914,28 @@ recurring need (any time a deployment runs past 20:00 EDT during DST),
 the screenshooter follow-up (§10 wrap-up #9) should land that fix in
 the source script instead of re-running this side-quest.
 
+### Encoder result
+
+**2026-05-22T20:50-04:00** — Encoder exited cleanly. Final output:
+
+| Field | Value |
+|---|---|
+| Output | `~/data/logs/operator/2026-05-22/screenshots/operator_2026-05-22_local.mp4` |
+| Size | **361 MiB** (377,873,862 B) |
+| Frames in mp4 | 446 (one less than the 447 input PNGs — likely a duplicate-timestamp dedupe by ffmpeg's concat demuxer; not material for the analysis use case) |
+| Encode wall-time | 367.9 s ≈ 6 min 8 s |
+| Encoder rate | 1.21 fps (encode) at `medium` x265 preset, yuv444p |
+| Avg QP | 18.55 |
+| Atomic move | `.tmp` → `.mp4` successful (no `.tmp` orphan) |
+
+Cross-check against the UTC-bucketed pair: 361 MiB combined vs
+358 MiB (May-22 UTC bucket) + 19 MiB (May-23 UTC bucket, partial) =
+377 MiB raw concat — the difference (~16 MiB / 4%) is x265 finding
+more inter-frame correlation across the previously-split boundary
+during the single combined encode. Cosmetic but worth noting: the
+single encode is also marginally smaller than the sum, not just more
+correctly organized.
+
 ---
 **Authored-By**: `Claude Code Agent`
 **Model**: `Claude Opus 4.7 (1M context)`
