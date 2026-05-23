@@ -5,13 +5,10 @@
 **Mode**: field (gitcloud origin)
 **Deployment**: git-bug `1e4fe7d` — *Deployment 2026-05-22: battery drain to LVD + perception #14 in-water + costmap-over-Starlink* (GitHub link added dev-side at wrap-up)
 
-## Summary
-
-*To be filled at wrap-up (user-curated).*
-
-## Lessons Learned
-
-*To be filled at wrap-up (user-curated).*
+> **Summary** and **Lessons Learned** for this deployment live in
+> [`2026-05-22_dev_logs.md`](2026-05-22_dev_logs.md), not here —
+> per-host logs capture scribe-grade detail, the dev log carries the
+> at-a-glance summary and the durable operator-level take-homes.
 
 ## 1. Session start — git-bug pull + field-side state confirmation
 
