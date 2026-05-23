@@ -700,3 +700,47 @@ differently.
   speed retriggers the param update. The dedup + completion-callback
   paths in `SetControllerSpeed` are designed for this; needs an
   actual back-to-back observation to close the loop.
+
+## 7. Recovery + post-recovery battery
+
+**2026-05-22T20:35-04:00** — Roland asked for the current voltage.
+
+| Topic | Value |
+|---|---|
+| `/bizzy/mavros/battery.voltage` | **23.102 V** |
+| `/bizzy/mavros/battery.current` | 0.010 A (sensor doesn't read charge current here) |
+| `/bizzy/mavros/battery.percentage` | −0.01 (uncalibrated all session) |
+
+Boat is **on the charger** per Roland — the 23.10 V reading is
+on-charger steady-state at the battery terminals, not active drain.
+The FCU's current sensor likely isn't in the charge path (reads
+~0 A even when charging).
+
+**Pre-launch ↔ recovery reference** (gabby-side observation only):
+
+| Snapshot | Time | Voltage |
+|---|---|---|
+| Pre-launch (§4a) | 16:51 EDT | 25.024 V |
+| On-charger now | 20:35 EDT | 23.102 V |
+| Total drop | ~3 h 44 min | **−1.92 V** |
+
+(Battery state-of-charge between those two points is not strictly
+monotonic — there's a recovery + charge interval in the middle.
+Useful as an end-of-session bookend, not a discharge slope.)
+
+**Phase-tracking miss**: I didn't catch the underway → recovery
+transition. Last hard evidence I had was the 1-knot test at ~19:46
+EDT (commanded `cmd_vel.linear.x = 0.515 m/s`), then a 5-min camera
+bag was recorded ending 20:05 EDT (could have been mid-survey or
+during recovery — no way to tell from the bag alone), and at 20:35
+Roland told me we'd been on the charger "for a bit". Per
+[[feedback_track_deployment_phase]], the right move when the operator
+goes quiet for a while is to ask "still underway?" rather than
+assume — saved here by Roland's correction but worth flagging.
+
+**Recovery + charger-connect timestamps**: not observed from gabby.
+Per the dev agent, those are captured in
+`docs/logs/2026/2026-05-22_dev_logs.md`; this gabby file just notes
+the post-recovery voltage point and defers timing to the dev log at
+wrap-up. (Dev log not on gitcloud yet at write-time; dev will pull
+gabby's log + integrate at wrap-up per the convention.)
