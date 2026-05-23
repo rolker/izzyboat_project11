@@ -38,12 +38,10 @@ visible from one place.
 ### Sensor payload integration (M3 + SBG + SVS on mercat)
 
 **Verify before June 4:**
-- AML SVS bridge — believed complete (gabby-side); confirm data is
-  actually being captured in deployment bag files. Some past
-  deployments used the mercat-side PowerShell stand-in
-  (`aml_bridge.ps1`); class cohort handoff shouldn't depend on that.
-- Mercat NTP — believed configured. Promote verification (`ntpq.exe -pn`)
-  to in-class teaching content for students.
+- AML SVS bridge — **regressed during #160 (2026-05-22)**: probe silent on `/dev/ttyS0` (all-NUL bytes) both dry pre-launch and in-water. Tracked as [`#163`](https://github.com/rolker/unh_echoboats_project11/issues/163); hardware/config issue (not parser). Pre-class: bench-test probe, verify config, replace if faulty.
+
+**Must finish before June 4 (new — surfaced 2026-05-22):**
+- [`unh_echoboats_project11#163`](https://github.com/rolker/unh_echoboats_project11/issues/163) — AML SVS probe outputting all-NUL bytes on `/dev/ttyS0`. M3 needs valid sound-speed updates for correct depth measurement in fresh water; manufacturer-default fallback drifts.
 
 **Open decision (decide before June 4):**
 - Sidescan imagery option — install Garmin sidescan (colleague has
@@ -60,6 +58,7 @@ visible from one place.
 **Done:**
 - [`unh_echoboats_project11#76`](https://github.com/rolker/unh_echoboats_project11/issues/76) — mercat bring-up. Software pipeline live 2026-04-27 (#94); M3 1PPS time-sync chain completed 2026-05-01 (#121); QINSy SBG hookup live.
 - NTRIP — MassDOT source tested at Lake Massabesic; works with current configuration.
+- Mercat NTP — **verified textbook-healthy 2026-05-22** (#160 dev log). `ntpq.exe -pn` is now in-class teaching content for students.
 
 ### Surface-obstacle awareness — camera + costmap
 
@@ -79,7 +78,7 @@ planner needs the costmap to be trustworthy before it'll improve
 autonomy quality.
 
 **Priority for June 4** (display path):
-- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. **Status (2026-05-21)**: [`PR #11`](https://github.com/rolker/unh_marine_perception/pull/11) shipped and fixes single-instance, but **multi-instance still segfaults** — discovered live during 2026-05-21 bring-up when [`seafloor_echoboat_project11#19`](https://github.com/rolker/seafloor_echoboat_project11/pull/19)'s 4-camera config triggered the crash on `controller_server` activation. Active field workaround: forward-only via [`seafloor_echoboat_project11#21`](https://github.com/rolker/seafloor_echoboat_project11/pull/21). Multi-instance root-cause pending — may need #6 reopened or a new issue against `unh_marine_perception`.
+- [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. **CLOSED** ([`PR #11`](https://github.com/rolker/unh_marine_perception/pull/11)). Multi-instance variant tracked separately as [`#14`](https://github.com/rolker/unh_marine_perception/issues/14) — also **CLOSED**; durably validated under in-water, low-battery, sunset/low-light conditions across the full 2h 43m mission window during #160 (2026-05-22). No segfaults observed; 4-instance `sea_surface_layer` is production-ready for the class.
 - [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK → costmap validation. Blocked on #6. End state for display-first: "a costmap is being published, populated by segmentation, and the operator can see it."
 - [`rolker/unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) — operator-side local costmap display. Becomes critical-to-have once #6 / #7 ship. 2026-05-19 measured ~78% loss on the wifi path for the costmap topic; bandwidth budget needs to fit.
 - Per-camera `frame_ids` + URDF-aligned `<label>_optical_frame` default via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-28). *(Done.)*
@@ -101,7 +100,7 @@ autonomy quality.
 ### Navigation reliability
 
 **Must finish before June 4:**
-- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → `/speed_limit`. High priority operational item — per-task speed from a CAMP-sent mission is needed for normal operations (different survey speeds for different segments / line types), not just as a safety fallback. Current `default_speed` bump workaround from deployment 2026-04-27 doesn't support per-task variation.
+- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → `/speed_limit`. **Field-implemented during #160 (2026-05-22)**: gabby agent landed the per-task speed plumbing in-deployment across two iterations (`/review-code`-caught 4 must-fixes, then namespace bug fixed on first field activation). End-to-end confirmed: `task.speed=1 kt → cmd_vel.linear.x=0.515 m/s`. **5 commits on `gitcloud/jazzy`** (`c7a5e34 → 8100131`) awaiting reconciliation PR against `rolker/unh_marine_navigation`; until that lands, the fix isn't on GitHub-side. Move to **Done** once the reconciliation PR merges.
 - [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals. No fix landed; 2026-05-19 deployment logs likely still show TF-lookup-out-of-time errors. Survey patterns at the lake will repeatedly trigger this. Verify still occurring, then fix.
 
 **Investigate before June 4:**
@@ -218,6 +217,9 @@ operator UI path — the annunciator subscribes to `/diagnostics`
 directly. Aggregator output has no user-facing consumer; the rqt
 aggregator view plugin caused problems and isn't used. Direction is
 "publishers → /diagnostics → annunciator," no aggregator middleman.
+
+**Class-blocking (new — surfaced 2026-05-22):**
+- [`unh_echoboats_project11#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) — Battery annunciator stays green at < `BATT_LOW_VOLT`. Threshold-to-color mapping is broken (row renders live voltage but severity never escalates). During #160 the annunciator was silent the entire time voltage was below 23.0 V (down to ~22 V loaded). Class-blocking: students cannot be expected to monitor raw `/mavros/battery` voltage; the annunciator is the operator's safety contract. Likely root cause is mavros `sys_status.min_voltage` not configured, leaving `DiagnosticStatus.level` at OK regardless of voltage — fix path TBD per the issue body.
 
 **Must finish before June 4 — small easy wins, do these first:**
 - [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) reframed — **remove** the `diagnostic_aggregator` from operator launches. Strip the Node from `operator_core_launch.py` + delete the unused aggregator config in `diagnostics.yaml`. Eliminates the "STALE bucket / config drift" misdirection 2026-05-19 surfaced.
@@ -375,7 +377,7 @@ they become relevant.
   couple of months without any pull toward them, they're probably
   dropped, not deferred. Edit them out.
 
-## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20)*
+## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22)*
 
 This appendix tags every "Must finish before June 4" item from the
 Active-threads sections above with effort, where it can be worked, and
@@ -396,16 +398,16 @@ exercise the change).
 | # | Item | Effort | Where | Critical-path notes |
 |---|---|---|---|---|
 | **Sensor payload** | | | | |
-| 1 | AML SVS bridge data capture verify | S | BF | Bag analysis; cross-confirm in next deployment |
-| 2 | Mercat NTP verify (`ntpq.exe -pn`) | XS | BF | SSH to mercat |
+| 1 | [`#163`](https://github.com/rolker/unh_echoboats_project11/issues/163) AML SVS probe outputs all-NUL bytes | S–M | BF | **NEW 2026-05-22**: probe not generating output (hardware/config, not parser). Bench test, verify config, replace if faulty |
+| 2 | ~~Mercat NTP verify (`ntpq.exe -pn`)~~ | — | — | **DONE 2026-05-22** (#160 dev log: textbook-healthy) |
 | 3 | Sidescan decision (M3 imagery vs Garmin) | S | BF | Decision only |
 | 3b | Sidescan install (if Garmin chosen) | M–L | BI | Physical install + protocol integration |
 | **Surface-obstacle** | | | | |
-| 4 | [`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) segfault | L | BF | **UNOWNED.** Blocks #5 → #6 → display path |
-| 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | Blocked on #6; replay bags for impl, validate live |
+| 4 | ~~[`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) segfault~~ | — | — | **DONE** (#6 + #14 closed; durably validated in-water 2026-05-22) |
+| 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | Unblocked; replay bags for impl, validate live |
 | 6 | [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) op-side costmap display | L | DI | 78% loss measured — bandwidth budget tight; replay-driven impl, validate live |
 | **Navigation reliability** | | | | |
-| 7 | [`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit` | M | DI | Sim/bag wire-up, verify in deployment |
+| 7 | [`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit` | reconcile only | — | **Field-implemented 2026-05-22**; 5 commits on `gitcloud/jazzy` (`c7a5e34 → 8100131`) awaiting reconciliation PR. Move to Done once landed on origin. |
 | 8 | [`unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) TF extrapolation fix | M | DI | Bag-debug, verify in deployment |
 | 9 | [`unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) costmap timeout investigate | S | BF | Bag analysis; decide fix-or-defer |
 | 10 | Boat-side bathy costmap | L–XL | BF | **Triage first** — Roland's "other computer" branch may exist |
@@ -413,6 +415,8 @@ exercise the change).
 | 11 | [`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) FCU reconfig + validation | S prep + **boat day** | BI | Bench param-write OK; sea_surface chain validation needs water |
 | **Class-ready UI** | | | | |
 | 12 | [`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) student deployment guide | M | BF | Writing-heavy; draft from logs |
+| **Observability — class-blocking** | | | | |
+| 12b | [`#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) Battery annunciator threshold-to-color logic | S–M | BF | **NEW 2026-05-22, class-blocking**: row displays voltage but stays green at < `BATT_LOW_VOLT`. Likely mavros `sys_status.min_voltage` unset; investigate, fix, verify thresholds match FCU |
 | **Observability — small wins** | | | | |
 | 13 | [`#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) remove `diagnostic_aggregator` | XS | BF | Node delete + YAML cleanup |
 | 14 | [`#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) `output='both'` in launches | XS | BF | One-line |
