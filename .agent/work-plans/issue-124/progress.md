@@ -29,3 +29,22 @@ no-current-meter constraint all verified clean.
 - [x] (suggestion) cruise m/s↔kt pairing (1.5↔3.0 implies 1.54) — standardised to 1.52 m/s — `bizzyboat_performance.md`, `bizzyboat_hardware.md`
 - [x] (suggestion) coast-down "~0.2 m/s²" was the max not median — restated ~0.15 (up to ~0.25) — `bizzyboat_performance.md`, `bizzyboat_hardware.md`
 - [x] (suggestion) "fit quality tracks current" mis-attributed — reworded to heading-arc + speed steadiness; slack "≈0" → ~0.1 within fit noise — `bizzyboat_performance.md`, `README.md`
+
+## Local Review (Pre-Push) — turning + yaw-cap round
+**Status**: complete
+**When**: 2026-05-25 12:10
+**By**: Claude Code Agent (Claude Opus 4.7 (1M context))
+**Verdict**: approved (after fixes)
+
+**Branch**: feature/issue-124 at `915571e`
+**Mode**: pre-push
+**Scope**: turn-radius item — turning.py, Turning section, max_yaw_speed 0.5→0.8 (behavior change)
+
+Fresh-context review + user domain correction caught real defects, all fixed before push:
+- [x] (must-fix) doc claimed "MANUAL turns didn't exceed clamp at cruise" — false; MANUAL is unclamped and hit 0.74 rad/s at cruise. Reworded.
+- [x] (must-fix) "8.3% pinned at 0.5" was the 05-01 low end — now stated as 8%→39% across deployments (~21% pooled).
+- [x] (must-fix) "0.5 is a placeholder / no tuning notes" — wrong; deployment log shows it was reduced 1.5→0.5 during an April steering-reversal debug. Reframed.
+- [x] (user correction) steering is VECTORED THRUST, not a rudder → yaw authority scales with thrust (throttle), not boat speed. Re-did the steering-effectiveness analysis as a throttle×deflection grid; rewrote the physics framing.
+- [x] (user correction) steering-reversal is a stationary controls-check artifact, orthogonal to max_yaw_speed → 0.8 bump cleared to proceed.
+
+max_yaw_speed 0.5→0.8 is a behavior change: unvalidated for sustained GUIDED cruise turns → flagged for next-deployment validation (#88 controlled sweep).
