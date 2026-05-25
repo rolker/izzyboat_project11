@@ -44,12 +44,12 @@ A full charge cycle with no recharge between deployments (opening resting voltag
 - **LiFePO4 curve:** flat **plateau** high up (lots of charge moves little voltage — 05-19 dropped
   ~0.4 V across a whole session) → steep **knee** near empty (05-22: 25 → 21 V fast). **Voltage-
   based SoC is unreliable mid-range**, usable only near full and near empty.
-- **Sag vs SOC (SOC-matched, validated across 4 deployments):** the mid-throttle **load sag is
-  small (~0.05–0.10 V) and only mildly SOC-dependent** (~0.06 V high-SOC → ~0.10 V near-empty).
-  Two independent deployments agree at matched SOC, so the behaviour is reproducible. R_int is
-  roughly stable → the constant 12.9 mΩ is a fair approximation; the strong dependence is on
-  **PWM**, not SOC. (Measured by pairing each throttle sample to a nearby idle sample to remove
-  within-deployment SOC drift.)
+- **Sag vs SOC (SOC-matched, validated across 7 deployments / ~3 months):** the mid-throttle
+  **load sag is small (~0.05–0.12 V) and only mildly SOC-dependent** (~0.07 V high-SOC → ~0.10 V
+  near-empty). All 7 deployments (2026-04-24 → 05-22) cluster within measurement noise at matched
+  SOC, so the behaviour is **reproducible**. R_int is roughly stable → the constant 12.9 mΩ is a
+  fair approximation; the strong dependence is on **PWM**, not SOC. (Measured by pairing each
+  throttle sample to a nearby idle sample to remove within-deployment SOC drift.)
 - **Speed-dependent prop load:** at fixed full throttle the drop is largest near static
   (bollard) and shrinks ~0.3–0.4 V as the boat speeds up (prop unloads). The 67 A anchor is the
   *running* load; bollard/acceleration current is **higher**.
