@@ -20,8 +20,8 @@ deployments accumulate.
 | **Survey throttle ramp** | ~0.1 m/s², τ ≈ 8 s | Good |
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
-| **Yaw-rate cap (autonomy)** | **0.8 rad/s** (raised from 0.5) | config clamp; ~0.9 rad/s pivot at full throttle (vectored thrust) |
-| **Min turn radius @ cruise** | ~1.9 m at the 0.8 cap (was ~3 m at 0.5) | set by the yaw clamp, not the hull |
+| **Yaw-rate cap (autonomy)** | **1.0 rad/s** (raised from 0.5; = helm default) | vehicle-capability backstop; ~0.9 rad/s pivot at full throttle (vectored thrust) |
+| **Min turn radius @ cruise** | ~1.5 m at the 1.0 cap (was ~3 m at 0.5) | set by the yaw clamp, not the hull |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
 expressed as ESC PWM (`mavros/rc/out.ch_0`): 1500 = neutral, 2000 = full
@@ -181,25 +181,30 @@ commanded* turn at the higher rate. Because vectoring thrust to turn diverts
 it from forward, the boat **slows into a hard turn** (and lower speed means
 *more* yaw authority, not less — no rudder-style stall). Turn radius is
 therefore set by the yaw clamp, not the hull: ~3 m at cruise under 0.5,
-~1.9 m under 0.8.
+~1.5 m under the new 1.0 cap.
 
 ### Change applied + caveat
 
-`max_yaw_speed` raised **0.5 → 0.8 rad/s**. 0.8 sits below the demonstrated
-full-throttle authority (~0.9 pivot) and above the MANUAL cruise transient
-(0.74), and the vectored-thrust mechanism means there is no speed-dependent
-stall to worry about. **Still validate on the next deployment**: confirm
-GUIDED cruise turns track the higher command without oscillation, and watch
-steering-direction consistency at the higher rate (given the stationary
-reversal history). Also weigh the survey-quality tradeoff (tighter
-line-transitions vs. sonar settling on the new line). A controlled
-yaw-vs-throttle sweep is folded into
-[#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
+`max_yaw_speed` raised **0.5 → 1.0 rad/s** — i.e. set to the helm's own
+default, treating this clamp as the **vehicle-capability backstop** rather
+than an operational limit. 1.0 sits just above the demonstrated peak (~0.9
+pivot, 0.97 raw), so the helm now rarely clamps — the boat turns as hard as
+it can, with no speed-dependent stall (vectored thrust). **Validate on the
+next deployment**: confirm GUIDED cruise turns track the command without
+oscillation, and watch steering-direction consistency at the higher rate
+(given the stationary reversal history). A controlled yaw-vs-throttle sweep
+is folded into [#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
 
-This governs the **crabbing-follower → helm** path observed driving the
-boat; if the stack switches to the Nav2 path (`cmd_vel_nav` → velocity
-smoother → `cmd_vel_smoothed`), that smoother's angular limit would also
-need raising.
+**Survey-turn gentleness is now unenforced — known gap.** A "turn gently for
+survey lines" limit belongs at the Nav2 layer, not the helm. Bizzy's
+(EchoBoat-inherited) Nav2 config *does* set the velocity_smoother angular
+`max_velocity = 0.45 rad/s`, but the logged data shows it was **not binding**
+(the FCU clamped at exactly the helm value, never 0.45, and the crabbing
+follower emits raw ±π with no shaping). So with the helm opened to 1.0,
+nothing effective currently bounds line-transition sharpness. Making the
+smoother's survey limit actually bind — and giving Bizzy its own Nav2
+override instead of inheriting the EchoBoat's (which also carries a 2.75 m/s
+linear limit vs Bizzy's ~1.9 m/s) — is a deferred follow-up (see Open gaps).
 
 ## Tidal current — magnitudes, NOAA-validated
 
@@ -229,8 +234,11 @@ autonomy/controller cap**.
 - Intermediate PWM→speed points (1550–1750) via steady-hold runs.
 - High-throttle tail with deliberate reciprocal legs (cleaner max STW).
 - Straight-reverse speed and active crash-stop braking distance.
-- **Yaw-rate vs steering vs speed sweep** — validate the raised 0.8 rad/s
-  cap at cruise (commanded step-turns in a safe area); the clamp gated this
-  in all logged data.
+- **Yaw-rate vs throttle sweep** — validate the raised 1.0 rad/s cap at
+  cruise (commanded step-turns in a safe area); the clamp gated this in all
+  logged data.
+- **Restore an effective survey-turn limit** at the Nav2 layer: make the
+  velocity_smoother angular limit actually bind on Bizzy's path, and give
+  Bizzy its own Nav2 config instead of inheriting the EchoBoat's.
 - Graduate the circle-fit / surge-fit tooling into `marine_tools`
   `bag_analysis` as a reusable `dynamics` extractor.

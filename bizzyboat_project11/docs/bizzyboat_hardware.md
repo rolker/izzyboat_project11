@@ -298,8 +298,8 @@ and [`../../docs/analysis/dynamics/`](../../docs/analysis/dynamics/)
 | Hard-launch acceleration | ~0.6 m/s² peak, τ ≈ 2.5 s | idle → full |
 | Coast-down deceleration | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s | passive; ~10–15 m to stop from cruise |
 | Max reverse speed | ~1.4 m/s (2.7 kt) peak, provisional | sustained reverse under-sampled — see [#88](https://github.com/rolker/unh_echoboats_project11/issues/88) |
-| Yaw-rate cap (autonomy) | 0.8 rad/s (`helm_manager.max_yaw_speed`) | raised from 0.5; vectored thrust → ~0.9 rad/s pivot at full throttle; sustained cruise turn unvalidated |
-| Min turn radius @ cruise | ~1.9 m at the 0.8 cap | set by the yaw clamp; <1 m pivot at low speed |
+| Yaw-rate cap (autonomy) | 1.0 rad/s (`helm_manager.max_yaw_speed`) | raised from 0.5 to the helm default = vehicle-capability backstop; ~0.9 rad/s pivot at full throttle; sustained cruise turn unvalidated |
+| Min turn radius @ cruise | ~1.5 m at the 1.0 cap | set by the yaw clamp; <1 m pivot at low speed |
 
 - All speeds are **speed-through-water** (tidal current removed); observed
   speed-over-ground varies with current and heading.
