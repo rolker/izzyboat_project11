@@ -4,10 +4,11 @@ Consolidated reference for BizzyBoat's electrical/energy behaviour: the battery 
 measured current anchors, discharge characterization, the (sensor-free) power model, and
 **operational deployment-planning rules**. Companion to
 [`bizzyboat_hardware.md`](bizzyboat_hardware.md) (electrical hardware) and
-`bizzyboat_performance.md` (speed/dynamics; added in PR #172).
+`bizzyboat_performance.md` (speed/dynamics; added in [PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172)).
 
-> **Key constraint — no current sensor.** `BATT_MONITOR=4` (inherited from IzzyBoat) reports
-> ~0 A because no shunt is wired between the Torqeedo packs and the Cube. **Voltage is the only
+> **Key constraint — no current sensor.** `BATT_MONITOR 3` (voltage-only; `4` was the inherited
+> IzzyBoat baseline) with `BATT_CURR_PIN -1` — no shunt is wired between the Torqeedo packs and
+> the Cube, so current reads ~0 A. **Voltage is the only
 > real electrical measurement.** All current / power / energy figures here are **modeled** from
 > PWM plus two clamp-meter anchors and are **±~30 %**. The **voltage-based field rules
 > ([Operational](#operational--deployment-planning)) are measured and reliable** — use those.
@@ -28,7 +29,9 @@ Two operating points, from a Bluetooth DC clamp on the combined post-parallel ou
 - **Idle ≈ 8 A** (PWM 1500 both, all systems on). Composition: gabby + USB + sensors 2–4 A,
   Cube + servos + ESCs 1–2 A, comms 1–2 A, cooling/lights 1–2 A.
 - **Full throttle = 67 A** (PWM 2000 both, under load) → ~1715 W at 25.6 V.
-- These anchor the V-drop model (`R_int ≈ 12.9 mΩ` from a 0.864 V drop at 67 A).
+- These anchor the V-drop model (`R_int ≈ 12.9 mΩ` from the 0.864 V **steady-state** drop at
+  67 A; note the 2026-04-27 log's ~25 mΩ is from the 1.7 V **peak transient** sag — a different
+  measure, not a conflict).
 - **Steering servos are 5 A-fused** (vectored thrust) — small, partly inside the idle figure.
 - A full **PWM × current sweep** (idle → full, reverse, at multiple boat speeds and steering
   angles) is the gating measurement → **#88**.
@@ -61,7 +64,8 @@ Current ≈ **f(PWM, SOC, boat speed, steering)**. Estimated via the V-drop mode
 (`marine_tools` `bag_analysis/plots/power.py`: `I = (V_oc − V_load)/R_int`) and/or PWM-coulomb
 counting (idle 8 A / full 67 A anchors; quadratic per the propeller power law).
 - **Anchored at only two points** → mid-throttle (where surveys live) is interpolated.
-- **Constant R_int** ignores the ~10× SOC dependence above (should be SOC-dependent).
+- **Constant R_int** — a fair approximation (§B: load sag is only mildly SOC-dependent,
+  validated across 7 deployments), so a minor limitation; the strong dependence is on **PWM**.
 - **Speed / steering axes uncalibrated** — and not separable from opportunistic field bags.
 - Cross-deployment coulomb estimate **over-predicts ~20–30 %** vs the 273 Ah pack — a built-in
   self-consistency check (a single cycle cannot exceed the pack). **Treat all energy / endurance
