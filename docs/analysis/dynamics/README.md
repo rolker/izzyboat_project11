@@ -13,6 +13,7 @@ acceleration/deceleration dynamics.
 | [`dynamics.py`](dynamics.py) | Max/cruise speed (circle-fit current removal) + acceleration (first-order surge fit) per deployment. |
 | [`dynamics_extra.py`](dynamics_extra.py) | Battery↔STW correlation, coast-down deceleration, reverse bound. |
 | [`turning.py`](turning.py) | Turn rate by flight mode, steering-PWM→yaw effectiveness, turn radius (yaw-rate-cap analysis). |
+| [`xte.py`](xte.py) | Course-keeping on straight legs: track-holding precision (line-fit residual) + XTE vs the planned path. |
 | [`queries.sql`](queries.sql) | Reference SQL: PWM-channel identification, in-water window, and the heading-contamination demonstration. |
 
 ## Method in one paragraph

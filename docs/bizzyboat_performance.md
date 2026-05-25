@@ -22,6 +22,7 @@ deployments accumulate.
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
 | **Yaw-rate cap (autonomy)** | **1.0 rad/s** (raised from 0.5; = helm default) | vehicle-capability backstop; ~0.9 rad/s pivot at full throttle (vectored thrust) |
 | **Min turn radius @ cruise** | ~1.5 m (was ~3 m) | governed by planner `minimum_turning_radius` 3.0→1.5 m; helm 1.0 cap now aligns |
+| **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | sub-decimeter; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
 expressed as ESC PWM (`mavros/rc/out.ch_0`): 1500 = neutral, 2000 = full
@@ -218,6 +219,29 @@ line-transition sharpness right now. Re-enabling the filter chain and siting
 the survey yaw limit in the smoother — ideally with a Bizzy-specific Nav2
 config rather than the inherited EchoBoat one — is deferred until there's a
 real need (see Open gaps).
+
+## Course-keeping (XTE on straight legs)
+
+Analysis in [`analysis/dynamics/xte.py`](analysis/dynamics/xte.py), over
+straight, moving, GUIDED-mode legs (≥8 s) across 05-01 / 05-21 / 05-22. Two
+measures per leg:
+
+- **Track-holding precision** — RMS perpendicular scatter about the leg's own
+  best-fit line (plan-independent; how *steadily* it holds a straight line):
+  **~0.13 m RMS median** (best legs ~0.02 m, worst ~1.4 m), and remarkably
+  **consistent across all three deployments**. The boat holds a line to ~0.1 m
+  — course-keeping is *not* a survey-limiting factor.
+- **XTE vs the commanded line** — RMS distance to the active `/bizzy/plan`
+  (the plan's `map_tide` frame and odom are horizontally coincident per the
+  logged TF — `odom→map_tide` translation is `(0, 0, −23.5)`, vertical datum
+  only — so no transform needed): **median-leg-RMS ~0.4–0.8 m**, broadly
+  sub-meter and consistent with the preliminary 04-24 observation
+  ("sub-meter, max 0.61 m"). This adds the constant cross-track *bias* the
+  track-holding metric fits out, but is noisier — its high tail (worst ~10 m)
+  is plan-matching artifact (stale / adjacent-line), not real wander.
+
+Net: tight track-holding (~0.13 m precision), sub-meter absolute accuracy to
+the commanded line. Comfortably within survey line-spacing tolerances.
 
 ## Tidal current — magnitudes, NOAA-validated
 
