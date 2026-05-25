@@ -1,5 +1,15 @@
 # BizzyBoat dynamics — preliminary findings (2026-04-24)
 
+> **Superseded for speed/current.** This single-deployment snapshot is *not*
+> current-corrected — its PWM→speed table is biased by the heading/current
+> mix of that day (see the heading-contamination note in
+> [`bizzyboat_performance.md`](bizzyboat_performance.md)). For
+> current-corrected speed and acceleration specs pooled across all
+> deployments, use [`bizzyboat_performance.md`](bizzyboat_performance.md)
+> ([#124](https://github.com/rolker/unh_echoboats_project11/issues/124) §2).
+> This doc is retained as the original dated analysis and for its
+> efficiency / V-drop observations.
+
 Captured from analysis of the 2026-04-24 in-water bags (`~/data/logs/bizzyboat/`,
 five sessions covering 09:48–14:08 between crane deploy and recover). This is a
 *preliminary* characterization, not a calibration; gaps in the data are flagged
