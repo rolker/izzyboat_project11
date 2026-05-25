@@ -195,16 +195,18 @@ oscillation, and watch steering-direction consistency at the higher rate
 (given the stationary reversal history). A controlled yaw-vs-throttle sweep
 is folded into [#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
 
-**Survey-turn gentleness is now unenforced — known gap.** A "turn gently for
-survey lines" limit belongs at the Nav2 layer, not the helm. Bizzy's
-(EchoBoat-inherited) Nav2 config *does* set the velocity_smoother angular
-`max_velocity = 0.45 rad/s`, but the logged data shows it was **not binding**
-(the FCU clamped at exactly the helm value, never 0.45, and the crabbing
-follower emits raw ±π with no shaping). So with the helm opened to 1.0,
-nothing effective currently bounds line-transition sharpness. Making the
-smoother's survey limit actually bind — and giving Bizzy its own Nav2
-override instead of inheriting the EchoBoat's (which also carries a 2.75 m/s
-linear limit vs Bizzy's ~1.9 m/s) — is a deferred follow-up (see Open gaps).
+**Survey-turn gentleness is currently unenforced — by design, for now.** A
+"turn gently for survey lines" limit belongs at the Nav2 layer, not the helm.
+The cmd_vel filter chain that would host it — the **velocity_smoother and
+other cmd_vel filters were deliberately disconnected during an earlier
+boat-troubleshooting pass** — so the helm clamp is presently the *sole*
+cmd_vel governor. (Consistent with the logs: the FCU clamped at exactly the
+helm value, never the smoother's configured 0.45, and the crabbing follower
+emits raw ±π with no shaping.) So with the helm opened to 1.0, nothing bounds
+line-transition sharpness right now. Re-enabling the filter chain and siting
+the survey yaw limit in the smoother — ideally with a Bizzy-specific Nav2
+config rather than the inherited EchoBoat one — is deferred until there's a
+real need (see Open gaps).
 
 ## Tidal current — magnitudes, NOAA-validated
 
@@ -237,8 +239,10 @@ autonomy/controller cap**.
 - **Yaw-rate vs throttle sweep** — validate the raised 1.0 rad/s cap at
   cruise (commanded step-turns in a safe area); the clamp gated this in all
   logged data.
-- **Restore an effective survey-turn limit** at the Nav2 layer: make the
-  velocity_smoother angular limit actually bind on Bizzy's path, and give
-  Bizzy its own Nav2 config instead of inheriting the EchoBoat's.
+- **If/when a real need arises** (survey-turn gentleness or cmd_vel
+  smoothing): re-enable the cmd_vel filter chain (velocity_smoother et al.,
+  deliberately disconnected during earlier troubleshooting) and site the
+  survey yaw limit in the smoother, with a Bizzy-specific Nav2 config rather
+  than the inherited EchoBoat one. No action unless needed.
 - Graduate the circle-fit / surge-fit tooling into `marine_tools`
   `bag_analysis` as a reusable `dynamics` extractor.
