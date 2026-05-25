@@ -281,6 +281,34 @@ drive the `mavros: Battery` diagnostic and annunciator indicators only.
 
 ---
 
+## Measured Performance
+
+Speed and acceleration measured from logged-bag analysis across 7 in-water
+deployments (2026-04-24 → 2026-05-22), current-corrected to
+speed-through-water (STW). Full method, per-deployment data, and
+reproducible scripts:
+[`../../docs/bizzyboat_performance.md`](../../docs/bizzyboat_performance.md)
+and [`../../docs/analysis/dynamics/`](../../docs/analysis/dynamics/)
+([#124](https://github.com/rolker/unh_echoboats_project11/issues/124) §2).
+
+| Metric | Value | Notes |
+|---|---|---|
+| Max forward speed | ~1.9 m/s (3.7 kt) STW | full throttle (ESC PWM 2000) |
+| Cruise speed | ~1.52 m/s (3.0 kt) STW | PWM 1750–1850; well-determined |
+| Hard-launch acceleration | ~0.6 m/s² peak, τ ≈ 2.5 s | idle → full |
+| Coast-down deceleration | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s | passive; ~10–15 m to stop from cruise |
+| Max reverse speed | ~1.4 m/s (2.7 kt) peak, provisional | sustained reverse under-sampled — see [#88](https://github.com/rolker/unh_echoboats_project11/issues/88) |
+
+- All speeds are **speed-through-water** (tidal current removed); observed
+  speed-over-ground varies with current and heading.
+- Cruise (~1.5 m/s) sits comfortably above the manufacturer's declared
+  survey speed of 1 m/s (Batteries §, *Declared endurance*).
+- Reverse speed and deceleration / crash-stop braking distance are
+  provisional pending the controlled field experiment in
+  [#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
+
+---
+
 ## Autonomy Interface
 
 - FCU speaks MAVLink 2 via USB to the onboard PC (gabby).
