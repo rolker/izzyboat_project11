@@ -48,3 +48,14 @@ Fresh-context review + user domain correction caught real defects, all fixed bef
 - [x] (user correction) steering-reversal is a stationary controls-check artifact, orthogonal to max_yaw_speed → 0.8 bump cleared to proceed.
 
 max_yaw_speed 0.5→0.8 is a behavior change: unvalidated for sustained GUIDED cruise turns → flagged for next-deployment validation (#88 controlled sweep).
+
+## §2 completion — course-keeping (XTE)
+**When**: 2026-05-25 13:30
+**By**: Claude Code Agent (Claude Opus 4.7 (1M context))
+
+Added xte.py + Course-keeping section (PR #172). Track-holding ~0.13 m RMS
+(consistent across 3 deployments, matches 04-24 "sub-meter"); XTE-vs-plan
+~0.4–0.8 m. Self-reviewed (two bugs found+fixed during dev: pandas `.mode`
+attribute shadowing, and plan-matching contamination → switched headline to
+the robust line-fit-residual metric). §2 now complete (max-reverse + mid-PWM
+curve spun to #88).
