@@ -59,3 +59,22 @@ Added xte.py + Course-keeping section (PR #172). Track-holding ~0.13 m RMS
 attribute shadowing, and plan-matching contamination → switched headline to
 the robust line-fit-residual metric). §2 now complete (max-reverse + mid-PWM
 curve spun to #88).
+
+## External Review
+**Status**: complete
+**When**: 2026-05-25 16:25 -04:00
+**By**: Claude Code Agent (Claude Opus 4.7 (1M context))
+
+**PR**: #172 at `da6ec14`
+**Reviews**: 5 (all Copilot bot), 22 inline + 2 conversation (author's own — no action)
+**CI**: no real CI (only copilot-pull-request-reviewer marker = success)
+**Verdict**: 6 valid (all doc/tooling-accuracy, none touch analysis conclusions); 3 false-positive/addressed; several optional perf/robustness
+
+### Actions
+- [ ] (#1) "sub-decimeter" wording wrong for ~0.13 m RMS — fix performance.md:25 + hardware.md:303 ("decimeter-scale")
+- [ ] (#2) turning.py:134 output prints stale "@0.8 rad/s" — change to 1.0 (the chosen cap)
+- [ ] (#3) turning.py:4 docstring frames max_yaw_speed=0.5 as current — note 0.5-during-data → 1.0
+- [ ] (#4) README:61/65 — turning.py (mavros/state) + xte.py (plan+odom) need the full deployment DB; not covered by the *_nav.db recipe/run examples
+- [ ] (#5) narrow `except Exception: pass` (dynamics.py:178, dynamics_extra.py:99) to curve_fit RuntimeError/ValueError
+- [ ] (#6) progress.md turning-round entry says 0.5→0.8 (final 1.0) — add correcting note
+- [ ] (optional) perf/robustness: xte.py vectorization; dynamics_extra DB-existence guard/hardcoded names; turning.py velocity_body guard
