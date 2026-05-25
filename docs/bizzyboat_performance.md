@@ -20,6 +20,8 @@ deployments accumulate.
 | **Survey throttle ramp** | ~0.1 m/s², τ ≈ 8 s | Good |
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
+| **Yaw-rate cap (autonomy)** | **0.8 rad/s** (raised from 0.5) | config clamp; ~0.9 rad/s pivot at full throttle (vectored thrust) |
+| **Min turn radius @ cruise** | ~1.9 m at the 0.8 cap (was ~3 m at 0.5) | set by the yaw clamp, not the hull |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
 expressed as ESC PWM (`mavros/rc/out.ch_0`): 1500 = neutral, 2000 = full
@@ -123,6 +125,82 @@ A dedicated straight-reverse + crash-stop run is needed for a firm reverse
 spec and braking distance — folded into
 [#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
 
+## Turning
+
+Analysis in [`analysis/dynamics/turning.py`](analysis/dynamics/turning.py),
+using the EKF yaw rate (`velocity_body.omega_z`), steering servo PWM
+(`rc/out.ch_2`; `ch_3` is bit-identical — a single slaved steering DOF),
+and flight mode (`mavros/state`).
+
+Steering is **vectored thrust** — the thrusters themselves rotate (servos
+`ch_2`/`ch_3`, bit-identical = one slaved steering DOF), there is no rudder.
+So yaw authority comes from **thrust × steering angle**, not from water flow
+over a control surface, and works at any boat speed.
+
+### The yaw-rate cap and how binding it is
+
+The helm clamps `cmd_vel.angular.z` to `max_yaw_speed`, which `bizzyboat.yaml`
+set to **0.5 rad/s** (the helm's own default is 1.0; sim nodes hardcode 0.5).
+0.5 was not a tuned-to-capability value: per the deployment log it was
+reduced 1.5 → 0.5 during an April steering-direction-reversal investigation
+(for steering "range/resolution"). That reversal is a **stationary
+controls-check artifact** — it still occurs with the boat on the trailer
+(no yaw feedback, suspected `PILOT_STEER_TYPE=0` PID windup) and is
+**orthogonal to this parameter**; on-water steering has been sound across
+clean autonomous missions.
+
+The cap is **binding**: the crabbing path-follower emits raw heading error
+as `angular.z` (range ±π, no proportional shaping), and the fraction of
+nonzero yaw commands pinned at the 0.5 ceiling ranges **8% (05-01) to 39%
+(05-22)** across deployments (~21% pooled) — so the clamp directly sets
+line-transition sharpness ("turn at max until aligned").
+
+### Yaw authority is thrust-driven (PWM as steering-angle proxy)
+
+Median yaw rate (rad/s) by throttle × steering deflection (`ch_2 − ~1435`
+centre; full deflection ±~500):
+
+| throttle | full-left (−450) | centre | full-right (+450) |
+|---|---|---|---|
+| idle (1500–1650) | ≈ 0 | 0 | ≈ 0 |
+| mid (1650–1800) | −0.15 | 0 | +0.18 |
+| full (1800–2000) | −0.32 to −0.43 | 0 | +0.35 to +0.44 |
+
+At **idle, full steering yields ~zero yaw** (no thrust to vector); at **full
+throttle, steering yields strong yaw even at zero speed** — the peak sample
+is **0.91 rad/s at full throttle + near-full steering + 0.08 m/s** (pivoting
+in place). This is the vectored-thrust signature: turning authority scales
+with thrust, not speed.
+
+### What that means at cruise
+
+In GUIDED the achieved yaw is gated at the clamp (cruise p99 0.39–0.45);
+**unclamped MANUAL turns reached 0.74 rad/s at cruise** (speeds to ~1.8 m/s),
+so the boat *does* exceed 0.5 at speed — what's missing is a *sustained
+commanded* turn at the higher rate. Because vectoring thrust to turn diverts
+it from forward, the boat **slows into a hard turn** (and lower speed means
+*more* yaw authority, not less — no rudder-style stall). Turn radius is
+therefore set by the yaw clamp, not the hull: ~3 m at cruise under 0.5,
+~1.9 m under 0.8.
+
+### Change applied + caveat
+
+`max_yaw_speed` raised **0.5 → 0.8 rad/s**. 0.8 sits below the demonstrated
+full-throttle authority (~0.9 pivot) and above the MANUAL cruise transient
+(0.74), and the vectored-thrust mechanism means there is no speed-dependent
+stall to worry about. **Still validate on the next deployment**: confirm
+GUIDED cruise turns track the higher command without oscillation, and watch
+steering-direction consistency at the higher rate (given the stationary
+reversal history). Also weigh the survey-quality tradeoff (tighter
+line-transitions vs. sonar settling on the new line). A controlled
+yaw-vs-throttle sweep is folded into
+[#88](https://github.com/rolker/unh_echoboats_project11/issues/88).
+
+This governs the **crabbing-follower → helm** path observed driving the
+boat; if the stack switches to the Nav2 path (`cmd_vel_nav` → velocity
+smoother → `cmd_vel_smoothed`), that smoother's angular limit would also
+need raising.
+
 ## Tidal current — magnitudes, NOAA-validated
 
 The fitted current vectors (0 – 0.6 m/s across deployments) are validated
@@ -151,5 +229,8 @@ autonomy/controller cap**.
 - Intermediate PWM→speed points (1550–1750) via steady-hold runs.
 - High-throttle tail with deliberate reciprocal legs (cleaner max STW).
 - Straight-reverse speed and active crash-stop braking distance.
+- **Yaw-rate vs steering vs speed sweep** — validate the raised 0.8 rad/s
+  cap at cruise (commanded step-turns in a safe area); the clamp gated this
+  in all logged data.
 - Graduate the circle-fit / surge-fit tooling into `marine_tools`
   `bag_analysis` as a reusable `dynamics` extractor.
