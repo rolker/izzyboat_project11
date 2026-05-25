@@ -140,8 +140,10 @@ over a control surface, and works at any boat speed.
 
 ### The yaw-rate cap and how binding it is
 
-The helm clamps `cmd_vel.angular.z` to `max_yaw_speed`, which `bizzyboat.yaml`
-set to **0.5 rad/s** (the helm's own default is 1.0; sim nodes hardcode 0.5).
+During the analyzed deployments the helm clamped `cmd_vel.angular.z` to
+`max_yaw_speed` = **0.5 rad/s** (`bizzyboat.yaml`; the helm's own default is
+1.0, sim nodes hardcode 0.5) — **since raised to 1.0** (see *Change applied*
+below).
 0.5 was not a tuned-to-capability value: per the deployment log it was
 reduced 1.5 → 0.5 during an April steering-direction-reversal investigation
 (for steering "range/resolution"). That reversal is a **stationary

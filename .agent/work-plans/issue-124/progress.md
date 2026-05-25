@@ -71,12 +71,12 @@ curve spun to #88).
 **Verdict**: 6 valid (all doc/tooling-accuracy, none touch analysis conclusions); 3 false-positive/addressed; several optional perf/robustness
 
 ### Actions
-- [ ] (#1) "sub-decimeter" wording wrong for ~0.13 m RMS — fix performance.md:25 + hardware.md:303 ("decimeter-scale")
-- [ ] (#2) turning.py:134 output prints stale "@0.8 rad/s" — change to 1.0 (the chosen cap)
-- [ ] (#3) turning.py:4 docstring frames max_yaw_speed=0.5 as current — note 0.5-during-data → 1.0
-- [ ] (#4) README:61/65 — turning.py (mavros/state) + xte.py (plan+odom) need the full deployment DB; not covered by the *_nav.db recipe/run examples
-- [ ] (#5) narrow `except Exception: pass` (dynamics.py:178, dynamics_extra.py:99) to curve_fit RuntimeError/ValueError
-- [ ] (#6) progress.md turning-round entry says 0.5→0.8 (final 1.0) — add correcting note
+- [x] (#1) "sub-decimeter" wording wrong for ~0.13 m RMS — fix performance.md:25 + hardware.md:303 ("decimeter-scale")
+- [x] (#2) turning.py:134 output prints stale "@0.8 rad/s" — change to 1.0 (the chosen cap)
+- [x] (#3) turning.py:4 docstring frames max_yaw_speed=0.5 as current — note 0.5-during-data → 1.0
+- [x] (#4) README:61/65 — turning.py (mavros/state) + xte.py (plan+odom) need the full deployment DB; not covered by the *_nav.db recipe/run examples
+- [x] (#5) narrow `except Exception: pass` (dynamics.py:178, dynamics_extra.py:99) to curve_fit RuntimeError/ValueError
+- [x] (#6) progress.md turning-round entry says 0.5→0.8 (final 1.0) — add correcting note
 - [ ] (optional) perf/robustness: xte.py vectorization; dynamics_extra DB-existence guard/hardcoded names; turning.py velocity_body guard
 
 ## Correction — yaw cap value of record
@@ -84,3 +84,8 @@ The "turning + yaw-cap round" entry above records `max_yaw_speed 0.5→0.8`; the
 cap was subsequently **finalized at 1.0 rad/s** (vehicle-capability backstop)
 — see the `config(helm): set max_yaw_speed to 1.0` commit and the External
 Review entry. **1.0 is the value of record.**
+
+## External Review — re-review round (3295647)
+Copilot re-reviewed the triage-fix commit; 2 new minor items, both addressed:
+- performance.md binding-discussion opener read present-tense ("set to 0.5") → reworded to "during the analyzed deployments … since raised to 1.0".
+- this entry's Actions checkboxes were unchecked while done → checked off #1–#6 (optional perf items remain intentionally undone).
