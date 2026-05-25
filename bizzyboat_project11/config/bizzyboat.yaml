@@ -2,7 +2,7 @@
   ros__parameters:
     output_type: twist
     max_speed: 2.0
-    max_yaw_speed: 0.5
+    max_yaw_speed: 1.0  # vehicle-capability backstop (was 0.5); survey-turn limit belongs in Nav2 smoother — see #124 §2
 
 /**/platform_sender:
   ros__parameters:
