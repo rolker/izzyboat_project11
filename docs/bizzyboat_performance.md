@@ -22,7 +22,7 @@ deployments accumulate.
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
 | **Yaw-rate cap (autonomy)** | **1.0 rad/s** (raised from 0.5; = helm default) | vehicle-capability backstop; ~0.9 rad/s pivot at full throttle (vectored thrust) |
 | **Min turn radius @ cruise** | ~1.5 m (was ~3 m) | governed by planner `minimum_turning_radius` 3.0→1.5 m; helm 1.0 cap now aligns |
-| **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | sub-decimeter; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
+| **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | decimeter-scale; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
 expressed as ESC PWM (`mavros/rc/out.ch_0`): 1500 = neutral, 2000 = full

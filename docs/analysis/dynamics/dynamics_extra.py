@@ -96,8 +96,8 @@ def decel_fits(db, dt):
                     out.append(((v0 - vinf) / tau, tau, v0, vinf, rms))
                     i += 6 * w
                     continue
-            except Exception:
-                pass
+            except (RuntimeError, ValueError):
+                pass  # curve_fit non-convergence / bad input = no clean event
         i += w
     src = "velocity_body" if use_body else "gps_vel(SOG)"
     if out:

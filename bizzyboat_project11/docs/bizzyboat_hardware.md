@@ -300,7 +300,7 @@ and [`../../docs/analysis/dynamics/`](../../docs/analysis/dynamics/)
 | Max reverse speed | ~1.4 m/s (2.7 kt) peak, provisional | sustained reverse under-sampled — see [#88](https://github.com/rolker/unh_echoboats_project11/issues/88) |
 | Yaw-rate cap (autonomy) | 1.0 rad/s (`helm_manager.max_yaw_speed`) | raised from 0.5 to the helm default = vehicle-capability backstop; ~0.9 rad/s pivot at full throttle; sustained cruise turn unvalidated |
 | Min turn radius @ cruise | ~1.5 m at the 1.0 cap | set by the yaw clamp; <1 m pivot at low speed |
-| Course-keeping (track-holding) | ~0.13 m RMS on straight legs | sub-decimeter; XTE vs commanded line ~0.5 m. Not survey-limiting |
+| Course-keeping (track-holding) | ~0.13 m RMS on straight legs | decimeter-scale; XTE vs commanded line ~0.5 m. Not survey-limiting |
 
 - All speeds are **speed-through-water** (tidal current removed); observed
   speed-over-ground varies with current and heading.

@@ -175,8 +175,8 @@ def accel_fits(d, dt):
                                 (vinf - v0) / tau, rms))
                     i += 6 * w
                     continue
-            except Exception:
-                pass
+            except (RuntimeError, ValueError):
+                pass  # curve_fit non-convergence / bad input = no clean event
         i += w
     return out, ("velocity_body" if use_body else "gps_vel(signed SOG)")
 

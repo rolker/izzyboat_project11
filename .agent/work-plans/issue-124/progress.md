@@ -78,3 +78,9 @@ curve spun to #88).
 - [ ] (#5) narrow `except Exception: pass` (dynamics.py:178, dynamics_extra.py:99) to curve_fit RuntimeError/ValueError
 - [ ] (#6) progress.md turning-round entry says 0.5→0.8 (final 1.0) — add correcting note
 - [ ] (optional) perf/robustness: xte.py vectorization; dynamics_extra DB-existence guard/hardcoded names; turning.py velocity_body guard
+
+## Correction — yaw cap value of record
+The "turning + yaw-cap round" entry above records `max_yaw_speed 0.5→0.8`; the
+cap was subsequently **finalized at 1.0 rad/s** (vehicle-capability backstop)
+— see the `config(helm): set max_yaw_speed to 1.0` commit and the External
+Review entry. **1.0 is the value of record.**

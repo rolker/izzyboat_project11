@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """BizzyBoat turning performance (#124 §2 turn-radius item).
 
-Question: the helm clamps cmd_vel angular.z at max_yaw_speed=0.5 rad/s
-(bizzyboat.yaml). Is that a placeholder, and what can the boat actually do?
+Question: the helm clamped cmd_vel angular.z at max_yaw_speed=0.5 rad/s
+during these deployments (bizzyboat.yaml; since raised to 1.0 — #124 §2).
+Was that a placeholder, and what can the boat actually do?
 
 Signals (05-01+ have velocity_body.omega_z = measured yaw rate):
   - yaw rate   : t_bizzy_mavros_local_position_velocity_body.omega_z (rad/s)
@@ -129,9 +130,9 @@ def analyze(db):
         peak_spd = float(d.loc[yr.idxmax(), "vel_x"])
         print(f"   peak |yaw| {yr.max():.2f} rad/s at spd "
               f"{peak_spd:.2f} m/s -> R={abs(peak_spd) / yr.max():.1f} m")
-    # radius the 0.5 clamp imposes at cruise vs physical
-    print(f" radius @ cruise 1.52 m/s: clamp(0.5)={1.52/0.5:.1f} m, "
-          f"@0.8 rad/s={1.52/0.8:.1f} m, @0.97={1.52/0.97:.1f} m")
+    # turn radius at cruise: old clamp vs new cap vs physical peak
+    print(f" radius @ cruise 1.52 m/s: old-clamp(0.5)={1.52/0.5:.1f} m, "
+          f"new-cap(1.0)={1.52/1.0:.1f} m, peak(0.97)={1.52/0.97:.1f} m")
 
 
 if __name__ == "__main__":

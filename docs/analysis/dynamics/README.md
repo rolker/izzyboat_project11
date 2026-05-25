@@ -63,6 +63,11 @@ ros2 run bag_analysis bag_to_sqlite \
 # Run the analysis (uses the workspace venv: numpy/pandas/scipy)
 .venv/bin/python3 docs/analysis/dynamics/dynamics.py        # all deployments
 .venv/bin/python3 docs/analysis/dynamics/dynamics_extra.py  # battery/decel/reverse
+# turning.py + xte.py need the FULL <date>_deployment.db (turning.py uses
+# mavros/state; xte.py needs the plan + odom tables) — NOT the focused
+# *_nav.db topic list above. Run them against 05-01/21/22 deployment DBs:
+.venv/bin/python3 docs/analysis/dynamics/turning.py         # turn rate / steering / radius
+.venv/bin/python3 docs/analysis/dynamics/xte.py             # course-keeping (XTE)
 ```
 
 **Topic availability**: PWM (`rc/out`) and `gps_vel` are in every
