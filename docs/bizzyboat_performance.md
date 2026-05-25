@@ -21,7 +21,7 @@ deployments accumulate.
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
 | **Yaw-rate cap (autonomy)** | **1.0 rad/s** (raised from 0.5; = helm default) | vehicle-capability backstop; ~0.9 rad/s pivot at full throttle (vectored thrust) |
-| **Min turn radius @ cruise** | ~1.5 m at the 1.0 cap (was ~3 m at 0.5) | set by the yaw clamp, not the hull |
+| **Min turn radius @ cruise** | ~1.5 m (was ~3 m) | governed by planner `minimum_turning_radius` 3.0→1.5 m; helm 1.0 cap now aligns |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
 expressed as ESC PWM (`mavros/rc/out.ch_0`): 1500 = neutral, 2000 = full
@@ -179,9 +179,20 @@ In GUIDED the achieved yaw is gated at the clamp (cruise p99 0.39–0.45);
 so the boat *does* exceed 0.5 at speed — what's missing is a *sustained
 commanded* turn at the higher rate. Because vectoring thrust to turn diverts
 it from forward, the boat **slows into a hard turn** (and lower speed means
-*more* yaw authority, not less — no rudder-style stall). Turn radius is
-therefore set by the yaw clamp, not the hull: ~3 m at cruise under 0.5,
-~1.5 m under the new 1.0 cap.
+*more* yaw authority, not less — no rudder-style stall).
+
+For **Nav2-planned** motion the binding constraint is not the helm clamp but
+the planner's `minimum_turning_radius` (`SmacPlannerHybrid`): a planned arc
+that radius wide never demands more yaw than `v / R`. It was **3.0 m**
+(≈ 0.5 rad/s at cruise — which exactly matched the *old* helm clamp) and has
+been **reduced to 1.5 m** ([seafloor_echoboat_project11#24](https://github.com/rolker/seafloor_echoboat_project11/pull/24),
+shared config) ≈ 1.0 rad/s at cruise — now aligned with the raised helm cap.
+So planned line-transitions tighten from ~3 m to ~1.5 m; the helm cap only
+bites on heading-error transients, hover, and manual. (Whether the Smac
+planner is actually in the loop for survey line-transitions vs. the trackline
+being fed straight to the follower is unconfirmed from logs — the filter
+chain was disconnected during troubleshooting — so verify on the next
+deployment.)
 
 ### Change applied + caveat
 
