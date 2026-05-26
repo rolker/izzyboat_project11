@@ -104,7 +104,8 @@ when low-SOC).
 - Don't rely on "yesterday's charge" — one full charge ≈ a handful of in-water hours, but idle
   dominates the budget.
 - **Recharge time between cohorts is not yet characterized** (only the charge-curve start was
-  captured) — **measure full charge time** at the next opportunity for swap planning.
+  captured) — **measure full charge time** at the next opportunity. BizzyBoat charges **in place**
+  (batteries are not field-swappable), so recharge-to-full time bounds the day/cohort cadence.
 
 ### Drive efficiently (extends every mission)
 - **Survey throttle, not full** — full throttle ≈ 4 h to empty; cruise/survey stretches that ~2–3×.
@@ -116,5 +117,5 @@ when low-SOC).
 - **#88** — PWM × current sweep (+ multiple speeds/steering angles) + dockside idle clamp +
   optional measured full-discharge capacity. The unlock for real (not ±30 %) numbers.
 - **#171 / #162** — annunciator never warns at LVD → manual voltage watch required (class-blocking).
-- **Recharge curve** — uncharacterized; measure a full charge for cohort-swap planning.
+- **Recharge curve** — uncharacterized; measure a full charge for cohort-cadence planning (charge-in-place; no battery swap).
 - Cross-deployment power analysis detail: see #167.
