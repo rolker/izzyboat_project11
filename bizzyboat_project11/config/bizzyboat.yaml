@@ -183,8 +183,11 @@
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
-              # Reflex collision cloud (#170). Unthrottled — measured tiny (<2 KB/msg).
-              collision_pointcloud: {source: collision_monitor/pointcloud}
+              # Reflex collision cloud (#170). Throttled to 1 Hz on the VPN
+              # link (period: 1.0) — VPN is the constrained OTH/Starlink budget
+              # path (1 MB/s cap); 1 Hz is enough for operator SA there. Full
+              # rate retained on the WiFi link above.
+              collision_pointcloud: {source: collision_monitor/pointcloud, period: 1.0}
               odom: {source: odom}
               oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 1.0}
@@ -286,6 +289,13 @@
       - /bizzy/run_tasks/_action/send_goal
       - /bizzy/compute_path_through_poses/_action/status
       - /bizzy/follow_path/_action/status
+      # CrabbingPathFollower PID internals — cross-track error (error),
+      # p/i/d terms, crab command (output); type control_msgs/PidState.
+      # Record-only for post-mission XTE analysis of SE-line undulation
+      # (#164). Topic verified live on gabby 2026-05-26: resolves under
+      # /bizzy/ (the node is namespaced), NOT the global /FollowPath/...
+      # the topic_prefix alone would suggest — confirm before assuming.
+      - /bizzy/FollowPath/pid/pid_state
       - /bizzy/hover/_action/status
       - /bizzy/plan
       - /bizzy/path_follower_visualization
@@ -294,6 +304,12 @@
       - /bizzy/collision_monitor_state
       # Reflex collision-avoidance cloud (perception#17 adapter) — Collision Monitor source (#170)
       - /bizzy/collision_monitor/pointcloud
+      # Collision Monitor danger-zone polygons (visualize: true) — capture the
+      # slowdown/stop zone geometry so non-trigger events can be replayed
+      # against the cloud directly, without re-deriving zones from config + TF
+      # (#170; geometry_msgs/PolygonStamped).
+      - /bizzy/collision_monitor/slowdown_polygon
+      - /bizzy/collision_monitor/stop_polygon
       - /bizzy/local_costmap/published_footprint
       - /bizzy/marine/response
       - /marine/platforms

@@ -57,3 +57,28 @@ indicators:
     diagnostic_name: "udp_bridge operator: bizzy: vpn"
     format: "{}"
     stale_timeout: 5.0
+
+  # --- Boat health (forwarded from gabby over the link) ---
+  # Strings confirmed live on op-side /diagnostics 2026-05-26 (deployment 20a49fc).
+  # stale_timeout 10.0: boat diags are ~1 Hz over a lossy VPN; 5 s risks nuisance flips.
+  - name: Battery
+    source: diagnostics
+    diagnostic_name: "mavros: Battery"
+    value_key: Voltage          # KeyValue key confirmed (capital V); reads ~28.49 V
+    format: "{:.2f} V"
+    thresholds:
+      warn: "value < 23.0"      # FCU BATT_LOW_VOLT — tune vs Torqeedo Power 24-3500
+      error: "value < 21.5"     # FCU BATT_CRT_VOLT
+    stale_timeout: 10.0
+
+  - name: FCU System
+    source: diagnostics
+    diagnostic_name: "mavros: System"   # carries "Battery N is low" + FCU ERRORs
+    format: "{}"
+    stale_timeout: 10.0
+
+  - name: Sound Speed
+    source: diagnostics
+    diagnostic_name: "sound_speed_bridge"   # exact name, no suffix (substring default matches)
+    format: "{}"
+    stale_timeout: 10.0
