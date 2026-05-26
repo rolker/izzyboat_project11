@@ -45,15 +45,16 @@ Phased per discussion (user-confirmed). **Phase A** is this PR.
    - `~/pointcloud` → `/bizzy/collision_monitor/pointcloud` (absolute dst to
      avoid private-namespace remap ambiguity)
 
-   **Activation risk to verify**: the node is a `LifecycleNode` and won't
-   publish until configured+activated. `segments_to_pointcloud_launch.py`
-   computes its `LifecycleTransition` target name from
-   `LaunchConfiguration('ros_namespace')`, which `PushRosNamespace` does **not**
-   set — so under a pushed namespace the transition may target the wrong FQN
-   and never fire. Verify activation in sim; if it misfires, pass `ros_namespace`
-   explicitly or launch the reflex node directly (with its own transition)
-   rather than via the include. This is the load-bearing check for Phase A —
-   no activation means no cloud to record/bridge.
+   **Activation note**: the node is a `LifecycleNode` and won't publish until
+   configured+activated. `segments_to_pointcloud_launch.py` computes its
+   `LifecycleTransition` target name from `LaunchConfiguration('ros_namespace')`.
+   Verified that `PushRosNamespace` *does* set `ros_namespace` to the combined
+   absolute namespace (`launch_ros/actions/push_ros_namespace.py:82`), so under
+   the `oak_forward` group the transition target
+   (`/bizzy/sensors/cameras/oak_forward/segments_to_pointcloud_reflex`) matches
+   the node FQN and the configure→activate transition fires. Still the
+   load-bearing sim check for Phase A — confirm the topic actually publishes
+   (no activation = silent empty topic).
 
 2. **Record it.** Add `/bizzy/collision_monitor/pointcloud` to the explicit
    `logger.topics` allowlist in `bizzyboat_project11/config/bizzyboat.yaml`.
@@ -63,8 +64,9 @@ Phased per discussion (user-confirmed). **Phase A** is this PR.
    in `bizzyboat.yaml`. **Measured** size is tiny — 128×96 mask, ≤~53 projecting
    `PointXYZI` points across the real 2026-05-22 obstacle-approach window,
    <2 KB/msg, <0.1 Mbps @10 Hz — so VPN inclusion is safe (unlike the costmap
-   dropped in #68 for size). Start at `period: 1.0` (operator SA/debug; the
-   monitor consumes it on-boat); tunable.
+   dropped in #68 for size). **Unthrottled** (no `period`) on both links per
+   user decision — the monitor consumes it on-boat, and the bridged copy is
+   cheap enough to forward every message for operator SA/debug.
 
 ### Phase B — wire + tune the monitor (follow-up sub-issue, own plan)
 
@@ -124,14 +126,13 @@ tuning — no field time. Per the #170 issue comment.
 
 ## Open Questions
 
-- [ ] **Bridge period** for `collision_pointcloud` — plan assumes `period: 1.0`
-  on both links (it's operator SA/debug; monitor consumes on-boat). Confirm or
-  set unthrottled.
-- [ ] **Phase A merge gating** — open this PR now (sim-tested against the
-  perception#17 worktree) and hold for perception#17 merge, or wait until
-  perception#17 lands first? Plan assumes open-now-hold-ready.
+- [x] **Bridge period** — resolved: **unthrottled** (no `period`) on both links.
+- [x] **Phase A merge gating** — resolved: **no gating**. perception#17 is
+  progressing in parallel for a near-term deployment; land Phase A alongside it
+  rather than waiting. Sim-test against the perception#17 worktree.
 
 ## Estimated Scope
 
-Phase A: single small PR (one launch addition + two config edits), gated on
-perception#17. Phases B and C are separate PRs/sub-issues with their own plans.
+Phase A: single small PR (one launch addition + two config edits). Developed in
+parallel with perception#17 (no merge gating). Phases B and C are separate
+PRs/sub-issues with their own plans.
