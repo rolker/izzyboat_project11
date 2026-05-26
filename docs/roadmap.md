@@ -157,7 +157,7 @@ still load-bearing for sonar processing.)
 
 ### Power / endurance *(new — 2026-05-26, from #167)*
 
-Battery/endurance characterized across the chained 2026-05-19 → 21 → 22 single charge cycle ([`#167`](https://github.com/rolker/unh_echoboats_project11/issues/167), **closed**). Durable reference: [`bizzyboat_power.md`](bizzyboat_power.md).
+Battery/endurance characterized across the chained 2026-05-19 → 21 → 22 single charge cycle ([`#167`](https://github.com/rolker/unh_echoboats_project11/issues/167), **closed**). Durable reference: [`bizzyboat_power.md`](../bizzyboat_project11/docs/bizzyboat_power.md).
 
 - **Field-ready output**: the **voltage ladder** (pre-launch resting-V go/no-go + in-mission loaded-V recovery ladder) is measured and reliable — use it for mission planning. All current / power / energy / endurance figures are **modeled (±~30 %)** — no current meter on this hull.
 - **No battery swap** — BizzyBoat charges **in place**, so **recharge-to-full time between deployment days / cohorts is the binding cadence constraint** (not swap logistics). The recharge curve is still **uncharacterized** — measure a full charge at the next opportunity.

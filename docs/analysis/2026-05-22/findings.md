@@ -40,7 +40,7 @@ Headline numbers:
 > **Power caveat.** BizzyBoat has **no current meter** — voltage is the only real
 > electrical measurement. The tier-1 report's current/energy/power figures
 > (peak ~152.9 A / 3471 W; ~1047 Wh ≈ 15% of 7000 Wh nominal) are a **modeled
-> V-drop estimate (±~20%)**, not measurements. The actual power-usage analysis
+> V-drop estimate (±~30%)**, not measurements. The actual power-usage analysis
 > is tracked in [`#167`](https://github.com/rolker/unh_echoboats_project11/issues/167);
 > trends are usable, absolutes are not.
 
@@ -48,7 +48,7 @@ Headline numbers:
 
 ## §8 Diagnostics summary ✅
 
-ERROR drill-down complete; milestone snapshots + annunciator correlation remain.
+ERROR drill-down complete; annunciator correlation (§8.D) and milestone health snapshots (§8.F) also complete.
 
 **18,637 of 163,166 diagnostic messages carried an ERROR**, from 5 sources:
 
@@ -162,13 +162,13 @@ The *survey* turn-rate limit belongs in the **Nav2 smoother**, not the backstop.
 - **Mean speed 0.93 m/s** while autonomous (max 2.02) — the turn-slowdowns (root cause
   above) pull the mean well below the ~1.5 m/s line cruise.
 
-### §6.2 XTE / undulation → delegated to #164
+### §6.2 XTE / undulation → analyzed in §12 (#164)
 Planned geometry is in `/bizzy/plan` (poses in `bizzy/map_tide`, whose x,y equal odom
 x,y since `map_tide` is a pure z-offset of `odom`); the per-line track is in `odom`. So
-per-line XTE and the **SE-vs-NW undulation asymmetry** are computable, but that's
-exactly [`#164`](https://github.com/rolker/unh_echoboats_project11/issues/164)'s remit —
-leaving the quantitative XTE-per-direction work there rather than duplicating it. Data +
-method are ready.
+per-line XTE and the **SE-vs-NW undulation asymmetry** are computable — the quantitative
+analysis was performed in **§12** ([`#164`](https://github.com/rolker/unh_echoboats_project11/issues/164),
+now **closed**): undulation is real (~1.6 m median RMS), but the SE-only asymmetry could
+not be confirmed from this mission's single travel heading.
 
 ---
 
@@ -393,8 +393,9 @@ threshold/source mapping). Full per-host technical detail lives in gabby §§1�
 2. **Annunciator coverage** (#171/#162) — class-blocking operator safety.
 3. **AML SV probe config** (#163) — verify before class.
 
-`docs/roadmap.md` is **not** edited here (repo doc — collaborative). The above is the
-proposed feed; I can open a worktree + PR for the roadmap update on your word.
+The above is the feed for the next-deployment scope. The `docs/roadmap.md` update derived
+from this analysis **is included in this PR** — a Power/endurance section plus placements for
+#33 (hover), #164, #171 (annunciator), #173 (next deployment), and camp#52.
 
 ---
 
