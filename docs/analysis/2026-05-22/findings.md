@@ -70,9 +70,9 @@ asserted (continuous diagnostic ERROR) while the statustext fires once.
 **No auto-failsafe mode change fired.** The boat ran **GUIDED continuously from
 18:18:46 until 20:10:05** (→ MANUAL for recovery; recovery 20:12:18). Despite the
 low-battery warning and the slide to 21.2 V, ArduPilot did not auto-RTL/HOLD —
-consistent with battery-failsafe action being disabled for the controlled drain.
-→ **Open question:** confirm this is intentional config, not an oversight (no
-auto-protection if a drain test overruns). See §Open questions.
+the battery-failsafe action is **intentionally disabled** for the controlled drain
+(confirmed). Accepted trade-off: no autopilot-side auto-protection if a drain test
+overruns.
 
 *(Power-field placeholders confirm the no-current-meter reality: `percentage` =
 −0.01, `power_supply_health` = 0/UNKNOWN, "used 0 mAh". Only voltage is real; the
@@ -402,8 +402,8 @@ from this analysis **is included in this PR** — a Power/endurance section plus
 ## Cross-cutting findings
 
 1. **The drain-to-LVD test worked as intended** — voltage fell to 21.2 V, FCU
-   raised low-battery, no auto-failsafe interrupted the controlled drain. The one
-   thing to verify is whether the absent failsafe action is deliberate config.
+   raised low-battery, no auto-failsafe interrupted the controlled drain. The
+   failsafe action is intentionally disabled for the drain test (confirmed).
 2. **Sound-velocity was never online this deployment** (standing ERROR dockside→
    recovery) — a real gap for the survey mission, tracked in #163.
 3. **Survey line transitions are open-loop and brittle.** The per-line
@@ -435,8 +435,9 @@ efficiency), #157 (nav activation race).
 
 ## Open questions
 
-- **Battery failsafe action** — is it intentionally disabled for the drain test, or
-  an oversight? No auto-protection fired through the slide to 21.2 V. (§8.A)
+- **Battery failsafe action** (§8.A) — *resolved 2026-05-26*: intentionally disabled
+  for the controlled drain test (confirmed); the slide to 21.2 V ran with no
+  autopilot auto-protection by design (accepted trade-off for drain tests).
 - **Yaw-rate clamp** — confirm the ≈0.5 rad/s cap on forwarded `omega_z` holds
   across the whole mission (only one turn inspected) and locate where it's set in
   the mux/mavros bridge. (§6)
