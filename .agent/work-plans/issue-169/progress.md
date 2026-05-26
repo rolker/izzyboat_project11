@@ -42,7 +42,7 @@ issue: 169
 **CI**: all-pass (copilot-pull-request-reviewer: success)
 
 ### Findings
-- [ ] (low, Copilot R3) §8 ERROR table verdict + §8.C prose label this run's 534 resend give-ups "structural ~30% resend", but §7 measured **0.7% of wire this deployment** (the ~30% is the prior 2026-05-01/05-18 calibration) — qualify so §8 doesn't contradict §7 — `docs/analysis/2026-05-22/findings.md:60,89`
+- [x] (low, Copilot R3) §8 ERROR table verdict + §8.C prose label this run's 534 resend give-ups "structural ~30% resend", but §7 measured **0.7% of wire this deployment** (the ~30% is the prior 2026-05-01/05-18 calibration) — *resolved 2026-05-26*: both spots now state 0.7%-this-run and attribute ~30% to the prior calibration baseline — `docs/analysis/2026-05-22/findings.md:60,89`
 - [x] (low, Copilot R3) Dev-log "Post-mission analysis" calls the no-auto-failsafe "by design" (settled), but findings §8.A kept "intentional config vs oversight" as an open question — *resolved 2026-05-26*: Roland confirmed the battery failsafe is **intentionally disabled** for the drain test; closed the open question in §8.A + §10 register + §Open questions, dev-log "by design" is now accurate — `docs/analysis/2026-05-22/findings.md:73`, `docs/logs/2026/2026-05-22_dev_logs.md:277`
 
 ### Resolved in prior round (verified at `73360cc`)

@@ -57,7 +57,7 @@ ERROR drill-down complete; annunciator correlation (§8.D) and milestone health 
 | `sound_speed_bridge` | 12,556 | 1 Hz continuous, entire bag (dockside→recovery) | **Standing fault** |
 | `mavros: System` | 4,597 | sporadic until 19:15, then pegged 1 Hz to recovery | **Low-battery failsafe** |
 | udp_bridge `operator: vpn`+`wifi` | 910 | nil until 19:35 blip, big spike 20:25 | Benign (link loss, mostly post-recovery) |
-| udp_bridge `resend give-ups` | 534 | steady 7–46/10-min throughout | Benign (structural ~30% resend) |
+| udp_bridge `resend give-ups` | 534 | steady 7–46/10-min throughout | Benign (0.7% of wire this run, §7; ~30% was the prior-calibration baseline) |
 | `starlink: link` | 40 | scattered blips | Benign |
 
 ### §8.A `mavros: System` = low-battery, as designed
@@ -86,8 +86,9 @@ pre-launch. The sound-velocity bridge never produced valid data this deployment.
 ### §8.C Benign link errors
 udp_bridge vpn+wifi ERRORs cluster at the 20:25 spike (post-recovery, boat being
 pulled / powered down) with a brief 19:35 blip — over-horizon/range behavior, not
-faults. Resend give-ups are steady background (structural ~30% resend overhead,
-per the 2026-05-18 link calibration). Starlink blips are minor path flaps.
+faults. Resend give-ups are steady background — but only **0.7% of wire this run**
+(§7), well under the ~30% structural overhead seen in the 2026-05-01 / 05-18
+calibration. Starlink blips are minor path flaps.
 
 ### §8.D Operator-annunciator cross-check ✅ → gaps filed
 The conditions above largely **did not surface to the operator annunciator**.
