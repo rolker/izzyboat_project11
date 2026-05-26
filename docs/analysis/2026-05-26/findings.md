@@ -84,4 +84,25 @@ A clean stopping-distance-vs-speed curve needs: isolation of the **single monoto
 - Coast / stopping-distance vs. approach speed (§6) → safe survey speed.
 - Transit-path turning behavior: yaw cap 1.0 + planner min radius 1.5 m, from `/bizzy/plan` curves + execution (the limits were exercised only in transit-to-line-start planning this run — individual tracklines, no survey-pattern apron turns).
 - `pid_state` cross-track-error dig (#164).
-- Mission re-send replay — `mission_manager` `Current Nav Task` + `behavior_tree_log` around the reproductions (git-bug `7709673`). Note: `follow_path`/`run_tasks` action-status goal UUIDs were not recorded (transient_local rosbag2 gap), limiting offline goal-id correlation.
+- Mission re-send replay — optional corroboration of §8 against `behavior_tree_log` at the 13:59 event (not required; §8 root cause is conclusive from the BT structure). Note: `follow_path`/`run_tasks` action-status goal UUIDs were not recorded (transient_local rosbag2 gap), and the inbound `marine/mission_manager/command` strings aren't recorded either — add both to the logger for future mission diagnosis.
+
+## 8. Mission re-send doesn't take effect — BT path-latch root cause
+
+> Needs its own issue in `unh_marine_navigation` (ROS autonomy stack). **Not** related to `unh_echoboats_project11#35` / git-bug `7709673`, which is an **ArduPilot** GUIDED-mode stale-mission concern (FCU side) — a different layer.
+
+**Symptom (operator):** running trackline3, press Execute on trackline4; the heartbeat shows trackline4 as the current task, **but the boat keeps driving toward trackline3's waypoint**. Workaround: **clear, then resend**.
+
+**Not the mission_manager.** CAMP's Execute sends `replace_task mission_plan` (`camp/.../mission_manager.cpp:99`) → `MissionManager.replaceTasks` (clear + add). The task list is replaced cleanly and `current_nav_task` advances — which is why the heartbeat correctly shows trackline4. The bag confirms the active-task id switches.
+
+**Root cause is in the BT** (`marine_nav_bt_task_navigator/behavior_trees/run_tasks.xml`), a reported-vs-executed split:
+- The main loop is a `ReactiveSequence`; its first child `UpdateCurrentTaskData` re-selects `current_task` **every tick** and sets `active_task_id := current_task_id`. So the *reported* active task tracks the list reactively → heartbeat = trackline4. ✓
+- `SurveyLineTask` is `ReactiveSequence[ ScriptCondition(current_task_type=='survey_line'), Sequence[ SetPathFromTask → TransitAndSurveyLine(FollowPath) → SetTaskDone ] ]`. The inner **`Sequence` has memory**: `SetPathFromTask` runs **once** (latching `survey_path` from the task active at entry) and is **not re-ticked** while `FollowPath` is RUNNING. The only re-entry gate is **`current_task_type`** — and trackline3→trackline4 is `survey_line → survey_line`, *no type change*, so the `ReactiveSequence` never halts the running `FollowPath` and never recomputes the path.
+- **Net:** reported task switches (reactive), executed path is latched (set once, gated on *type* not *id*). Boat follows trackline3's path while the heartbeat says trackline4.
+
+**Why "it used to work":** normal sequential surveys are fine — each line runs to `SetTaskDone`, the subtree exits and re-enters, and `SetPathFromTask` recomputes for the next line. The bug only appears when the operator **interrupts mid-line with another same-type line** (the running line never reaches "done," so the subtree never re-enters).
+
+**Why clear→resend fixes it:** clearing makes `current_task_type` become `hover`/none → the `survey_line` ScriptCondition fails → the `ReactiveSequence` halts the running `FollowPath` → resend re-enters fresh and `SetPathFromTask` runs for the new line.
+
+**Fix direction:** gate survey-line re-entry on **task identity, not just type** — halt + restart `FollowPath` when `active_task_id` changes mid-execution (e.g., a `ReactiveSequence` condition comparing the entered task id to the live `current_task_id`); or have the goal preempt cancel the running nav. Lives in `unh_marine_navigation` (BT + possibly the task subtrees).
+
+*(Static BT analysis from the dev-workspace copy; confirm it matches gabby's deployed `jazzy`. BT.CPP4 `Sequence` keeps its position while a child is RUNNING, so earlier SUCCESS children aren't re-ticked — the load-bearing fact here.)*
