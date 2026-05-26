@@ -50,9 +50,11 @@ Obstacle range was taken from the reflex cloud itself — published in `bizzy/ba
 **Conclusion:** the reflex CA reliably stops for **large/extended** obstacles (breakwater, shoreline, docks, large vessels) but **does not reliably stop for small obstacles** (buoys, mooring balls). The small-obstacle case is exactly the recurring-collision hazard (2026-05-01 mooring-ball near-miss, 2026-05-21 floating platform, 2026-05-22 mooring). The deployment validated CA for the big-structure case; the motivating mooring-ball problem is **not fully solved**.
 
 **Mitigation directions (to scope as follow-up, not decided):**
-- **Stop-latch / obstacle-memory** — hold the stop for a few seconds after an obstacle vanishes in the near zone instead of resuming instantly (likely cheapest, highest leverage).
+- **Stop-latch / obstacle-memory** — hold the stop for a few seconds after an obstacle vanishes in the near zone instead of resuming instantly (cheap, independent insurance).
 - **Near-field coverage** — a forward-down camera or other sensor for the <2 m blind zone.
-- **Speed cap** so coast-down cannot carry a small obstacle into the blind zone before the boat halts (depends on the §5 stopping-distance curve).
+- **Speed cap** so coast-down cannot carry a small obstacle into the blind zone before the boat halts (depends on the §6 stopping-distance curve).
+
+**Framing (operator steer, 2026-05-26):** this is a **known limitation, not a fire drill** — the reflex handled the real structure (breakwater) correctly. The proper home for the fix is the natural evolution of the **segmentation→costmap pipeline** (spatial obstacle memory so a buoy stays in the map after it leaves the camera's near view, + planner route-around) — handle the small-obstacle case as part of that evolution rather than as an urgent standalone reflex patch. The reflex stop-latch above is optional cheap insurance, not a mandate. (Costmap clearing/persistence config governs whether the map actually retains the obstacle on close approach — a thing to get right as the costmap evolves.)
 
 ## 4. `pid_state` recording — confirmed
 
