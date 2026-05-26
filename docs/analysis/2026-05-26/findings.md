@@ -58,7 +58,18 @@ Obstacle range was taken from the reflex cloud itself — published in `bizzy/ba
 
 `/bizzy/FollowPath/pid/pid_state` (`control_msgs/PidState`) recorded **10,310 + 3,234** messages across the two in-water bags. The objective-3 "did it land in the bag" check is closed; the #164 cross-track-error analysis is unblocked. The topic is namespaced under `/bizzy/` (verified live by the gabby agent), not the global `/FollowPath/...` the issue's source-note predicted.
 
-## 5. Coast distance vs. approach speed — inconclusive (next pass)
+## 5. Sound speed (#163) — resolved
+
+`/bizzy/sensors/sound_speed/sound_speed` (`marine_interfaces/SoundSpeed`) during the in-water window:
+
+- **98.8% valid readings** (117,961 of 119,346); only **1.2% zero-dropouts**.
+- Real values **1481.9–1491.0 m/s, median 1489.9** — a tight, plausible saltwater sound speed for ~10–12 °C coastal water.
+- First valid reading **19 s after launch** (12:49:13) — the probe settling on water entry; that 19 s is the single longest zero-gap. The remaining dropouts are 70 brief scattered spans.
+- Pre-launch (on the cart) reads 0.0 — dry, expected.
+
+This is a complete turnaround from the 2026-05-22 all-NUL failure ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)): the AML SVS probe produced good, stable data in the water. **#163 can move toward closed.** Minor follow-up: watch the ~1.2% intermittent zero-dropouts if M3 sound-speed accuracy proves sensitive (M3 presumably holds last value). See `sound_speed.png` in the analysis artifacts.
+
+## 6. Coast distance vs. approach speed — inconclusive (next pass)
 
 Intended to answer: does the ~10–15 m coast-down (no reverse action; [#88](https://github.com/rolker/unh_echoboats_project11/issues/88)) eat the stopping margin as approach speed climbs, and what is the safe survey speed?
 
@@ -66,10 +77,9 @@ The first-pass metric (path length from first gated≈0 to first halt, per STOP 
 
 A clean stopping-distance-vs-speed curve needs: isolation of the **single monotonic deceleration** from peak approach to halt, **autonomous-only** filtering (drop manual segments), and cross-check of the high-speed runs against the camera video. Deferred to the next analysis pass.
 
-## 6. Pending (next analysis pass)
+## 7. Pending (next analysis pass)
 
-- Coast / stopping-distance vs. approach speed (§5) → safe survey speed.
+- Coast / stopping-distance vs. approach speed (§6) → safe survey speed.
 - Transit-path turning behavior: yaw cap 1.0 + planner min radius 1.5 m, from `/bizzy/plan` curves + execution (the limits were exercised only in transit-to-line-start planning this run — individual tracklines, no survey-pattern apron turns).
 - `pid_state` cross-track-error dig (#164).
-- Sound-speed in-water plausibility (#163) — the bridge published heavily in water; verify the values are sensible.
 - Mission re-send replay — `mission_manager` `Current Nav Task` + `behavior_tree_log` around the reproductions (git-bug `7709673`). Note: `follow_path`/`run_tasks` action-status goal UUIDs were not recorded (transient_local rosbag2 gap), limiting offline goal-id correlation.
