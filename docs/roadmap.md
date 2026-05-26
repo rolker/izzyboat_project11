@@ -114,9 +114,12 @@ autonomy quality.
   either link existing issue/branch or open new. Borrowable code in
   `s57_tools`/`marine_charts` for the depth-data → costmap layer
   plumbing.
+- [`unh_echoboats_project11#173`](https://github.com/rolker/unh_echoboats_project11/issues/173) — **next-deployment validation** of two field-untested turning-limit changes since #160: helm yaw cap 0.5→1.0 rad/s ([PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172) / #124 §2) and planner min turning radius 3.0→1.5 m. Also carries the `pid_state` (cross-track-error) logging task that unblocks the #164/#165 analyses. The next test day is the vehicle.
 
 **Defer past June 4:**
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults). Not critical for single-boat ops; promote when joint Bizzy + Izzy ops come into scope.
+- [`rolker/unh_marine_navigation#33`](https://github.com/rolker/unh_marine_navigation/issues/33) — Hover overshoots station on engagement (root-caused from #160 via [`#165`](https://github.com/rolker/unh_echoboats_project11/issues/165)): `Hover` holds the engage-point with a position-only controller (no velocity term), so a boat arriving at survey speed coasts a median ~9 m past before a slow return. Fix = restore the stop-point projection (`pos + v²/2a`; the pre-nav2 behavior, legacy code recovered at git `1c5db5a^`) + an optional live `point_at_target` (ArduPilot `LOIT_TYPE` analog). Shared cross-platform code → needs on-water re-validation. **Opportunistic only** — do if spare cycles before June 4; the enabler (recording `pid_state`) lands before June 4 via [`#173`](https://github.com/rolker/unh_echoboats_project11/issues/173).
+- [`unh_echoboats_project11#164`](https://github.com/rolker/unh_echoboats_project11/issues/164) — CrabbingPathFollower SE-undulation. **Closed** — undulation is real (~1.6 m median RMS) but the SE-only asymmetry couldn't be confirmed (single travel heading; visually magnified by 1 m line spacing). Reopen on recurrence; resolution gated on `pid_state` recording ([`#173`](https://github.com/rolker/unh_echoboats_project11/issues/173)).
 
 ### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01; FCU side outstanding)*
 
@@ -151,6 +154,14 @@ still load-bearing for sonar processing.)
 
 **Done:**
 - [`unh_echoboats_project11#112`](https://github.com/rolker/unh_echoboats_project11/issues/112) — record EKF3 streams. **CLOSED** ([PR #123](https://github.com/rolker/unh_echoboats_project11/pull/123) merged 2026-05-18).
+
+### Power / endurance *(new — 2026-05-26, from #167)*
+
+Battery/endurance characterized across the chained 2026-05-19 → 21 → 22 single charge cycle ([`#167`](https://github.com/rolker/unh_echoboats_project11/issues/167), **closed**). Durable reference: [`bizzyboat_power.md`](bizzyboat_power.md).
+
+- **Field-ready output**: the **voltage ladder** (pre-launch resting-V go/no-go + in-mission loaded-V recovery ladder) is measured and reliable — use it for mission planning. All current / power / energy / endurance figures are **modeled (±~30 %)** — no current meter on this hull.
+- **No battery swap** — BizzyBoat charges **in place**, so **recharge-to-full time between deployment days / cohorts is the binding cadence constraint** (not swap logistics). The recharge curve is still **uncharacterized** — measure a full charge at the next opportunity.
+- **Defer past June 4**: [`#88`](https://github.com/rolker/unh_echoboats_project11/issues/88) — PWM × current sweep, the precision unlock that removes the ±30 %. The field-ready voltage rules don't need it.
 
 ### Class-ready operator UI
 
@@ -222,6 +233,7 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`unh_echoboats_project11#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) — Battery annunciator stays green at < `BATT_LOW_VOLT`. Threshold-to-color mapping is broken (row renders live voltage but severity never escalates). During #160 the annunciator was silent the entire time voltage was below 23.0 V (down to ~22 V loaded). Class-blocking: students cannot be expected to monitor raw `/mavros/battery` voltage; the annunciator is the operator's safety contract. Likely root cause is mavros `sys_status.min_voltage` not configured, leaving `DiagnosticStatus.level` at OK regardless of voltage — fix path TBD per the issue body.
 
 **Must finish before June 4 — small easy wins, do these first:**
+- [`unh_echoboats_project11#171`](https://github.com/rolker/unh_echoboats_project11/issues/171) — operator annunciator is **missing indicator rows** (gaps from #160): no battery-voltage-threshold, no **sound-speed** (SV-failure), no **FCU-system** (`mavros:System`) row — so during the drain none surfaced. Config-only (`bizzyboat_operator_annunciator.yaml`). **Distinct from #162** (which fixes the *existing* battery row's threshold→color); #171 *adds the missing rows*. Do as one annunciator-config pass alongside #162.
 - [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) reframed — **remove** the `diagnostic_aggregator` from operator launches. Strip the Node from `operator_core_launch.py` + delete the unused aggregator config in `diagnostics.yaml`. Eliminates the "STALE bucket / config drift" misdirection 2026-05-19 surfaced.
 - [`unh_echoboats_project11#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) — `output='screen'` → `output='both'` in BizzyBoat launches. One-line change. Crash output recoverable post-mission.
 - [`unh_echoboats_project11#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) — remove stale `bencloud` ping target. Trivial. Reduces the chronic alert-fatigue noise.
@@ -229,6 +241,7 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — run network monitor nodes on salmon + record salmon-side `/diagnostics` during deployments. Already in the deployment process intent; confirm it's actually wired up and recording.
 
 **Desirable, defer if needed:**
+- [`rolker/camp#52`](https://github.com/rolker/camp/issues/52) — CAMP GUI froze twice during #160 ([`#166`](https://github.com/rolker/unh_echoboats_project11/issues/166), root cause **unconfirmed** — a GUI hang leaves no log trace). Deliverable is a *capture plan* (Qt-timer heartbeat + auto-backtrace-on-stall) so the next freeze self-documents. **Before June 4 if cycles allow, low priority**; workaround is solo `pkill camp` (rest of stack survives).
 - [`rolker/ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5) — observability mode. Substantial implementation. Catches the lifecycle-abort + silent-process-death failure shapes as a general mechanism. Would close the biggest remaining observability hole, but the rest of the easy wins above already deliver most operator-visible value. Treat as stretch goal — if it ships before June 4 great, otherwise the workaround is documented manual checks at launch time + students drilled to recognize "I queued a goal and nothing happened" as a system problem requiring expert help.
 - [`unh_echoboats_project11#142`](https://github.com/rolker/unh_echoboats_project11/issues/142) — host thermals as `DiagnosticStatus` (lm-sensors + NVMe SMART). Off-the-shelf package available; do if quick, defer if not.
 
@@ -332,10 +345,7 @@ they become relevant.
 
 ### Navigation polish
 
-- **Hover v5** (range-aware taper for faster excursion recovery) —
-  v4 is sufficient for current use; revisit only if v4's behavior
-  becomes a real ergonomics problem
-- **Hover vectored-thrust parameter** — works well enough with v4 cliff
+- **Hover stop-point projection + `point_at_target`** — now tracked as [`rolker/unh_marine_navigation#33`](https://github.com/rolker/unh_marine_navigation/issues/33) (root-caused from #160; see Navigation reliability → Defer). Supersedes the former no-issue "Hover v5 excursion-recovery taper" and "vectored-thrust parameter" notes: the stop-point projection removes the excursion (no taper band-aid needed), and `point_at_target` *is* the vectored-thrust parameter.
 
 ### Networking
 
