@@ -12,6 +12,7 @@ from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParametersFromFile
+from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -129,6 +130,40 @@ def generate_launch_description():
                                     'oak_cameras_launch.py'
                                 ])
                             ),
+                        ),
+
+                        # Reflex collision-avoidance pointcloud (#170): forward-OAK
+                        # segmentation projected to base_link_level for the nav2
+                        # Collision Monitor (perception#17 segments_to_pointcloud,
+                        # reflex mode). Under oak_forward/ so its relative
+                        # `segmentation` + `segmentation/camera_info` subscriptions
+                        # resolve to the forward camera; `~/pointcloud` is remapped
+                        # to the canonical /<ns>/collision_monitor/pointcloud topic
+                        # consumed by the bag/bridge configs and the Collision
+                        # Monitor (Phase B).
+                        GroupAction(
+                            actions=[
+                                PushRosNamespace('oak_forward'),
+                                SetRemap(
+                                    src='~/pointcloud',
+                                    dst=['/', namespace,
+                                         '/collision_monitor/pointcloud']
+                                ),
+                                IncludeLaunchDescription(
+                                    PythonLaunchDescriptionSource(
+                                        PathJoinSubstitution([
+                                            FindPackageShare(
+                                                'sea_surface_segmentation'),
+                                            'launch',
+                                            'segments_to_pointcloud_launch.py'
+                                        ])
+                                    ),
+                                    launch_arguments={
+                                        'name': 'segments_to_pointcloud_reflex',
+                                        'target_frame': 'bizzy/base_link_level',
+                                    }.items()
+                                ),
+                            ]
                         ),
                     ]
                 ),
