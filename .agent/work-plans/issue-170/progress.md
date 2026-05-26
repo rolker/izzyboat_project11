@@ -14,7 +14,7 @@ issue: 170
 **Phases**: 3 (A = launch reflex node + record + bridge [this PR]; B = swap collision_monitor source + tune polygons; C = offline trigger cataloging)
 
 ### Open questions
-- [ ] Bridge `period` for `collision_pointcloud` — plan assumes `1.0` on both links; confirm or set unthrottled.
+- [x] Bridge `period` for `collision_pointcloud` — resolved as intentionally unthrottled on both links (matches PR/config and `plan.md`).
 - [ ] Phase A merge gating — open-now-hold-ready (sim-test vs perception#17 worktree) vs wait for perception#17 to land first.
 
 ## Local Review (Pre-Push)
