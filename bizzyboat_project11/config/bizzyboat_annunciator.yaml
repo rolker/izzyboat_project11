@@ -35,7 +35,11 @@ indicators:
   - name: Battery
     source: diagnostics
     diagnostic_name: "mavros: Battery"
-    format: "{}"
+    value_key: Voltage
+    format: "{:.2f} V"
+    thresholds:
+      warn: "value < 23.0"
+      error: "value < 21.5"
 
   - name: GPS
     source: diagnostics
