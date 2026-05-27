@@ -5,6 +5,7 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
 
@@ -31,5 +32,19 @@ def generate_launch_description():
                 'use_namespace': 'true',
                 'use_composition': 'False',
             }.items()
+        ),
+
+        # Republish a cropped, smaller window of the local costmap for the
+        # operator (CAMP) over the lossy bridge — unh_marine_navigation#38,
+        # unh_marine_autonomy#127. Runs in the local_costmap namespace so it
+        # subscribes to <ns>/local_costmap/costmap and publishes
+        # <ns>/local_costmap/costmap_windowed. window_size is live-tunable.
+        Node(
+            package='marine_nav_utilities',
+            executable='costmap_window_node',
+            name='costmap_window',
+            namespace=[namespace, '/local_costmap'],
+            parameters=[{'window_size': 200.0}],
+            output='screen',
         ),
     ])
