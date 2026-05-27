@@ -102,8 +102,7 @@ autonomy quality.
 ### Navigation reliability
 
 **Must finish before June 4:**
-- [`rolker/unh_marine_navigation#35`](https://github.com/rolker/unh_marine_navigation/issues/35) — **mission re-send mid-line doesn't take effect.** Operator Executes a new trackline; the heartbeat shows it but the boat keeps following the *old* line's path (workaround: clear + resend). Root-caused on #173: the BT latches the path — `SetPathFromTask` runs once behind a memory `Sequence`, and survey-line re-entry is gated on task *type*, not *id*, so a same-type (`survey_line→survey_line`) switch never halts/recomputes `FollowPath`. **Class-significant** — students will hit this redirecting the boat mid-mission. Fix: gate re-entry on task id (or preempt-cancel the running nav). Normal sequential surveys are unaffected. Full analysis: [`docs/analysis/2026-05-26/findings.md`](analysis/2026-05-26/findings.md) §8.
-- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → `/speed_limit`. **Field-implemented during #160 (2026-05-22)**: gabby agent landed the per-task speed plumbing in-deployment across two iterations (`/review-code`-caught 4 must-fixes, then namespace bug fixed on first field activation). End-to-end confirmed: `task.speed=1 kt → cmd_vel.linear.x=0.515 m/s`. **5 commits on `gitcloud/jazzy`** (`c7a5e34 → 8100131`) awaiting reconciliation PR against `rolker/unh_marine_navigation`; until that lands, the fix isn't on GitHub-side. Move to **Done** once the reconciliation PR merges.
+- [`rolker/unh_marine_navigation#35`](https://github.com/rolker/unh_marine_navigation/issues/35) — **mission re-send mid-line doesn't take effect.** Operator Executes a new trackline; the heartbeat shows it but the boat keeps following the *old* line's path (workaround: clear + resend). Root-caused on #173: the BT latches the path — `SetPathFromTask` runs once behind a memory `Sequence`, and survey-line re-entry is gated on task *type*, not *id*, so a same-type (`survey_line→survey_line`) switch never halts/recomputes `FollowPath`. **Class-significant** — students will hit this redirecting the boat mid-mission. Fix: gate re-entry on task id (or preempt-cancel the running nav). Normal sequential surveys are unaffected. Full analysis: [`docs/analysis/2026-05-26/findings.md`](analysis/2026-05-26/findings.md) §8. **In progress** — plan drafted 2026-05-27, [`PR #36`](https://github.com/rolker/unh_marine_navigation/pull/36).
 - [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals. No fix landed; 2026-05-19 deployment logs likely still show TF-lookup-out-of-time errors. Survey patterns at the lake will repeatedly trigger this. Verify still occurring, then fix.
 
 **Investigate before June 4:**
@@ -121,8 +120,11 @@ autonomy quality.
 
 **Defer past June 4:**
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults). Not critical for single-boat ops; promote when joint Bizzy + Izzy ops come into scope.
-- [`rolker/unh_marine_navigation#33`](https://github.com/rolker/unh_marine_navigation/issues/33) — Hover overshoots station on engagement (root-caused from #160 via [`#165`](https://github.com/rolker/unh_echoboats_project11/issues/165)): `Hover` holds the engage-point with a position-only controller (no velocity term), so a boat arriving at survey speed coasts a median ~9 m past before a slow return. Fix = restore the stop-point projection (`pos + v²/2a`; the pre-nav2 behavior, legacy code recovered at git `1c5db5a^`) + an optional live `point_at_target` (ArduPilot `LOIT_TYPE` analog). Shared cross-platform code → needs on-water re-validation. **Opportunistic only** — do if spare cycles before June 4; the enabler (recording `pid_state`) lands before June 4 via [`#173`](https://github.com/rolker/unh_echoboats_project11/issues/173).
 - [`unh_echoboats_project11#164`](https://github.com/rolker/unh_echoboats_project11/issues/164) — CrabbingPathFollower SE-undulation. **Closed** — undulation real (~1.6 m median RMS) but SE-only asymmetry unconfirmed. `pid_state` recording **now landed ✓** (#173), but the #173 dig was **inconclusive**: it was a collision-test day with no sustained clean survey line — clean stretches held sub-meter XTE, the large excursions were collision-stop/re-acquisition artifacts. **Needs a clean-survey deployment** to characterize undulation. Reopen on recurrence.
+
+**Done:**
+- [`rolker/unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) — wire BT `target_speed` → `/speed_limit`. Field-implemented during #160 (`task.speed=1 kt → cmd_vel.linear.x=0.515 m/s`); **CLOSED 2026-05-25**, field commits reconciled to origin via [`PR #27`](https://github.com/rolker/unh_marine_navigation/pull/27).
+- [`rolker/unh_marine_navigation#33`](https://github.com/rolker/unh_marine_navigation/issues/33) — Hover overshoots station on engagement. Was opportunistic/Defer; **MERGED 2026-05-27** ([`PR #34`](https://github.com/rolker/unh_marine_navigation/pull/34)) — restored the stop-point projection (`pos + v²/2a`) + optional live `point_at_target`. Cross-platform; on-water re-validation folds into the next clean-survey deployment. (Triggered a sibling sweep retiring the now-dead `hover.deceleration` param across the nav2 config repos: [`sim #61`](https://github.com/rolker/unh_marine_simulation/pull/61), [`ben #25`](https://github.com/rolker/ben_project11/pull/25), [`seafloor #31`](https://github.com/rolker/seafloor_echoboat_project11/pull/31).)
 
 ### Both nav systems report at base_link *(theme — 2026-04-29; major progress 2026-05-01; FCU side outstanding)*
 
@@ -232,16 +234,14 @@ directly. Aggregator output has no user-facing consumer; the rqt
 aggregator view plugin caused problems and isn't used. Direction is
 "publishers → /diagnostics → annunciator," no aggregator middleman.
 
-**Class-blocking (new — surfaced 2026-05-22):**
-- [`unh_echoboats_project11#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) — Battery annunciator stays green at < `BATT_LOW_VOLT`. Threshold-to-color mapping is broken (row renders live voltage but severity never escalates). During #160 the annunciator was silent the entire time voltage was below 23.0 V (down to ~22 V loaded). Class-blocking: students cannot be expected to monitor raw `/mavros/battery` voltage; the annunciator is the operator's safety contract. Likely root cause is mavros `sys_status.min_voltage` not configured, leaving `DiagnosticStatus.level` at OK regardless of voltage — fix path TBD per the issue body.
-
-**Must finish before June 4 — small easy wins, do these first:**
-- [`unh_echoboats_project11#171`](https://github.com/rolker/unh_echoboats_project11/issues/171) — operator annunciator is **missing indicator rows** (gaps from #160): no battery-voltage-threshold, no **sound-speed** (SV-failure), no **FCU-system** (`mavros:System`) row — so during the drain none surfaced. Config-only (`bizzyboat_operator_annunciator.yaml`). **Distinct from #162** (which fixes the *existing* battery row's threshold→color); #171 *adds the missing rows*. Do as one annunciator-config pass alongside #162.
-- [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) reframed — **remove** the `diagnostic_aggregator` from operator launches. Strip the Node from `operator_core_launch.py` + delete the unused aggregator config in `diagnostics.yaml`. Eliminates the "STALE bucket / config drift" misdirection 2026-05-19 surfaced.
-- [`unh_echoboats_project11#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) — `output='screen'` → `output='both'` in BizzyBoat launches. One-line change. Crash output recoverable post-mission.
-- [`unh_echoboats_project11#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) — remove stale `bencloud` ping target. Trivial. Reduces the chronic alert-fatigue noise.
-- [`rolker/ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) — try/except + backoff for `mikrotik_monitor` / `teltonika_monitor`. Small fix; prevents the silent-startup-crash failure shape directly (without needing ros2launch_session#5 to catch it as a generalization).
-- [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — run network monitor nodes on salmon + record salmon-side `/diagnostics` during deployments. Already in the deployment process intent; confirm it's actually wired up and recording.
+**Done — shipped before June 4** *(the class-blocking item + the whole small-wins batch landed; reconciled 2026-05-27 via #189)*:
+- [`unh_echoboats_project11#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) — Battery annunciator stayed green below `BATT_LOW_VOLT` (threshold→color mapping). The operator's safety contract. **CLOSED 2026-05-26** ([`PR #179`](https://github.com/rolker/unh_echoboats_project11/pull/179)).
+- [`unh_echoboats_project11#171`](https://github.com/rolker/unh_echoboats_project11/issues/171) — operator annunciator **missing indicator rows**: battery-voltage-threshold, **sound-speed** (SV-failure), **FCU-system** (`mavros:System`). Field config added all three rows to `bizzyboat_operator_annunciator.yaml` (validated green on-panel); imported to `jazzy` via the 2026-05-26 wrap-up (commit `0cd42f5`, [`PR #182`](https://github.com/rolker/unh_echoboats_project11/pull/182)). Issue closed during the #189 reconciliation.
+- [`unh_echoboats_project11#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) — removed `diagnostic_aggregator` from operator launches (annunciator subscribes to `/diagnostics` directly). **CLOSED** ([`PR #146`](https://github.com/rolker/unh_echoboats_project11/pull/146)).
+- [`unh_echoboats_project11#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) — `output='screen'` → `output='both'` in BizzyBoat launches. **CLOSED**.
+- [`unh_echoboats_project11#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) — removed stale `bencloud` ping target. **CLOSED** ([`PR #148`](https://github.com/rolker/unh_echoboats_project11/pull/148)).
+- [`rolker/ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) — try/except + backoff for `mikrotik_monitor` / `teltonika_monitor` (silent-startup-crash shape). **CLOSED**.
+- [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — salmon-side monitor nodes + `/diagnostics` recording. **CLOSED** ([`PR #109`](https://github.com/rolker/unh_echoboats_project11/pull/109)).
 
 **Desirable, defer if needed:**
 - [`rolker/camp#52`](https://github.com/rolker/camp/issues/52) — CAMP GUI froze twice during #160 ([`#166`](https://github.com/rolker/unh_echoboats_project11/issues/166), root cause **unconfirmed** — a GUI hang leaves no log trace). Deliverable is a *capture plan* (Qt-timer heartbeat + auto-backtrace-on-stall) so the next freeze self-documents. **Before June 4 if cycles allow, low priority**; workaround is solo `pkill camp` (rest of stack survives).
@@ -333,7 +333,7 @@ The 2026-05-01 deployment surfaced a real BT design issue (now filed)
 and validated the GUIDED stale-setpoint failsafe.
 
 **Must finish before June 4:**
-- [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) — `SkipUnknownTaskType` catchall in `run_tasks.xml` silently marks tracklines done when a matching subtree's execution fails (e.g. `FollowPath` ABORT). Forensic match for the 2026-05-01 15:09 HOLD episode. Class-significant: a silently-marked-done line at OTH range means the operator sees a "complete" trackline and the boat parked in `done_hover` with no alert — coverage holes show up only post-mission.
+- [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) — `SkipUnknownTaskType` catchall in `run_tasks.xml` silently marks tracklines done when a matching subtree's execution fails (e.g. `FollowPath` ABORT). Forensic match for the 2026-05-01 15:09 HOLD episode. Class-significant: a silently-marked-done line at OTH range means the operator sees a "complete" trackline and the boat parked in `done_hover` with no alert — coverage holes show up only post-mission. **In progress** — implementation code-complete (Switch dispatch + marine RecoveryNode), in review 2026-05-27 ([`PR #37`](https://github.com/rolker/unh_marine_navigation/pull/37)).
 
 **Track during class prep:**
 - **Broader BT review of `marine_nav_bt_task_navigator/behavior_trees/run_tasks.xml`** — the catchall issue (`#25`) is one concrete failure mode; the tree has other shape choices a non-BT-native author may have made differently (e.g. nested `RetryUntilSuccessful num_attempts=3` around `Sequence`, `ReactiveFallback` semantics with stateful subtrees, multiple `_autoremap="true"` blackboard scopes, `KeepRunningUntilFailure`+`Inverter` patterns). Worth a Nav2-BT-experienced second pass before June 4. *(No issue yet — promote to one if the review surfaces concrete findings.)*
@@ -390,13 +390,23 @@ they become relevant.
   couple of months without any pull toward them, they're probably
   dropped, not deferred. Edit them out.
 
-## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22)*
+## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22; status reconciled 2026-05-27 via #189)*
 
 This appendix tags every "Must finish before June 4" item from the
 Active-threads sections above with effort, where it can be worked, and
 critical-path notes — and uses that to size the agent count needed to
 clear the list. Refresh or remove this appendix as items land; it's a
 working sizing document, not durable direction.
+
+> **2026-05-27 status note:** the entire observability batch (#162, #141,
+> #139, #140, `ros2_network_monitor#23`, #97, and #171), plus nav #24 and
+> the opportunistic nav #33, have landed since this was sized — done rows
+> are struck below. The **Totals / Parallelism / agent-allocation** math
+> further down is now stale (it assumed the small-wins batch was open) and
+> should be re-sized or dropped at the next planning pass. Remaining genuine
+> gaps: #5 (perception #7), #6 (#127), #8 (nav #23), #9 (nav #19), #10
+> (bathy), #11 (#138 boat day), #12 (#18 deploy guide), #18–21 (OTH),
+> #22 (nav #25 — in review). #3 (sidescan decision) still open.
 
 **Where coding**: `BF` = boat-free (implement + test off-boat) · `DI` =
 desk-implement, validate on a deployment · `BI` = needs boat to
@@ -420,7 +430,7 @@ exercise the change).
 | 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | Unblocked; replay bags for impl, validate live |
 | 6 | [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) op-side costmap display | L | DI | 78% loss measured — bandwidth budget tight; replay-driven impl, validate live |
 | **Navigation reliability** | | | | |
-| 7 | [`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit` | reconcile only | — | **Field-implemented 2026-05-22**; 5 commits on `gitcloud/jazzy` (`c7a5e34 → 8100131`) awaiting reconciliation PR. Move to Done once landed on origin. |
+| 7 | ~~[`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit`~~ | — | — | **DONE 2026-05-25** — field commits reconciled to origin via [PR #27](https://github.com/rolker/unh_marine_navigation/pull/27) |
 | 8 | [`unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) TF extrapolation fix | M | DI | Bag-debug, verify in deployment |
 | 9 | [`unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) costmap timeout investigate | S | BF | Bag analysis; decide fix-or-defer |
 | 10 | Boat-side bathy costmap | L–XL | BF | **Triage first** — Roland's "other computer" branch may exist |
@@ -429,20 +439,21 @@ exercise the change).
 | **Class-ready UI** | | | | |
 | 12 | [`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) student deployment guide | M | BF | Writing-heavy; draft from logs |
 | **Observability — class-blocking** | | | | |
-| 12b | [`#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) Battery annunciator threshold-to-color logic | S–M | BF | **NEW 2026-05-22, class-blocking**: row displays voltage but stays green at < `BATT_LOW_VOLT`. Likely mavros `sys_status.min_voltage` unset; investigate, fix, verify thresholds match FCU |
+| 12b | ~~[`#162`](https://github.com/rolker/unh_echoboats_project11/issues/162) Battery annunciator threshold-to-color logic~~ | — | — | **DONE 2026-05-26** ([PR #179](https://github.com/rolker/unh_echoboats_project11/pull/179)) |
 | **Observability — small wins** | | | | |
-| 13 | [`#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) remove `diagnostic_aggregator` | XS | BF | Node delete + YAML cleanup |
-| 14 | [`#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) `output='both'` in launches | XS | BF | One-line |
-| 15 | [`#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) remove `bencloud` ping target | XS | BF | Trivial |
-| 16 | [`ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) try/except + backoff | S | BF | Defensive code |
-| 17 | [`#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) salmon `/diagnostics` recording wiring | XS | BF | Verify |
+| 12c | ~~[`#171`](https://github.com/rolker/unh_echoboats_project11/issues/171) annunciator missing rows (battery/SV/FCU-system)~~ | — | — | **DONE** — field config imported via `0cd42f5` / [PR #182](https://github.com/rolker/unh_echoboats_project11/pull/182) |
+| 13 | ~~[`#141`](https://github.com/rolker/unh_echoboats_project11/issues/141) remove `diagnostic_aggregator`~~ | — | — | **DONE** ([PR #146](https://github.com/rolker/unh_echoboats_project11/pull/146)) |
+| 14 | ~~[`#139`](https://github.com/rolker/unh_echoboats_project11/issues/139) `output='both'` in launches~~ | — | — | **DONE** |
+| 15 | ~~[`#140`](https://github.com/rolker/unh_echoboats_project11/issues/140) remove `bencloud` ping target~~ | — | — | **DONE** ([PR #148](https://github.com/rolker/unh_echoboats_project11/pull/148)) |
+| 16 | ~~[`ros2_network_monitor#23`](https://github.com/rolker/ros2_network_monitor/issues/23) try/except + backoff~~ | — | — | **DONE** |
+| 17 | ~~[`#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) salmon `/diagnostics` recording wiring~~ | — | — | **DONE** ([PR #109](https://github.com/rolker/unh_echoboats_project11/pull/109)) |
 | **OTH** | | | | |
 | 18 | [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) OTH field validation | **boat day** | BI | Combinable with #11 |
 | 19 | Topic-budget cull (measure + cull + verify) | M + **boat verify** | DI | Bag-driven measurement BF; verify under load DI |
 | 20 | Low-bandwidth status fallback | L | DI | New node + UI plugin; unit-test BF, real-link DI |
 | 21 | VPN-path indicator | M | DI | Cheaper than #20; UI surface for [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124) |
 | **Autonomy robustness** | | | | |
-| 22 | [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) BT catchall fix | M | BF | Sim/bag testable; review-first recommended |
+| 22 | [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) BT catchall fix | M | BF | **In review 2026-05-27** ([PR #37](https://github.com/rolker/unh_marine_navigation/pull/37)) — code-complete, Switch dispatch + RecoveryNode |
 | 23 | Broader BT review of `run_tasks.xml` | M | BF | Should precede #22 to scope it |
 
 ### Totals
