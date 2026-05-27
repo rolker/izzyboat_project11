@@ -7,7 +7,9 @@
 local_costmap:
   local_costmap:
     ros__parameters:
-      # 4-OAK sea_surface segmentation rig (replaces base's [chart_layer, inflation_layer]).
+      # 4-OAK sea_surface segmentation rig. Deep-merge replaces lists wholesale, so this
+      # list restates the base's chart_layer + inflation_layer (they are NOT dropped) and
+      # adds the four sea_surface layers between them.
       plugins: ["chart_layer",
                 "sea_surface_layer_forward",
                 "sea_surface_layer_port",
