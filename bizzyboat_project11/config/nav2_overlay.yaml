@@ -16,25 +16,25 @@ local_costmap:
                 "inflation_layer"]
       sea_surface_layer_forward:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: True
+        enabled: true
         segmentation_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation
         camera_info_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation/camera_info
         maximum_range: 150.0
       sea_surface_layer_port:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: True
+        enabled: true
         segmentation_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation
         camera_info_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation/camera_info
         maximum_range: 150.0
       sea_surface_layer_starboard:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: True
+        enabled: true
         segmentation_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation
         camera_info_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation/camera_info
         maximum_range: 150.0
       sea_surface_layer_aft:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: True
+        enabled: true
         segmentation_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation
         camera_info_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation/camera_info
         maximum_range: 150.0
@@ -48,21 +48,21 @@ collision_monitor:
       action_type: "slowdown"
       slowdown_ratio: 0.3
       min_points: 4
-      visualize: True
+      visualize: true
       polygon_pub_topic: "collision_monitor/slowdown_polygon"
-      enabled: True
+      enabled: true
     CollisionStop:
       type: "polygon"
       points: "[[5.0, 2.0], [5.0, -2.0], [0.0, -2.0], [0.0, 2.0]]"
       action_type: "stop"
       min_points: 5
-      visualize: True
+      visualize: true
       polygon_pub_topic: "collision_monitor/stop_polygon"
-      enabled: True
+      enabled: true
     observation_sources: ["reflex_cloud"]
     reflex_cloud:
       type: "pointcloud"
       topic: "collision_monitor/pointcloud"
       min_height: -2.0
       max_height: 2.0
-      enabled: True
+      enabled: true
