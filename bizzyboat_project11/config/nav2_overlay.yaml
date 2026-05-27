@@ -1,0 +1,68 @@
+# BizzyBoat (EchoBoat 240) nav2 instance overlay — Part of seafloor#3 step 2.
+# Merged on top of echoboat_project11's nav2_params.base.yaml + nav2_params.240.yaml
+# at launch (passed as `instance_params` to nav2_bringup_launch.py). Carries the
+# sensor-rig + reflex config that used to live in the generic base, driven by
+# Bizzy's 4-OAK camera rig and reflex deployment (not the hull model).
+# <robot_namespace> is substituted by nav2_bringup's ReplaceString after merge.
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # 4-OAK sea_surface segmentation rig (replaces base's [chart_layer, inflation_layer]).
+      plugins: ["chart_layer",
+                "sea_surface_layer_forward",
+                "sea_surface_layer_port",
+                "sea_surface_layer_starboard",
+                "sea_surface_layer_aft",
+                "inflation_layer"]
+      sea_surface_layer_forward:
+        plugin: "sea_surface_layer::SeaSurfaceLayer"
+        enabled: True
+        segmentation_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation
+        camera_info_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation/camera_info
+        maximum_range: 150.0
+      sea_surface_layer_port:
+        plugin: "sea_surface_layer::SeaSurfaceLayer"
+        enabled: True
+        segmentation_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation
+        camera_info_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation/camera_info
+        maximum_range: 150.0
+      sea_surface_layer_starboard:
+        plugin: "sea_surface_layer::SeaSurfaceLayer"
+        enabled: True
+        segmentation_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation
+        camera_info_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation/camera_info
+        maximum_range: 150.0
+      sea_surface_layer_aft:
+        plugin: "sea_surface_layer::SeaSurfaceLayer"
+        enabled: True
+        segmentation_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation
+        camera_info_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation/camera_info
+        maximum_range: 150.0
+
+collision_monitor:
+  ros__parameters:
+    polygons: ["CollisionSlowdown", "CollisionStop"]
+    CollisionSlowdown:
+      type: "polygon"
+      points: "[[20.0, 3.0], [20.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
+      action_type: "slowdown"
+      slowdown_ratio: 0.3
+      min_points: 4
+      visualize: True
+      polygon_pub_topic: "collision_monitor/slowdown_polygon"
+      enabled: True
+    CollisionStop:
+      type: "polygon"
+      points: "[[5.0, 2.0], [5.0, -2.0], [0.0, -2.0], [0.0, 2.0]]"
+      action_type: "stop"
+      min_points: 5
+      visualize: True
+      polygon_pub_topic: "collision_monitor/stop_polygon"
+      enabled: True
+    observation_sources: ["reflex_cloud"]
+    reflex_cloud:
+      type: "pointcloud"
+      topic: "collision_monitor/pointcloud"
+      min_height: -2.0
+      max_height: 2.0
+      enabled: True
