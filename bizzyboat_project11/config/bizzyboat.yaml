@@ -69,9 +69,12 @@
             - heartbeat
             - heartbeat_nav
             - hover_viz
-            - local_costmap
+            - local_costmap_windowed
             - local_costmap_footprint
             - collision_pointcloud
+            - collision_slowdown_polygon
+            - collision_stop_polygon
+            - collision_monitor_state
             - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
@@ -108,10 +111,17 @@
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
               hover_viz: {source: hover_visualization}
-              local_costmap: {source: local_costmap/costmap, period: 3.0}
+              # Cropped local-costmap window for operator SA (unh_marine_navigation#38,
+              # #127). Replaces the raw local_costmap, whose full grid lost ~78% over
+              # the bridge. Full rate on WiFi.
+              local_costmap_windowed: {source: local_costmap/costmap_windowed}
               local_costmap_footprint: {source: local_costmap/published_footprint}
-              # Reflex collision cloud (#170). Unthrottled — measured tiny (<2 KB/msg).
+              # Reflex collision feedback (#170). Cloud measured tiny (<2 KB/msg);
+              # danger-zone polygons + state are smaller. Unthrottled on WiFi.
               collision_pointcloud: {source: collision_monitor/pointcloud}
+              collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon}
+              collision_stop_polygon: {source: collision_monitor/stop_polygon}
+              collision_monitor_state: {source: collision_monitor_state}
               odom: {source: odom}
               oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed}
@@ -155,7 +165,13 @@
             - heartbeat
             - heartbeat_nav
             - hover_viz
+            - local_costmap_windowed
+            - local_costmap_footprint
+            - path_follower_visualization
             - collision_pointcloud
+            - collision_slowdown_polygon
+            - collision_stop_polygon
+            - collision_monitor_state
             - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
@@ -188,6 +204,17 @@
               # path (1 MB/s cap); 1 Hz is enough for operator SA there. Full
               # rate retained on the WiFi link above.
               collision_pointcloud: {source: collision_monitor/pointcloud, period: 1.0}
+              # Danger-zone polygons throttled to 1 Hz on VPN to match the cloud;
+              # state is tiny and sent unthrottled for prompt mode changes (#170).
+              collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon, period: 1.0}
+              collision_stop_polygon: {source: collision_monitor/stop_polygon, period: 1.0}
+              collision_monitor_state: {source: collision_monitor_state}
+              # Cropped local-costmap window for operator SA over the constrained VPN
+              # link — throttled to every 2 s (unh_marine_navigation#38, #127). The
+              # footprint and path-follower viz are low-bandwidth, sent unthrottled.
+              local_costmap_windowed: {source: local_costmap/costmap_windowed, period: 2.0}
+              local_costmap_footprint: {source: local_costmap/published_footprint}
+              path_follower_visualization: {source: path_follower_visualization}
               odom: {source: odom}
               oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, period: 1.0}
