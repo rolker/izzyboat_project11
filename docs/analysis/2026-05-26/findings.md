@@ -88,7 +88,7 @@ A clean stopping-distance-vs-speed curve needs: isolation of the **single monoto
 
 ## 8. Mission re-send doesn't take effect — BT path-latch root cause
 
-> Needs its own issue in `unh_marine_navigation` (ROS autonomy stack). **Not** related to `unh_echoboats_project11#35` / git-bug `7709673`, which is an **ArduPilot** GUIDED-mode stale-mission concern (FCU side) — a different layer.
+> Tracked as **[rolker/unh_marine_navigation#35](https://github.com/rolker/unh_marine_navigation/issues/35)** (ROS autonomy stack). **Not** related to `rolker/unh_echoboats_project11#35` / git-bug `7709673`, which is an **ArduPilot** GUIDED-mode stale-mission concern (FCU side) — a different layer. (The two #35s are different repos — mind the collision.)
 
 **Symptom (operator):** running trackline3, press Execute on trackline4; the heartbeat shows trackline4 as the current task, **but the boat keeps driving toward trackline3's waypoint**. Workaround: **clear, then resend**.
 
