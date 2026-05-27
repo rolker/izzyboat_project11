@@ -29,7 +29,15 @@ def generate_launch_description():
             launch_arguments={
                 'namespace': namespace,
                 'use_namespace': 'true',
-                'use_composition': 'False',
+                'use_composition': 'false',
+                # BizzyBoat is an EchoBoat 240; supply its sensor-rig + reflex
+                # overlay on top of the generic base + 240 hull params (seafloor#3).
+                'model': '240',
+                'instance_params': PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'config',
+                    'nav2_overlay.yaml',
+                ]),
             }.items()
         ),
     ])
