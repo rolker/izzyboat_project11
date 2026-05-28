@@ -346,10 +346,6 @@ and validated the GUIDED stale-setpoint failsafe.
 These items are explicitly not on deck. Promote to a task issue when
 they become relevant.
 
-### Navigation polish
-
-- **Hover stop-point projection + `point_at_target`** — now tracked as [`rolker/unh_marine_navigation#33`](https://github.com/rolker/unh_marine_navigation/issues/33) (root-caused from #160; see Navigation reliability → Defer). Supersedes the former no-issue "Hover v5 excursion-recovery taper" and "vectored-thrust parameter" notes: the stop-point projection removes the excursion (no taper band-aid needed), and `point_at_target` *is* the vectored-thrust parameter.
-
 ### Networking
 
 - **DNS-over-HTTPS on RUTX11** — exploration item, not urgent
