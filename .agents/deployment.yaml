@@ -18,17 +18,13 @@ labels:
 log_dir: docs/logs
 
 # ---------------------------------------------------------------------
-# Host inventory (informational only)
+# Host inventory: intentionally omitted.
 # ---------------------------------------------------------------------
-# field_mode.sh against the project repo's origin URL is authoritative
-# for dev/field detection — this list is just a roster.
-
-hosts:
-  dev:
-    - salmon          # primary dev/operator station
-  field:
-    - gabby           # Linux/ROS on the boat
-    - mercat          # Windows/QINSy on the boat (no ROS agent yet)
+# The schema treats `hosts:` as informational only — `field_mode.sh`
+# against each repo's origin URL is the authoritative dev/field signal.
+# Hosts at this project (salmon, deadpool, gabby, mercat) also serve
+# multiple roles across deployments, so a static roster drifts faster
+# than it's useful.
 
 # ---------------------------------------------------------------------
 # Pluggable issue-sync — git-bug + gitcloud
@@ -39,12 +35,21 @@ hosts:
 #
 # git-bug + gitcloud is the propagation channel — manual sync is documented
 # at ros2_agent_workspace/.agent/knowledge/field_mode_hotfix.md.
+#
+# Subcommand reminders for this git-bug version (verified against
+# `git-bug --help`): listing is `git bug bug <query>` (NOT `git bug ls`);
+# detail is `git bug bug show <ID>` (NOT `git bug show`). The bare
+# `git bug pull / push` are top-level, hence no `bug` repetition.
 
 issue_sync:
   field_pull: "git bug pull gitcloud"
-  field_list_open: "git bug ls --label deployment --status open"
-  field_show: "git bug show {id}"
-  dev_push: "git bug push gitcloud"
+  field_list_open: "git bug bug --label deployment --status open"
+  field_show: "git bug bug show {id}"
+  # dev_push runs bridge-pull first so newly-created GitHub issues are
+  # in the local git-bug refs before the push to gitcloud; without
+  # bridge-pull, fresh issues stay invisible to field hosts even after
+  # a successful push.
+  dev_push: "git bug bridge pull github && git bug push gitcloud"
   failure_hint: "Check gitcloud SSH connectivity (git ls-remote gitcloud); see field_mode_hotfix.md in the workspace."
 
 # ---------------------------------------------------------------------
