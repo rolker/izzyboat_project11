@@ -1,0 +1,69 @@
+# BizzyBoat deployment config — drives the workspace /start-deployment skill
+#
+# Schema reference: ros2_agent_workspace/.agent/templates/deployment_config.yaml
+# Skill: ros2_agent_workspace/.claude/skills/start-deployment/SKILL.md
+# ADR: ros2_agent_workspace/docs/decisions/0014-deployment-mode.md
+
+# ---------------------------------------------------------------------
+# Platform identity
+# ---------------------------------------------------------------------
+
+platform: BizzyBoat
+default_branch: jazzy
+layer: platforms
+packages:
+  - unh_echoboats_project11
+labels:
+  - deployment
+log_dir: docs/logs
+
+# ---------------------------------------------------------------------
+# Host inventory (informational only)
+# ---------------------------------------------------------------------
+# field_mode.sh against the project repo's origin URL is authoritative
+# for dev/field detection — this list is just a roster.
+
+hosts:
+  dev:
+    - salmon          # primary dev/operator station
+  field:
+    - gabby           # Linux/ROS on the boat
+    - mercat          # Windows/QINSy on the boat (no ROS agent yet)
+
+# ---------------------------------------------------------------------
+# Pluggable issue-sync — git-bug + gitcloud
+# ---------------------------------------------------------------------
+# Dev side: issue_sync is fully optional (gh handles everything via origin).
+# Field side: field_pull / field_list_open / field_show are HARD-REQUIRED;
+# without them the skill stops at issue lookup (no gh fallback on field hosts).
+#
+# git-bug + gitcloud is the propagation channel — manual sync is documented
+# at ros2_agent_workspace/.agent/knowledge/field_mode_hotfix.md.
+
+issue_sync:
+  field_pull: "git bug pull gitcloud"
+  field_list_open: "git bug ls --label deployment --status open"
+  field_show: "git bug show {id}"
+  dev_push: "git bug push gitcloud"
+  failure_hint: "Check gitcloud SSH connectivity (git ls-remote gitcloud); see field_mode_hotfix.md in the workspace."
+
+# ---------------------------------------------------------------------
+# Pre-flight data sources (dev side only)
+# ---------------------------------------------------------------------
+# Defaults below are for the most common BizzyBoat site (Judd Gregg pier,
+# Newcastle, NH). Inland deployments (e.g., Lake Massabesic survey)
+# should override or skip tides/currents entirely — Massabesic is
+# freshwater with no tidal signal. Heights always logged in metres.
+
+tides:
+  # NOAA Fort Point, NH — nearest station to Judd Gregg pier
+  station: "8423898"
+
+currents:
+  # NOAA Clark Island (Portsmouth Harbor main channel) — the right
+  # geometry, not the closer ACT0726 (Salamander Point side pocket).
+  station: "ACT0731"
+
+weather:
+  # NWS Gray, ME office (covers the seacoast NH area)
+  source: "GYX"
