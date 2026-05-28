@@ -9,37 +9,33 @@ local_costmap:
     ros__parameters:
       # 4-OAK sea_surface segmentation rig. Deep-merge replaces lists wholesale, so this
       # list restates the base's chart_layer + inflation_layer (they are NOT dropped) and
-      # adds the four sea_surface layers between them.
-      plugins: ["chart_layer",
-                "sea_surface_layer_forward",
-                "sea_surface_layer_port",
-                "sea_surface_layer_starboard",
-                "sea_surface_layer_aft",
-                "inflation_layer"]
-      sea_surface_layer_forward:
+      # adds the single multi-source sea_surface layer between them. The four cameras
+      # all feed one shared persistent log-odds buffer (see rolker/unh_marine_perception#19),
+      # so an obstacle in the FOV overlap accumulates evidence from every camera that
+      # sees it and survives the handoff between camera views.
+      plugins: ["chart_layer", "sea_surface_layer", "inflation_layer"]
+      sea_surface_layer:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
         enabled: true
-        segmentation_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation
-        camera_info_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation/camera_info
+        observation_sources: ["forward", "port", "starboard", "aft"]
+        forward:
+          segmentation_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation
+          camera_info_topic: <robot_namespace>/sensors/cameras/oak_forward/segmentation/camera_info
+        port:
+          segmentation_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation
+          camera_info_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation/camera_info
+        starboard:
+          segmentation_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation
+          camera_info_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation/camera_info
+        aft:
+          segmentation_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation
+          camera_info_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation/camera_info
         maximum_range: 150.0
-      sea_surface_layer_port:
-        plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: true
-        segmentation_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation
-        camera_info_topic: <robot_namespace>/sensors/cameras/oak_port/segmentation/camera_info
-        maximum_range: 150.0
-      sea_surface_layer_starboard:
-        plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: true
-        segmentation_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation
-        camera_info_topic: <robot_namespace>/sensors/cameras/oak_starboard/segmentation/camera_info
-        maximum_range: 150.0
-      sea_surface_layer_aft:
-        plugin: "sea_surface_layer::SeaSurfaceLayer"
-        enabled: true
-        segmentation_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation
-        camera_info_topic: <robot_namespace>/sensors/cameras/oak_aft/segmentation/camera_info
-        maximum_range: 150.0
+        # Republish the lethal mask for the global-costmap SeaSurfaceRelayLayer
+        # (configured in echoboat_project11's nav2_params.base.yaml — see
+        # rolker/seafloor_echoboat_project11#35) so Smac plans around buoys too.
+        # Empty-string would disable the publication.
+        published_topic: <robot_namespace>/sea_surface/lethal_grid
 
 collision_monitor:
   ros__parameters:
