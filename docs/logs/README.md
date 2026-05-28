@@ -1,306 +1,72 @@
-# Deployment logs convention
+# Deployment logs (BizzyBoat)
 
 Per-deployment, per-host log files. Each agent writes its own file; no
 coordination needed for parallel agents on different hosts.
 
-> **Prototype notice**: This convention is the proven prototype for a
-> workspace-level deployment-logging capability tracked in
-> [`rolker/ros2_agent_workspace#477`](https://github.com/rolker/ros2_agent_workspace/issues/477).
-> When updating this file — adding steps, refining wording, adjusting
-> the lifecycle — please also append the change (or a link to the
-> commit/PR) as a comment on that issue, so the workspace design
-> discussion stays in sync with what's proven in BizzyBoat practice.
+> **This is the BizzyBoat-specific overlay.** The generic lifecycle,
+> file-layout, urgency-contract, and what-to-write guidance lives in
+> the workspace deployment-mode docs:
+>
+> - **[ADR-0014: Deployment Mode](https://github.com/rolker/ros2_agent_workspace/blob/main/docs/decisions/0014-deployment-mode.md)** — the decision record
+> - **[`.agent/knowledge/deployment_mode.md`](https://github.com/rolker/ros2_agent_workspace/blob/main/.agent/knowledge/deployment_mode.md)** — operational reference (urgency contract, lifecycle phases, log-naming, timestamps, tides format, three-state detection, project-config schema)
+> - **[`.claude/skills/start-deployment/SKILL.md`](https://github.com/rolker/ros2_agent_workspace/blob/main/.claude/skills/start-deployment/SKILL.md)** — the skill that does setup
+>
+> Start a deployment with `/start-deployment` (Claude Code). The skill
+> reads [`.agents/deployment.yaml`](../../.agents/deployment.yaml) in
+> this repo, branches on dev vs field via `field_mode.sh`, and either
+> creates / first-activates / resumes the deployment.
 
-## File layout
+## BizzyBoat-specific overrides
+
+These are the platform-specific deviations from the workspace convention.
+Everything not called out below follows the workspace docs.
+
+### File location
 
 ```
 docs/logs/<year>/<YYYY-MM-DD>_<label>_logs.md
 ```
 
-- **`<year>`** — UTC year of the deployment start date
-- **`<YYYY-MM-DD>`** — UTC date of the deployment **start**, not the
-  date of the writing. A multi-day deployment uses one file across all
-  its days; sections inside can have date sub-headers when crossing
-  UTC midnight.
-- **`<label>`** —
-  - `dev` literal when the agent is in a **GitHub-origin** clone
-    (workspace dev workstation, agent has GitHub access). The hostname
-    of the dev machine is intentionally not encoded — the role matters,
-    the specific dev box doesn't.
-  - `hostname -s` when the agent is in a **field-origin** clone (e.g.,
-    gitcloud). Stable per-machine identity (`gabby`, `mercat`, `lr30`,
-    etc.).
-  - The dev-vs-field distinction matches `field_mode.sh --describe`
-    (provided by the parent workspace at
-    `ros2_agent_workspace/.agent/scripts/field_mode.sh`) on the project
-    repo, so the label can be derived programmatically. If reading this
-    README outside the workspace context: the rule is `dev` for
-    GitHub-origin clones, `hostname -s` otherwise.
+Year sub-directory under `docs/logs/` is required (matches the existing
+2026/ tree). Workspace skill's `log_dir: docs/logs` config picks this up;
+the year sub-dir is created by the skill if missing.
 
-Examples:
+### Sample logs
 
-- `docs/logs/2026/2026-04-24_gabby_logs.md` — agent on the boat-side
-  Linux host during the 2026-04-24 deployment (gitcloud origin)
-- `docs/logs/2026/2026-04-24_dev_logs.md` — agent on a dev machine
-  doing pre-deploy or wrap-up work for the 2026-04-24 deployment
-- `docs/logs/2026/2026-05-12_lr30_logs.md` — agent on LR30 during a
-  multi-day deployment that started 2026-05-12
+- [`2026/2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md) — strong reference for a field-side host log on a live deployment day. Shows the topic-section structure, timestamped entries, operator-quoted observations, and Issues-encountered diagnoses.
+- [`2026/2026-05-22_dev_logs.md`](2026/2026-05-22_dev_logs.md) — dev-side log for a recent deployment, including pre-flight section and wrap-up flow.
 
-## File header
+### User-curated reflective sections
 
-Every log file starts with:
+In addition to the workspace urgency-contract guidance, BizzyBoat logs
+carry two **user-curated** sections at the top, filled in at wrap-up:
 
-```markdown
-# <Platform> deployment log — <label> — <YYYY-MM-DD>
+- **Summary** — 2–3 sentences with strong operator voice; what a human would say if asked "what was today about?" with the benefit of hindsight. Agents draft; the operator's wording governs.
+- **Lessons Learned** — durable operator-level take-home messages worth remembering across deployments. Short, generalisable, opinionated. Distinct from the Timeline (event narrative) and Issues encountered (failure-mode diagnoses).
 
-**Host**: <hostname or "dev">
-**Operator**: <human> + <agent identity, e.g. "Claude Code Agent (Claude Opus 4.7)">
-**Mode**: dev (GitHub origin) | field (gitcloud origin) | field (other)
-**Deployment**: #<deployment-issue-number> (link)
-```
-
-Then sections by topic, in chronological order within the deployment.
-
-### Ordering — append, forward-chronological
-
-Within a section, entries are **forward-chronological**: oldest at
-the top, newest at the bottom. New entries get **appended** to the
-end of the relevant section. Reading top-to-bottom should track the
-deployment's actual progression.
-
-When working on a wrap-up later (e.g., the next day on dev pulling
-the field bag for analysis), append the new entries to the existing
-Timeline using the same convention — the latest analysis lands at
-the bottom, not the top.
-
-Numbered topic sections (`## 1. ...`, `## 2. ...`, as in the gabby
-sample at [`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md))
-follow the same rule: section numbering reflects the order things
-happened during the session, and content within each section reads
-top-to-bottom in time.
-
-## Lifecycle
-
-### Deployment start
-
-1. User prompts the dev agent at start of day. Agent reads
-   `docs/roadmap.md` and the open task issues, proposes the day's items.
-2. User confirms. Agent opens a **deployment issue** (see
-   [Deployment issue](#deployment-issue) for title format, labels, and
-   body template), creates a worktree (via the parent workspace's
-   `ros2_agent_workspace/.agent/scripts/worktree_create.sh --issue <N>`),
-   opens a draft PR.
-3. Agent initializes the day's log file in the worktree with the header
-   above. Issue body links to the file (and to any other host files as
-   they appear).
-4. **Pre-flight section: ask the user about tides and weather** before
-   pulling them — the user often already has the local conditions in
-   mind and can save the agent a lookup or correct stale assumptions
-   about the deployment site / station / time window. Only fetch
-   independently if the user defers.
-   - **Tide heights are recorded in metres** (not feet) regardless of
-     the source's native units — convert at lookup time. Other marine
-     measures keep their conventional units (knots, nautical miles,
-     °F/°C as the source provides).
-   - **Tide times must explicitly mark the time zone**, e.g.
-     `L 04:23 EDT` or `L 08:23 UTC`. NOAA defaults to local "LDT"/"LST"
-     which agents and downstream readers misread; ambiguity here is a
-     class-day hazard. If in doubt, give both: `L 04:23 EDT (08:23 UTC)`.
-5. On any field machine that wakes up, the user tells the agent
-   "continue with existing log" or "start new". Agent acts accordingly.
-   Field machines do not open GitHub issues themselves; the dev side's
-   deployment issue is the single source of truth.
-
-### During
-
-- The "logger" agent on each host owns appends to that host's log.
-  When other agents on the same host do work, the logger summarizes
-  them (often at user request).
-- Multi-day deployments append to the same file under date sub-headers,
-  no rotation.
-- Cross-host work (e.g., dev SSHs into salmon) is logged in the
-  **agent's own host's file**, not the target's. The file describes
-  work done by an agent, not work done to a host.
-- **Multiple agents on one host**: parallel agent sessions on the
-  same host (separate threads of work) all append to the **same**
-  host log file. The file is per-host, not per-agent. One designated
-  **primary logger** per host coordinates with the user and may
-  summarize peer agents' work at user request.
-
-### Wrap-up
-
-1. User signals: "wrap up the deployment" / "close out".
-2. Field machines push their logs to gitcloud at end of session.
-3. Dev pulls those into the worktree branch.
-4. **Dev integrates brief summaries of significant field-agent log
-   entries into the dev log's Timeline** so the dev log alone provides
-   an at-a-glance view of the full deployment. Each integrated entry
-   stays one sentence (drill-down lives in the source log) and tags
-   its origin, e.g. `gabby agent (gabby log §N): …`. Avoid restating
-   what the dev log already covers via the operator's real-time
-   observations — only fill gaps. Cross-host observations that
-   contradict each other deserve an inline reconciliation entry, not
-   silent overwrites.
-5. Dev agent reviews the full deployment, opens follow-up task issues
-   for any genuine carry-forward, updates `docs/roadmap.md` with
-   anything that's "do this someday but not now".
-6. Dev pushes, gets the PR ready for review, merges.
-7. Merging closes the deployment issue.
-
-### Deferred / no-issue items → roadmap
-
-If a deployment surfaces work that's:
-
-- Not bounded enough to be a focused task issue, **or**
-- Not on deck for the next deployment
-
-…it goes on `docs/roadmap.md`, not into a placeholder issue. The
-roadmap is the carry-over mechanism between deployments. The next
-deployment's planner reads the roadmap to pick what to fold in.
-
-## Deployment issue
-
-Each deployment gets its own GitHub issue, opened on the dev side at
-the start of the session.
-
-**Title**: `Deployment YYYY-MM-DD: <one-line scope>`
-
-The agent drafts the one-line scope from the proposed day's items;
-the user **approves the scope** before the issue is opened.
-
-**Labels**: `deployment` + `documentation`. (`deployment` is a
-repo-specific label — create it the first time if it doesn't exist.)
-
-**Body sections** (in order):
-
-- **Scope today** — the user-approved one-line scope expanded into
-  a few bullets
-- **Open task issues in scope** — links to focused issues being
-  worked on (e.g., `#76`, `#77`, `#87`)
-- **Hosts active** — which agent hosts are involved (gabby, dev,
-  salmon, mercat, etc.)
-- **Logs** — populated during the session as files appear:
-  - per-host base log files (one per active host)
-  - any task-specific deep-dive log files spun off during the session
-    (see [Task-specific deep-dive logs](#task-specific-deep-dive-logs))
-- **Wrap-up checklist** — push field logs to gitcloud, pull to dev,
-  integrate brief field-agent timeline entries into the dev log,
-  audit for carry-forward, open follow-up task issues, update
-  `docs/roadmap.md` with anything deferred, merge the wrap-up PR
-
-### Field-side hosts have no GitHub access
-
-`gabby`, `salmon`, and other field-deployed hosts don't carry user
-GitHub credentials. Their only responsibility is to append to their
-host log file and push to gitcloud at session end. **All GitHub
-interaction** — opening the deployment issue, body updates,
-comments, follow-up task issues, the wrap-up PR, the merge —
-happens on the dev side after the dev agent pulls field logs into
-the worktree branch.
-
-## What to write in a log
-
-The log captures **what an agent did and what it learned**, in enough
-detail that a future agent (or human) can pick up cold. Strong sample:
-[`2026-04-24_gabby_logs.md`](2026/2026-04-24_gabby_logs.md).
-
-Useful sections (use what fits, skip what doesn't):
-
-- **Summary** — 2–3 sentences at the top. **User-curated** —
-  agents draft, but this section reads with strong user voice. It is
-  what a human would say if asked "what was today about?" with the
-  benefit of hindsight.
-- **Lessons Learned** — durable operator-level take-home messages
-  the user wants to remember from this deployment. **User-curated** —
-  agents may propose entries, but the user makes the call about what
-  belongs and how it's worded. Distinct from the Timeline (event
-  narrative) and from Issues encountered (failure-mode diagnoses).
-  An entry here is something an experienced operator would say "yes,
-  remember this" about — short, generalisable, opinionated.
-- **Numbered topic sections** — actual work done, with file paths and
-  line numbers
-- **Issues encountered + diagnoses**
-- **Pending on operator** / **Handoff** — cross-host coordination
-- **Files touched** — repos and paths changed (helps future grep)
-
-The first two — **Summary** and **Lessons Learned** — sit at the top
-of the document and are filled in last (during wrap-up), with the
-user's voice driving the content. Everything else can be appended in
-real time during the session.
-
-Avoid:
-
-- Restating what the diff shows; describe **why** and **what was
-  learned**
-- Long bag-data dumps in the log itself — analysis goes in the log,
-  raw data stays in `~/data/logs/`
-- Multi-paragraph design discussions — those belong on the
-  deployment issue or a focused task issue
-- Naming components or mechanisms that aren't in the actual stack
-  as candidate causes (e.g., listing GStreamer as a buffer-bloat
-  candidate when video isn't GStreamer-piped). When proposing
-  diagnoses, list only components you've verified are deployed;
-  ask the operator or omit if unsure.
-
-### Timestamp every entry
-
-Prefix each entry — observation, action, summary — with an ISO-8601
-timestamp in **local time with the UTC offset**, with the timestamp
-in bold so it stands out when scanning:
-
-> **2026-04-27T08:42-04:00** — started charging the boat before launch
->
-> **2026-04-27T09:15-04:00** — boat in the water, FCU armed
-
-Local-with-offset is unambiguous (no UTC mental conversion for the
-on-site human) and trivially correlatable to bag timestamps later.
-Even editorial summaries get timestamps — knowing **when** a
-summary was written can matter as much as the summary itself. Use
-**minute precision by default**; bump to seconds when correlating
-tightly to a bag or a ROS event.
-
-### Logging during live field operations
-
-During an active deployment the operator is steering the boat —
-their attention is on the helm, traffic, and wind, not on producing
-tidy log copy. Two patterns recur:
-
-**Operator notes are often quick and incomplete.** The operator
-drops short observations into the session ("the boat went into
-HOLD", "~60 s of latency", "pressed Standby") for
-capture-and-later-review. The agent's job is to record these
-faithfully and add **only factual context** — timestamps, current
-mode/state, references to prior log entries. Do **not** invent
-mechanisms, attribute causes the operator didn't state, or fill in
-missing detail with plausible-sounding speculation. If the picture
-is unclear, log the observation as-is and flag it for follow-up.
-
-**Troubleshooting suggestions are conversation, not log entries.**
-The agent should proactively suggest diagnostic steps in real time
-("want me to grab `dmesg` on gabby?", "should we check the
-udp_bridge stats topic?"). The operator may be too busy to try
-them, or already running something else. **Log only what was
-actually attempted and its outcome** — skip suggestions that
-didn't get acted on.
-
-Together these mean: the agent is a real-time scribe and a
-conversational helper. The scribe captures verified facts; the
-helper offers options without polluting the log with proposals
-that weren't picked up.
+Agents can propose entries for both, but the operator makes the call about what belongs and how it's worded.
 
 ### Task-specific deep-dive logs
 
-When a single topic warrants its own running log (e.g., a multi-hour
-sonar bring-up, a deep dive on a network issue), spin off a
-deep-dive log alongside the base host log:
+When a single topic warrants its own running log (multi-hour sonar
+bring-up, deep network-issue investigation), spin off a deep-dive
+alongside the base host log:
 
 ```
 docs/logs/<year>/<YYYY-MM-DD>_<label>_<topic>_logs.md
 ```
 
-The base host log gets a short summary entry pointing at the
-deep-dive rather than carrying the full detail. Link both from the
-deployment issue's **Logs** section.
+The base host log gets a short summary entry pointing at the deep-dive
+rather than carrying the full detail. Link both from the deployment
+issue's `## Logs` section.
+
+### Per-deployment / per-host scope
+
+Each deployment is one GitHub issue (`Deployment YYYY-MM-DD: <scope>`),
+with one per-host log file per active host. Field-host pushes go to
+gitcloud; dev integrates summaries into the dev log at wrap-up and
+merges one PR (`Closes #N`). Convention established in PR #93; first
+deployment under it was #94.
 
 ## Anti-pattern: the monolithic log
 
@@ -308,20 +74,5 @@ deployment issue's **Logs** section.
 that file) is what this convention replaces. It accumulated 5 weeks of
 content into 3500 lines, mixing per-session detail with umbrella-style
 milestones. Hard to navigate, hard to scope changes against, hard to
-close.
-
-The per-deployment per-host model fixes this by giving each unit of
-work its own bounded artifact.
-
-## Future automation
-
-This convention is a candidate for a Claude Code skill that handles:
-
-- Today's filename derivation (UTC date, `field_mode.sh --describe`)
-- Initialization with header
-- Append API for structured entries
-- Summarization of peer agents' work (commits, branches, PRs)
-- End-of-deployment handoff (move items to roadmap / open task issues
-  / update deployment-issue body)
-
-Until that skill exists, agents follow this README manually.
+close. The per-deployment / per-host model fixes this by giving each
+unit of work its own bounded artifact.

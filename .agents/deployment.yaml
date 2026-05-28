@@ -1,0 +1,74 @@
+# BizzyBoat deployment config — drives the workspace /start-deployment skill
+#
+# Schema reference: ros2_agent_workspace/.agent/templates/deployment_config.yaml
+# Skill: ros2_agent_workspace/.claude/skills/start-deployment/SKILL.md
+# ADR: ros2_agent_workspace/docs/decisions/0014-deployment-mode.md
+
+# ---------------------------------------------------------------------
+# Platform identity
+# ---------------------------------------------------------------------
+
+platform: BizzyBoat
+default_branch: jazzy
+layer: platforms
+packages:
+  - unh_echoboats_project11
+labels:
+  - deployment
+log_dir: docs/logs
+
+# ---------------------------------------------------------------------
+# Host inventory: intentionally omitted.
+# ---------------------------------------------------------------------
+# The schema treats `hosts:` as informational only — `field_mode.sh`
+# against each repo's origin URL is the authoritative dev/field signal.
+# Hosts at this project (salmon, deadpool, gabby, mercat) also serve
+# multiple roles across deployments, so a static roster drifts faster
+# than it's useful.
+
+# ---------------------------------------------------------------------
+# Pluggable issue-sync — git-bug + gitcloud
+# ---------------------------------------------------------------------
+# Dev side: issue_sync is fully optional (gh handles everything via origin).
+# Field side: field_pull / field_list_open / field_show are HARD-REQUIRED;
+# without them the skill stops at issue lookup (no gh fallback on field hosts).
+#
+# git-bug + gitcloud is the propagation channel — manual sync is documented
+# at ros2_agent_workspace/.agent/knowledge/field_mode_hotfix.md.
+#
+# Subcommand reminders for this git-bug version (verified against
+# `git-bug --help`): listing is `git bug bug <query>` (NOT `git bug ls`);
+# detail is `git bug bug show <ID>` (NOT `git bug show`). The bare
+# `git bug pull / push` are top-level, hence no `bug` repetition.
+
+issue_sync:
+  field_pull: "git bug pull gitcloud"
+  field_list_open: "git bug bug --label deployment --status open"
+  field_show: "git bug bug show {id}"
+  # dev_push runs bridge-pull first so newly-created GitHub issues are
+  # in the local git-bug refs before the push to gitcloud; without
+  # bridge-pull, fresh issues stay invisible to field hosts even after
+  # a successful push.
+  dev_push: "git bug bridge pull github && git bug push gitcloud"
+  failure_hint: "Check gitcloud SSH connectivity (git ls-remote gitcloud); see field_mode_hotfix.md in the workspace."
+
+# ---------------------------------------------------------------------
+# Pre-flight data sources (dev side only)
+# ---------------------------------------------------------------------
+# Defaults below are for the most common BizzyBoat site (Judd Gregg pier,
+# Newcastle, NH). Inland deployments (e.g., Lake Massabesic survey)
+# should override or skip tides/currents entirely — Massabesic is
+# freshwater with no tidal signal. Heights always logged in metres.
+
+tides:
+  # NOAA Fort Point, NH — nearest station to Judd Gregg pier
+  station: "8423898"
+
+currents:
+  # NOAA Clark Island (Portsmouth Harbor main channel) — the right
+  # geometry, not the closer ACT0726 (Salamander Point side pocket).
+  station: "ACT0731"
+
+weather:
+  # NWS Gray, ME office (covers the seacoast NH area)
+  source: "GYX"
