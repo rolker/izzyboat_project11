@@ -389,7 +389,7 @@ they become relevant.
   couple of months without any pull toward them, they're probably
   dropped, not deferred. Edit them out.
 
-## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22; status reconciled 2026-05-27 via #189)*
+## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22; status reconciled 2026-05-27 via #189; refreshed 2026-05-28 post-#186)*
 
 This appendix tags every "Must finish before June 4" item from the
 Active-threads sections above with effort, where it can be worked, and
@@ -406,6 +406,31 @@ working sizing document, not durable direction.
 > gaps: #5 (perception #7), #6 (#127), #8 (nav #23), #9 (nav #19), #10
 > (bathy), #11 (#138 boat day), #12 (#18 deploy guide), #18–21 (OTH),
 > #22 (nav #25 — in review). #3 (sidescan decision) still open.
+
+> **2026-05-28 status (post-#186) — how far behind:** since 05-27, two more
+> landed — **nav #25** ([PR #37](https://github.com/rolker/unh_marine_navigation/pull/37) **merged**; fail-forward validated on-water at #186) and
+> **nav #23** (**closed**) — and **perception #7** got **on-water acceptance
+> evidence** at #186 (the planner routed around camera-detected obstacles; the
+> #6-segfault risk is long moot). Marking *robustness* (small/dim targets) spun
+> out as **post-June-4** work ([`unh_marine_perception#22`](https://github.com/rolker/unh_marine_perception/issues/22) / [`#23`](https://github.com/rolker/unh_marine_perception/issues/23) / [`marine_perception_tools#1`](https://github.com/rolker/marine_perception_tools/issues/1)) — not Must-finish.
+>
+> **Schedule gap:** the sizing below assumed *15 calendar days* to June 4; as of
+> 2026-05-28 it's **~7 calendar days (~5 working)**. The small-wins batch +
+> several mediums are done, and the scariest technical unknown (does
+> perception→planning work?) resolved **positively**. Remaining Must-finish is
+> **execution-capacity-bound, not technical-unknown-bound**:
+> - **#6 [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)** op-side costmap display (L, bandwidth) — the genuinely hard one, **open**.
+> - **#12 [`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18)** student deployment guide (M, writing) — **open**.
+> - **Boat day** — #11 [`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) FCU/nav-input + on-water validation of #5/#127/#9; serial, weather-dependent, **not yet scheduled in the window**.
+> - **#10** bathy (triage), **#9 [`nav#19`](https://github.com/rolker/unh_marine_navigation/issues/19)** (S), **#1 [`#163`](https://github.com/rolker/unh_echoboats_project11/issues/163)** AML SVS, **#3** sidescan decision.
+> - OTH (#18–21, [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)) — **natural drop for the lake** (not OTH-scale).
+>
+> **Read: behind on the L items + the boat day, but de-risked technically.** If
+> #127 slips, the fallback (vigilant camera-watching + exclusion zones — and the
+> #186 milestone shows the planner *can* route around solidly-marked obstacles)
+> is viable. The **Totals / Parallelism / agent-allocation** math below remains
+> stale (sized at 15 days with the small-wins batch open) — read it for shape,
+> not current numbers.
 
 **Where coding**: `BF` = boat-free (implement + test off-boat) · `DI` =
 desk-implement, validate on a deployment · `BI` = needs boat to
@@ -426,11 +451,11 @@ exercise the change).
 | 3b | Sidescan install (if Garmin chosen) | M–L | BI | Physical install + protocol integration |
 | **Surface-obstacle** | | | | |
 | 4 | ~~[`unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) segfault~~ | — | — | **DONE** (#6 + #14 closed; durably validated in-water 2026-05-22) |
-| 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | Unblocked; replay bags for impl, validate live |
+| 5 | [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) OAK→costmap validation | M | DI | **On-water acceptance evidence at #186 (2026-05-28)** — planner routed around camera-detected obstacles; close-out remaining |
 | 6 | [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) op-side costmap display | L | DI | 78% loss measured — bandwidth budget tight; replay-driven impl, validate live |
 | **Navigation reliability** | | | | |
 | 7 | ~~[`unh_marine_navigation#24`](https://github.com/rolker/unh_marine_navigation/issues/24) BT `target_speed` → `/speed_limit`~~ | — | — | **DONE 2026-05-25** — field commits reconciled to origin via [PR #27](https://github.com/rolker/unh_marine_navigation/pull/27) |
-| 8 | [`unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) TF extrapolation fix | M | DI | Bag-debug, verify in deployment |
+| 8 | ~~[`unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) TF extrapolation fix~~ | — | — | **DONE** — #23 closed |
 | 9 | [`unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) costmap timeout investigate | S | BF | Bag analysis; decide fix-or-defer |
 | 10 | Boat-side bathy costmap | L–XL | BF | **Triage first** — Roland's "other computer" branch may exist |
 | **Both nav at base_link** | | | | |
@@ -452,7 +477,7 @@ exercise the change).
 | 20 | Low-bandwidth status fallback | L | DI | New node + UI plugin; unit-test BF, real-link DI |
 | 21 | VPN-path indicator | M | DI | Cheaper than #20; UI surface for [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124) |
 | **Autonomy robustness** | | | | |
-| 22 | [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) BT catchall fix | M | BF | **In review 2026-05-27** ([PR #37](https://github.com/rolker/unh_marine_navigation/pull/37)) — code-complete, Switch dispatch + RecoveryNode |
+| 22 | ~~[`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) BT catchall fix~~ | — | — | **DONE** — [PR #37](https://github.com/rolker/unh_marine_navigation/pull/37) merged; fail-forward validated on-water at #186 |
 | 23 | Broader BT review of `run_tasks.xml` | M | BF | Should precede #22 to scope it |
 
 ### Totals
