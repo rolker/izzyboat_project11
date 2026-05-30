@@ -42,7 +42,10 @@ log_dir: docs/logs
 # `git bug pull / push` are top-level, hence no `bug` repetition.
 
 issue_sync:
-  field_pull: "git bug pull gitcloud"
+  # field_pull runs ON the field host, where the field share is the clone's
+  # `origin` (not a separately-named `gitcloud` remote) — so pull from origin.
+  # (dev_push below runs on dev, where `gitcloud` IS a named remote.)
+  field_pull: "git bug pull origin"
   field_list_open: "git bug bug --label deployment --status open"
   field_show: "git bug bug show {id}"
   # dev_push runs bridge-pull first so newly-created GitHub issues are
