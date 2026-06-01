@@ -111,6 +111,18 @@
 - `unh_echoboats_project11`: `nav2_overlay.yaml` field tuning (sea_surface_layer `obstacle_prob_min 0.8`/`obstacle_clamp 15.0`/`clear_floor -0.5`/`min_grazing_angle_deg 2.1`/`decay_half_life_s 60.0`; CollisionSlowdown box 10 m + `slowdown_ratio 0.5`); this log.
 - **Open / deferred to bag replay:** avoider ahead-path not tracking the costmap (updates only behind the boat) — root cause not pinned live; solver re-solves fresh each tick (no math freeze), so it's input-freshness or output-propagation — instrument at the dock. Bags: `bag_2026-06-01T13.45.10`, `15.22.12` (+ earlier). Collision-monitor dynamic-polygon + avoider param-exposure-on-lifecycle-node remain tested-PR work, not hot-patched.
 
+**2026-06-01 16:42 -04:00** — Pushed (field, jazzy). Commit SHAs for dock reconciliation:
+- `unh_marine_navigation`: `ea7277d` (overlay clear-on-teardown), `9ce5bb6` (obstacle_avoidance_weight 1.0).
+- `unh_echoboats_project11`: `009ccea` (nav2_overlay.yaml field tuning), `95dfaa6` (this log).
+
+**Dock TODO (consolidated from this session):**
+1. **Avoider ahead-path not tracking the live costmap** (updates only behind the boat) — the one unresolved field symptom. Solver re-solves fresh every tick (DP rebuilt from scratch, `chatter_damping_weight=0` so no cross-tick carry), input is a live rolling costmap (`costmap_raw` ~1.4 Hz, `rolling_window=true`), overlay republishes ~7 Hz — so the freeze is NOT in the math. **Instrument:** add throttled logging in `tick()` of `[active_begin, active_end)`, a checksum of the ahead `obstacle_costs` rows, and the ahead `*solved` offsets, run against bags `bag_2026-06-01T13.45.10` / `15.22.12`. If the ahead cost-checksum changes but the offsets don't → output/render; if neither changes → the avoider's `costmap_raw` content ahead isn't actually refreshing (vs. the grid CAMP shows).
+2. **Avoider live-param exposure** — declare `survey_avoidance.*` on the main bt_navigator **lifecycle** node at configure time (currently lazy, on the internal `_rclcpp_node` which doesn't service param RPCs → not CLI/rqt-tunable, `halt()` is `final` in BT.CPP 4.9).
+3. **collision_monitor polygon shape is configure-time** (not runtime-reconfigurable; `slowdown_ratio` is). Make dynamic or accept relaunch-to-apply.
+4. **CAMP doesn't honour marker `lifetime`** — the destructor DELETEALL (committed) covers teardown; intra-tree branch-switch still leaks until CAMP honours lifetime or the viz arch changes.
+5. **Sim-validate all field-tuned values** before trusting (avoider weight ratio, costmap persistence, CA box). Dev-side wrap-up (Summary/Lessons) goes in the dev log, not here.
+- **Reference geometry:** BizzyBoat forward OAK camera ≈ **1.41 m** above the `map_tide` sea-surface plane → grazing max-range `R = 1.41 / tan(θ)` (θ in `min_grazing_angle_deg`).
+
 **2026-06-01 15:22 -04:00** — Operator: record another 30 min. Started `record_camera_topics.sh 1800` → `~/data/logs/bizzy_images/bag_2026-06-01T15.22.12_ffmpeg_seg` (background).
 
 **2026-06-01 15:30 -04:00** — Operator approved config-bake + relaunch plan ("fix the avoider" both, "fix CA live params", weight 0.15; operator will relaunch when ready). Operator note: limited future deployments → live fixes need to happen; if config+relaunch doesn't work, will do a live code fix. **Decision: bake all tuning + avoider weight + CA box into config (no risky live code change to make them work; the dynamic-reconfigure CODE fixes — avoider param-exposure + collision_monitor dynamic polygon (SAFETY) — deferred to tested PRs, not hot-patched live).** Both repos are field mode. Edits:
