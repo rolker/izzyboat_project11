@@ -40,9 +40,9 @@ local_costmap:
         # Tuned live on the 2026-06-01 deployment (gabby) and baked in for
         # durability across relaunch. obstacle_prob_min raised to gate weak
         # glare false positives; clear_floor eased from the -2.0 default for
-        # mark persistence vs FPs; min_grazing_angle_deg at 1.5 trims the
-        # least-reliable near-horizon rays (R~54m at h~1.4m, still covers the
-        # +/-50m local window). See docs/logs/2026/2026-06-01_gabby_logs.md.
+        # mark persistence vs FPs; min_grazing_angle_deg at 2.1 trims the
+        # least-reliable near-horizon rays (caps range ~38 m at h~1.4m — the
+        # near-field obstacle window). See docs/logs/2026/2026-06-01_gabby_logs.md.
         obstacle_prob_min: 0.8
         obstacle_clamp: 15.0
         clear_floor: -0.5
