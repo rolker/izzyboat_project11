@@ -37,6 +37,20 @@ local_costmap:
           # `ros2 param set ... sea_surface_layer.aft.image_mask_rects`.
           image_mask_rects: [40, 65, 90, 96]
         maximum_range: 150.0
+        # Tuned live on the 2026-06-01 deployment (gabby) and baked in for
+        # durability across relaunch. obstacle_prob_min raised to gate weak
+        # glare false positives; clear_floor eased from the -2.0 default for
+        # mark persistence vs FPs; min_grazing_angle_deg at 1.5 trims the
+        # least-reliable near-horizon rays (R~54m at h~1.4m, still covers the
+        # +/-50m local window). See docs/logs/2026/2026-06-01_gabby_logs.md.
+        obstacle_prob_min: 0.8
+        obstacle_clamp: 15.0
+        clear_floor: -0.5
+        min_grazing_angle_deg: 2.1
+        # decay raised from the 30 s default: high-confidence (>=0.8) single-
+        # sighting obstacles persist longer. clear_floor eased so a one-time hit
+        # resists active clearing. grazing 2.1 deg caps range ~38 m (near-field).
+        decay_half_life_s: 60.0
         # Republish the lethal mask for the global-costmap SeaSurfaceRelayLayer
         # (configured in echoboat_project11's nav2_params.base.yaml — see
         # rolker/seafloor_echoboat_project11#35) so Smac plans around buoys too.
@@ -48,9 +62,12 @@ collision_monitor:
     polygons: ["CollisionSlowdown", "CollisionStop"]
     CollisionSlowdown:
       type: "polygon"
-      points: "[[20.0, 3.0], [20.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
+      # Box shrunk 20m->10m forward + ratio 0.3->0.5 on the 2026-06-01 (gabby)
+      # deployment: the 20m/30% slowdown dropped the boat below steering-
+      # authority speed when false positives tripped it. CollisionStop unchanged.
+      points: "[[10.0, 3.0], [10.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
       action_type: "slowdown"
-      slowdown_ratio: 0.3
+      slowdown_ratio: 0.5
       min_points: 4
       visualize: true
       polygon_pub_topic: "collision_monitor/slowdown_polygon"
