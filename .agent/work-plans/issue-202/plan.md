@@ -71,11 +71,22 @@ update to BizzyBoat 240 (fleet mapping: 240 = BizzyBoat deployed/current,
 
 ## Open items / notes
 
-- Confirm exact power-on sequence + which host launches what against the launch
-  files before writing §3 (don't document from memory).
-- Decide doc location/format (e.g., `docs/bizzyboat_operator_manual.md`) and link
-  from README alongside the reconcile.
-- Keep the README reconcile in this same PR (agreed: bundle, don't split).
+- ~~Confirm exact power-on sequence + which host launches what against the launch
+  files before writing §3~~ **DONE** — verified against `scripts/start_tmux_project11.bash`
+  (gabby, cron @reboot: zenoh → core → perception → nav) and
+  `scripts/start_tmux_operator_project11.bash` (operator station, manual start).
+- ~~Decide doc location/format~~ **DONE** — `docs/bizzyboat_operator_manual.md`,
+  linked from README under Documentation.
+- ~~Keep the README reconcile in this same PR~~ **DONE** — README rewritten
+  160→240 (both packages listed, BizzyBoat as current/deployed), in this commit.
+
+### Implementation notes
+- Battery-message *type* and command *semantics* are not declared in this repo
+  (they live in mavros / marine_autonomy); the manual states the operator-facing
+  facts (voltage-only, no current/watts; Standby→MANUAL; heartbeat-as-ack) and
+  links the framework guide for mechanism rather than asserting internals.
+- No network SVG for BizzyBoat exists, so the README links the network *doc* only
+  (the old `izzyboat_network.svg` image reference was dropped).
 
 ---
 **Authored-By**: `Claude Code Agent`
