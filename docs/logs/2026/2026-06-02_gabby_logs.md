@@ -139,3 +139,8 @@
 - `seafloor_echoboat_project11`: **`d35a795`** — nav2(240) velocity_smoother yaw accel/decel ±0.5 → ±3.0 (with #197 sim-validate caveat in message + comment).
 - `unh_echoboats_project11`: **`0dc719d`** — nav2 avoider weights obstacle 0.5 / chatter 0.5; collision-monitor experiment reverted to original 20 m / 0.3 / ±2 m.
 Pre-commit hooks passed. **Both commits are LOCAL — not pushed to gitcloud yet** (awaiting operator go on push). This gabby log held living/untracked through wrap-up. Parked CA experiment (8 m / 0.7 / ±1.5 m) documented above for post-deployment.
+
+**2026-06-02 16:18 -04:00** — Pushed both repos to gitcloud (operator: push + ensure nothing uncommitted left behind). Committed this gabby log too. **unh_echoboats push initially rejected** — remote `jazzy` had the **salmon agent's operator-station log** (`2026-06-02_salmon_logs.md`, commit `f0b7e38`, CAMP display diagnostics); disjoint files, so **rebased our commits onto it cleanly (no conflicts)** and pushed. **Final pushed SHAs** (supersede the 16:13 SHAs, which the rebase rewrote):
+- `seafloor_echoboat_project11`: `d35a795` — smoother yaw accel ±3.0 (pushed).
+- `unh_echoboats_project11`: `3f4fb64` — avoider weights (was 0dc719d pre-rebase); gabby log commit = current HEAD `d7731a1`.
+Both repos verified **clean (0 uncommitted) and in sync with origin/jazzy** (0 ahead / 0 behind). Salmon + gabby logs now both on gitcloud under the deployment. (This correction commit changes the gabby-log HEAD again — findable by message; not self-referenced.)
