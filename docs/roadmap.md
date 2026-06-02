@@ -29,6 +29,30 @@ system must work, not just demonstrate. Hydrographic-quality output is
 the educational goal even though the operational bar is lower. The
 system must support multi-operator handoff across daily cohorts.
 
+## June-4 reality check (2026-06-02, post-#201)
+
+With ~2 boat-days left before the freeze, #201 (2026-06-01) reset the
+must-finish list. This section supersedes the now-stale per-theme "Must finish
+before June 4" optimism below and the Appendix A sizing snapshot.
+
+**Accepted as fallback — NOT must-finish:** autonomous obstacle avoidance.
+*Turning a camera image into a reliable costmap is hard* — costmap delivery
+([`nav#56`](https://github.com/rolker/unh_marine_navigation/issues/56)) and the
+avoider ahead-replan ([`nav#57`](https://github.com/rolker/unh_marine_navigation/issues/57))
+are unsolved offline-tuning problems, not 2-day fixes. Students operate with the
+**fallback**: vigilant camera-watching + exclusion zones + manual override
+(drilled). See *Surface-obstacle awareness → Planning path regression*.
+
+**Real must-finish (priority order):**
+1. **[`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) FCU reconfig + tide/chart-datum validation** (boat day) — prerequisite for sonar/survey **data quality** at the lake.
+2. **One clean survey run** — validate what works (line-following held sub-metre on #201) and characterize mid-line resume ([`nav#58`](https://github.com/rolker/unh_marine_navigation/issues/58)) / mission re-send ([`nav#35`](https://github.com/rolker/unh_marine_navigation/issues/35)).
+3. **Operator perception display ([`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)) + document the costmap-delivery hack ([`nav#56`](https://github.com/rolker/unh_marine_navigation/issues/56))** — the fallback depends on operators *seeing* clearly.
+4. **[`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) student deployment guide** (boat-free) — class-blocking.
+5. **Fallback SOP** — manual-override / RC drill + exclusion zones, practised with students.
+
+Binding constraint = boat days (serial, weather-dependent). Bundle #1/#2 (+ an
+OTH check, [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)) into one boat day; #3–5 proceed off-water in parallel.
+
 ## Active threads (have task issues)
 
 Cross-references — the roadmap is not the source of truth for any
