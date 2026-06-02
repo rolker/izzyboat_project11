@@ -16,6 +16,8 @@ Started: 2026-06-01 13:20 -04:00
 
 **2026-06-01 13:30 -04:00** — costmap now working in CAMP. Operator: "I forgot I had to do a hack" — resolves the 13:25 costmap-not-bridged finding. The grid topic crossing the bridge required a manual workaround the operator applied (specifics not captured live). ⚠️ **WRAP-UP TODO:** capture exactly what the hack was and where it lives, so the costmap-over-bridge step is either documented or made permanent (the bridge config gap from 13:25 is real — the hack is the current stopgap).
 
+> **[dev wrap-up correction — 2026-06-01, from operator interview]:** The 13:25 "send-side udp_bridge forwarded-topic set" attribution is **wrong**, as is the "zenoh discovery race" framing elsewhere. Real mechanism: **subscriber-gated (lazy) publishing** — the costmap is not emitted to the windowing node until *another* subscriber also attaches to the costmap topic (same class as image / compressed_image; predates zenoh — not a DDS or udp_bridge bug). The "hack" is simply attaching an extra subscriber; `rqt_udp_bridge` is the convenient tool to do that, not the cause. Root-cause investigation: rolker/unh_marine_navigation#56 (windowing node is `marine_nav_utilities/costmap_window_node`). This has been re-derived wrong on 2026-05-28 / 05-29 / 06-01.
+
 **2026-06-01 13:31 -04:00** — controls checks done, getting ready to launch.
 
 **2026-06-01 13:46 -04:00** — CAMP (operator station app on salmon) crashed and was restarted by operator. Back up. ⚠️ **WRAP-UP TODO:** check for a CAMP crash dump / stderr on salmon to capture the cause (no live diagnosis — operator restarted to keep going).
