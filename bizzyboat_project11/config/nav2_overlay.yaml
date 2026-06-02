@@ -62,12 +62,16 @@ collision_monitor:
     polygons: ["CollisionSlowdown", "CollisionStop"]
     CollisionSlowdown:
       type: "polygon"
-      # Box shrunk 20m->10m forward + ratio 0.3->0.5 on the 2026-06-01 (gabby)
-      # deployment: the 20m/30% slowdown dropped the boat below steering-
-      # authority speed when false positives tripped it. CollisionStop unchanged.
-      points: "[[10.0, 3.0], [10.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
+      # 20 m forward box / 0.3 slowdown_ratio: the ORIGINAL, validated values
+      # (tested approaching an obstacle at 3 kn). The 2026-06-01 field tune to a
+      # 10 m box / 0.5 ratio was REVERTED at wrap-up: it did NOT cure the
+      # false-positive paralysis (boat still bogged down) and it weakened a
+      # tested safety slowdown. The real fix is upstream -- turn before the
+      # obstacle enters this zone (avoider re-plan, unh_marine_navigation#57) --
+      # not weakening the reflex. CollisionStop unchanged.
+      points: "[[20.0, 3.0], [20.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
       action_type: "slowdown"
-      slowdown_ratio: 0.5
+      slowdown_ratio: 0.3
       min_points: 4
       visualize: true
       polygon_pub_topic: "collision_monitor/slowdown_polygon"
