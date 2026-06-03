@@ -53,6 +53,21 @@ are unsolved offline-tuning problems, not 2-day fixes. Students operate with the
 Binding constraint = boat days (serial, weather-dependent). Bundle #1/#2 (+ an
 OTH check, [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)) into one boat day; #3–5 proceed off-water in parallel.
 
+**#205 update (2026-06-02 — UNH-pier shakedown).** Must-finish #2 (clean survey
+run) **attempted, not met.** Line-following hunting was fixed on the water
+(velocity_smoother yaw-accel ±0.5→±3.0, [`seafloor#38`](https://github.com/rolker/seafloor_echoboat_project11/issues/38)),
+but a **persistent swerving blocks "clean"** — root-caused to the avoider-in-loop
+(#206) weaving the line along the charted pier's 150 m inflation gradient
+([`nav#63`](https://github.com/rolker/unh_marine_navigation/issues/63), fix open).
+**This is the new blocker for #2.** On the plus side, the **first on-water
+autonomous avoidance** worked (routed around a moored sailboat), and
+costmap-over-bridge to CAMP ([`nav#56`](https://github.com/rolker/unh_marine_navigation/issues/56)/PR #61)
+validated — but a survey-speed near-miss
+([`nav#64`](https://github.com/rolker/unh_marine_navigation/issues/64)) reinforces
+**avoidance stays the fallback (low-speed-only + manual override)**, not a
+must-finish. OTH ([`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130))
+still untested. Sensor/sonar readiness met for the teaching goal.
+
 ## Active threads (have task issues)
 
 Cross-references — the roadmap is not the source of truth for any

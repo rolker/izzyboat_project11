@@ -62,13 +62,16 @@ collision_monitor:
     polygons: ["CollisionSlowdown", "CollisionStop"]
     CollisionSlowdown:
       type: "polygon"
-      # 20 m forward box / 0.3 slowdown_ratio: the ORIGINAL, validated values
-      # (tested approaching an obstacle at 3 kn). The 2026-06-01 field tune to a
-      # 10 m box / 0.5 ratio was REVERTED at wrap-up: it did NOT cure the
-      # false-positive paralysis (boat still bogged down) and it weakened a
-      # tested safety slowdown. The real fix is upstream -- turn before the
-      # obstacle enters this zone (avoider re-plan, unh_marine_navigation#57) --
-      # not weakening the reflex. CollisionStop unchanged.
+      # 20 m forward box / 0.3 slowdown_ratio — original validated reflex (RESTORED).
+      # 2026-06-02 field experiment (gabby) tried 8 m box / 0.7 ratio for
+      # "turn-before-slowdown" (let the avoider steer clear before braking). It
+      # worked at LOW speed, but at default survey speed (0.77 m/s) the boat could
+      # NOT out-turn a moored sailboat in time (yaw capped at 1.0 rad/s) and, with
+      # the slowdown margin removed, carried speed to CollisionStop → emergency
+      # stop → manual takeover (near-miss, 15:27). REVERTED. Turn-before-slowdown
+      # is speed-limited; the slowdown braking is needed at speed to buy the avoider
+      # time. Revisit post-deployment (faster turn authority, or speed-scaled CA
+      # zones). Full experiment values in docs/logs/2026/2026-06-02_gabby_logs.md.
       points: "[[20.0, 3.0], [20.0, -3.0], [0.0, -3.0], [0.0, 3.0]]"
       action_type: "slowdown"
       slowdown_ratio: 0.3
@@ -78,6 +81,8 @@ collision_monitor:
       enabled: true
     CollisionStop:
       type: "polygon"
+      # ±2.0 m width — original (RESTORED; the 2026-06-02 ±1.5 m narrowing was
+      # reverted with the slowdown experiment above).
       points: "[[5.0, 2.0], [5.0, -2.0], [0.0, -2.0], [0.0, 2.0]]"
       action_type: "stop"
       min_points: 5
@@ -114,18 +119,19 @@ controller_server:
       plugin: "marine_nav_avoidance_controller::AvoidanceController"
       primary_controller: "marine_nav_crabbing_path_follower::CrabbingPathFollower"
       # Corridor-solver tunables (live via `ros2 param set <controller_server>
-      # FollowPath.<name>`). obstacle_avoidance_weight 1.0 == 1:1 with
-      # line_following_weight for a clearly visible bend (raised from the 0.02
-      # placeholder per the 2026-06-01 field finding); SIM/ON-WATER TUNE before
-      # trusting. anchor_behind_distance anchors the detour entry behind the boat
-      # so the tracker actually follows it (#59 fix).
+      # FollowPath.<name>`). 2026-06-02 field tune (gabby): obstacle_avoidance_weight
+      # 0.5 (was 1.0 == 1:1) → 2:1 toward line_following for gentler bends, plus
+      # chatter_damping_weight 0.5 (was 0.0) to steady the corridor tick-to-tick.
+      # Validated on water — boat routed around a moored sailboat twice. SIM-validate
+      # before trusting widely. anchor_behind_distance anchors the detour entry behind
+      # the boat so the tracker actually follows it (#59 fix).
       max_deviation: 6.0
       along_track_spacing: 2.0
       lateral_resolution: 0.5
       line_following_weight: 1.0
-      obstacle_avoidance_weight: 1.0
+      obstacle_avoidance_weight: 0.5
       smoothness_weight: 2.0
-      chatter_damping_weight: 0.0
+      chatter_damping_weight: 0.5
       max_lateral_change: 1.0
       anchor_behind_distance: 4.0
       # avoid_speed 0.0 = no slowdown through the manoeuvre (controller default
