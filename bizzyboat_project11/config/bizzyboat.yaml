@@ -357,6 +357,13 @@
       - /bizzy/collision_monitor/stop_polygon
       - /bizzy/local_costmap/published_footprint
       - /bizzy/marine/response
+      # Operator command INPUTS — record the raw command bus + manual helm
+      # boat-side so the boat bag is self-contained for "what was commanded,
+      # by whom, when" (incl. manual takeovers). Previously these lived only
+      # in the operator-station bag; the #205 wrap-up needed that bag to
+      # confirm command intent + takeover timing (#209). Both low-rate.
+      - /bizzy/marine/command
+      - /bizzy/piloting_mode/manual/helm
       - /marine/platforms
       - /rosout
       - /tf
