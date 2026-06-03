@@ -44,14 +44,17 @@ are unsolved offline-tuning problems, not 2-day fixes. Students operate with the
 (drilled). See *Surface-obstacle awareness → Planning path regression*.
 
 **Real must-finish (priority order):**
-1. **[`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) FCU reconfig + tide/chart-datum validation** (boat day) — prerequisite for sonar/survey **data quality** at the lake.
+1. ~~**#138 FCU reconfig + tide/chart-datum validation** (boat day) — data quality~~ — **largely delivered, demoted.** FCU `EK3_SRC1_POSZ=3` + the chain fix are in (see [`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) detail below). The ROS `tide_estimate`/datum chain is **costmap-only** (Nav2 `map_tide`), **NOT** hydrographic data — survey data is collected via QINSy outside ROS, with students verifying lever arms/offsets. The residual ≤~0.5 m datum-reference offset is a **costmap-only, low-priority** follow-up, not a data-quality must-finish.
 2. **One clean survey run** — validate what works (line-following held sub-metre on #201) and characterize mid-line resume ([`nav#58`](https://github.com/rolker/unh_marine_navigation/issues/58)) / mission re-send ([`nav#35`](https://github.com/rolker/unh_marine_navigation/issues/35)).
 3. **Operator perception display ([`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)) + document the costmap-delivery hack ([`nav#56`](https://github.com/rolker/unh_marine_navigation/issues/56))** — the fallback depends on operators *seeing* clearly.
 4. **[`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) student deployment guide** (boat-free) — class-blocking.
 5. **Fallback SOP** — manual-override / RC drill + exclusion zones, practised with students.
 
-Binding constraint = boat days (serial, weather-dependent). Bundle #1/#2 (+ an
-OTH check, [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)) into one boat day; #3–5 proceed off-water in parallel.
+Binding constraint = boat days (serial, weather-dependent). With #1 largely
+delivered, the final pre-class boat day centers on **#2 (clean survey validation)
++ OTH** ([`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130));
+#3–5 proceed off-water in parallel. Boat-day checklist pre-staged at
+[`#211`](https://github.com/rolker/unh_echoboats_project11/issues/211).
 
 **#205 update (2026-06-02 — UNH-pier shakedown).** Must-finish #2 (clean survey
 run) **attempted, not met.** Line-following hunting was fixed on the water
@@ -67,6 +70,13 @@ validated — but a survey-speed near-miss
 **avoidance stays the fallback (low-speed-only + manual override)**, not a
 must-finish. OTH ([`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130))
 still untested. Sensor/sonar readiness met for the teaching goal.
+
+**nav#63 is location-specific — likely moot at the lake.** The swerving is driven by
+the charted pier's S57 inflation gradient; Lake Massabesic has **no S57 coverage**, so
+the `chart_layer` is empty there and the avoider returns zero deviation (straight lines).
+So nav#63 is **not a fix-before-freeze blocker**. For clean-survey validation *at the
+pier* (final prep day, [`#211`](https://github.com/rolker/unh_echoboats_project11/issues/211)),
+set `FollowPath.obstacle_avoidance_weight=0` live to sidestep it.
 
 ## Active threads (have task issues)
 
@@ -147,7 +157,7 @@ autonomy quality.
 **Must finish before June 4:**
 - [`rolker/unh_marine_navigation#35`](https://github.com/rolker/unh_marine_navigation/issues/35) — **mission re-send mid-line doesn't take effect.** Operator Executes a new trackline; the heartbeat shows it but the boat keeps following the *old* line's path (workaround: clear + resend). Root-caused on #173: the BT latches the path — `SetPathFromTask` runs once behind a memory `Sequence`, and survey-line re-entry is gated on task *type*, not *id*, so a same-type (`survey_line→survey_line`) switch never halts/recomputes `FollowPath`. **Class-significant** — students will hit this redirecting the boat mid-mission. Fix: gate re-entry on task id (or preempt-cancel the running nav). Normal sequential surveys are unaffected. Full analysis: [`docs/analysis/2026-05-26/findings.md`](analysis/2026-05-26/findings.md) §8. **In progress** — plan drafted 2026-05-27, [`PR #36`](https://github.com/rolker/unh_marine_navigation/pull/36). *(Distinct: the #186 hover re-send failure was traced to a **CAMP-side command-send gap** — the commands were never published — not this BT task-latch family.)* **#201 (2026-06-01)**: operator re-ran/nudged a 3-buoy mission repeatedly and it **took effect on-water** (mission adjust worked) — unconfirmed whether this exercised the #35 same-type-latch fix (PR #36) or the replace-task path; verify which path was active.
 - [`rolker/unh_marine_navigation#58`](https://github.com/rolker/unh_marine_navigation/issues/58) — **mid-line resume after a goto override re-runs the line from the start** instead of resuming from the boat's current position (on-water regression of the merged #52/#53, which was sim-validated). Updatable goto re-target itself worked; only the resume failed. **Class-significant** — students will override mid-line and expect resume, not a full re-run. Candidate: `RobotOnPath` 5 m tolerance missed under heavy crab. New on #201 (2026-06-01).
-- [`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals. No fix landed; 2026-05-19 deployment logs likely still show TF-lookup-out-of-time errors. Survey patterns at the lake will repeatedly trigger this. Verify still occurring, then fix. **#201 (2026-06-01): NO TF-extrapolation errors in boat-side rosout** — may already be resolved (the CAMP tf crash this run was operator-side → camp #58, not this). Verify on a clean multi-line survey before closing.
+- ~~[`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals.~~ **RESOLVED / CLOSED** — no recurrence across recent multi-line surveys (incl. #201, no TF-extrapolation errors in boat-side rosout); operator confirms many clean multi-line surveys since with no recurrence. #23 closed; not a must-finish.
 
 **Investigate before June 4:**
 - [`rolker/unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) — costmap-update timeout too aggressive at 1.0s. **Confirmed real on #201 (2026-06-01)**: `Costmap timed out waiting for update` logged ×14 (controller_server, 14:32–16:20) while the boat was working the mooring field — promote from "investigate" to a real reliability factor in the costmap/avoidance failure. Tied to the costmap-delivery mechanism ([`unh_marine_navigation#56`](https://github.com/rolker/unh_marine_navigation/issues/56)).
