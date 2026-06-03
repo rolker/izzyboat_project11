@@ -87,6 +87,12 @@ update to BizzyBoat 240 (fleet mapping: 240 = BizzyBoat deployed/current,
   links the framework guide for mechanism rather than asserting internals.
 - No network SVG for BizzyBoat exists, so the README links the network *doc* only
   (the old `izzyboat_network.svg` image reference was dropped).
+- Added **§4 "The operator station displays"** (annunciators + camera/segmentation
+  imagery) — scope moved here from the CAMP manual at Roland's direction (CAMP is
+  not where these are viewed; recurring agent confusion). Example screenshots in
+  `docs/images/` cropped from the 2026-06-01 operator screenshooter capture
+  (`~/data/logs/operator/2026-06-01/...`), **terminals excluded** (dev/agent
+  screens); Roland approved the Portsmouth-pier content for these PUBLIC repos.
 
 ---
 **Authored-By**: `Claude Code Agent`

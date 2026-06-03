@@ -38,7 +38,7 @@ mission-planning interface — and the operator-side ROS nodes.
 
 A human pilot can take manual control **at any time** with the RC controller. This
 is the primary safety mechanism. Pressing **Standby** (from CAMP or the controller)
-hands the boat to **MANUAL** control immediately — see [§4](#4-driving--autonomy).
+hands the boat to **MANUAL** control immediately — see [§5](#5-driving--autonomy).
 When in doubt, take manual control.
 
 ---
@@ -72,7 +72,7 @@ station's annunciator panel and in CAMP.
 
 - The operator station talks to the boat over a **WiFi backhaul** (primary) with a
   **Starlink/VPN** fallback. Confirm the link indicators are green before relying
-  on remote control. See [§5](#5-comms--range).
+  on remote control. See [§6](#6-comms--range).
 
 ---
 
@@ -116,7 +116,52 @@ view of this.
 
 ---
 
-## 4. Driving & autonomy
+## 4. The operator station displays
+
+Once the stack is up, the operator station shows the boat across several windows on
+its monitors. **These are separate from CAMP.** CAMP is the map / mission-planning
+view (see the CAMP user manual); the **camera feeds** and the **annunciators** are
+their own windows — a common point of confusion is to look for them inside CAMP,
+where they do not live.
+
+![Operator station: PTZ camera (top), CAMP map (lower left), OAK cameras +
+segmentation (lower middle/right), and the diagnostics/annunciator strip (lower
+right). Terminals omitted.](images/operator_station_2026-06-01.jpg)
+
+### Cameras
+
+- **Situational-awareness camera (AXIS PTZ).** A steerable camera for watching the
+  boat's surroundings (and the boat itself when in view). Useful for keeping eyes on
+  traffic and the boat during a run.
+
+  ![Boat PTZ camera view](images/operator_ptz_camera_2026-06-01.jpg)
+
+- **Perception cameras (OAK) + segmentation.** The four OAK cameras — **port,
+  forward, starboard, aft** — and their **segmentation** view, shown in an rqt
+  window (titled `bizzyboat - rqt`), *not* CAMP. In the segmentation tiles, **blue =
+  sky, green = water, red = the water/obstacle boundary**. The forward segmentation
+  feeds the collision monitor (the boat's reflex safety stop).
+
+  ![OAK cameras (raw + segmentation) and the diagnostics runtime
+  monitor](images/operator_cameras_segmentation_2026-06-01.jpg)
+
+### Annunciators (diagnostics)
+
+The **annunciators** are a separate diagnostics display showing system health —
+comms links, GPS/RTK, battery, nav stack, mission manager, etc. **Green = OK, yellow
+= warning, red = error.** This is where the readiness checks in §2 show up at a
+glance, and where you watch for problems during a run.
+
+- Annunciator naming distinguishes the diagnostic **source** — "boat" vs "operator"
+  — **not** where the display lives. **Both run at the operator station** (the boat
+  is uncrewed).
+- The `bizzyboat-diagnostics` runtime monitor (Stale / Errors / Warnings / OK
+  counts) and per-link indicators (e.g. "Op Starlink", "Ping Gabby (WiFi)") are part
+  of this display.
+
+---
+
+## 5. Driving & autonomy
 
 You command the boat three ways: the **RC controller** (manual), the **CAMP map**
 (overrides like Hover and Goto), and **survey missions** (planned lines sent from
@@ -159,7 +204,7 @@ section explains what the commands *mean*.
 
 ---
 
-## 5. Comms & range
+## 6. Comms & range
 
 - **Primary link:** WiFi backhaul (`gabby.bizzy.p11.lan`). **Fallback:**
   Starlink/VPN. The UDP bridge moves ROS traffic across whichever path is up.
@@ -173,7 +218,7 @@ section explains what the commands *mean*.
 
 ---
 
-## 6. Shutdown & post-run
+## 7. Shutdown & post-run
 
 1. Bring the boat back under **manual (RC)** control for recovery — press
    **Standby**.
