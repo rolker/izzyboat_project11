@@ -1,8 +1,10 @@
 # BizzyBoat / hydrography roadmap
 
 What we're aiming for, and what's deferred. Scope is BizzyBoat plus the
-sensor payload (M3 sonar, SBG, SVS) bound for the June 2026 field
-hydrography class.
+sensor payload (M3 sonar, SBG, SVS) supporting the **2026 survey
+campaigns** — the June Lake Massabesic survey and a potential August OTH
+survey. The June Summer Hydro class is the training / sonar-setup /
+shakedown week that feeds the June survey, not the end in itself.
 
 This document is the **carry-over mechanism between deployments**.
 Items here are durable direction; specific bounded work belongs in
@@ -16,24 +18,50 @@ to the pier — all without user intervention.
 
 ## Forcing function
 
-**Summer Hydro 2026 — class + real lake survey.**
-- **June 4**: Class starts. Roland teaches boat operation; students learn
-  survey-component integration in parallel. Heavy development should be
-  **done by this date** — switch to maintenance mode thereafter.
-- **June 15 → ~June 29**: Two-week real survey at Lake Massabesic, NH.
-  10 students rotate in 3 daily groups (3–4 students/day) plus engineer
-  / intern helpers.
+**2026 survey campaigns.** The roadmap is driven by real surveys, not the class
+per se. Two campaigns are on the horizon:
+- **June survey — Lake Massabesic, NH (~June 15 → ~June 29).** A two-week real
+  survey for a real customer — the immediate driver. 10 students rotate in 3
+  daily groups (3–4/day) plus engineer / intern helpers.
+- **Potential OTH survey — August (tentative).** A second campaign, expected to
+  be **OTH-scale** (boat operating outside direct comms range; longer-range
+  autonomy / link demands). *Named as a horizon goal only — it does **not**
+  re-prioritize the June must-finish work yet; revisit after the June survey.*
+
+**Survey-prep week — June 8 → 15 (the Summer Hydro class).** One week of
+**operator training + sonar setup + shakedown** ahead of the June survey: Roland
+teaches boat operation while students learn survey-component integration in
+parallel, and the boat + sonar payload get set up and shaken down. Heavy
+development should be **done by June 8 (Monday)** — switch to maintenance mode
+thereafter.
+
+> **Schedule update (2026-06-03):** the survey-prep week (and the dev freeze)
+> moved to start **June 8 (Monday)** from June 4. This buys **two more pier/dev
+> days (June 4–5)** before the freeze — but it **compresses the June 8 → June 15
+> prep week** (operator training + sonar setup + shakedown) into just **4–5
+> days**. That compression is now the binding schedule constraint: the extra
+> pier days go to finishing the must-finish list, not to slack. The survey
+> date (June 15) is unchanged. Throughout this document, "before June 4" /
+> "June 4" freeze references should now be read as **June 8** unless they are
+> explicitly dated historical snapshots (the 2026-06-02 reality check below
+> and Appendix A).
 
 This is a real survey for a real customer, not a class exercise — the
 system must work, not just demonstrate. Hydrographic-quality output is
-the educational goal even though the operational bar is lower. The
-system must support multi-operator handoff across daily cohorts.
+the goal even though the operational bar is lower. The system must
+support multi-operator handoff across daily cohorts.
 
 ## June-4 reality check (2026-06-02, post-#201)
 
 With ~2 boat-days left before the freeze, #201 (2026-06-01) reset the
 must-finish list. This section supersedes the now-stale per-theme "Must finish
 before June 4" optimism below and the Appendix A sizing snapshot.
+
+> **Schedule update (2026-06-03):** the freeze moved June 4 → **June 8** (see
+> Forcing function). The "~2 boat-days left" above was the 2026-06-02 count;
+> there are now **two more pier days (June 4–5)** on top of the June 3 day, so
+> the must-finish list below gets more on-water time — but the June 8 → 15
+> student-training / survey-setup window is correspondingly tighter (4–5 days).
 
 **Accepted as fallback — NOT must-finish:** autonomous obstacle avoidance.
 *Turning a camera image into a reliable costmap is hard* — costmap delivery
@@ -86,13 +114,13 @@ visible from one place.
 
 ### Sensor payload integration (M3 + SBG + SVS on mercat)
 
-**Verify before June 4:**
+**Verify before June 8:**
 - AML SVS bridge — **RESOLVED on #173 (2026-05-26)**: after the #160 all-NUL regression, the probe produced valid in-water sound speed (~1490 m/s, 98.8% valid, median 1489.9); the all-NUL behavior did not reproduce (`minicom` confirmed flow pre-deploy). [`#163`](https://github.com/rolker/unh_echoboats_project11/issues/163) **kept open as a watch item** for a few more deployments (minor ~1.2% intermittent zero-dropouts, mostly early-run settling).
 
 **Resolved since 2026-05-22:**
-- [`unh_echoboats_project11#163`](https://github.com/rolker/unh_echoboats_project11/issues/163) — AML SVS all-NUL. **No longer blocking — resolved on #173 (2026-05-26)** (see Verify-before-June-4 above): the probe now delivers valid in-water SV, which M3 needs for correct depth.
+- [`unh_echoboats_project11#163`](https://github.com/rolker/unh_echoboats_project11/issues/163) — AML SVS all-NUL. **No longer blocking — resolved on #173 (2026-05-26)** (see Verify-before-June-8 above): the probe now delivers valid in-water SV, which M3 needs for correct depth.
 
-**Open decision (decide before June 4):**
+**Open decision (decide before June 8):**
 - Sidescan imagery option — install Garmin sidescan (colleague has
   headless protocol implementation) vs run M3 in imagery mode. Tradeoff
   is install effort vs imagery quality. *(Needs an issue.)*
@@ -130,15 +158,15 @@ autonomy quality.
 
 **Planning path — first on-water close (2026-05-28, [#186](https://github.com/rolker/unh_echoboats_project11/issues/186)).** The autonomy planner **did route around camera-detected obstacles** for the first time — it threaded a path between a sailboat and a buoy seen only by the OAK cameras (segmentation → costmap → planner). The section's premise above ("the planner has no awareness") is now refuted for **large / solidly-marked** obstacles: the loop closes, and on-water acceptance evidence for the #7 end-state is posted on [`unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7). **Two gaps remain** — (a) *marking robustness*: small/dim targets under dark skies mark poorly (the strict argmax gate scores marginal-red as a *miss*, plus segmentation false-negatives in low contrast) → [`unh_marine_perception#22`](https://github.com/rolker/unh_marine_perception/issues/22) (gate + graded vote), [`unh_marine_perception#23`](https://github.com/rolker/unh_marine_perception/issues/23) (core export), offline **tuning tool** [`marine_perception_tools#1`](https://github.com/rolker/marine_perception_tools/issues/1); (b) *planning in clutter*: the boat got stuck / orbited in dense-buoy geometries (CA behaved correctly — the planner drove into spots it couldn't gracefully escape). **Planning quality in clutter — not CA tuning — is the next priority.**
 
-**Planning path — major regression on a mooring field (2026-06-01, [#201](https://github.com/rolker/unh_echoboats_project11/issues/201)).** #186's "loop closes" optimism does **not** generalize. Against a 3-buoy mooring field the planner **never autonomously avoided** the buoys, via two distinct mechanisms now filed: (a) the costmap was **never reliably delivered/maintained** — operator-side delivery is subscriber-gated lazy publish ([`unh_marine_navigation#56`](https://github.com/rolker/unh_marine_navigation/issues/56)) and the controller logged `Costmap timed out waiting for update` ×14; and (b) the corridor avoider **only re-plans behind the boat, never ahead** ([`unh_marine_navigation#57`](https://github.com/rolker/unh_marine_navigation/issues/57)). **Net takeaway: turning a camera image into a reliable costmap is hard — the planning path is NOT class-ready.** For June 4 the **fallback (vigilant camera-watching + exclusion zones + manual takeover — ~20 USB-controller takeovers were needed on #201)** is the operating plan; autonomous obstacle avoidance is **not** to be relied on with students. (Reflex CollisionStop did fire on buoys, but light contact still occurred.)
+**Planning path — major regression on a mooring field (2026-06-01, [#201](https://github.com/rolker/unh_echoboats_project11/issues/201)).** #186's "loop closes" optimism does **not** generalize. Against a 3-buoy mooring field the planner **never autonomously avoided** the buoys, via two distinct mechanisms now filed: (a) the costmap was **never reliably delivered/maintained** — operator-side delivery is subscriber-gated lazy publish ([`unh_marine_navigation#56`](https://github.com/rolker/unh_marine_navigation/issues/56)) and the controller logged `Costmap timed out waiting for update` ×14; and (b) the corridor avoider **only re-plans behind the boat, never ahead** ([`unh_marine_navigation#57`](https://github.com/rolker/unh_marine_navigation/issues/57)). **Net takeaway: turning a camera image into a reliable costmap is hard — the planning path is NOT class-ready.** For June 8 the **fallback (vigilant camera-watching + exclusion zones + manual takeover — ~20 USB-controller takeovers were needed on #201)** is the operating plan; autonomous obstacle avoidance is **not** to be relied on with students. (Reflex CollisionStop did fire on buoys, but light contact still occurred.)
 
-**Priority for June 4** (display path):
+**Priority for June 8** (display path):
 - [`rolker/unh_marine_perception#6`](https://github.com/rolker/unh_marine_perception/issues/6) — `SeaSurfaceLayer::matchSize()` segfault. **CLOSED** ([`PR #11`](https://github.com/rolker/unh_marine_perception/pull/11)). Multi-instance variant tracked separately as [`#14`](https://github.com/rolker/unh_marine_perception/issues/14) — also **CLOSED**; durably validated under in-water, low-battery, sunset/low-light conditions across the full 2h 43m mission window during #160 (2026-05-22). No segfaults observed; 4-instance `sea_surface_layer` is production-ready for the class.
 - [`rolker/unh_marine_perception#7`](https://github.com/rolker/unh_marine_perception/issues/7) — end-to-end OAK → costmap validation. Blocked on #6. End state for display-first: "a costmap is being published, populated by segmentation, and the operator can see it." **On-water close on #186 (2026-05-28)** — the planner routed around camera-detected obstacles; screengrab acceptance evidence posted on the issue.
 - [`rolker/unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) — operator-side perception display over the bridge. **Broadened 2026-05-26** from costmap-only to *all relevant perception topics* (costmap, costmap_updates, reflex pointcloud, segmentation) after hit-and-miss rviz/CAMP display on #173. Leading costmap idea: **send as a compressed image** (camera streams deliver 92–99% vs raw OccupancyGrid ~1–2%, see [`#68`](https://github.com/rolker/unh_echoboats_project11/issues/68)); reflex pointcloud needs QoS-matching (best-effort); `costmap_updates` companion was missing from the bridge `topics_list`.
 - Per-camera `frame_ids` + URDF-aligned `<label>_optical_frame` default via [PR #9](https://github.com/rolker/unh_marine_perception/pull/9) (2026-04-28). *(Done.)*
 
-**Defer past June 4** (planning path):
+**Defer past June 8** (planning path):
 - Using the costmap for autonomous planning. Requires costmap quality
   to be much higher than the display-only bar. Maintenance-mode work.
 
@@ -154,12 +182,12 @@ autonomy quality.
 
 ### Navigation reliability
 
-**Must finish before June 4:**
+**Must finish before June 8:**
 - [`rolker/unh_marine_navigation#35`](https://github.com/rolker/unh_marine_navigation/issues/35) — **mission re-send mid-line doesn't take effect.** Operator Executes a new trackline; the heartbeat shows it but the boat keeps following the *old* line's path (workaround: clear + resend). Root-caused on #173: the BT latches the path — `SetPathFromTask` runs once behind a memory `Sequence`, and survey-line re-entry is gated on task *type*, not *id*, so a same-type (`survey_line→survey_line`) switch never halts/recomputes `FollowPath`. **Class-significant** — students will hit this redirecting the boat mid-mission. Fix: gate re-entry on task id (or preempt-cancel the running nav). Normal sequential surveys are unaffected. Full analysis: [`docs/analysis/2026-05-26/findings.md`](analysis/2026-05-26/findings.md) §8. **In progress** — plan drafted 2026-05-27, [`PR #36`](https://github.com/rolker/unh_marine_navigation/pull/36). *(Distinct: the #186 hover re-send failure was traced to a **CAMP-side command-send gap** — the commands were never published — not this BT task-latch family.)* **#201 (2026-06-01)**: operator re-ran/nudged a 3-buoy mission repeatedly and it **took effect on-water** (mission adjust worked) — unconfirmed whether this exercised the #35 same-type-latch fix (PR #36) or the replace-task path; verify which path was active.
 - [`rolker/unh_marine_navigation#58`](https://github.com/rolker/unh_marine_navigation/issues/58) — **mid-line resume after a goto override re-runs the line from the start** instead of resuming from the boat's current position (on-water regression of the merged #52/#53, which was sim-validated). Updatable goto re-target itself worked; only the resume failed. **Class-significant** — students will override mid-line and expect resume, not a full re-run. Candidate: `RobotOnPath` 5 m tolerance missed under heavy crab. New on #201 (2026-06-01).
 - ~~[`rolker/unh_marine_navigation#23`](https://github.com/rolker/unh_marine_navigation/issues/23) — TF extrapolation on multi-line survey goals.~~ **RESOLVED / CLOSED** — no recurrence across recent multi-line surveys (incl. #201, no TF-extrapolation errors in boat-side rosout); operator confirms many clean multi-line surveys since with no recurrence. #23 closed; not a must-finish.
 
-**Investigate before June 4:**
+**Investigate before June 8:**
 - [`rolker/unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) — costmap-update timeout too aggressive at 1.0s. **Confirmed real on #201 (2026-06-01)**: `Costmap timed out waiting for update` logged ×14 (controller_server, 14:32–16:20) while the boat was working the mooring field — promote from "investigate" to a real reliability factor in the costmap/avoidance failure. Tied to the costmap-delivery mechanism ([`unh_marine_navigation#56`](https://github.com/rolker/unh_marine_navigation/issues/56)).
 - **Boat-side bathy costmap** *(placeholder — needs issue or existing
   agent-branch link)*. Lake Massabesic has no S57 ENC coverage, so the
@@ -173,7 +201,7 @@ autonomy quality.
 - **Turning-limit validation — STILL PENDING after #173 (2026-05-26).** The two field-untested changes (helm yaw cap 0.5→1.0 rad/s, [PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172) / #124 §2; planner min turning radius 3.0→1.5 m) were **not assessed** — #173 went to collision-avoidance testing. They were exercised only incidentally in transit-to-line-start planning (individual tracklines, no survey-pattern apron turns), so the tight-apron case the 1.5 m radius most affects is still untested. `pid_state` (cross-track-error) recording **landed ✓** on #173. **Needs a clean survey run** to validate; fold into the next deployment. (#186 (2026-05-28) was again a buoy/CA/segmentation day with aborted lines in dense clutter, not a clean survey run — still pending. #201 (2026-06-01) likewise — buoy-avoidance/perception firefight, no clean survey lines; turning behaviour went unobserved. Still pending.)
 - **Re-enable the velocity_smoother in the cmd_vel chain — [`rolker/seafloor_echoboat_project11#36`](https://github.com/rolker/seafloor_echoboat_project11/issues/36) (OPEN).** The smoother was removed from the active path in [`seafloor#27`](https://github.com/rolker/seafloor_echoboat_project11/issues/27) (routing the controller straight into the Collision Monitor via `cmd_vel_nav`), so it is currently **not in the path and not in `lifecycle_nodes`**. Consequence: the survey **accel / yaw-rate limiting** that `bizzyboat.yaml` says "belongs in the Nav2 smoother" (#124 §2) **is not active** — the only yaw governors today are the helm clamp (`max_yaw_speed 1.0`) and the planner's min turning radius. **This blocks the turning-limit goal above** — confirmed on #201 (2026-06-01): the smoother/limiter simply isn't in the stack to validate. Re-enable per the recipe in `navigation_launch.py` (re-add to `lifecycle_nodes`, route controller → `cmd_vel_smoothed`, set collision_monitor `cmd_vel_in_topic` back to `cmd_vel_smoothed`).
 
-**Defer past June 4:**
+**Defer past June 8:**
 - [`unh_echoboats_project11#96`](https://github.com/rolker/unh_echoboats_project11/issues/96) — BizzyBoat-specific nav2 params override (decouple from seafloor echoboat defaults). Not critical for single-boat ops; promote when joint Bizzy + Izzy ops come into scope.
 - [`unh_echoboats_project11#164`](https://github.com/rolker/unh_echoboats_project11/issues/164) — CrabbingPathFollower SE-undulation. **Closed** — undulation real (~1.6 m median RMS) but SE-only asymmetry unconfirmed. `pid_state` recording **now landed ✓** (#173), but the #173 dig was **inconclusive**: it was a collision-test day with no sustained clean survey line — clean stretches held sub-meter XTE, the large excursions were collision-stop/re-acquisition artifacts. **Needs a clean-survey deployment** to characterize undulation. Reopen on recurrence. **#201 (2026-06-01)**: cleanest read yet — clean stretches |XTE| median **0.47 m** (71% ≤ 1 m) held under heavy crab; large excursions still avoidance/manual-takeover artifacts. Still no fully-clean sustained survey line.
 
@@ -203,13 +231,13 @@ Massabesic that chain becomes a "lake-level / chart-datum" chain;
 mathematically the same, no tidal variation but reference geometry
 still load-bearing for sonar processing.)
 
-**Must finish before June 4:**
+**Must finish before June 8:**
 - [`unh_echoboats_project11#138`](https://github.com/rolker/unh_echoboats_project11/issues/138) — `mru_transform` durable nav-input choice + FCU reconfig. **Substantive FCU change is only `EK3_SRC1_POSZ = 3`** (GPS), so the FCU EKF Z stops tracking atmospheric pressure. (Earlier brief drafts also called for an `EK3_GPS_OFFS_*` family — those params don't exist on ArduPilot Rover; the GPS antenna lever-arm goes through `GPS_POS1_*` only, which was already at the right values from #91.) Field-side revert to `mavros/global_position/raw/fix` is a workaround; FCU reconfig is the durable answer. **Status (2026-05-21)**: bench-side validation passed — `/global` altitude back in chart-datum band, `tide_estimate` plausible, suppression warnings gone — and `mru_transform` switched back from `raw/fix` → `/global` in field commit `f348f66`. In-water trackline validation didn't run (nav stack unhealthy — see [`#150`](https://github.com/rolker/unh_echoboats_project11/issues/150) topic 6); offline bag analysis pending in [`#150 topic 1`](https://github.com/rolker/unh_echoboats_project11/issues/150). **Status update (2026-05-22 bag review)**: gabby §9's initial "lever-arm double-count" hypothesis was superseded by gabby §10. The actual mechanism was a *missing* lever-arm: `mru_transform` was still consuming `raw/fix` (a 2026-05-19 field workaround) — and mavros publishes `raw/fix` as antenna altitude labelled `base_link`. Switching back to `/global` (field commit `f348f66`, now in this PR) restores correct base_link altitude in the chain. The §10 closure claim ("+0.03 m residual ✓ after ~0.7 m freeboard") is also revised — freeboard is actually ≤ ~0.22 m (sonar face at z=-0.22 m from base_link per URDF is "definitely submerged" per operator), so the residual against NOAA forecast is ~+0.5 m, not near zero. Candidate causes for the remaining ~0.5 m: geoid/datum reference mismatch (VDatum-at-pier vs NOAA-Fort-Point-station — both within mm at the pier, but NOAA forecast is referenced to the gauge's local zero), or unmodeled small offsets. **MLLW value from the bag is sound** (`chart_datum` node banner: −28.012 m at the pier on 2026-05-21, matching 2026-05-19 §13 to mm). #138's FCU-side change is delivered; chain-side fix is delivered; residual ≤ 0.5 m is a smaller follow-up (likely fits in [`#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) scope or a new dedicated issue).
 
 **Wrap-up / housekeeping:**
 - [`unh_echoboats_project11#111`](https://github.com/rolker/unh_echoboats_project11/issues/111) — lever-arm / base_link contract. SBG half resolved live 2026-05-01; FCU half folds into #138's reconfig. Plan: fold the remaining FCU-side scope into #138's body, then close #111 with a pointer.
 
-**Defer past June 4:**
+**Defer past June 8:**
 - [`unh_echoboats_project11#110`](https://github.com/rolker/unh_echoboats_project11/issues/110) — URDF gap (SBG INS + GNSS antennas + IMU mounting). Becomes load-bearing when the camera-image → costmap pipeline ships (need accurate geometric placement for segmentation projection), but it's not on the critical path for the tide / chart-datum chain — which uses the position+altitude topics directly. Until then, documentation-correctness work that can live in maintenance mode.
 
 **Done:**
@@ -222,7 +250,7 @@ Battery/endurance characterized across the chained 2026-05-19 → 21 → 22 sing
 - **Field-ready output**: the **voltage ladder** (pre-launch resting-V go/no-go + in-mission loaded-V recovery ladder) is measured and reliable — use it for mission planning. All current / power / energy / endurance figures are **modeled (±~30 %)** — no current meter on this hull.
 - **No battery swap** — BizzyBoat charges **in place**, so **recharge-to-full time between deployment days / cohorts is the binding cadence constraint** (not swap logistics). The recharge curve is still **uncharacterized** — measure a full charge at the next opportunity.
 - **First measured charger-current datapoint (#186, 2026-05-28)**: ~6.2 A external-charger draw after a multi-day in-place charge (idle/maintenance load near full). No current meter on the hull, so charger-side readings are the only **measured** current we get — a real anchor for the otherwise-modeled charge side. Capture + power-model review: [`#196`](https://github.com/rolker/unh_echoboats_project11/issues/196).
-- **Defer past June 4**: [`#88`](https://github.com/rolker/unh_echoboats_project11/issues/88) — PWM × current sweep, the precision unlock that removes the ±30 %. The field-ready voltage rules don't need it.
+- **Defer past June 8**: [`#88`](https://github.com/rolker/unh_echoboats_project11/issues/88) — PWM × current sweep, the precision unlock that removes the ±30 %. The field-ready voltage rules don't need it.
 
 ### Class-ready operator UI
 
@@ -231,7 +259,7 @@ good-enough shape — Phase-1 plugins exist or the current config works,
 and students can fall back to text editor / paper for the recording
 parts. Documentation for student operators is the only must-finish.
 
-**Must finish before June 4:**
+**Must finish before June 8:**
 - [`unh_echoboats_project11#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) — student-facing deployment guide. Students operate without an expert next to them. Draft from the BizzyBoat deployment logs.
 
 **Nice-to-have / acceptable workaround:**
@@ -245,7 +273,7 @@ parts. Documentation for student operators is the only must-finish.
   work. No developer-side starter needed.
 - *(See companion: [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127) operator-side local costmap display — only matters once camera→costmap fusion ships.)*
 
-**Design thread — defer past June 4** *(surfaced 2026-05-21 from
+**Design thread — defer past June 8** *(surfaced 2026-05-21 from
 deployment debrief)*:
 
 Platform-aware speed override + on-the-fly trackline editing. From the
@@ -300,8 +328,8 @@ aggregator view plugin caused problems and isn't used. Direction is
 - [`unh_echoboats_project11#97`](https://github.com/rolker/unh_echoboats_project11/issues/97) — salmon-side monitor nodes + `/diagnostics` recording. **CLOSED** ([`PR #109`](https://github.com/rolker/unh_echoboats_project11/pull/109)).
 
 **Desirable, defer if needed:**
-- [`rolker/camp#52`](https://github.com/rolker/camp/issues/52) — CAMP GUI froze twice during #160 ([`#166`](https://github.com/rolker/unh_echoboats_project11/issues/166), root cause **unconfirmed** — a GUI hang leaves no log trace). Deliverable is a *capture plan* (Qt-timer heartbeat + auto-backtrace-on-stall) so the next freeze self-documents. **Before June 4 if cycles allow, low priority**; workaround is solo `pkill camp` (rest of stack survives).
-- [`rolker/ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5) — observability mode. Substantial implementation. Catches the lifecycle-abort + silent-process-death failure shapes as a general mechanism. Would close the biggest remaining observability hole, but the rest of the easy wins above already deliver most operator-visible value. Treat as stretch goal — if it ships before June 4 great, otherwise the workaround is documented manual checks at launch time + students drilled to recognize "I queued a goal and nothing happened" as a system problem requiring expert help.
+- [`rolker/camp#52`](https://github.com/rolker/camp/issues/52) — CAMP GUI froze twice during #160 ([`#166`](https://github.com/rolker/unh_echoboats_project11/issues/166), root cause **unconfirmed** — a GUI hang leaves no log trace). Deliverable is a *capture plan* (Qt-timer heartbeat + auto-backtrace-on-stall) so the next freeze self-documents. **Before June 8 if cycles allow, low priority**; workaround is solo `pkill camp` (rest of stack survives).
+- [`rolker/ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5) — observability mode. Substantial implementation. Catches the lifecycle-abort + silent-process-death failure shapes as a general mechanism. Would close the biggest remaining observability hole, but the rest of the easy wins above already deliver most operator-visible value. Treat as stretch goal — if it ships before June 8 great, otherwise the workaround is documented manual checks at launch time + students drilled to recognize "I queued a goal and nothing happened" as a system problem requiring expert help.
 - [`unh_echoboats_project11#142`](https://github.com/rolker/unh_echoboats_project11/issues/142) — host thermals as `DiagnosticStatus` (lm-sensors + NVMe SMART). Off-the-shelf package available; do if quick, defer if not.
 
 **Future:**
@@ -315,12 +343,12 @@ aggregator view plugin caused problems and isn't used. Direction is
 **Track during class prep:**
 - [`rolker/udp_bridge#10`](https://github.com/rolker/udp_bridge/issues/10) — bridge wedges when remote subscriber dies. Real bug; not observed during 2026-05-01 or 2026-05-19. If it surfaces during student-led ops it could be operationally bad, but track rather than promote unless it recurs.
 
-**Maintenance mode after June 4:**
+**Maintenance mode after June 8:**
 - [`rolker/udp_bridge#23`](https://github.com/rolker/udp_bridge/issues/23) — restrict resend response to requesting connection. Wire-format change (`connection_id` field). Modest impl, reduces resend amplification under loss. Filed 2026-05-20; `[PLAN]` PR [`#25`](https://github.com/rolker/udp_bridge/pull/25) merged 2026-05-21 (plan document only — implementation still pending).
 - [`rolker/udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20) — stats-timer publication stalls. Made operator panels blind for 1h17m during 2026-05-19 (data plane unaffected). Stats are observability — not data path. Less urgent than the observability theme's main vehicle.
 - [`rolker/udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21) — "after N attempts" value varies 5/6/1. Counter interpretation question. Investigate when convenient.
 
-**Future (post-June-4):**
+**Future (post-June-8):**
 - [`unh_echoboats_project11#145`](https://github.com/rolker/unh_echoboats_project11/issues/145) — concurrent Starlink + cell with safety-critical traffic pinned to cell. Today's RUTX11-failover model causes a brief outage at every Starlink↔cell switch, blinding the operator before they can react. udp_bridge already supports per-topic-per-connection assignment, so this is primarily a network setup question — router config, possibly a second VPN endpoint for the cell-side path. Pin heartbeat / position / command to a cell-backed connection; let video / costmap / etc. stay on Starlink.
 
 **Done:**
@@ -356,7 +384,14 @@ pending.
 **Class scope reassessment (2026-05-20)**: Lake Massabesic surveys go
 OTH routinely from a shore-based operator station — the lake is large
 enough that the boat is regularly outside direct comms range. The
-OTH-specific work below is therefore **class-priority**, not deferred.
+OTH-specific work below is therefore **survey-priority**, not deferred.
+
+> **Survey-campaign framing (2026-06-03):** OTH capability is the through-line
+> between both 2026 campaigns — the June lake survey is OTH from shore, and the
+> **potential August OTH survey** would lean on it even harder (likely
+> larger-scale / longer-range). The June survey still drives the near-term
+> priorities below; the August campaign is a **horizon goal** that reinforces
+> this theme rather than re-ordering it — revisit OTH scaling after the June survey.
 
 **2026-05-21 update**: Attempted an OTH trackline during the 2026-05-21
 deployment. Transit out worked; ended early on collision (camera mast
@@ -372,14 +407,14 @@ recovery all worked. Bandwidth / saturation analysis pending in
 [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130)
 remains open — the OTH-with-completed-survey criterion isn't met yet.
 
-**Must finish before June 4:**
+**Must finish before June 8:**
 - [`unh_echoboats_project11#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) — field validation of OTH Starlink-only operation including a completed survey. The lake survey IS the test — but going in without a controlled validation first is the kind of risk we don't take with students aboard. Schedule a deliberate OTH validation between now and June 15.
 - **Topic-budget cull** — operating OTH at lake scale is exactly the saturation scenario from 2026-05-01. Identify which topics dominate the link, cull or rate-limit accordingly. Don't wait for a future OTH attempt to re-hit the 30–60 s latency episodes.
 - **Low-bandwidth status fallback** — text/heartbeat/minimal-telemetry path that survives when the full topic stream doesn't. May overlap with [`#145`](https://github.com/rolker/unh_echoboats_project11/issues/145)'s safety-critical-pinned-to-cell concept. 2026-05-01 worked around this with manual gabby SSH; the class scenario needs the fallback in the operator UI.
 - **VPN-path indicator** (Starlink vs. cellular vs. WiFi) — operator awareness gap; on 2026-05-01 we lost significant diagnostic time guessing which path was carrying traffic. See [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124).
 - **"OTH mode" — annunciator with range awareness** — operator-toggled (or auto-by-path-detection) mode that quiets the WiFi WARN cascade when the boat is intentionally past WiFi range. Implementation of the existing `feedback_wifi_disconnect_not_an_error` principle ("drops are data, not ERROR; let downstream consumers apply context-aware logic"). Surfaced during 2026-05-21 OTH run where WiFi WARN noise crowded out useful annunciator visibility. Not yet promoted to a focused issue — wants a brief design conversation: where does the mode-state live (CAMP toggle vs. auto-detect from Starlink-active vs. RC-out-of-range), and which diagnostics participate in the quiet-list. Small implementation once scoped.
 
-**Defer past June 4:**
+**Defer past June 8:**
 - **Bench stress-test rig** — synth topics + mininet + CAMP-stub harness so the next saturation question can be answered at the desk. The lake survey itself will produce real-water OTH data; pre-survey budget is better spent on the topic cull and the fallback channel. Revisit post-survey. See [`#124`](https://github.com/rolker/unh_echoboats_project11/issues/124).
 - **RC mode-switch fringe-range hardening** — RC handheld stays at the operator station; controller doesn't follow the boat to OTH range. Captured in memory `project_bizzyboat_rc_mode_switch_at_fringe_range.md` for future relevance.
 
@@ -388,11 +423,11 @@ remains open — the OTH-with-completed-survey criterion isn't met yet.
 The 2026-05-01 deployment surfaced a real BT design issue (now filed)
 and validated the GUIDED stale-setpoint failsafe.
 
-**Must finish before June 4:**
+**Must finish before June 8:**
 - [`unh_marine_navigation#25`](https://github.com/rolker/unh_marine_navigation/issues/25) — `SkipUnknownTaskType` catchall in `run_tasks.xml` silently marks tracklines done when a matching subtree's execution fails (e.g. `FollowPath` ABORT). Forensic match for the 2026-05-01 15:09 HOLD episode. Class-significant: a silently-marked-done line at OTH range means the operator sees a "complete" trackline and the boat parked in `done_hover` with no alert — coverage holes show up only post-mission. **In progress** — implementation code-complete (Switch dispatch + marine RecoveryNode), in review 2026-05-27 ([`PR #37`](https://github.com/rolker/unh_marine_navigation/pull/37)).
 
 **Track during class prep:**
-- **Broader BT review of `marine_nav_bt_task_navigator/behavior_trees/run_tasks.xml`** — the catchall issue (`#25`) is one concrete failure mode; the tree has other shape choices a non-BT-native author may have made differently (e.g. nested `RetryUntilSuccessful num_attempts=3` around `Sequence`, `ReactiveFallback` semantics with stateful subtrees, multiple `_autoremap="true"` blackboard scopes, `KeepRunningUntilFailure`+`Inverter` patterns). Worth a Nav2-BT-experienced second pass before June 4. *(No issue yet — promote to one if the review surfaces concrete findings.)*
+- **Broader BT review of `marine_nav_bt_task_navigator/behavior_trees/run_tasks.xml`** — the catchall issue (`#25`) is one concrete failure mode; the tree has other shape choices a non-BT-native author may have made differently (e.g. nested `RetryUntilSuccessful num_attempts=3` around `Sequence`, `ReactiveFallback` semantics with stateful subtrees, multiple `_autoremap="true"` blackboard scopes, `KeepRunningUntilFailure`+`Inverter` patterns). Worth a Nav2-BT-experienced second pass before June 8. *(No issue yet — promote to one if the review surfaces concrete findings.)*
 
 **Done:**
 - **GUIDED stale-setpoint HOLD verified working** — when `cmd_vel` publication stops, FCU correctly enters HOLD. Confirmed Nav2-crash failsafe behaves as intended on 2026-05-01.
@@ -443,6 +478,12 @@ they become relevant.
   dropped, not deferred. Edit them out.
 
 ## Appendix A: June 4 punch list — effort, boat-dependency, parallelism *(snapshot 2026-05-20, refreshed 2026-05-22; status reconciled 2026-05-27 via #189; refreshed 2026-05-28 post-#186)*
+
+> **Historical snapshot — dates not updated.** This appendix is a point-in-time
+> sizing made against the **original June 4** freeze (and superseded by the
+> reality check near the top). The freeze later moved to **June 8** (see
+> Forcing function, 2026-06-03); the "15 calendar days to June 4" framing below
+> reflects the date as it stood at snapshot time and is left as-is for the record.
 
 This appendix tags every "Must finish before June 4" item from the
 Active-threads sections above with effort, where it can be worked, and
