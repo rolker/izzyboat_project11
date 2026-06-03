@@ -121,3 +121,47 @@ docs/logs/<year>/<YYYY-MM-DD>_<host>_logs.md      # e.g. docs/logs/2026/2026-06-
 `/start-deployment` reads `.agents/deployment.yaml`, detects field mode, and sets
 up the per-host log + issue sync. See the workspace deployment-mode docs (ADR-0014
 and `.agent/knowledge/deployment_mode.md`) for the lifecycle and urgency contract.
+
+## Account / profile quirk (important)
+
+The Claude Code agent process runs as **`mercat\field`** (`whoami` → `mercat\field`,
+SID `…-1001`), but `USERPROFILE` and the Git-Bash `HOME` point at
+**`C:\Users\admin`**. Consequences:
+
+- `~` in Git Bash, `~/.ssh/config`, and `~/.local/bin` (where `git-bug.exe` lives)
+  all resolve under **`C:\Users\admin`**, not a `field` profile dir.
+- The `field` user's own **HKCU hive is locked down** — writes are denied even
+  when the process is elevated (both PowerShell `New-ItemProperty` and `reg.exe`
+  return *Access denied*).
+- **Takeaway:** for any machine config that must stick, prefer **machine-wide
+  `HKLM` policy keys**, not per-user `HKCU` tweaks — the latter can't be written
+  from the agent context here.
+
+## Machine-config tweaks applied
+
+### Disabling desktop weather & news (Widgets)
+
+Windows 11 25H2 shows weather on the taskbar plus a news/weather board via the
+**Widgets** feature (the `MicrosoftWindows.Client.WebExperience` pack). Operators
+who RDP in don't need it. Disable it **machine-wide** (every account, survives the
+HKCU lockdown above):
+
+```powershell
+# elevated PowerShell
+$dsh = 'HKLM:\SOFTWARE\Policies\Microsoft\Dsh'
+if (-not (Test-Path $dsh)) { New-Item -Path $dsh -Force | Out-Null }
+New-ItemProperty -Path $dsh -Name 'AllowNewsAndInterests' -Value 0 -PropertyType DWord -Force
+```
+
+- This is the documented GPO/MDM **"Allow widgets"** policy. `0` removes the
+  taskbar entry point *and* the widgets board for all users.
+- Takes effect at the **next sign-in / RDP reconnect**. For immediate effect in a
+  live session, restart the shell: `Stop-Process -Name explorer` (auto-restarts;
+  only refreshes taskbar/desktop, doesn't drop the RDP connection or other apps).
+- The per-user toggle `HKCU\…\Explorer\Advanced\TaskbarDa = 0` is **not usable
+  here** (HKCU lockdown) and is redundant once the policy above is set.
+- **Not** touched: lock-screen widgets / Windows Spotlight — RDP sessions don't
+  show the lock screen, so they're irrelevant to operators. Disable separately
+  (also via HKLM policy) if a console user ever needs it.
+
+*Applied on mercat 2026-06-03.*
