@@ -76,7 +76,7 @@ the charted pier's S57 inflation gradient; Lake Massabesic has **no S57 coverage
 the `chart_layer` is empty there and the avoider returns zero deviation (straight lines).
 So nav#63 is **not a fix-before-freeze blocker**. For clean-survey validation *at the
 pier* (final prep day, [`#211`](https://github.com/rolker/unh_echoboats_project11/issues/211)),
-set `FollowPath.obstacle_avoidance_weight=0` live to sidestep it.
+set `FollowPath.obstacle_avoidance_weight=0` live on `controller_server` to sidestep it.
 
 ## Active threads (have task issues)
 
