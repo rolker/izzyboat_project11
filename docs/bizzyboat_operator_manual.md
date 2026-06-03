@@ -1,8 +1,8 @@
 # BizzyBoat Operator Manual
 
-A guide for **student operators** running BizzyBoat during Summer Hydro. It covers
-the *project11 autonomy layer* on top of the boat — how to bring the boat up, drive
-it, run a survey, and shut it down.
+A guide for **operators** running BizzyBoat. It covers the *project11 autonomy
+layer* on top of the boat — how to bring the boat up, drive it, run a survey, and
+shut it down.
 
 > **Scope.** This manual is *not* a hardware manual. For the hull, thrusters,
 > charging, and physical handling of the boat, see the **EchoBoat 240 vendor
@@ -52,7 +52,7 @@ station's annunciator panel and in CAMP.
 
 - BizzyBoat's batteries are **charged in place — there is no battery swap.** Plan
   around **recharge-to-full time**, not a hot-swap; this is the constraint that
-  paces how often a cohort can run.
+  paces how often you can run back-to-back.
 - Watch **battery voltage** (the annunciator's `mavros: Battery` indicator):
   - **Warn below 23.0 V**, **error below 21.5 V** (a healthy pack reads ~28 V).
   - **There is no current or power reading on this boat.** The current field is a
