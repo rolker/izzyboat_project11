@@ -51,6 +51,38 @@ system must work, not just demonstrate. Hydrographic-quality output is
 the goal even though the operational bar is lower. The system must
 support multi-operator handoff across daily cohorts.
 
+## Top priority — line-following stability (2026-06-04)
+
+**The #1 problem to solve: the boat over-corrects into full 360° loops while
+line-tracking, especially on planner-generated paths —
+[`nav#66`](https://github.com/rolker/unh_marine_navigation/issues/66).** This is a
+**survey blocker**: a boat that loops cannot run survey lines, transit, or return.
+
+Unlike [`nav#63`](https://github.com/rolker/unh_marine_navigation/issues/63) (the
+pier-inflation weave, which is **location-specific and likely moot at the lake** — no
+S57 coverage), nav#66 is a **cross-track control instability that travels with the
+boat**. It will show up on Lake Massabesic's planner transit/survey paths too, so it
+cannot be sidestepped the way nav#63 can.
+
+Mechanism (2026-06-04 bag analysis, `~/data/logs/bizzyboat/2026-06-04T13-43-04+00-00`):
+the cross-track PID commands yaw **3–4× beyond the hull's turn capability** → undamped
+overshoot / limit cycle that closes into full 360s at speed. It's a **synergy** of two
+operating-point changes — (a) the yaw-rate ceiling raised **0.5 → 1.0 rad/s** (set from
+the hull's real capability), which removed the amplitude cap that kept the latent
+overshoot to a weave; and (b) **jumpy planner reference paths** (short, curved, replanned
+every ~15 s — a new path every second at one point — with ~5 m discontinuous cross-track
+steps on segment re-index) that drive the PID to saturation. The gains are tuned for the
+**old** operating point (low ceiling + smooth fixed survey lines).
+
+Fix directions (see nav#66): retune / add damping + anti-windup to the cross-track PID;
+cap survey yaw-rate separately from the capability backstop; reduce planner reference
+churn (replan hysteresis / path continuity). Add a regression test (nav#5).
+
+> This **supersedes the earlier "line-following held sub-metre" optimism** for
+> *planner-path* following — clean sub-metre tracking held only on **straight, fixed
+> survey lines at the old 0.5 ceiling**. On planner paths at the 1.0 ceiling it can go
+> fully unstable.
+
 ## June-4 reality check (2026-06-02, post-#201)
 
 With ~2 boat-days left before the freeze, #201 (2026-06-01) reset the
