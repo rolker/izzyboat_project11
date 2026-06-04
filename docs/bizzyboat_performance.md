@@ -89,6 +89,36 @@ fit-quality-driven. BizzyBoat has no current meter, so true electrical power
 is unmeasurable; only battery voltage is logged (and used here as context,
 never as power).
 
+## Endurance & range (modeled)
+
+> **Modeled, not measured.** BizzyBoat has no current meter, so endurance is from the
+> voltage-based coulomb model ([#167](https://github.com/rolker/unh_echoboats_project11/issues/167) /
+> [#196](https://github.com/rolker/unh_echoboats_project11/issues/196)): idle **6.2 A**
+> (measured at the charger 2026-06-04, all systems on) + prop current (60.8 A at full
+> throttle) over a **273 Ah** pack, integrated over ESC PWM. Treat as planning heuristics
+> (**±30 % or more**). The spread is the model bracket: **conservative** = prop current ∝
+> throttle (linear), **optimistic** = ∝ throttle² (quadratic). Speeds are **STW** from the
+> current-corrected fits above (≈ SOG in calm, no-current water such as a lake). Endurance is
+> **to a fully empty pack** — plan with a reserve (budget the return leg + ~20–30 %).
+> Recharge-to-full, not range, is the binding back-to-back cadence constraint.
+
+| Mode | PWM | Speed | Endurance (to empty) | Range |
+|---|---|---|---|---|
+| Station-keep / idle | 1500 | 0 m/s (0 kn) | **~44 h** (hotel load, 6.2 A) | — |
+| Slow survey\* | ~1650 | 0.77 m/s (1.5 kn) | 11–23 h | 31–65 km (17–35 nm) |
+| **Cruise** | 1750–1850 | 1.52 m/s (3.0 kn) | **6.4–9.7 h** | **35–53 km (19–29 nm)** |
+| Full ahead | ~1975 | 1.90 m/s (3.7 kn) | 4.3–4.5 h | 29–31 km (16–17 nm) |
+
+\* Sub-cruise throttle↔speed is **not yet cleanly resolved** ([#88](https://github.com/rolker/unh_echoboats_project11/issues/88));
+the 1.5 kn row is interpolated between idle and cruise, so its bracket is correspondingly wide.
+
+**Best range is at cruise, not full** — pushing past ~3 kn burns disproportionately more
+(prop current rises steeply near the top) for little extra distance, so a survey covers the
+most water per charge at cruise. Real surveys should also *beat* these figures: they assume
+clean tracking (no [nav#66](https://github.com/rolker/unh_marine_navigation/issues/66) turning
+loss — ~13–29 % overhead measured on 2026-06-03) and bake in exposed-water load that a
+sheltered lake removes. Source: `~/data/logs/analysis/2026-06-04/endurance_final.py`.
+
 ## Acceleration
 
 First-order surge fits `v(t) = v∞·(1 − e^(−t/τ))` on clean throttle steps
