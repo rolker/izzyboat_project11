@@ -59,6 +59,25 @@ station's annunciator panel and in CAMP.
     placeholder (~0.01 A) — **voltage is the only real battery number.** Never
     report amps or watts.
 
+### Endurance & range (rough planning guide)
+
+These are **modeled estimates**, not measured — the boat has no current meter, so
+endurance comes from a voltage-based power model. Treat them as **planning heuristics
+(±30 % or more)** and always keep a reserve for the return leg. Figures are to a fully
+empty pack; speeds are through-water (≈ over-ground in calm water like a lake).
+
+| Speed | Endurance | Range |
+|---|---|---|
+| Station-keep (0 kn) | ~44 h | — |
+| Slow survey ~1.5 kn (0.77 m/s) | ~11–23 h | ~31–65 km (17–35 nm) |
+| **Cruise ~3.0 kn (1.52 m/s)** | **~6–10 h** | **~35–53 km (19–29 nm)** |
+| Full ~3.7 kn (1.9 m/s) | ~4.5 h | ~29–31 km (16–17 nm) |
+
+- **Cruise covers the most water per charge** — going faster than ~3 kn burns a lot
+  more battery for little extra range.
+- **Plan to the low (conservative) end** and keep a return-leg reserve; don't run to empty.
+- Recharge-to-full time (not range) is what paces back-to-back runs.
+
 ### Positioning / RTK
 
 - The boat needs a good GNSS fix before survey-quality autonomy. The `gps_rtk`
