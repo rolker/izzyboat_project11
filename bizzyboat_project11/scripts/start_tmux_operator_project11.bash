@@ -35,15 +35,12 @@ sleep 2
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_core_launch.py" C-m
 
-# UI: camp + rqt (bizzyboat perspective) + joystick, etc.
+# UI: camp + three rqt instances (bizzyboat, bizzyboat-diagnostics, logger
+# perspectives) + joystick, etc. The diagnostics and operator-log rqt windows
+# are launched from operator_ui_launch.py rather than a separate tmux window.
 /usr/bin/tmux new-window -t project11 -n ui
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_ui_launch.py" C-m
-
-# Second rqt with bizzyboat-diagnostics perspective
-/usr/bin/tmux new-window -t project11 -n rqt-diag
-/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
-/usr/bin/tmux send-keys "ros2 run rqt_gui rqt_gui -p bizzyboat-diagnostics" C-m
 
 # Johnny5 PTZ camera (axis) from molab_hardware
 /usr/bin/tmux new-window -t project11 -n johnny5
