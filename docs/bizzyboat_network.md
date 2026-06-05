@@ -136,11 +136,60 @@ Two independent paths between operator and boat:
 Verified 2026-03-25: VPN path operates independently when WiFi bridge is down
 (tested during WiFi password change).
 
-## Hostname Aliases
+## DNS Naming
 
-| Alias | IP | Path |
-|-------|----|------|
-| gabby_bb | 192.168.20.5 | WiFi bridge |
-| gabby_v | 192.168.21.5 | VPN (NETMAP) |
-| salmon_bb | 192.168.13.142 | WiFi bridge |
-| salmon_bv | 192.168.22.142 | VPN (NETMAP, BizzyBoat path) |
+Every device has a hierarchical DNS name under **`p11.lan`**, served by
+**dnsmasq on each router** (boat and operator). Use the name instead of the IP —
+e.g. `ssh field@gabby.p11.lan`, `ping time.bizzy.p11.lan`.
+
+**Authoritative source** (private `ccomjhc_project11` repo):
+
+- Scheme spec: [`docs/dns_naming.md`](https://github.com/CCOMJHC/ccomjhc_project11/blob/jazzy/docs/dns_naming.md)
+- BizzyBoat hosts file (served by the boat router): `configuration/dnsmasq/bizzyboat.hosts`
+
+The table below is the BizzyBoat-relevant subset; the spec above is the full,
+cross-vehicle source of truth. **Keep this in sync with `bizzyboat.hosts`** — if
+they disagree, the hosts file wins.
+
+### Naming convention
+
+`<host>.<scope>.p11.lan`, **shortest unambiguous name wins**:
+
+- **Unique hosts** get a top-level shorthand *and* a vehicle-qualified name:
+  `gabby.p11.lan` = `gabby.bizzy.p11.lan`.
+- **Ambiguous hosts** (`router`, `kvm`, `oak-*`) always need the vehicle scope:
+  `router.bizzy.p11.lan`.
+- **Path qualifiers** select how you reach a device:
+  - `lan` — onboard LAN, direct (default; usually omitted)
+  - `vpn` — via the WireGuard NETMAP path (use when WiFi is down): `gabby.vpn.p11.lan`
+  - `wifi` — a WiFi-bridge radio / router bridge interface: `wifi.bizzy.p11.lan`
+  - `wg` — a WireGuard tunnel endpoint (router-to-router): `bizzy.wg.p11.lan`
+
+### BizzyBoat names (from `bizzyboat.hosts`)
+
+**Onboard LAN — 192.168.20.0/24 (direct):**
+
+| Host | Primary name | IP |
+|------|--------------|----|
+| Boat router | `router.bizzy.p11.lan` | 192.168.20.1 |
+| gabby (Linux/ROS) | `gabby.p11.lan` | 192.168.20.5 |
+| mercat (Windows/QINSy) | `mercat.p11.lan` | 192.168.20.8 |
+| OAK cameras ×4 | `oak-1.bizzy.p11.lan` … `oak-4.bizzy.p11.lan` | 192.168.20.9–12 |
+| KVM switch | `kvm.bizzy.p11.lan` | 192.168.20.50 |
+| Time clock (TM2000B) | `time.bizzy.p11.lan` | 192.168.20.123 |
+
+**VPN NETMAP — 192.168.21.0/24** (same hosts, `vpn` path): `router.vpn.bizzy`
+(.1), `gabby.vpn` (.5), `mercat.vpn.bizzy` (.8), `time.vpn.bizzy` (.123), etc.
+
+**WiFi-bridge radios — 172.16.20.0/24:** `wifi.bizzy.p11.lan` (boat OmniTIK, .3),
+`bizzy.wifi.op.p11.lan` (shore SXTsq, .4), `router.wifi.bizzy.p11.lan` (boat
+router bridge iface, .1).
+
+**Operator hosts:** `salmon.p11.lan` (192.168.13.142), `deadpool.p11.lan`
+(192.168.13.143). Reached from the boat over VPN as `salmon.vpn.bizzy.p11.lan`
+(192.168.22.142).
+
+> **Legacy note:** earlier `/etc/hosts` underscore aliases (`gabby_bb`, `gabby_v`,
+> `salmon_bb`, `salmon_bv`) are **superseded** by this scheme — `gabby_bb` →
+> `gabby.bizzy.p11.lan`, `gabby_v` → `gabby.vpn.bizzy.p11.lan`. Remove them where
+> they still linger in station `/etc/hosts` files.
