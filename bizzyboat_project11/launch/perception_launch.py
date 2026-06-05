@@ -114,6 +114,10 @@ def generate_launch_description():
                             }],
                             emulate_tty=True
                         ),
+                        # detections_to_pointcloud reads "odom" for speed-over-
+                        # ground; it lives outside this sensors/m3 namespace.
+                        # (Its TF frame params are set in bizzyboat.yaml.)
+                        SetRemap(src='odom', dst='/bizzy/odom'),
                         IncludeLaunchDescription(
                             PythonLaunchDescriptionSource(
                                 PathJoinSubstitution([
