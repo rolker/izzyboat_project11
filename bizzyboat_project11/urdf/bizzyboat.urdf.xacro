@@ -235,4 +235,13 @@
   <xacro:deltat_sonar parent="bizzy/base_link" name="deltat"
     x="-0.23" y="0.0" z="-0.18"/>
 
+  <!-- ========== Kongsberg M3 Multibeam ========== -->
+  <!-- Loaner unit sharing the DeltaT cavity (x); transducer-face z from the
+       #77 install log ([MEAS] rough). Frame consumed by cube_bathymetry's
+       TF lookup; kongsberg_em_bridge must stamp frame_id "bizzy/m3" (set its
+       frame_id param in the launch). Offsets + orientation to be confirmed by
+       a patch test. -->
+  <xacro:m3_multibeam parent="bizzy/base_link" name="m3"
+    x="-0.23" y="0.0" z="-0.145"/>
+
 </robot>
