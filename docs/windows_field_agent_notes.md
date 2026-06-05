@@ -32,7 +32,8 @@ write deployment logs and small utilities, commit them, and push to
 ## Field mode
 
 Both the workspace repo and this project repo have `origin` on **gitcloud**, so
-they are in **field mode** (see `.agent/scripts/field_mode.sh`):
+they are in **field mode** (see `.agent/scripts/field_mode.sh` in the
+`ros2_agent_workspace` repo — it is not part of this project repo):
 
 - Commit directly to the default branch (`jazzy`) and push to `origin` — **no
   GitHub PR ceremony** (there is no GitHub remote here).
