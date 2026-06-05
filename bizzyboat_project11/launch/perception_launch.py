@@ -95,6 +95,46 @@ def generate_launch_description():
                     ]
                 ),
 
+                # M3 multibeam + cube bathymetry.
+                # Unlike the DeltaT (which publishes `soundings` directly), the
+                # M3 chain is three nodes: kongsberg_em_bridge decodes the M3's
+                # UDP Kongsberg .all stream to SonarDetections, then
+                # detections_to_pointcloud -> cube_bathymetry_node grid it. The
+                # bridge stamps `bizzy/m3` (the URDF transducer frame, #221).
+                GroupAction(
+                    actions=[
+                        PushRosNamespace('sensors/m3'),
+                        Node(
+                            package='kongsberg_em_bridge',
+                            executable='kongsberg_em_bridge',
+                            name='kongsberg_em_bridge',
+                            parameters=[{
+                                'bind_port': 20002,
+                                'frame_id': 'bizzy/m3',
+                            }],
+                            emulate_tty=True
+                        ),
+                        IncludeLaunchDescription(
+                            PythonLaunchDescriptionSource(
+                                PathJoinSubstitution([
+                                    FindPackageShare('cube_bathymetry'),
+                                    'launch',
+                                    'detections_to_pointcloud_launch.py'
+                                ])
+                            )
+                        ),
+                        IncludeLaunchDescription(
+                            PythonLaunchDescriptionSource(
+                                PathJoinSubstitution([
+                                    FindPackageShare('cube_bathymetry'),
+                                    'launch',
+                                    'cube_bathymetry_launch.py'
+                                ])
+                            )
+                        ),
+                    ]
+                ),
+
                 # Cameras
                 GroupAction(
                     actions=[
