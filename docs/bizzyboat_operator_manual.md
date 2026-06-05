@@ -293,6 +293,32 @@ section explains what the commands *mean*.
 
 ---
 
+## 8. Hosts & names (quick reference)
+
+Every device on the boat and operator networks has a DNS name under `p11.lan`,
+served automatically by the boat and operator routers — **you can use the name
+instead of the IP** (e.g. `ssh field@gabby.p11.lan`, `ping time.bizzy.p11.lan`).
+The handful you'll touch most:
+
+| Host | Name | IP | Role |
+|------|------|----|------|
+| **gabby** | `gabby.p11.lan` | 192.168.20.5 | Boat Linux/ROS computer (autonomy stack) |
+| **mercat** | `mercat.p11.lan` | 192.168.20.8 | Boat Windows computer (QINSy + M3 acquisition) |
+| **salmon** | `salmon.p11.lan` | 192.168.13.142 | Operator station |
+| Boat router | `router.bizzy.p11.lan` | 192.168.20.1 | Boat cellular router (NTRIP, DHCP/DNS) |
+| Time clock | `time.bizzy.p11.lan` | 192.168.20.123 | GPS-disciplined NTP appliance (TM2000B) |
+
+- **Names auto-resolve** through the routers' DNS — no `/etc/hosts` editing needed
+  on a properly configured station.
+- To force the **VPN path** (when WiFi is down), use the `vpn` form, e.g.
+  `gabby.vpn.p11.lan`.
+- This is only the short list. The **full device/IP/DNS map** — every host, the
+  WiFi-bridge and VPN paths, and the naming rules — is in
+  [`bizzyboat_network.md`](bizzyboat_network.md) (which links to the authoritative
+  project-wide scheme).
+
+---
+
 ## See also
 
 - **CAMP user manual** (`camp`, `docs/camp_user_manual.md`) — the operator-station
