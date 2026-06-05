@@ -109,6 +109,28 @@ collision_monitor:
       max_height: 2.0
       enabled: true
 
+# Marine CA safety node (rolker/unh_marine_navigation#64) — DEFAULT helm gate on
+# BizzyBoat (use_ca_safety:=true), replacing the Collision Monitor block above
+# (kept as the use_ca_safety:=false fallback). Per-rig tuning: the reflex cloud
+# feed + zone geometry mirroring the Collision Monitor it supersedes (20 m
+# slowdown box / 5 m x 4 m stop), now speed-scaled. Base wiring (frames, cmd_vel
+# topics, odom, viz topics) is in seafloor's nav2_params.base.yaml.
+# NB: reverse-yaw passthrough stays OFF (cancel_yaw_during_reverse: true) until
+# the sim yaw-sign-in-reverse test passes — see #64.
+ca_safety:
+  ros__parameters:
+    pointcloud_topic: "collision_monitor/pointcloud"
+    slowdown_min_length: 5.0
+    slowdown_max_length: 20.0
+    slowdown_width: 6.0
+    ttc_time_constant: 4.0
+    stop_length: 5.0
+    stop_width: 4.0
+    reverse_speed: 0.5
+    reverse_distance: 3.0
+    reverse_duration: 4.0
+    cancel_yaw_during_reverse: true
+
 # Controller-layer survey-line obstacle avoidance (rolker/unh_marine_navigation#59,
 # echoboats#206). Flip BizzyBoat's FollowPath controller from the bare crabbing
 # tracker to the AvoidanceController decorator, with crabbing as its inner. The
