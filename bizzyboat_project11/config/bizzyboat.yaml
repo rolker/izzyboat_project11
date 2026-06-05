@@ -34,6 +34,15 @@
     map_frame: bizzy/map
     cell_size: 0.5
 
+# M3 -> SonarDetections -> soundings: the CUBE error model's pose comes from TF
+# (roll/pitch from level_frame, heave from tide_frame) + /odom (SOG); odom is
+# remapped to /bizzy/odom in perception_launch.py.
+/**/detections_to_pointcloud:
+  ros__parameters:
+    base_link_frame: bizzy/base_link
+    level_frame: bizzy/base_link_north_up
+    tide_frame: bizzy/map_tide
+
 /**/mru_transform:
   ros__parameters:
     sensors:
