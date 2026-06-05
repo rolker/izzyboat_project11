@@ -15,8 +15,18 @@ def generate_launch_description():
         'namespace', default_value=TextSubstitution(text='bizzy')
     )
 
+    # Field revert hatch: use_ca_safety:=false falls back to the nav2 Collision
+    # Monitor (default true = the new CA safety node helm gate, #64).
+    use_ca_safety = LaunchConfiguration('use_ca_safety')
+    use_ca_safety_arg = DeclareLaunchArgument(
+        'use_ca_safety', default_value='true',
+        description='Use the CA safety node helm gate (default); false reverts '
+        'to the nav2 Collision Monitor.'
+    )
+
     return LaunchDescription([
         namespace_arg,
+        use_ca_safety_arg,
 
         # Nav2
         IncludeLaunchDescription(
@@ -31,6 +41,7 @@ def generate_launch_description():
                 'namespace': namespace,
                 'use_namespace': 'true',
                 'use_composition': 'false',
+                'use_ca_safety': use_ca_safety,
                 # BizzyBoat is an EchoBoat 240; supply its sensor-rig + reflex
                 # overlay on top of the generic base + 240 hull params (seafloor#3).
                 'model': '240',
