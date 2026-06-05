@@ -87,6 +87,47 @@ empty pack; speeds are through-water (≈ over-ground in calm water like a lake)
   client is connected (the `NTRIP` annunciator goes to error if corrections stop
   for ~15 s).
 
+### Time synchronization
+
+Survey data is only as good as its timestamps: the M3's pings, the boat's nav,
+and the logged bags all have to agree on the clock. The boat carries a
+**GPS-disciplined NTP appliance** (a Time Machines TM2000B) as the canonical
+time source — `time.bizzy.p11.lan` (`192.168.20.123`), stratum-1, GPS-anchored.
+gabby, mercat, the boat router, and the bridges all sync to it.
+
+Confirm time sync is healthy before a survey (operator-driven — these are
+command-line checks, not annunciator items):
+
+- **mercat** (Windows / QINSy): `ntpq.exe -pn` — expect `*192.168.20.123`
+  (`time.bizzy.p11.lan`, refid `.GPS.`) selected, offset well under ~10 ms.
+- **gabby** (Linux): `chronyc tracking` — converged against the same source.
+
+If mercat's clock is off, QINSy logging timestamps drift. Background on the
+boat-router NTP stack is in
+[`bizzyboat_ntp_investigation_2026-04-09.md`](bizzyboat_ntp_investigation_2026-04-09.md).
+
+### Sound velocity (survey)
+
+The boat carries an **AML sound-velocity sensor (SVS)** — a through-hull probe
+mounted alongside the M3 sonar (AML, SN 11357, 6000 m depth rating). It measures
+the **speed of sound in the water at the sonar head**, which the M3 multibeam
+needs to form and ray-bend its beams; a wrong or missing value degrades survey
+data.
+
+- The reading is published into ROS at `/bizzy/sensors/sound_speed/sound_speed`
+  and delivered to the M3 on mercat. *(How that delivery is wired — the AML → M3
+  path — is in the [2026 Field Season Guide](bizzyboat_2026_field_season_guide.md).)*
+- **Confirm before a survey:** the sound-speed value is present and sensible
+  (~1450–1520 m/s once the probe is submerged). It reads near zero / nothing
+  until the probe is in the water and producing.
+- **Known issue:** the AML has been seen emitting all-NUL bytes on its serial
+  line ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)). If
+  the M3 shows no sound speed, check this first.
+- Full device specs and mounting offsets:
+  [reference geometry](../bizzyboat_project11/docs/bizzyboat_reference_geometry.md)
+  and the
+  [hydro payload install log](../bizzyboat_project11/docs/hydro_payload_install_log.md).
+
 ### Comms link
 
 - The operator station talks to the boat over a **WiFi backhaul** (primary) with a
@@ -259,6 +300,9 @@ section explains what the commands *mean*.
 - **Marine-autonomy framework guide** (`unh_marine_autonomy`,
   `docs/how_the_stack_works.md`) — how the autonomy stack works; the place to build
   understanding when behavior is surprising.
+- [2026 Field Season Guide](bizzyboat_2026_field_season_guide.md) — the borrowed
+  survey payload (M3 multibeam, SBG INS) and how it's wired in this season,
+  including the NTRIP → SBG and AML → M3 integration paths.
 - [BizzyBoat hardware](../bizzyboat_project11/docs/bizzyboat_hardware.md),
   [power](../bizzyboat_project11/docs/bizzyboat_power.md),
   [reference geometry](../bizzyboat_project11/docs/bizzyboat_reference_geometry.md).
