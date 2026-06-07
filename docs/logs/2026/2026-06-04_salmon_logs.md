@@ -18,7 +18,7 @@ deficiency on survey paths. Root-caused dev-side to cross-track PID over-command
 yaw 3–4× hull capability → undamped overshoot closing into 360° loops on
 planner-generated paths. Tracked at
 [unh_marine_navigation#66](https://github.com/rolker/unh_marine_navigation/issues/66)
-(top roadmap priority; not location-specific — will travel to Lake Massabesic).
+(top roadmap priority; not location-specific — expected to reproduce elsewhere).
 
 **2026-06-04 10:38:46 EDT** — Pilot: "way over corrected for avoid obstacle."
 Obstacle-avoidance over-correction (avoider-in-loop weave). Data point for
