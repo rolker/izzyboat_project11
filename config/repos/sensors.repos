@@ -19,3 +19,7 @@ repositories:
     type: git
     url: git@gitcloud:field/ros2_network_monitor.git
     version: jazzy
+  marine_tools:
+    type: git
+    url: git@gitcloud:field/marine_tools.git
+    version: jazzy

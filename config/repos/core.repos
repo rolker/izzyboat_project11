@@ -23,7 +23,3 @@ repositories:
     type: git
     url: git@gitcloud:field/unh_marine_autonomy.git
     version: jazzy
-  marine_tools:
-    type: git
-    url: git@gitcloud:field/marine_tools.git
-    version: jazzy
