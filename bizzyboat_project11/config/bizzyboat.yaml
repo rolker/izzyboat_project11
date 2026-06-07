@@ -391,6 +391,17 @@
       - /bizzy/odom
       - /bizzy/robot_description
       - /bizzy/sensors/deltat/soundings
+      # Garmin GCV-20 sidescan (only present when core_launch sidescan:=true).
+      # Decoded per-channel imagery + latched control/status. debug/raw_status
+      # carries the GCV :50050 status stream (incl. the unverified depth field);
+      # it is only published when the driver runs with debug_raw:=true, recorded
+      # here so the first wet run captures it for the offline depth decode.
+      - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_port
+      - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_starboard
+      - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_down
+      - /bizzy/sensors/sidescan/garmin_sidescan/state
+      - /bizzy/sensors/sidescan/garmin_sidescan/status
+      - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_status
       # Sound-speed for bathy correction in post-processing.
       - /bizzy/sensors/sound_speed/sound_speed
       # SBG INS for sonar motion compensation + georeferencing.

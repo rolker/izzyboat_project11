@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
+from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
@@ -34,11 +35,20 @@ def generate_launch_description():
         'gcs_url', default_value=TextSubstitution(text='')
     )
 
+    # Garmin GCV-20 sidescan. Off by default: it depends on the mercat proxy
+    # being up (see sidescan_launch.py) and is a parallel effort, not part of
+    # every mission. Enable with sidescan:=true.
+    sidescan = LaunchConfiguration('sidescan')
+    sidescan_arg = DeclareLaunchArgument(
+        'sidescan', default_value='false'
+    )
+
     return LaunchDescription([
         namespace_arg,
         frame_prefix_arg,
         fcu_url_arg,
         gcs_url_arg,
+        sidescan_arg,
 
         GroupAction(
             actions=[
@@ -294,6 +304,22 @@ def generate_launch_description():
                     launch_arguments={
                         'frame_prefix': frame_prefix,
                     }.items()
+                ),
+
+                # Garmin GCV-20 sidescan (gabby driver -> mercat proxy -> GCV).
+                # Opt-in: requires the mercat proxy; enable with sidescan:=true.
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'sidescan_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'frame_prefix': frame_prefix,
+                    }.items(),
+                    condition=IfCondition(sidescan)
                 ),
 
                 # ZDA serial bridge (SBG SbgUtcTime -> $GPZDA on
