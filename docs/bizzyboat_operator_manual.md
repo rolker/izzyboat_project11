@@ -1,4 +1,4 @@
-# BizzyBoat Operator Manual
+# BizzyBoat Operator Manual *(draft)*
 
 A guide for **operators** running BizzyBoat. It covers the *project11 autonomy
 layer* on top of the boat — how to bring the boat up, drive it, run a survey, and
@@ -12,6 +12,103 @@ shut it down.
 > framework guide** (`unh_marine_autonomy`, `docs/how_the_stack_works.md`). When
 > something behaves unexpectedly, the framework guide — not a symptom→cure list
 > here — is where to build understanding.
+
+---
+
+> ⚠️ **Draft manual — corrections welcome.** This is a first draft from the 2026
+> field setup; some details (exact commands, hardware specifics, site procedures)
+> may be wrong, incomplete, or out of date. If you hit something incorrect,
+> unclear, or missing, **open an issue** in `unh_echoboats_project11` (label
+> `documentation`) describing what you saw. Operator corrections are how this
+> becomes trustworthy.
+
+## Quick start
+
+The one-page version — cold boot to clean shutdown. Each step is expanded in the
+numbered sections that follow; jump there when you need the detail.
+
+### 1. Power up the boat
+
+*Everything below is inside the single main hatch.*
+
+1. **Open the main hatch.**
+2. **Boat power** — press the **push button** at the **aft side** of the compartment.
+   *(See the EchoBoat 240 vendor manual for the exact button.)*
+3. **Payload power** — turn on the **payload switch** on the **port side, at the aft end**.
+4. **Computers** — briefly press the **small power button** on **each of the two PCs**
+   at the **front** of the compartment.
+5. **Close up** — close the hatch and make sure the **bolts are secure** before launch.
+
+This powers the *hardware* only; the autonomy stacks are started next.
+
+### 2. Start the operator station
+
+1. **Router** — make sure the **operator-side router box (blue)** is powered up.
+2. **Laptop** — **salmon** booted and logged into the **`field`** account.
+3. **Operator stack** — in a terminal, from your home directory:
+   ```bash
+   ./start_tmux_operator_project11.bash
+   ```
+4. **Connect to the boat** — open a second tab:
+   ```bash
+   ssh gabby.vpn
+   ```
+5. **Boat stack** — on gabby, from your home directory:
+   ```bash
+   ./start_tmux_project11.bash
+   ```
+   *There is no autostart yet — the boat stack does not come up on its own.*
+
+### 3. Confirm she's up
+
+1. **CAMP** opens, and the **heartbeat window (upper-left)** turns **green**.
+2. **Cameras** — all cameras appear in the **camera grid (rqt)**.
+3. **Annunciators** — all clear **except sound speed**, which resolves once the boat
+   is in the water.
+
+### 4. Controls check
+
+> ⚠️ Only with the thrusters where you — **or someone you're in comms with** — can
+> **see and hear them**. Never engage thrust blind.
+
+**USB controller:**
+
+1. Set the boat to **Manual**.
+2. Confirm — the **Autonomous** and **Standby** buttons turn **blue** in CAMP.
+3. **Left stick** (gently) → thrust; **right stick** → steering. Confirm the thrusters respond.
+
+**RC controller:**
+
+4. Set the boat to **Standby** — this **automatically puts the RC controller in manual**.
+5. Repeat the thrust + steer check on the **RC controller**.
+
+### 5. Launch & loiter
+
+> Launch is **site-specific**; the Lake Massabesic specifics aren't settled yet, so
+> this stays brief and will be expanded once we know the site.
+
+1. **Launch the boat.**
+2. With the **RC controller**, drive to a **safe loiter spot**.
+3. Engage **Loiter**.
+4. **Return to the operator station.**
+
+### 6. Run a mission
+
+1. In **CAMP**, **plan a mission**.
+2. Send it to the boat with CAMP's **Execute** button.
+
+> 🛰️ **Over-the-horizon ops:** if the mission takes the boat **out of RC range**,
+> **turn the RC controller off** *before* it leaves range. The handheld stays at the
+> station, and a fringe-range RC link can cause unwanted mode switches.
+
+### 7. Shutdown
+
+1. **Stop the stacks cleanly** — in the **`project11` tmux sessions on both salmon
+   and gabby**, press **Ctrl-C** in **each window**. *This lets the bag recordings
+   finish writing — don't skip it, or you can lose/corrupt the run's data.*
+2. **Power off the PCs** — brief press of each PC's power button.
+3. *(Optional)* turn off the **payload switch**.
+4. **Power off the boat.**
 
 ---
 
@@ -138,12 +235,19 @@ data.
 
 ## 3. Starting the stack
 
-### Boat side (gabby) — usually automatic
+### Boat side (gabby) — you start it
 
-The boat computer is configured to **start the autonomy stack automatically on
-power-up** (via the `field` user's `@reboot` cron job running
-`scripts/start_tmux_project11.bash`). Power the boat on and the stack comes up in
-this order:
+**There is no autostart yet.** After powering the boat on, you start the autonomy
+stack yourself: SSH to the boat's backseat driver and run the boat launcher from
+your home directory (`./start_tmux_project11.bash`, a symlink to
+`bizzyboat_project11/scripts/start_tmux_project11.bash`):
+
+```bash
+ssh gabby.vpn
+./start_tmux_project11.bash
+```
+
+The stack comes up in this order (zenoh-first):
 
 1. **Zenoh router** (`rmw_zenohd`) — the ROS middleware router. Everything else
    waits for it.
