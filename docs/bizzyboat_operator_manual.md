@@ -84,7 +84,7 @@ This powers the *hardware* only; the autonomy stacks are started next.
 
 ### 5. Launch & loiter
 
-> Launch is **site-specific**; the Lake Massabesic specifics aren't settled yet, so
+> Launch is **site-specific**; the site specifics aren't settled yet, so
 > this stays brief and will be expanded once we know the site.
 
 1. **Launch the boat.**
@@ -177,7 +177,7 @@ empty pack; speeds are through-water (≈ over-ground in calm water like a lake)
 
 ### Positioning / RTK
 
-- The boat needs a good GNSS fix before survey-quality autonomy. The `gps_rtk`
+- The boat needs a good GNSS fix before survey-quality autonomy. The `GPS: RTK`
   diagnostic reports fix type: **type ≥ 6 is OK** (RTK), **type 3 is a warning**
   (no RTK), below that is not survey-ready.
 - RTK corrections arrive over **NTRIP**. If RTK won't lock, check that the NTRIP
@@ -263,8 +263,9 @@ The stack comes up in this order (zenoh-first):
 
 ### Operator side (salmon) — you start this
 
-On the operator station, start the operator launcher
-(`scripts/start_tmux_operator_project11.bash`). It brings up, again zenoh-first:
+On the operator station, start the operator launcher from your home directory
+(`./start_tmux_operator_project11.bash`, a symlink to
+`bizzyboat_project11/scripts/start_tmux_operator_project11.bash`). It brings up, again zenoh-first:
 the operator core nodes, the **operator UI** (CAMP with the `bizzyboat`
 perspective), the diagnostics view (rqt), the Axis PTZ camera, and the
 screenshooter.
@@ -370,7 +371,7 @@ section explains what the commands *mean*.
 
 ## 6. Comms & range
 
-- **Primary link:** WiFi backhaul (`gabby.bizzy.p11.lan`). **Fallback:**
+- **Primary link:** WiFi backhaul (`gabby.p11.lan`). **Fallback:**
   Starlink/VPN. The UDP bridge moves ROS traffic across whichever path is up.
 - **Operating Over The Horizon (OTH) — i.e. beyond direct line-of-sight comms — is
   normal** for this boat and routine for a shore-based operator during a lake
