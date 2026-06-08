@@ -86,12 +86,17 @@ This *was* the #1 survey blocker (the boat over-corrected into full 360° loops 
 paths). Fixed by [`PR #72`](https://github.com/rolker/unh_marine_navigation/pull/72)
 (CrabbingPathFollower: progress-preserving localization + pure-pursuit look-ahead +
 tunable/clamped yaw) + [`PR #70`](https://github.com/rolker/unh_marine_navigation/pull/70)
-(viz recolor), both merged 2026-06-05; **the boat ran lines cleanly on the 2026-06-05
-deployment, which ran with these fixes.** The pure-pursuit look-ahead + clamped yaw absorb
-the jumpy planner output downstream, so tracking is clean even though raw `cmd_vel_nav` still
-looks spiky. The issue stays OPEN only for the regression test (nav#5) / formal close-out.
-Diagnosis detail is in the *(now historical)* section below. **Regression watch:** confirm
-clean tracking holds across full survey patterns, not just the June-5 lines (harvest `pid_state`).
+(viz recolor), both merged 2026-06-05. **On the 2026-06-05 deployment (run with these fixes)
+the boat ran lines cleanly** — cross-track error held median **0.19 m / 89 % within 1 m** on a
+clean line, **0.44 m / 76 % within 1 m** across all autonomous lines, **no loops**
+(analysis: `~/data/logs/analysis/2026-06-07_issue228/`). The pure-pursuit look-ahead + clamped
+yaw absorb the jumpy planner output downstream — `cmd_vel_nav` yaw still spikes to ±3 rad/s but
+`cmd_vel_smoothed` clamps it to ±1.0. **Open tail:** the *controller-side* fix landed; the
+**planner reference churn** that triggered nav#66 is still present (replan bursts — e.g. 7 paths
+in 10 s — and discontinuous segment steps). It no longer destabilizes the boat, but it inflates
+XTE at line transitions and is worth reducing (replan hysteresis / path continuity) for cleaner
+survey data. nav#66 stays OPEN for that + the nav#5 regression test. **Regression watch:**
+confirm clean tracking holds across full survey patterns (harvest `pid_state`).
 
 **Safety floor — CA helm gate validated on water ([`nav#64`](https://github.com/rolker/unh_marine_navigation/issues/64)).**
 The marine CA safety node replaced the nav2 Collision Monitor as the **default helm gate**;
