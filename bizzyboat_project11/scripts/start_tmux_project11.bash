@@ -1,6 +1,7 @@
 #!/bin/bash
 
-# called from cron @reboot using field's user crontab
+# may later be added to cron @reboot via field's user crontab;
+# autostart is NOT currently enabled — start this manually after boot
 
 DAY=$(date "+%Y-%m-%d")
 NOW=$(date "+%Y-%m-%dT%H.%M.%S.%N")

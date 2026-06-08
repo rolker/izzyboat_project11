@@ -1,23 +1,35 @@
 # unh_echoboats_project11
 
-ROS 2 configuration and launch files for UNH CCOM's EchoBoat 160 (IzzyBoat).
+ROS 2 configuration and launch files for UNH CCOM's EchoBoats. The current,
+deployed platform is **BizzyBoat** (EchoBoat 240); **IzzyBoat** (EchoBoat 160) is
+the older testing platform.
 
 ## Packages
 
-- **izzyboat_project11** — URDF, launch files, and configuration for IzzyBoat.
-  Includes sensor drivers (OAK-D camera, DeltaT sonar), navigation stack
-  integration, and UDP bridge configuration for operator communication.
+- **bizzyboat_project11** — URDF, launch files, and configuration for **BizzyBoat
+  (EchoBoat 240)**, the current deployed boat. Includes the autonomy bring-up
+  (core/perception/navigation launches), sensor drivers (OAK cameras, sonar), and
+  UDP bridge configuration for operator communication.
+- **izzyboat_project11** — URDF, launch files, and configuration for IzzyBoat
+  (EchoBoat 160), the older testing platform.
 
 ## Network
 
-IzzyBoat communicates with the operator station over a dedicated WiFi backhaul
-link and a VPN fallback path. See [docs/izzyboat_network.md](docs/izzyboat_network.md)
-for full network documentation.
-
-![IzzyBoat network diagram](docs/izzyboat_network.svg)
+BizzyBoat communicates with the operator station over a dedicated WiFi backhaul
+link with a Starlink/VPN fallback path. See
+[docs/bizzyboat_network.md](docs/bizzyboat_network.md) for full network
+documentation.
 
 ## Documentation
 
-- [Network setup](docs/izzyboat_network.md) — subnets, devices, VPN configuration, router details
-- [Hardware measurements](izzyboat_project11/measurements.md) — physical dimensions and dynamics
-- [Camera calibration](izzyboat_project11/camera_calibration.md) — camera calibration notes
+- **[BizzyBoat operator manual](docs/bizzyboat_operator_manual.md)** — student
+  operator guide: bring the boat up, drive it, run a survey, shut it down.
+- [BizzyBoat network setup](docs/bizzyboat_network.md) — subnets, devices, VPN,
+  router details.
+- [BizzyBoat hardware](bizzyboat_project11/docs/bizzyboat_hardware.md) — sensors,
+  computers, payload.
+- [BizzyBoat power](bizzyboat_project11/docs/bizzyboat_power.md) — power system and
+  power-on notes.
+- [BizzyBoat reference geometry](bizzyboat_project11/docs/bizzyboat_reference_geometry.md)
+  — offsets and mounting geometry.
+- [IzzyBoat network setup](docs/izzyboat_network.md) — legacy 160 platform.
