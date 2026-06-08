@@ -87,16 +87,16 @@ paths). Fixed by [`PR #72`](https://github.com/rolker/unh_marine_navigation/pull
 (CrabbingPathFollower: progress-preserving localization + pure-pursuit look-ahead +
 tunable/clamped yaw) + [`PR #70`](https://github.com/rolker/unh_marine_navigation/pull/70)
 (viz recolor), both merged 2026-06-05. **On the 2026-06-05 deployment (run with these fixes)
-the boat ran lines cleanly** — cross-track error held median **0.19 m / 89 % within 1 m** on a
-clean line, **0.44 m / 76 % within 1 m** across all autonomous lines, **no loops**
-(analysis: `~/data/logs/analysis/2026-06-07_issue228/`). The pure-pursuit look-ahead + clamped
-yaw absorb the jumpy planner output downstream — `cmd_vel_nav` yaw still spikes to ±3 rad/s but
-`cmd_vel_smoothed` clamps it to ±1.0. **Open tail:** the *controller-side* fix landed; the
-**planner reference churn** that triggered nav#66 is still present (replan bursts — e.g. 7 paths
-in 10 s — and discontinuous segment steps). It no longer destabilizes the boat, but it inflates
-XTE at line transitions and is worth reducing (replan hysteresis / path continuity) for cleaner
-survey data. nav#66 stays OPEN for that + the nav#5 regression test. **Regression watch:**
-confirm clean tracking holds across full survey patterns (harvest `pid_state`).
+the boat ran the survey line cleanly** — on the genuine survey line (`pattern0001/line0`)
+cross-track error held median **0.19 m, 89 % within 1 m, no loops** (analysis:
+`~/data/logs/analysis/2026-06-07_issue228/`). The pure-pursuit look-ahead + clamped yaw absorb
+the jumpy planner output downstream — `cmd_vel_nav` yaw still spikes to ±3 rad/s but
+`cmd_vel_smoothed` clamps it to ±1.0. (An earlier read of large XTE on "trackline0002" turned
+out to be a **~280 m transit *to* the line**, not line-following — the global planner routing
+to the goal through the pier's chart-inflation costmap, i.e. nav#63, which is **moot at the
+lake** with no S57; not a survey-line churn.) nav#66 stays OPEN only for the **nav#5 regression
+test**. **Regression watch:** confirm clean tracking holds across full survey patterns
+(harvest `pid_state`).
 
 **Safety floor — CA helm gate validated on water ([`nav#64`](https://github.com/rolker/unh_marine_navigation/issues/64)).**
 The marine CA safety node replaced the nav2 Collision Monitor as the **default helm gate**;
@@ -362,15 +362,24 @@ autonomy quality.
 
 **Investigate — harvest from production:**
 - [`rolker/unh_marine_navigation#19`](https://github.com/rolker/unh_marine_navigation/issues/19) — costmap-update timeout too aggressive at 1.0s. **Confirmed real on #201 (2026-06-01)**: `Costmap timed out waiting for update` logged ×14 (controller_server, 14:32–16:20) while the boat was working the mooring field — promote from "investigate" to a real reliability factor in the costmap/avoidance failure. Tied to the costmap-delivery mechanism ([`unh_marine_navigation#56`](https://github.com/rolker/unh_marine_navigation/issues/56)).
-- **Boat-side bathy costmap** *(placeholder — needs issue or existing
-  agent-branch link)*. Lake Massabesic has no S57 ENC coverage, so the
-  Nav2 costmap won't have any depth-derived "don't go here" data unless
-  external bathymetry is ingested. Likely consumes NHGranIT contours via
-  [`unh_marine_autonomy#86`](https://github.com/rolker/unh_marine_autonomy/issues/86)'s GGGS data store as a Processed source. Roland recalls
-  possible work on this from another computer — confirm location, then
-  either link existing issue/branch or open new. Borrowable code in
-  `s57_tools`/`marine_charts` for the depth-data → costmap layer
-  plumbing.
+- **Boat-side bathy costmap — our own bathymetry replaces the chart layer.** Lake Massabesic
+  has no S57 ENC coverage, so the Nav2 `chart_layer` is empty there — no depth-derived
+  "don't-go-shallow" data. **Plan:** feed *our own collected bathymetry* into the costmap as
+  the chart-layer replacement, and **refine it as we survey**:
+  - **Start crude** — a contour-derived bathy map (NHGranIT depth contours) gives a first
+    "shallow here" layer to launch with.
+  - **Refine with collected data** — the **M3 → CUBE surface** (now working in rviz,
+    [`#225`](https://github.com/rolker/unh_echoboats_project11/issues/225)) persisted to the
+    **GGGS on-disk grid store** ([`unh_marine_autonomy#86`](https://github.com/rolker/unh_marine_autonomy/issues/86)) becomes the depth source as coverage builds.
+  - **Closes a loop:** the survey *produces* the bathymetry that improves the costmap that
+    guides the next survey. Ties into the *Sonar coverage surfaces in CAMP* thread (same
+    CUBE/GGGS pipeline, different consumer — costmap vs. operator display).
+
+  Borrowable plumbing in `s57_tools` / `marine_charts` for the depth-grid → costmap layer.
+  *(Flip side of nav#63: at the pier the `chart_layer` inflation **caused** the weave; at the
+  lake the gap is the opposite — no layer at all — so our own bathy is the fix, not the
+  problem.)* Confirm whether Roland's "other computer" contour work exists; then link or open
+  an issue.
 - **Turning-limit validation — STILL PENDING after #173 (2026-05-26).** The two field-untested changes (helm yaw cap 0.5→1.0 rad/s, [PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172) / #124 §2; planner min turning radius 3.0→1.5 m) were **not assessed** — #173 went to collision-avoidance testing. They were exercised only incidentally in transit-to-line-start planning (individual tracklines, no survey-pattern apron turns), so the tight-apron case the 1.5 m radius most affects is still untested. `pid_state` (cross-track-error) recording **landed ✓** on #173. **Harvest from production:** the first clean student survey lines (and survey-pattern apron turns) are exactly the data this needs — capture `cmd_vel_*` + `pid_state` + odom and assess the 1.5 m radius / 1.0 ceiling on a real pattern. (Still pending through #186/#201 — both were buoy/CA/perception days with no clean survey lines; turning behaviour went unobserved.)
 - **velocity_smoother re-enabled in the cmd_vel chain — [`rolker/seafloor_echoboat_project11#36`](https://github.com/rolker/seafloor_echoboat_project11/issues/36) (DONE, merged 2026-06-02).** The smoother is back in the active path and `lifecycle_nodes` (`cmd_vel_nav → velocity_smoother → cmd_vel_smoothed → [helm gate]`), so the survey **accel / yaw-rate limiting** (#124 §2) is active again. The 2026-06-05 bag confirms it enforces the yaw-accel cap. Yaw-accel was field-tuned ±0.5 → **±3.0 rad/s²** (`d35a795`; locked by `test_param_compose` in [`seafloor#45`](https://github.com/rolker/seafloor_echoboat_project11/issues/45)) — **not** a regression (closes the #228 Goal-3 question). **Watch (harvest from production):** ±3.0 re-opens the deployment-197 snap-roll — sharp autonomous yaw reversals rolled the hull up to ~22° on 2026-06-05 (sub-197, but real). Back off toward ±1.5 if a sharp reversal rolls the hull on a survey.
 
