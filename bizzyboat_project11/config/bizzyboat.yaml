@@ -391,7 +391,7 @@
       - /bizzy/odom
       - /bizzy/robot_description
       - /bizzy/sensors/deltat/soundings
-      # Garmin GCV-20 sidescan (only present when core_launch sidescan:=true).
+      # Garmin GCV-20 sidescan (on by default; absent if core_launch sidescan:=false).
       # Decoded per-channel imagery + latched control/status. debug/raw_status
       # carries the GCV :50050 status stream (incl. the unverified depth field);
       # it is only published when the driver runs with debug_raw:=true, recorded

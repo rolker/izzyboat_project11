@@ -35,12 +35,13 @@ def generate_launch_description():
         'gcs_url', default_value=TextSubstitution(text='')
     )
 
-    # Garmin GCV-20 sidescan. Off by default: it depends on the mercat proxy
-    # being up (see sidescan_launch.py) and is a parallel effort, not part of
-    # every mission. Enable with sidescan:=true.
+    # Garmin GCV-20 sidescan. On by default so it comes up with the boat; the
+    # driver transmits nothing until commanded and is gated on a valid sound
+    # speed, so with the mercat proxy or GCV absent it simply retries (no harm).
+    # Disable with sidescan:=false.
     sidescan = LaunchConfiguration('sidescan')
     sidescan_arg = DeclareLaunchArgument(
-        'sidescan', default_value='false'
+        'sidescan', default_value='true'
     )
 
     return LaunchDescription([
@@ -307,7 +308,7 @@ def generate_launch_description():
                 ),
 
                 # Garmin GCV-20 sidescan (gabby driver -> mercat proxy -> GCV).
-                # Opt-in: requires the mercat proxy; enable with sidescan:=true.
+                # On by default; disable with sidescan:=false.
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution([
