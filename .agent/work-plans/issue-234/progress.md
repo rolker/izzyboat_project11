@@ -17,8 +17,8 @@ issue: 234
 ### Findings
 - [x] (must-fix, Copilot) debug_raw passed as LaunchConfiguration (string) but node declares it bool -> node fails on startup; crash-loops now that sidescan is on-by-default — wrap in ParameterValue(value_type=bool) — `bizzyboat_project11/launch/sidescan_launch.py`
 - [x] (should-fix, Copilot) sound_speed_topic hard-coded /bizzy/...; add a namespace arg, derive the SV topic from it, pass namespace from core_launch — `sidescan_launch.py`, `core_launch.py`
-- [ ] (doc, Copilot) PR #236 body still says it vendors mercat/* scripts; they were de-vendored to marine_tools — update the PR description
-- [ ] (defensive, Copilot) install_proxy_service.ps1 passes all powershell flags to nssm as one string token; pass each as a separate token — NOTE: this file is in MERGED marine_tools (#21), needs a follow-up there, not in #236
+- [x] (doc, Copilot) PR #236 body still says it vendors mercat/* scripts; they were de-vendored to marine_tools — update the PR description
+- [x] (defensive, Copilot) install_proxy_service.ps1 NSSM single-string args -> tracked in marine_tools#22 (merged code, needs Windows verification)
 
 ### False positives
 - (Copilot x3) sidescan default 'true' / "on by default" comments contradict issue's opt-in — superseded by explicit user instruction to make sidescan on by default; code + comments are consistent and correct.
