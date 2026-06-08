@@ -1,4 +1,10 @@
-# 2026 BizzyBoat Field Season Guide — Borrowed Hydro Payload
+# 2026 BizzyBoat Field Season Guide — Borrowed Hydro Payload *(draft)*
+
+> ⚠️ **Draft — corrections welcome.** This is a first draft from the 2026 field
+> setup; some details (offsets, wiring specifics, commands) may be approximate,
+> incomplete, or out of date. If you hit something incorrect, unclear, or missing,
+> **open an issue** in `unh_echoboats_project11` (label `documentation`) describing
+> what you saw. Field corrections are how this becomes trustworthy.
 
 This guide documents the **borrowed hydrographic payload** carried on BizzyBoat
 for the Summer Hydro 2026 class — the **M3 multibeam sonar** and the **SBG
