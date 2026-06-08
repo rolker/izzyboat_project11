@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- Garmin GCV-20 sidescan sonar — TF frames only (no visual/collision).
+
+       The garmin_sidescan driver (rolker/marine_tools) publishes one
+       RawSonarImage per channel, each stamped with its own frame_id
+       (bizzy/<name>_port / _starboard / _down). Mounting and per-beam
+       orientation live here in TF, never in the driver params.
+
+       Per-channel range axis is the frame's local +Z (rviz_sonar_image places a
+       fixed beam's samples along +Z when rx/tx steering = 0):
+         _down       +Z points down   (matches the M3/DeltaT transducer convention)
+         _port       +Z points to port (+Y)
+         _starboard  +Z points to starboard (-Y)
+
+       PLACEHOLDER: side-scan grazing tilt is 0 (port/starboard beams horizontal).
+       Real side-scan fires a few tens of degrees below horizontal — refine the
+       _port/_starboard pitch once the install is measured/calibrated. -->
+  <xacro:macro name="garmin_sidescan" params="parent name x:=0 y:=0 z:=0">
+
+    <!-- Mount frame, aligned with base_link (X fwd, Y port, Z up). -->
+    <link name="bizzy/${name}"/>
+
+    <joint name="base_to_${name}" type="fixed">
+      <parent link="${parent}"/>
+      <child link="bizzy/${name}"/>
+      <origin xyz="${x} ${y} ${z}" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Down-look (water-column) beam: +Z down. -->
+    <link name="bizzy/${name}_down"/>
+    <joint name="${name}_to_${name}_down" type="fixed">
+      <origin xyz="0 0 0" rpy="${radians(180)} 0 0"/>
+      <parent link="bizzy/${name}"/>
+      <child link="bizzy/${name}_down"/>
+    </joint>
+
+    <!-- Port side-scan beam: +Z to port (+Y). -->
+    <link name="bizzy/${name}_port"/>
+    <joint name="${name}_to_${name}_port" type="fixed">
+      <origin xyz="0 0 0" rpy="${radians(-90)} 0 0"/>
+      <parent link="bizzy/${name}"/>
+      <child link="bizzy/${name}_port"/>
+    </joint>
+
+    <!-- Starboard side-scan beam: +Z to starboard (-Y). -->
+    <link name="bizzy/${name}_starboard"/>
+    <joint name="${name}_to_${name}_starboard" type="fixed">
+      <origin xyz="0 0 0" rpy="${radians(90)} 0 0"/>
+      <parent link="bizzy/${name}"/>
+      <child link="bizzy/${name}_starboard"/>
+    </joint>
+
+  </xacro:macro>
+</robot>
