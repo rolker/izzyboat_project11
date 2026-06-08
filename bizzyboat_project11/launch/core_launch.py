@@ -318,6 +318,7 @@ def generate_launch_description():
                         ])
                     ),
                     launch_arguments={
+                        'namespace': namespace,
                         'frame_prefix': frame_prefix,
                     }.items(),
                     condition=IfCondition(sidescan)

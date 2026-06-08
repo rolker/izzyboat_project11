@@ -27,9 +27,15 @@ from launch.substitutions import LaunchConfiguration
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
+    namespace = LaunchConfiguration('namespace')
+    namespace_arg = DeclareLaunchArgument(
+        'namespace', default_value=TextSubstitution(text='bizzy')
+    )
+
     frame_prefix = LaunchConfiguration('frame_prefix')
     frame_prefix_arg = DeclareLaunchArgument(
         'frame_prefix', default_value='bizzy/'
@@ -53,7 +59,13 @@ def generate_launch_description():
                     '(set true for the first wet run to capture depth bytes)'
     )
 
+    # The sound-speed interlock topic follows the launch namespace (the AML SVS
+    # bridge publishes it under /<namespace>/sensors/sound_speed/), so it stays
+    # correct if core_launch runs under a non-default namespace.
+    sound_speed_topic = ['/', namespace, '/sensors/sound_speed/sound_speed']
+
     return LaunchDescription([
+        namespace_arg,
         frame_prefix_arg,
         gcv_ip_arg,
         iface_ip_arg,
@@ -73,13 +85,14 @@ def generate_launch_description():
                         'gcv_ip': gcv_ip,
                         'iface_ip': iface_ip,
                         'frame_id': [frame_prefix, 'garmin_sidescan'],
-                        'debug_raw': debug_raw,
+                        # debug_raw is a bool node param; type the launch-arg
+                        # string override so ROS 2 doesn't reject "true"/"false".
+                        'debug_raw': ParameterValue(debug_raw, value_type=bool),
                         # SAFE: never transmit on startup; only ping under a
                         # valid sound speed from the AML SVS bridge.
                         'transmit_on_startup': False,
                         'sound_speed_safety_enabled': True,
-                        'sound_speed_topic':
-                            '/bizzy/sensors/sound_speed/sound_speed',
+                        'sound_speed_topic': sound_speed_topic,
                     }],
                     respawn=True,
                     respawn_delay=2.0,
