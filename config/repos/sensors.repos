@@ -23,3 +23,7 @@ repositories:
     type: git
     url: git@gitcloud:field/marine_tools.git
     version: jazzy
+  unh_marine_radar:
+    type: git
+    url: git@gitcloud:field/unh_marine_radar.git
+    version: jazzy
