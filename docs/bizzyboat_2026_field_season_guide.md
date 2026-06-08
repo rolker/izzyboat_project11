@@ -304,9 +304,10 @@ When a measurement is updated, regenerate the offsets diagram:
 This payload is freshly integrated; a few items are still open. Check these
 before drawing conclusions about bad data:
 
-- [#163](https://github.com/rolker/unh_echoboats_project11/issues/163) — AML SVS
-  probe outputting all-NUL bytes on `/dev/ttyS0` (relevant to the sound-velocity
-  feed).
+- [#163](https://github.com/rolker/unh_echoboats_project11/issues/163) — AML SVS:
+  the all-NUL-bytes regression on `/dev/ttyS0` was **resolved** (#173, 2026-05-26 —
+  the probe now delivers valid in-water sound speed, ~99% valid). Kept open as a
+  **watch item** for occasional brief zero-dropouts at startup. The SV feed works.
 - [#137](https://github.com/rolker/unh_echoboats_project11/issues/137) — M3
   intermittent missing pings (suspected ping-rate × depth correlation).
 - [#156](https://github.com/rolker/unh_echoboats_project11/issues/156) /
