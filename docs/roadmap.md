@@ -477,6 +477,25 @@ Not promoted to issues yet — both pieces want scoping conversations
 about where the message-schema change lands and what CAMP's plugin
 surface for these controls looks like.
 
+### Documentation — keep the manuals current *(2026-06-07)*
+
+Standing discipline, now load-bearing: the boat is in production with **students operating
+from the manuals**, so the operator / student / field-season docs must track the system as it
+changes. When a change lands that affects how the boat is operated — CA helm-gate behavior,
+line-following, hover / station-keep, sonar displays, comms / OTH — update the relevant manual
+in the same breath, not "later." A manual that lies to a student operator is worse than a
+missing one.
+
+The manual set:
+- [`#18`](https://github.com/rolker/unh_echoboats_project11/issues/18) — student deployment guide.
+- [`#202`](https://github.com/rolker/unh_echoboats_project11/issues/202) — BizzyBoat operator manual (student-facing).
+- [`#219`](https://github.com/rolker/unh_echoboats_project11/issues/219) — 2026 BizzyBoat Field Season Guide.
+- [`camp#61`](https://github.com/rolker/camp/issues/61) — CAMP user manual (operator-facing).
+- [`unh_marine_autonomy#132`](https://github.com/rolker/unh_marine_autonomy/issues/132) — project11 marine-autonomy framework guide.
+
+Changes the manuals should reflect *now*: the CA safety helm gate ([`nav#64`](https://github.com/rolker/unh_marine_navigation/issues/64)) as the default helm gate (slowdown + reverse-stop
+behavior, and the hover-stop caveat [`nav#73`](https://github.com/rolker/unh_marine_navigation/issues/73)), the nav#66 line-following fix, and — as it ships — the sonar-coverage-in-CAMP work.
+
 ### Class-day operator observability *(new theme — 2026-04-27; major expansion 2026-05-19)*
 
 Student operators won't intuit silent failures the way an expert does.
