@@ -378,8 +378,15 @@ autonomy quality.
   Borrowable plumbing in `s57_tools` / `marine_charts` for the depth-grid → costmap layer.
   *(Flip side of nav#63: at the pier the `chart_layer` inflation **caused** the weave; at the
   lake the gap is the opposite — no layer at all — so our own bathy is the fix, not the
-  problem.)* Confirm whether Roland's "other computer" contour work exists; then link or open
-  an issue.
+  problem.)*
+
+  **Status:** the crude-contour starting point already exists —
+  [`CCOMJHC/ccomjhc_project11#55`](https://github.com/CCOMJHC/ccomjhc_project11/issues/55) /
+  [`PR #56`](https://github.com/CCOMJHC/ccomjhc_project11/pull/56) (`build_bathymetry_geotiff.py`:
+  NH GRANIT contours + depth-band polygons → ghost-point-seeded TIN → Massabesic GeoTIFF,
+  EPSG:26919, depth m). **PR #56 is open — needs a sync-from-`jazzy` + merge** (it's ~3 behind).
+  Remaining work is the **GeoTIFF → Nav2 costmap-layer plumbing** (then swap CUBE-refined data in
+  for the contours).
 - **Turning-limit validation — STILL PENDING after #173 (2026-05-26).** The two field-untested changes (helm yaw cap 0.5→1.0 rad/s, [PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172) / #124 §2; planner min turning radius 3.0→1.5 m) were **not assessed** — #173 went to collision-avoidance testing. They were exercised only incidentally in transit-to-line-start planning (individual tracklines, no survey-pattern apron turns), so the tight-apron case the 1.5 m radius most affects is still untested. `pid_state` (cross-track-error) recording **landed ✓** on #173. **Harvest from production:** the first clean student survey lines (and survey-pattern apron turns) are exactly the data this needs — capture `cmd_vel_*` + `pid_state` + odom and assess the 1.5 m radius / 1.0 ceiling on a real pattern. (Still pending through #186/#201 — both were buoy/CA/perception days with no clean survey lines; turning behaviour went unobserved.)
 - **velocity_smoother re-enabled in the cmd_vel chain — [`rolker/seafloor_echoboat_project11#36`](https://github.com/rolker/seafloor_echoboat_project11/issues/36) (DONE, merged 2026-06-02).** The smoother is back in the active path and `lifecycle_nodes` (`cmd_vel_nav → velocity_smoother → cmd_vel_smoothed → [helm gate]`), so the survey **accel / yaw-rate limiting** (#124 §2) is active again. The 2026-06-05 bag confirms it enforces the yaw-accel cap. Yaw-accel was field-tuned ±0.5 → **±3.0 rad/s²** (`d35a795`; locked by `test_param_compose` in [`seafloor#45`](https://github.com/rolker/seafloor_echoboat_project11/issues/45)) — **not** a regression (closes the #228 Goal-3 question). **Watch (harvest from production):** ±3.0 re-opens the deployment-197 snap-roll — sharp autonomous yaw reversals rolled the hull up to ~22° on 2026-06-05 (sub-197, but real). Back off toward ±1.5 if a sharp reversal rolls the hull on a survey.
 
