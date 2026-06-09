@@ -259,4 +259,43 @@ follow-on investigation:
 - Ad-hoc M3 bag (§11) stopped + finalized cleanly: 346 MB, metadata
   written, ~14:51–16:49 in-water `m3/detections`+`soundings`+TF+odom.
 
-Phase: **recovered**. Awaiting operator on wrap-up.
+Phase: **recovered**.
+
+## Wrap-up
+
+**2026-06-09 18:04 -04:00** — Deployment wrapped (gabby field side; no
+deployment issue this run, so cross-host Summary/Lessons get integrated
+dev-side at `/import-field-changes`, not here). Stack is down; boat
+recovered. Git: 3 commits (sidescan debug script, sonar_logger M3
+config, this log) committed and **pushed to gitcloud** `jazzy`
+(rebased onto salmon's log + the Hover-Marker PR).
+
+### Outstanding / follow-ups (for dev-side wrap-up)
+
+1. **M3 grid not producing (§9)** — `cube_bathymetry` active, fed 9 Hz,
+   valid TF, but emitted no `m3/grid`. Undiagnosed (not lifecycle, not
+   TF). Next: rosout for gridding warnings, publish-trigger/accumulation
+   params, or survey-motion gating. **Open.**
+2. **sonar_logger M3 detections — staged, not live** — config committed
+   but needs a **rebuild + sonar_logger relaunch** to take effect. Also
+   remove the dead `deltat/soundings` line (decommissioned sonar).
+3. **CA stop-box mitigation is NOT persisted** — the 5.0×4.0 → 3.0×3.0
+   shrink (§8) was a runtime param set, **reverted by the stack
+   shutdown**. To keep it, put `stop_length/stop_width: 3.0` in YAML.
+   Durable fix is upstream: a **min-points / persistence filter** so one
+   spurious segmentation point can't trip a hard stop (no such knob
+   exists today). Follow-up issue candidate.
+4. **mercat data access** — not implemented. mercat has SSH (:22) **and**
+   SMB (:445) already up; recommended path is rclone-over-sftp or a
+   direct SMB mount **from salmon** (drops gabby as proxy) — rsync-over-ssh
+   needs cwRsync installed on the Windows box. Decision pending.
+5. **Ad-hoc M3 bag** preserved this run's in-water data
+   (`~/data/logs/bizzy_m3/bag_2026-06-09T14.51.50_m3_detections/`, 346 MB)
+   until the durable logger change lands.
+
+### Process note
+
+During recovery I over-investigated the intended stack-down (silent
+marine channel, empty node graph, no zenoh router) as if it were a fault
+instead of asking. Phase-tracking + ask-first, per
+`[[feedback_track_deployment_phase]]` / `[[feedback_scribe_not_detective]]`.
