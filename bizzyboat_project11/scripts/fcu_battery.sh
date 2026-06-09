@@ -1,9 +1,17 @@
 #!/bin/bash
 # fcu_battery.sh — Print the FCU-reported battery voltage without the ROS stack.
 #
-# Talks MAVLink directly to the flight controller's serial port and reads one
+# Talks MAVLink directly to the flight controller's serial port and reads a live
 # SYS_STATUS message. Handy for a quick battery check before launch, or any time
 # MAVROS / the core stack is NOT running.
+#
+# Stale-value guard: when nothing is reading /dev/fcu (exactly the case this
+# script is for), the FCU keeps streaming into the serial buffer, which fills
+# with OLD data and drops new bytes. A naive single read then returns a value
+# buffered minutes-to-hours ago. We flush the input buffer after the heartbeat
+# and keep the most recent SYS_STATUS from a short live window, so the printed
+# voltage is current. If the FCU is off there is nothing fresh to read and we
+# time out rather than report a stale number.
 #
 # Usage: ./fcu_battery.sh [device] [baud]
 #   device: FCU serial device   (default: /dev/fcu)
@@ -55,9 +63,9 @@ if [ ! -e "$DEVICE" ]; then
     exit 1
 fi
 
-# --- read one SYS_STATUS and print -----------------------------------------
+# --- read a live SYS_STATUS and print --------------------------------------
 exec "$PYTHON" - "$DEVICE" "$BAUD" <<'EOF'
-import sys
+import sys, time
 from pymavlink import mavutil
 
 device, baud = sys.argv[1], int(sys.argv[2])
@@ -66,9 +74,23 @@ m = mavutil.mavlink_connection(device, baud=baud)
 if not m.wait_heartbeat(timeout=10):
     sys.exit("error: no MAVLink heartbeat (is the FCU powered? is MAVROS holding the port?)")
 
-s = m.recv_match(type='SYS_STATUS', blocking=True, timeout=5)
+# Dump any stale backlog buffered while the port sat idle, then read only data
+# that arrives after the flush.
+try:
+    m.port.reset_input_buffer()
+except Exception:
+    pass
+
+# Keep the most recent SYS_STATUS from a short live window. Discards a possible
+# partial frame left by the flush; if nothing fresh arrives, s stays None.
+s = None
+deadline = time.monotonic() + 3.0
+while time.monotonic() < deadline:
+    msg = m.recv_match(type='SYS_STATUS', blocking=True, timeout=3)
+    if msg is not None:
+        s = msg
 if s is None:
-    sys.exit("error: heartbeat seen but no SYS_STATUS within 5s")
+    sys.exit("error: heartbeat seen but no live SYS_STATUS within 3s (FCU off, or port contended?)")
 
 volts = s.voltage_battery / 1000.0            # mV -> V
 amps = "n/a" if s.current_battery == -1 else f"{s.current_battery / 100.0:.1f} A"
