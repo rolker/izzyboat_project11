@@ -99,7 +99,7 @@ die()  { err "$*"; exit 1; }
 ssh_base=(ssh -o BatchMode=yes -o ConnectTimeout=8)
 
 usage() {
-  sed -n '3,/^set -euo pipefail/p' "$0" | sed '1d;$d; s/^# \{0,1\}//'
+  sed -n '3,/^set -euo pipefail/p' "$0" | sed '$d; s/^# \{0,1\}//'
 }
 
 host_sources() {  # host -> prints one "path[|label]" entry per line
