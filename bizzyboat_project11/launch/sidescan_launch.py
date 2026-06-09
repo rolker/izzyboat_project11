@@ -84,6 +84,15 @@ def generate_launch_description():
                     parameters=[{
                         'gcv_ip': gcv_ip,
                         'iface_ip': iface_ip,
+                        # Force the GCV-20 decode path. This boat's GCV-20 is
+                        # mis-identified as gcv10 by 'auto': its imagery packets
+                        # carry the 0x11 value-width tag at offset 13, which
+                        # GEN_BY_TAG maps to gcv10, so the dark_layer extractor
+                        # finds no third "dark" layer (GCV-20 has only two) and
+                        # sonar_image_* stays empty. Verified on the 2026-06-08
+                        # wet test: /debug/raw flowed at ~255 Hz while all three
+                        # decoded channels were silent under auto-detect.
+                        'device': 'gcv20',
                         'frame_id': [frame_prefix, 'garmin_sidescan'],
                         # debug_raw is a bool node param; type the launch-arg
                         # string override so ROS 2 doesn't reject "true"/"false".
