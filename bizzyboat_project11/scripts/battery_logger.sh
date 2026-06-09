@@ -15,8 +15,11 @@
 # Output: ~/data/logs/bizzy_battery/battery_YYYY-MM-DD.csv
 #   columns: timestamp,voltage_v,current_a,remaining_pct,source
 #   timestamp is ISO-8601 with offset; source is "fcu" or "mavros".
+#   NOTE: BizzyBoat has NO current sensor — current_a is not a real measurement.
+#   It is blank from the FCU (reports -1/unknown) and may be blank, 0, or NaN
+#   from MAVROS. Do not treat current_a as valid; voltage_v is the real signal.
 #
-# An flock guards against overlapping runs: an FCU-off read can block several
+# A flock guards against overlapping runs: an FCU-off read can block several
 # seconds waiting for a heartbeat, longer than nothing, so a slow run must not
 # pile up under the per-minute schedule.
 #

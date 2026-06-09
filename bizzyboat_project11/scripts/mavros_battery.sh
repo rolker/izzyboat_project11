@@ -82,7 +82,14 @@ VOLTS="$(printf '%.2f' "$V")"
 AMPS=""
 [ -n "$A" ] && AMPS="$(printf '%.1f' "$A")"
 REMAIN=""
-[ -n "$PCT_RAW" ] && REMAIN="$(awk -v p="$PCT_RAW" 'BEGIN{printf "%d", p*100 + 0.5}')"
+# BatteryState percentage is 0..1, but MAVROS emits -0.01 when the MAVLink
+# battery_remaining field is -1 (unknown), and other publishers may report
+# similar out-of-range sentinels. Such a value would otherwise convert to a
+# negative or >100 "remaining" — treat anything outside [0,1] as unavailable
+# (blank) rather than emit a misleading percent.
+if [ -n "$PCT_RAW" ]; then
+    REMAIN="$(awk -v p="$PCT_RAW" 'BEGIN{ if (p < 0 || p > 1) exit 1; printf "%d", p*100 + 0.5 }')" || REMAIN=""
+fi
 
 if [ "$FORMAT" = "csv" ]; then
     printf '%s,%s,%s\n' "$VOLTS" "$AMPS" "$REMAIN"
