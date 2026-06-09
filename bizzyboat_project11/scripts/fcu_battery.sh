@@ -13,7 +13,10 @@
 # voltage is current. If the FCU is off there is nothing fresh to read and we
 # time out rather than report a stale number.
 #
-# Usage: ./fcu_battery.sh [device] [baud]
+# Usage: ./fcu_battery.sh [--csv] [device] [baud]
+#   --csv:  emit machine-readable "volts,amps,remaining" (empty fields when the
+#           FCU reports a value as unavailable) instead of the human line. Used
+#           by battery_logger.sh. No trailing units; remaining has no % sign.
 #   device: FCU serial device   (default: /dev/fcu)
 #   baud:   serial baud rate     (default: 57600)
 # These defaults match core_launch.py's fcu_url (/dev/fcu:57600).
@@ -26,6 +29,12 @@
 # auto-select an interpreter that can import it. Override with FCU_BATTERY_PYTHON.
 
 set -eo pipefail
+
+FORMAT="human"
+if [ "${1:-}" = "--csv" ]; then
+    FORMAT="csv"
+    shift
+fi
 
 DEVICE="${1:-/dev/fcu}"
 BAUD="${2:-57600}"
@@ -64,11 +73,12 @@ if [ ! -e "$DEVICE" ]; then
 fi
 
 # --- read a live SYS_STATUS and print --------------------------------------
-exec "$PYTHON" - "$DEVICE" "$BAUD" <<'EOF'
+exec "$PYTHON" - "$DEVICE" "$BAUD" "$FORMAT" <<'EOF'
 import sys, time
 from pymavlink import mavutil
 
 device, baud = sys.argv[1], int(sys.argv[2])
+fmt = sys.argv[3] if len(sys.argv) > 3 else "human"
 m = mavutil.mavlink_connection(device, baud=baud)
 
 if not m.wait_heartbeat(timeout=10):
@@ -93,7 +103,13 @@ if s is None:
     sys.exit("error: heartbeat seen but no live SYS_STATUS within 3s (FCU off, or port contended?)")
 
 volts = s.voltage_battery / 1000.0            # mV -> V
-amps = "n/a" if s.current_battery == -1 else f"{s.current_battery / 100.0:.1f} A"
-remaining = "n/a" if s.battery_remaining == -1 else f"{s.battery_remaining}%"
-print(f"{volts:.2f} V  (current: {amps}, remaining: {remaining})")
+if fmt == "csv":
+    # Empty (not "n/a") when unavailable, so the CSV column is cleanly blank.
+    amps = "" if s.current_battery == -1 else f"{s.current_battery / 100.0:.1f}"
+    remaining = "" if s.battery_remaining == -1 else f"{s.battery_remaining}"
+    print(f"{volts:.2f},{amps},{remaining}")
+else:
+    amps = "n/a" if s.current_battery == -1 else f"{s.current_battery / 100.0:.1f} A"
+    remaining = "n/a" if s.battery_remaining == -1 else f"{s.battery_remaining}%"
+    print(f"{volts:.2f} V  (current: {amps}, remaining: {remaining})")
 EOF
