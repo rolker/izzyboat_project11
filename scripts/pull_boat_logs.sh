@@ -32,13 +32,13 @@
 #
 # Usage:
 #   pull_boat_logs.sh [HOST ...] [options]
-#   pull_boat_logs.sh                 # all hosts, auto-detect link
+#   pull_boat_logs.sh                 # all hosts over WiFi (default)
 #   pull_boat_logs.sh gabby           # just gabby
 #   pull_boat_logs.sh gabby -n        # dry run (show what would transfer)
 #   pull_boat_logs.sh mercat --link wireguard --bwlimit 250k
 #
 # Options:
-#   --link {wifi|wireguard|auto}   path to use (default: auto — first reachable)
+#   --link {wifi|wireguard|auto}   path to use (default: wifi; auto = first reachable)
 #   --bwlimit RATE     rsync --bwlimit (e.g. 500k, 1m). Overrides per-link default.
 #   --dest DIR         destination root (default: $HOME/data/logs)
 #   --ros-log          also pull ~/.ros/log from Linux hosts (off by default)
@@ -84,7 +84,7 @@ LINK_ORDER=(wifi wireguard)
 declare -A DEFAULT_BWLIMIT=( [wifi]="" [wireguard]=500k )
 
 # --------------------------------------------------------------------------
-LINK=auto
+LINK=wifi
 BWLIMIT_OVERRIDE=""
 BWLIMIT_SET=0
 DEST_ROOT="$HOME/data/logs"
