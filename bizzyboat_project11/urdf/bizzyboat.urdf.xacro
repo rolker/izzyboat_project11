@@ -8,6 +8,7 @@
   <xacro:include filename="$(find bizzyboat_project11)/urdf/sensors/camera_oak.xacro"/>
   <xacro:include filename="$(find bizzyboat_project11)/urdf/sensors/gnss.xacro"/>
   <xacro:include filename="$(find bizzyboat_project11)/urdf/sensors/sonar.xacro"/>
+  <xacro:include filename="$(find bizzyboat_project11)/urdf/sensors/sidescan.xacro"/>
 
   <!-- ========== Hull ========== -->
   <!-- base_link origin: center screw hole in hull floor, near CofG.
@@ -243,5 +244,17 @@
        a patch test. -->
   <xacro:m3_multibeam parent="bizzy/base_link" name="m3"
     x="-0.23" y="0.0" z="-0.145"/>
+
+  <!-- ========== Garmin GCV-20 Sidescan ========== -->
+  <!-- Centered, ~0.15 m forward of base_link, flush against the hull underside.
+       z = -0.30 is the flat hull bottom (hull depth 0.30 below the deck/base_link
+       plane per scripts/generate_hull_mesh.py). The garmin_sidescan driver stamps
+       each channel image with a per-channel frame_id — the base frame_id param
+       ("bizzy/garmin_sidescan", set in launch/sidescan_launch.py) plus a channel
+       suffix, giving "bizzy/garmin_sidescan_down/_port/_starboard"; this macro
+       supplies the matching TF frames.
+       Offsets are approximate — confirm by measurement. -->
+  <xacro:garmin_sidescan parent="bizzy/base_link" name="garmin_sidescan"
+    x="0.15" y="0.0" z="-0.30"/>
 
 </robot>

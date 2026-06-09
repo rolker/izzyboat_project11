@@ -14,7 +14,9 @@ LAN; install it as a Windows service with the sibling
 
 Transmit is OFF at startup and interlocked on a valid sound speed
 (``/bizzy/sensors/sound_speed/sound_speed``, published by sound_speed_launch.py).
-TF frames for the channels come from ben_description (garmin_sidescan_*).
+TF frames for the channels (bizzy/garmin_sidescan, _down/_port/_starboard) come
+from BizzyBoat's URDF (urdf/sensors/sidescan.xacro), published by
+robot_state_publisher.
 
 For the first wet run, set ``debug_raw:=true`` to also record the raw GCV streams
 (needed for the offline depth-field decode that the imagery alone can't verify).
