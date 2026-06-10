@@ -399,15 +399,19 @@
       - /bizzy/sensors/m3/detections
       # Garmin GCV-20 sidescan (on by default; absent if core_launch sidescan:=false).
       # Decoded per-channel imagery + latched control/status. debug/raw_status
-      # carries the GCV :50050 status stream (incl. the unverified depth field);
-      # it is only published when the driver runs with debug_raw:=true, recorded
-      # here so the first wet run captures it for the offline depth decode.
+      # carries the GCV :50050 status stream (incl. the unverified depth field)
+      # and debug/raw_config the chartplotter :51000 CDP config (the active range
+      # under auto-range); both are only published when the driver runs with
+      # debug_raw:=true and the mercat proxy relays :50050/:51000 (marine_tools#28),
+      # recorded here so the first wet run captures them for the offline
+      # depth + range/sample-rate decode.
       - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_port
       - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_starboard
       - /bizzy/sensors/sidescan/garmin_sidescan/sonar_image_down
       - /bizzy/sensors/sidescan/garmin_sidescan/state
       - /bizzy/sensors/sidescan/garmin_sidescan/status
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_status
+      - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_config
       # Sound-speed for bathy correction in post-processing.
       - /bizzy/sensors/sound_speed/sound_speed
       # SBG INS for sonar motion compensation + georeferencing.
