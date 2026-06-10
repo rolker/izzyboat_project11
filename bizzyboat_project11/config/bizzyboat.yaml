@@ -390,12 +390,12 @@
       - /diagnostics
       - /bizzy/odom
       - /bizzy/robot_description
-      - /bizzy/sensors/deltat/soundings
+      # - /bizzy/sensors/deltat/soundings   # temporarily dead (DeltaT not
+      #   installed) — records nothing; commented out, re-enable when it returns.
       # M3 multibeam: detections are the first/rawest ROS product
       # (kongsberg_em_bridge -> detections -> soundings -> CUBE grid).
       # Logging detections lets soundings + grid be re-derived offline by
-      # replaying through the pipeline. NOTE: deltat above is the
-      # decommissioned sonar (records nothing) — clean up at wrap-up.
+      # replaying through the pipeline.
       - /bizzy/sensors/m3/detections
       # Garmin GCV-20 sidescan (on by default; absent if core_launch sidescan:=false).
       # Decoded per-channel imagery + latched control/status. debug/raw_status
