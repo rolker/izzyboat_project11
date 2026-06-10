@@ -211,10 +211,20 @@ for host in "${HOSTS[@]}"; do
     dest="$DEST_ROOT/$host/$label"
     printf -- '-> %s:%s/  ==>  %s/  (bwlimit=%s)\n' "$target" "$src" "$dest" "${bw:-none}"
     if rsync "${arch[@]}" "${common[@]}" "${extra[@]}" -e "$ssh_cmd" "$target:$src/" "$dest/"; then
-      :
+      rs=0
     else
-      err "$host: rsync of '$src' failed (exit $?)"; rc=1
+      rs=$?
     fi
+    # 23/24 are partial-transfer codes, NOT failures: live acquisition (QINSy)
+    # holds the current file open/locked (23 = unreadable) or keeps writing it
+    # (24 = vanished/changed mid-read). rsync transfers every closed/done file
+    # and skips the busy one; --partial keeps any progress so a later run (after
+    # QINSy closes it) completes it. Treat as a warning, don't fail the run.
+    case "$rs" in
+      0) : ;;
+      23|24) err "$host: '$src' partial (rsync $rs) — some files still being written/locked by acquisition; done files transferred, busy ones will sync on a later run" ;;
+      *) err "$host: rsync of '$src' failed (exit $rs)"; rc=1 ;;
+    esac
   done < <(host_sources "$host")
 done
 
