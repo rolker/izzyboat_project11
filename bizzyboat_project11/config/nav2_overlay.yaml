@@ -171,3 +171,14 @@ controller_server:
       # avoid_speed 0.0 = no slowdown through the manoeuvre (controller default
       # speed). Off for v1; enable + tune on the water if a slowdown is wanted.
       avoid_speed: 0.0
+      # Inner-crabbing cross-track slew limiter (rolker/unh_marine_navigation#66
+      # first cut, PR #75; enabled per #253). Caps how fast the cross-track error
+      # fed to the PID may change, so replan/reshape reference steps — the #250
+      # zig-zag trigger — ramp in instead of slamming the helm. Node default is
+      # 0.0 = disabled; 3.0 m/s sits above genuine lateral drift (~boat speed)
+      # but well below an instantaneous replan step. NB the limiter also ramps
+      # re-acquisition from a large offset (mission start far off the line, big
+      # avoidance excursion) at this same rate — don't set it low. Live-tunable:
+      # `ros2 param set /bizzy/controller_server FollowPath.cross_track_error_slew_rate 0.0`
+      # is the instant revert hatch.
+      cross_track_error_slew_rate: 3.0
