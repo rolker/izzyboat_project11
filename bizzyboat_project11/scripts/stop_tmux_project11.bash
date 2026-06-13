@@ -3,8 +3,11 @@
 # Gracefully stop the project11 tmux session.
 # Works for both boat-side and operator-side sessions.
 # Sends SIGINT to each window, verifies exit, then kills the session.
+#
+# Usage: stop_tmux_project11.bash [session]   (default: project11)
+#        e.g. stop_tmux_project11.bash camera_test
 
-SESSION="project11"
+SESSION="${1:-project11}"
 SHUTDOWN_TIMEOUT=10  # seconds to wait per window after Ctrl-C
 
 if ! /usr/bin/tmux has-session -t "$SESSION" 2>/dev/null; then
