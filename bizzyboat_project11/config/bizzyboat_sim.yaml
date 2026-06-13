@@ -1,0 +1,45 @@
+# Sim overlay for BizzyBoat — applied only under is_simulator by
+# bizzyboat_sim_core_launch.py, on top of bizzyboat.yaml. Holds ONLY the
+# deltas from the field config. Never duplicate planner/costmap config here:
+# that stays in nav2_overlay.yaml (the single source of truth, loaded by
+# nav_launch.py). Mirrors ben_project11/config/ben_sim.yaml.
+
+# In sim there is no mavros/FCU or SBG INS; asv_sim publishes the platform's
+# nav on sensors/nav/{orientation,position,velocity} (sim_robot_launch.py
+# remaps asv_sim's position/orientation/velocity outputs there). Redirect the
+# nav consumers from the mavros sources in bizzyboat.yaml to those topics.
+# (Leaving the base 'mru' sensor defined but unselected is intentional — only
+# sensor_names is switched, matching ben_sim.yaml.)
+/**/mru_transform:
+  ros__parameters:
+    sensors:
+      nav:
+        topics:
+          orientation: "sensors/nav/orientation"
+          position: "sensors/nav/position"
+          velocity: "sensors/nav/velocity"
+    sensor_names:
+    - nav
+
+/**/platform_sender:
+  ros__parameters:
+    nav:
+      source_names:
+        - nav
+      sources:
+        nav:
+          topics:
+            orientation: "sensors/nav/orientation"
+            position: "sensors/nav/position"
+            velocity: "sensors/nav/velocity"
+
+# NOTE: a sim chart-layer tide_invalidate_threshold override (as ben_sim.yaml
+# carries) is intentionally NOT set here. This overlay is applied via
+# SetParametersFromFile inside the core launch's namespace GroupAction, but nav2
+# is included as a sibling outside that scope and loads its costmap params via
+# its own RewrittenYaml chain (nav2_params.base + model + nav2_overlay) — so a
+# /**/{local,global}_costmap override placed here would never reach the costmap
+# nodes. It is also moot at Lake Massabesic, which has no ENC coverage (the
+# chart_layer is inert). If a sim tide-threshold is ever needed, it belongs in
+# the nav2 param chain via nav_launch.py's instance_params, not here.
+# (ben_sim.yaml has the same latent sibling-scope issue — tracked separately.)
