@@ -7,8 +7,10 @@
 # Usage:  crop_screenshooter.sh <YYYY-MM-DD> [region]
 #   region = a named preset (default: middle) or a raw ffmpeg crop "w:h:x:y".
 #
-# Presets (tuned to the 3840x5760 3-monitor stack; re-check per deployment if
-# the operator monitor layout changes):
+# Presets are tuned to BIZZYBOAT's operator monitor layout (3840x5760 3-monitor
+# stack). The screenshooter is reused on other platforms with DIFFERENT layouts,
+# so on those pass a raw w:h:x:y crop instead. Re-check per deployment if the
+# monitor arrangement changes.
 #   middle      annunciator + CAMP/chart + camera grid + segmentation + the
 #               bottom sidescan waterfall (terminals flank it). 3840:2250:0:2000
 #   top-middle  the above PLUS the top screen above it.            3840:4250:0:0
@@ -21,8 +23,12 @@ set -euo pipefail
 
 DATE="${1:?usage: crop_screenshooter.sh <YYYY-MM-DD> [region]}"
 REGION="${2:-middle}"
+[[ -n "${2:-}" ]] || echo "note: default region 'middle' is bizzyboat-specific; pass a region or w:h:x:y for other platforms" >&2
 FPS=2
-UTC_OFFSET_HOURS=-4   # EDT (June). Use -5 for EST outside DST.
+# Local timezone for the burned label. Default EDT (June DST). For EST set
+# both: UTC_OFFSET_HOURS=-5 LOCAL_TZ=EST so offset and label stay consistent.
+UTC_OFFSET_HOURS="${UTC_OFFSET_HOURS:--4}"
+LOCAL_TZ="${LOCAL_TZ:-EDT}"
 
 # --- resolve region preset -> ffmpeg crop w:h:x:y ---
 case "$REGION" in
@@ -45,9 +51,9 @@ OUT="$OUTDIR/operator_${DATE}_${TAG}_ts.mp4"
 mkdir -p "$OUTDIR"
 
 # --- ASS subtitle from CSV (explicit PlayRes -> predictable font size) ---
-python3 - "$CSV" "$ASS" "$FPS" "$UTC_OFFSET_HOURS" "$CROP" <<'PY'
+python3 - "$CSV" "$ASS" "$FPS" "$UTC_OFFSET_HOURS" "$CROP" "$LOCAL_TZ" <<'PY'
 import csv, sys, datetime
-csvpath, asspath, fps, off, crop = sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]), sys.argv[5]
+csvpath, asspath, fps, off, crop, tzlabel = sys.argv[1], sys.argv[2], float(sys.argv[3]), int(sys.argv[4]), sys.argv[5], sys.argv[6]
 w, h = crop.split(":")[0], crop.split(":")[1]
 frame_s = 1.0 / fps
 def ass_t(t):
@@ -70,12 +76,21 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
 with open(asspath, "w") as f:
     f.write(hdr)
+    written = 0
     for i, row in enumerate(rows):
-        dt = datetime.datetime.strptime(row["timestamp"], "%Y-%m-%dT%H-%M-%S")
+        try:
+            dt = datetime.datetime.strptime(row["timestamp"], "%Y-%m-%dT%H-%M-%S")
+        except (ValueError, KeyError) as e:
+            print(f"skip row {i}: bad timestamp {row.get('timestamp')!r} ({e})", file=sys.stderr)
+            continue
+        # Place each event at its true frame position (the CSV's frame_index),
+        # not the row ordinal, so a dropped frame can't silently desync times.
+        fi = int(row.get("frame_index", i))
         loc = dt + datetime.timedelta(hours=off)
-        text = f"{dt:%Y-%m-%d %H:%M:%S} UTC ({loc:%H:%M:%S} EDT)"
-        f.write(f"Dialogue: 0,{ass_t(i*frame_s)},{ass_t((i+1)*frame_s)},ts,,0,0,0,,{text}\n")
-print(f"wrote {len(rows)} ASS events -> {asspath}")
+        text = f"{dt:%Y-%m-%d %H:%M:%S} UTC ({loc:%H:%M:%S} {tzlabel})"
+        f.write(f"Dialogue: 0,{ass_t(fi*frame_s)},{ass_t((fi+1)*frame_s)},ts,,0,0,0,,{text}\n")
+        written += 1
+print(f"wrote {written} ASS events -> {asspath}")
 PY
 
 # --- crop + burn timestamp + re-encode ---
