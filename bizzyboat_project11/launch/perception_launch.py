@@ -156,7 +156,15 @@ def generate_launch_description():
                                         'camera_name': 'usb_camera',
                                         'framerate': 5.0,
                                         'image_width': 640,
-                                        'image_height': 360,
+                                        # Device ("HD USB Camera", /dev/video0)
+                                        # offers MJPG at 640x480 but NOT 640x360.
+                                        # Requesting an unsupported 360 made the
+                                        # driver fall back to 640x480 capture
+                                        # while still framing for 360 -> mjpeg2rgb
+                                        # produced all-zero (pure black) buffers.
+                                        # 480 matches a supported mode. (v4l2-ctl
+                                        # --list-formats-ext on gabby, 2026-06-03)
+                                        'image_height': 480,
                                         'frame_id': 'bizzy/usb_camera_optical',
                                         'pixel_format': 'mjpeg2rgb',
                                     }],
