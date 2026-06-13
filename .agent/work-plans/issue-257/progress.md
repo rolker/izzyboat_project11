@@ -23,3 +23,10 @@ no duplicate keys, QoS best_effort matches, YAML valid, recorder script bash -n 
 - [ ] (suggestion) WiFi sidescan imagery adds ~150 KB/s (~10% of the 1.5 MB/s budget) alongside the camera streams; the bridge's drop-fairness under saturation isn't expressed in config. Kept full-rate (operator explicitly wants live imagery; safety topics are tiny). Flagged in the PR for Roland's link-budget call — easy knob is a per-topic `period` on the wifi imagery if margin is tight.
 
 Out of scope (pre-existing): the sonar_logger comment says "GCV-20" while the fleet uses GCV-10/20 — unrelated to this diff.
+
+### Update 2026-06-13 11:40 — VPN sidescan at full rate
+Operator field-tested both sidescan channels at full rate over the VPN/OTH link
+without issue, resolving the WiFi-bandwidth flag above. Bridged sidescan_port +
+sidescan_starboard on the VPN connection too (full rate). Water-column (down)
+channel stays WiFi-only (outside the field test). Bridge list/map consistency
+re-verified (wifi 51/51, vpn 40/40).
