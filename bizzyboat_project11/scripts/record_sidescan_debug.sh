@@ -44,6 +44,8 @@ TOPICS=(
     "${NODE}/sonar_image_down"
     "${NODE}/sonar_image_port"
     "${NODE}/sonar_image_starboard"
+    "${NODE}/nadir_depth"
+    "${NODE}/water_temperature"
     "${NODE}/state"
     "${NODE}/status"
     "${NODE}/transmitting"
