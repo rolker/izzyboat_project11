@@ -7,13 +7,28 @@
 local_costmap:
   local_costmap:
     ros__parameters:
+      # Coarsened grid for bizzyboat 2026-06-12: base is 0.25 m / 400 m
+      # (1600x1600 = 2.56M cells @ 5 Hz). The 4-OAK sea_surface_layer raytracing
+      # over that grid pegged controller_server at ~169% CPU and the control loop
+      # could not hold 5 Hz (continuous "missed control rate" warnings). 0.5 m /
+      # 350 m (700x700 = 0.49M cells, ~5x fewer) dropped it to ~79%. Trade-off:
+      # coarser obstacle placement and ~25 m less look-ahead per side — acceptable
+      # at survey speed. Applied live first, persisted here for relaunch durability.
+      resolution: 0.5
+      width: 350
+      height: 350
       # 4-OAK sea_surface segmentation rig. Deep-merge replaces lists wholesale, so this
-      # list restates the base's chart_layer + inflation_layer (they are NOT dropped) and
-      # adds the single multi-source sea_surface layer between them. The four cameras
-      # all feed one shared persistent log-odds buffer (see rolker/unh_marine_perception#19),
-      # so an obstacle in the FOV overlap accumulates evidence from every camera that
-      # sees it and survives the handoff between camera views.
-      plugins: ["chart_layer", "sea_surface_layer", "inflation_layer"]
+      # list restates the base's inflation_layer and adds the single multi-source
+      # sea_surface layer. The four cameras all feed one shared persistent log-odds
+      # buffer (see rolker/unh_marine_perception#19), so an obstacle in the FOV overlap
+      # accumulates evidence from every camera that sees it and survives the handoff
+      # between camera views.
+      # chart_layer (base's s57_layer::S57Layer) commented out for bizzyboat 2026-06-12
+      # per operator; the base's chart_layer config block stays defined but unreferenced.
+      plugins:
+        # - "chart_layer"
+        - "sea_surface_layer"
+        - "inflation_layer"
       sea_surface_layer:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
         enabled: true
@@ -68,6 +83,19 @@ local_costmap:
         # rolker/seafloor_echoboat_project11#35) so Smac plans around buoys too.
         # Empty-string would disable the publication.
         published_topic: <robot_namespace>/sea_surface/lethal_grid
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      # chart_layer commented out for bizzyboat 2026-06-12 per operator. The base
+      # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
+      # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
+      # lists wholesale, so this restates that list minus chart_layer. The base's
+      # chart_layer config block stays defined but unreferenced (harmless).
+      plugins:
+        # - "chart_layer"
+        - "sea_surface_relay"
+        - "inflation_layer"
 
 collision_monitor:
   ros__parameters:
