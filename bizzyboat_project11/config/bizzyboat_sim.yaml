@@ -33,17 +33,13 @@
             position: "sensors/nav/position"
             velocity: "sensors/nav/velocity"
 
-# Sim runs tide ~10x real-time (tide_speed_factor=10), so the field-appropriate
-# 1 cm chart-layer tide_invalidate_threshold fires ~10x as often. 5 cm restores
-# a roughly real-time-equivalent invalidation cadence and avoids costmap-stall
-# planner aborts. (Mirrors ben_sim.yaml; requires rolker/s57_tools#17. Harmless
-# where no ENC coverage exists, e.g. Lake Massabesic.)
-/**/local_costmap/local_costmap:
-  ros__parameters:
-    chart_layer:
-      tide_invalidate_threshold: 0.05
-
-/**/global_costmap/global_costmap:
-  ros__parameters:
-    chart_layer:
-      tide_invalidate_threshold: 0.05
+# NOTE: a sim chart-layer tide_invalidate_threshold override (as ben_sim.yaml
+# carries) is intentionally NOT set here. This overlay is applied via
+# SetParametersFromFile inside the core launch's namespace GroupAction, but nav2
+# is included as a sibling outside that scope and loads its costmap params via
+# its own RewrittenYaml chain (nav2_params.base + model + nav2_overlay) — so a
+# /**/{local,global}_costmap override placed here would never reach the costmap
+# nodes. It is also moot at Lake Massabesic, which has no ENC coverage (the
+# chart_layer is inert). If a sim tide-threshold is ever needed, it belongs in
+# the nav2 param chain via nav_launch.py's instance_params, not here.
+# (ben_sim.yaml has the same latent sibling-scope issue — tracked separately.)
