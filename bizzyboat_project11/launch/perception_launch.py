@@ -167,6 +167,26 @@ def generate_launch_description():
                                         'image_height': 480,
                                         'frame_id': 'bizzy/usb_camera_optical',
                                         'pixel_format': 'mjpeg2rgb',
+                                        # ffmpeg_image_transport (3.0.2) encoder
+                                        # config for the image_raw/ffmpeg topic.
+                                        # Unlike the OAKs (H.265 on-device via the
+                                        # depthai VideoEncoder), this generic UVC
+                                        # cam has no onboard encoder, so we encode
+                                        # H.265 in software on the host. CPU cost
+                                        # is negligible at 640x480 @ 5 fps. Mirrors
+                                        # the OAK 800 kbps budget; gop_size 41 is
+                                        # coprime with the OAK keyframe intervals
+                                        # (23/29/31/37) so its IDR bursts don't
+                                        # coincide with theirs on the uplink.
+                                        # Alternative for host-GPU offload:
+                                        # encoding 'hevc_nvenc'. NEEDS a camera
+                                        # relaunch + `ros2 topic bw` on the
+                                        # image_raw/ffmpeg topic to verify encode
+                                        # + measure real bandwidth (see 06-03
+                                        # libx264 init failure).
+                                        'image_raw.ffmpeg.encoding': 'libx265',
+                                        'image_raw.ffmpeg.bit_rate': 800000,
+                                        'image_raw.ffmpeg.gop_size': 41,
                                     }],
                                     emulate_tty=True
                                 ),
