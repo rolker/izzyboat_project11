@@ -48,12 +48,12 @@ def generate_launch_description():
                         # (23/29/31/37) so its IDR bursts don't
                         # coincide with theirs on the uplink.
                         # Alternative for host-GPU offload:
-                        # encoding 'hevc_nvenc'. NEEDS a camera
-                        # relaunch + `ros2 topic bw` on the
-                        # image_raw/ffmpeg topic to verify encode
-                        # + measure real bandwidth (see 06-03
-                        # libx264 init failure).
-                        'image_raw.ffmpeg.encoding': 'libx265',
+                        # encoder 'hevc_nvenc'. (Param names
+                        # verified against the live node:
+                        # ffmpeg_image_transport's publisher param
+                        # is `encoder`, NOT `encoding` -- the latter
+                        # is the FFMPEGPacket message field.)
+                        'image_raw.ffmpeg.encoder': 'libx265',
                         'image_raw.ffmpeg.bit_rate': 800000,
                         'image_raw.ffmpeg.gop_size': 41,
                     }],
