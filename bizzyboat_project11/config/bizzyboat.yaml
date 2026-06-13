@@ -227,6 +227,8 @@
             - mavros_velocity_body
             - tf
             - tf_static
+            - sidescan_port
+            - sidescan_starboard
             - sidescan_nadir_depth
             - sidescan_water_temperature
             topics:
@@ -285,11 +287,13 @@
               mavros_velocity_body: {source: mavros/local_position/velocity_body}
               tf: {source: /tf}
               tf_static: {source: /tf_static}
-              # Sidescan depth + temperature scalars only on the constrained VPN
-              # link (both tiny); the RawSonarImage imagery is WiFi-only — too
-              # heavy for the lossy OTH budget, like the camera overlays above.
-              # Nadir depth throttled to 1 Hz (operator depth readout doesn't
-              # need the per-ping rate); temperature is already ~0.7 Hz.
+              # Sidescan port/stbd imagery at full rate on the VPN too — field-
+              # tested at full rate over the OTH link without issue (2026-06-13).
+              # The water-column (down) channel stays WiFi-only. Nadir depth
+              # throttled to 1 Hz (operator readout doesn't need the per-ping
+              # rate); temperature is already ~0.7 Hz; both tiny.
+              sidescan_port: {source: sensors/sidescan/garmin_sidescan/sonar_image_port, queue_size: 50}
+              sidescan_starboard: {source: sensors/sidescan/garmin_sidescan/sonar_image_starboard, queue_size: 50}
               sidescan_nadir_depth: {source: sensors/sidescan/garmin_sidescan/nadir_depth, period: 1.0}
               sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
 
