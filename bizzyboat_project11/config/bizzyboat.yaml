@@ -360,6 +360,12 @@
       # the head is dry; the regex matches it). Parse failures → NaN.
       # See unh_echoboats_project11#104 wrap-up + marine_tools#7.
       - /bizzy/sensors/sound_speed/sound_speed
+      # Garmin transducer water temperature + nadir bottom range — small scalars,
+      # kept in the main bag (alongside sound_speed) so the sound-speed/depth
+      # cross-check is self-contained here, not only in the sonar bag (#270;
+      # follow-up to #257 which only added these to sonar_logger + the bridge).
+      - /bizzy/sensors/sidescan/garmin_sidescan/water_temperature
+      - /bizzy/sensors/sidescan/garmin_sidescan/nadir_depth
       - /bizzy/udp_bridge/bridge_info
       - /bizzy/udp_bridge/topic_statistics
       - /bizzy/udp_bridge/remotes/operator/bridge_info
