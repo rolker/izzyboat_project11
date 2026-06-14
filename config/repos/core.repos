@@ -7,6 +7,10 @@ repositories:
     type: git
     url: git@gitcloud:field/marine_ais.git
     version: jazzy
+  marine_control:
+    type: git
+    url: git@gitcloud:field/marine_control.git
+    version: jazzy
   udp_bridge:
     type: git
     url: git@gitcloud:field/udp_bridge.git
