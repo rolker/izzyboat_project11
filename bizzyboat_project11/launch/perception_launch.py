@@ -205,6 +205,14 @@ def generate_launch_description():
                                     launch_arguments={
                                         'name': 'segments_to_pointcloud_reflex',
                                         'target_frame': 'bizzy/base_link_level',
+                                        # Reflex confidence floor: drop low-
+                                        # confidence returns (calm-water
+                                        # reflections ~0.55) so the e-stop reacts
+                                        # to real obstacles (buoys/pots 0.85+).
+                                        # "Balanced" default; raise to ~0.75 on
+                                        # glassy water via ros2 param set. See
+                                        # unh_marine_perception#35/#37/#34.
+                                        'obstacle_prob_min': '0.60',
                                     }.items()
                                 ),
                             ]
