@@ -76,6 +76,74 @@ Two reading rules for the rest of this document:
 - Anything still open that needs on-water evidence is tagged **"harvest from
   production"** — make sure it's recorded, then mine the operational bags.
 
+## 2026-06-15 update — Massabesic survey window: shakedown findings + infrastructure wave
+
+The survey window has opened. The 2026-06-07 "no more dev experiments" framing held
+for the *boat* but not for *dev*: the first Massabesic student-ops shakedown
+(**2026-06-12**) produced the harvest data, and 06-12 → 06-15 saw a large wave of
+**parallel-driver infrastructure** land — none survey-blocking, most of it the
+foundations for the next season.
+
+### 2026-06-12 Massabesic shakedown — findings (the harvest)
+- **Planning degraded by the chart layer.** At the lake the ENC charts no bathy but
+  charts the surrounding land, so s57 reads the whole lake as lethal land → the
+  planner could only plan inside the local costmap window. The field workaround
+  **disabled `chart_layer`** (imported as [`#263`](https://github.com/rolker/unh_echoboats_project11/pull/263),
+  interim). Real fix = the **chart/bathy costmap** thread below. Headline operational item.
+- **Sound speed validated.** The AML-SVS `sound_speed` (~1505 m/s) was independently
+  confirmed by the Garmin transducer **water temp 26.8 °C** (→ ~1501 m/s; 0.26 % —
+  negligible). No depth bias; surface water was genuinely warm.
+- **Recording hardened.** Garmin `water_temperature`/`nadir_depth` now publish
+  (rolker/marine_tools#37/#38) and record in **both** the sonar bag ([`#258`](https://github.com/rolker/unh_echoboats_project11/pull/258))
+  and the **main deployment bag** ([`#271`](https://github.com/rolker/unh_echoboats_project11/pull/271)) + bridged ([`#257`](https://github.com/rolker/unh_echoboats_project11/issues/257)).
+- **Generated bathy validated** vs Friday's M3 (nadir depths in range; mean 5.25 m =
+  published 17 ft avg) — but the store **chart layer was ingested surface-relative**,
+  not ellipsoidal; needs **re-import with `depth_offset ≈ +52.3 m`** (measured lake
+  surface from RTK — see rolker/unh_marine_autonomy#86).
+
+### Landed 06-12 → 06-15 (parallel-driver wave)
+- **marine_control — device-control framework, essentially complete.** Bridge-correct
+  (topics-only) view/set of device settings topside: msgs (rolker/marine_control#2),
+  C++ + Python libs (#4/#9), ADR-0003 (rolker/unh_marine_autonomy#150) + D7 self-configuring
+  bridge (#160), generic rqt widgets/plugin (rolker/rqt_operator_tools#57), **sidescan
+  adopter** (rolker/marine_tools#40: transmit + range), manifests on all 3 machines
+  (#155 / [`#269`](https://github.com/rolker/unh_echoboats_project11/pull/269) / CCOMJHC/ccomjhc_project11#72).
+  *Remaining adopters: segmentation→costmap, e-stop.*
+- **Bathymetric data store** (rolker/unh_marine_autonomy#86). ADR-0002 (#142) +
+  **multi-level / level-aware query** amendment (#153); per-tile GeoTIFF on GGGS,
+  ellipsoidal, content-hash sync. Phase-2 import in flight (#148). Feeds the chart/bathy
+  costmap + multibeam coverage in CAMP.
+- **Lake-datum support** — rolker/mru_transform#26 (polygon-keyed datum + `lake_datum`
+  override); Massabesic ellipsoidal surface measured at **52.3 m**.
+- **Unified perception Contact data model** — sensor- and kinematic-agnostic
+  (Autoware-pattern object + curation; `vision_msgs` as the observation layer projecting
+  up; AIS/radar stay their own types). Design rolker/unh_marine_autonomy#156 → message PR
+  #161; deprecates the legacy vessel `marine_interfaces/Contact` (CAMP already on
+  `marine_ais`; dead refs removed rolker/camp#94). Gates sidescan target-marking +
+  the contact manager (rolker/unh_marine_autonomy#157).
+- **Sidescan slant-range display** — rolker/rqt_operator_tools#60: water-column removal +
+  slant→ground + range lines + uniform ping scaling. Driver range/nadir/temp (marine_tools#36/#38).
+- **Lake Massabesic sim** — rolker/unh_marine_simulation#67/#70/#72/#74: boat + operator
+  station + asv_helm line-following + yaw_inertia + lake datum. The fast-iterate harness
+  for bathy/costmap/coverage work between field days.
+- **Reflex confidence floor** — `obstacle_prob_min` floor (rolker/unh_marine_perception#36/#38),
+  activated on BizzyBoat at **0.60** ([`#268`](https://github.com/rolker/unh_echoboats_project11/pull/268)); capability report (#33).
+
+### New threads now tracked
+- **Chart/bathy costmap — restore global planning.** Keep s57 for obstacles; add an
+  **ellipsoidal bathy costmap layer** (a new `bathymetry_geotiff_layer` / store-query
+  plugin) *ordered after s57*, overriding the lake-as-land. The datum trace showed the
+  override must be a **separate cost layer**, not a depth merged into s57 (chart-datum
+  vs ellipsoidal); the store unifies the GRANIT prior + cube survey in ellipsoidal.
+  **Consumer plugin still unowned — the top operational gap.** Coastal/ENC follow-up =
+  the **S57 split** (chart-bathy vs obstacles, obstacles applied last). Supersedes the
+  nav#63 "moot at the lake" read.
+- **Multibeam coverage in CAMP** — per-tile coverage from the tiled store (fixes the
+  monolithic-grid downlink); folds into *Sonar coverage surfaces in CAMP* below.
+- **Contact / target manager + sidescan marking** — CRUD store + CAMP rendering
+  (rolker/unh_marine_autonomy#157) consuming the Contact message (#161); the sidescan
+  box-draw marking (rolker/rqt_operator_tools#59) publishes into it.
+
 ## Survey readiness — what works, what blocks (2026-06-07)
 
 Where the system actually stands going into the survey, synthesized across the spring
