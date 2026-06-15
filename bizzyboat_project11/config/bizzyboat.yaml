@@ -430,6 +430,10 @@
     chart_datum_frame: bizzy/chart_datum
     base_frame: bizzy/base_link
     mhhw_frame: bizzy/chart_datum_mhhw
+    # Lake Massabesic (freshwater, no tidal signal, no VDatum coverage): fixed
+    # chart-datum override = lake datum height rel. WGS84 ellipsoid, metres
+    # (positive = above ellipsoid). Set 2026-06-15 for survey ops.
+    lake_datum: 52.3
 
 /**/sea_surface_estimator:
   ros__parameters:
