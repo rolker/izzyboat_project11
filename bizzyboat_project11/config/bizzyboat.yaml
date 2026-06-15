@@ -271,8 +271,9 @@
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, period: 1.0}
               # oak_segmentation_starboard_info / _raw not in VPN topics_list
               # (uplink budget — overlay only).
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: 1.0}
+              # Rear (oak_aft) camera off over VPN/Starlink, kept on wifi — operator 2026-06-15.
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100, period: -1.0}
+              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, period: -1.0}
               oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, period: 1.0}
               # oak_segmentation_port_info / _raw not in VPN topics_list
