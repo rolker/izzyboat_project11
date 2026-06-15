@@ -13,6 +13,7 @@ install(PROGRAMS
   scripts/start_tmux_project11.bash
   scripts/start_tmux_operator_project11.bash
   scripts/start_tmux_camera_test.bash
+  scripts/start_tmux_operator_bridge.bash
   scripts/stop_tmux_project11.bash
   scripts/gps_rtk_diagnostics_node.py
   scripts/ntrip_diagnostics_node.py
