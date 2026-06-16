@@ -139,22 +139,28 @@
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
               odom: {source: odom}
-              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed}
+              # Bridge subscription queue depths sized for fail-fresh under link
+              # saturation (#287): bulk best-effort streams kept shallow so a stalled
+              # link drops the stale backlog instead of delivering it ~30 s late.
+              # ffmpeg video=5 (retains a keyframe across a brief stall); compressed
+              # segmentation overlays=2 (independent frames); sidescan/watercolumn=25.
+              # Reliable control/telemetry left at the bridge default (10).
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, queue_size: 2}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
-              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 100}
-              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed}
+              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 2}
+              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, queue_size: 2}
               oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
-              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 100}
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed}
+              oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 2}
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, queue_size: 2}
               oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
-              oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0, queue_size: 100}
-              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed}
+              oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0, queue_size: 2}
+              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, queue_size: 2}
               oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
-              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 100}
+              oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 2}
               path_follower_visualization: {source: path_follower_visualization}
               # Survey-line obstacle-avoidance overlay (unh_marine_navigation#30) —
               # published only while deviating; small + intermittent, so unthrottled
@@ -182,14 +188,17 @@
               # and water temperature. Full rate on WiFi (~150 KB/s for the three
               # RawSonarImage channels); the rate limiter shares the budget with
               # the cameras. RawSonarImage is best_effort, like the camera streams.
-              sidescan_port: {source: sensors/sidescan/garmin_sidescan/sonar_image_port, queue_size: 50}
-              sidescan_starboard: {source: sensors/sidescan/garmin_sidescan/sonar_image_starboard, queue_size: 50}
-              watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 50}
+              sidescan_port: {source: sensors/sidescan/garmin_sidescan/sonar_image_port, queue_size: 25}
+              sidescan_starboard: {source: sensors/sidescan/garmin_sidescan/sonar_image_starboard, queue_size: 25}
+              watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 25}
               sidescan_nadir_depth: {source: sensors/sidescan/garmin_sidescan/nadir_depth}
               sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
 
           vpn:
-            maximum_bytes_per_second: 1000000
+            # Raised 20% (1.0 -> 1.2 MB/s) to absorb the port/stbd ffmpeg streams
+            # re-enabled on VPN below (period: -1.0 removed) without starving the
+            # other OTH streams that share this budget (#287).
+            maximum_bytes_per_second: 1200000
             topics_list:
             - battery
             - command_response
@@ -263,20 +272,21 @@
               # avoiding), so unthrottled like the overlay it pairs with.
               received_global_plan: {source: received_global_plan}
               odom: {source: odom}
-              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed}
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, queue_size: 2}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
-              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 100}
-              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 100, period: -1.0}
-              oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed}
+              oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 2}
+              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, queue_size: 2}
               # oak_segmentation_starboard_info / _raw not in VPN topics_list
               # (uplink budget — overlay only).
-              # All 4 cameras' segmentation on both links (full rate); side (port/stbd)
-              # RAW imagery (ffmpeg) stays wifi-only; front/rear ffmpeg on both — operator 2026-06-15.
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 100}
-              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed}
-              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 100, period: -1.0}
-              oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed}
+              # All 4 cameras' segmentation + ffmpeg on both links (full rate). Side
+              # (port/stbd) ffmpeg re-enabled on VPN here (period: -1.0 removed) so they
+              # match front/aft; VPN rate cap raised 20% to absorb it (#287, 2026-06-16).
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, queue_size: 2}
+              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
+              oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, queue_size: 2}
               # oak_segmentation_port_info / _raw not in VPN topics_list
               # (uplink budget — overlay only).
               battery: {source: /bizzy/mavros/battery}
@@ -288,16 +298,16 @@
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
               mavros_position_ekf: {source: mavros/global_position/global}
               mavros_velocity_body: {source: mavros/local_position/velocity_body}
-              tf: {source: /tf}
+              tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
               # Sidescan port/stbd + water-column (down) imagery at full rate on
               # the VPN too — field-tested over the OTH link without issue
               # (2026-06-13). Nadir depth throttled to 1 Hz (operator readout
               # doesn't need the per-ping rate); temperature is already ~0.7 Hz;
               # both tiny.
-              sidescan_port: {source: sensors/sidescan/garmin_sidescan/sonar_image_port, queue_size: 50}
-              sidescan_starboard: {source: sensors/sidescan/garmin_sidescan/sonar_image_starboard, queue_size: 50}
-              watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 50}
+              sidescan_port: {source: sensors/sidescan/garmin_sidescan/sonar_image_port, queue_size: 25}
+              sidescan_starboard: {source: sensors/sidescan/garmin_sidescan/sonar_image_starboard, queue_size: 25}
+              watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 25}
               sidescan_nadir_depth: {source: sensors/sidescan/garmin_sidescan/nadir_depth, period: 1.0}
               sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
 
