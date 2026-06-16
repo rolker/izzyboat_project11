@@ -144,25 +144,16 @@ def generate_launch_description():
                     actions=[
                         PushRosNamespace('sensors/cameras'),
 
-                        # USB camera
-                        GroupAction(
-                            actions=[
-                                PushRosNamespace('usb/'),
-                                Node(
-                                    package='usb_cam',
-                                    executable='usb_cam_node_exe',
-                                    name='usb_camera',
-                                    parameters=[{
-                                        'camera_name': 'usb_camera',
-                                        'framerate': 5.0,
-                                        'image_width': 640,
-                                        'image_height': 360,
-                                        'frame_id': 'bizzy/usb_camera_optical',
-                                        'pixel_format': 'mjpeg2rgb',
-                                    }],
-                                    emulate_tty=True
-                                ),
-                            ]
+                        # USB camera (definition shared with the cameras-only
+                        # test launch; edit usb_camera_launch.py, not here)
+                        IncludeLaunchDescription(
+                            PythonLaunchDescriptionSource(
+                                PathJoinSubstitution([
+                                    FindPackageShare('bizzyboat_project11'),
+                                    'launch',
+                                    'usb_camera_launch.py'
+                                ])
+                            ),
                         ),
 
                         # 4x OAK cameras
