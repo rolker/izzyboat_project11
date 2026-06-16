@@ -94,7 +94,11 @@ def generate_launch_description():
                     }.items()
                 ),
 
-                # Chart datum (MLLW vertical datum transform)
+                # Chart datum (MLLW vertical datum transform).
+                # Lake Massabesic datum comes from the polygon config
+                # (override:true entry, chart_datum_z = 48.88 m full-pool); no
+                # scalar lake_datum param is set, so the polygon is the live
+                # source (single source of truth, toward unh_marine_autonomy#163).
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution([
@@ -103,6 +107,13 @@ def generate_launch_description():
                             'chart_datum_launch.py'
                         ])
                     ),
+                    launch_arguments={
+                        'datum_config_path': PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'config',
+                            'massabesic_datum_polygons.yaml'
+                        ])
+                    }.items(),
                 ),
 
                 # MAVROS frame bridges (workaround)

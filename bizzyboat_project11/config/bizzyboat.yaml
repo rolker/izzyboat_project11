@@ -474,13 +474,12 @@
     chart_datum_frame: bizzy/chart_datum
     base_frame: bizzy/base_link
     mhhw_frame: bizzy/chart_datum_mhhw
-    # Lake Massabesic (freshwater, no tidal signal, no VDatum coverage): fixed
-    # chart-datum override = lake datum height rel. WGS84 ellipsoid, metres
-    # (positive = above ellipsoid). Full-pool value derived 2026-06-16 from
-    # in-water nav z: /bizzy/odom base_link 48.737 m + 0.030 m waterline =
-    # 48.767 m surface, + 0.114 m below-full gauge offset = 48.88 m full pool.
-    # Supersedes the provisional 52.3 (boat on the trailer, ~3.6 m high). See #278.
-    lake_datum: 48.88
+    # Lake Massabesic datum comes from the polygon config (override:true entry,
+    # chart_datum_z = 48.88 m full-pool WGS84 ellipsoidal) in
+    # config/massabesic_datum_polygons.yaml, wired via datum_config_path in
+    # core_launch.py. No scalar lake_datum here, so the polygon is the live
+    # source (single source of truth, toward unh_marine_autonomy#163). Datum
+    # derivation: #278.
 
 /**/sea_surface_estimator:
   ros__parameters:
