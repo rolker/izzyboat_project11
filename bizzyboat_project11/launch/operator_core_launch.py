@@ -27,10 +27,19 @@ def generate_launch_description():
         'enable_bridge', default_value='true'
     )
 
+    # Plumbs through to bag_recorder_operator_launch.py. Default true so
+    # deployment launches keep recording; pass record_diagnostics:=false
+    # to bring up the operator core without the bag recorder (bench/test).
+    record_diagnostics = LaunchConfiguration('record_diagnostics')
+    record_diagnostics_arg = DeclareLaunchArgument(
+        'record_diagnostics', default_value='true'
+    )
+
     return LaunchDescription([
         operator_namespace_arg,
         robot_namespace_arg,
         enable_bridge_arg,
+        record_diagnostics_arg,
         GroupAction(
             actions=[
                 PushRosNamespace(operator_namespace),
@@ -70,6 +79,9 @@ def generate_launch_description():
                     'bag_recorder_operator_launch.py'
                 ])
             ),
+            launch_arguments={
+                'record_diagnostics': record_diagnostics,
+            }.items()
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

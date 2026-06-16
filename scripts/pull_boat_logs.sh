@@ -195,7 +195,9 @@ for host in "${HOSTS[@]}"; do
     windows) arch=(-rlt --no-perms --no-owner --no-group --modify-window=1) ;;
     *)       err "$host: unknown os '$os'"; rc=1; continue ;;
   esac
-  common=(-h --partial --partial-dir=.rsync-partial --info=progress2 --mkpath)
+  # --info=progress2 = overall transfer progress; name1 = print each file as it
+  # transfers (per-file visibility). Together: filenames scroll by + a running total.
+  common=(-h --partial --partial-dir=.rsync-partial --info=progress2,name1 --mkpath)
   extra=()
   [[ "$link" != wifi ]] && extra+=(-z)          # compress on the thin VPN path
   [[ -n "$bw" ]]        && extra+=(--bwlimit="$bw")

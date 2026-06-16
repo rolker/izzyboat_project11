@@ -43,9 +43,12 @@ sleep 2
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_ui_launch.py" C-m
 
 # Johnny5 PTZ camera (axis) from molab_hardware
-/usr/bin/tmux new-window -t project11 -n johnny5
-/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
-/usr/bin/tmux send-keys "ros2 launch molab_hardware johnny5_launch.py" C-m
+# DISABLED 2026-06-15 (Lake Massabesic): Johnny5/mobile-lab not deployed at this
+# site; the boat's USB front camera is used instead. Re-enable when the mobile
+# lab / Johnny5 PTZ is present again.
+#/usr/bin/tmux new-window -t project11 -n johnny5
+#/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
+#/usr/bin/tmux send-keys "ros2 launch molab_hardware johnny5_launch.py" C-m
 
 # Screenshooter: full-screen captures into ~/data/logs/operator_raw/...
 # Ctrl-C in this window prompts to encode the day's PNGs to HEVC.
