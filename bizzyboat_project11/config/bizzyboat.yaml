@@ -476,8 +476,11 @@
     mhhw_frame: bizzy/chart_datum_mhhw
     # Lake Massabesic (freshwater, no tidal signal, no VDatum coverage): fixed
     # chart-datum override = lake datum height rel. WGS84 ellipsoid, metres
-    # (positive = above ellipsoid). Set 2026-06-15 for survey ops.
-    lake_datum: 52.3
+    # (positive = above ellipsoid). Full-pool value derived 2026-06-16 from
+    # in-water nav z: /bizzy/odom base_link 48.737 m + 0.030 m waterline =
+    # 48.767 m surface, + 0.114 m below-full gauge offset = 48.88 m full pool.
+    # Supersedes the provisional 52.3 (boat on the trailer, ~3.6 m high). See #278.
+    lake_datum: 48.88
 
 /**/sea_surface_estimator:
   ros__parameters:
