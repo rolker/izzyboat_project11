@@ -124,8 +124,26 @@ def generate_launch_description():
                                 'save_all_dir': PathJoinSubstitution([
                                     sonar_log_directory, 'm3_all'
                                 ]),
+                                # Prototype rollover: cap each .all segment at
+                                # 200 MB (about every ~12 min at the M3's
+                                # current rate) so files stay manageable. Set
+                                # save_all_max_seconds instead/also for
+                                # time-based splits; 0 = trigger off. NOTE:
+                                # split segments do not yet re-emit the
+                                # installation/SVP (I/73) datagrams at their
+                                # head, so a mid-stream file may not load
+                                # cleanly in Caris/Qimera (deferred).
+                                'save_all_max_bytes': 200000000,
+                                'save_all_max_seconds': 0.0,
                             }],
-                            emulate_tty=True
+                            emulate_tty=True,
+                            # Auto-restart like the boat's other UDP/serial
+                            # drivers (cameras, SBG, sidescan, ntrip,
+                            # sound_speed) so a transient bridge crash does not
+                            # silently kill M3 bathymetry. Respawn opens a fresh
+                            # .all segment (timestamped, never overwrites).
+                            respawn=True,
+                            respawn_delay=5.0,
                         ),
                         # detections_to_pointcloud reads "odom" for speed-over-
                         # ground; it lives outside this sensors/m3 namespace.
