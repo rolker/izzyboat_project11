@@ -1,0 +1,26 @@
+# Lake Massabesic polygon -> datum config for mru_transform's chart_datum_node.
+#
+# Wired via the `datum_config_path` param (set in core_launch.py). Resolution
+# order in the node: lake_datum param (if set) > override:true entry whose ring
+# contains the point > VDatum > override:false entry. The boat sets no
+# lake_datum param, so this override:true entry is the live source.
+#
+# chart_datum_z is the datum height rel. the WGS84 ellipsoid (metres, + = above).
+# Value 48.88 m (full-pool) derived 2026-06-16 from in-water nav z + waterline +
+# below-full gauge offset — see unh_echoboats_project11#278.
+#
+# Ring = the contour bathymetry raster (massabesic_bathy.tif, NAD83/UTM19N)
+# lat/lon extent padded ~0.005 deg (~0.5 km), covering the lake + buffer.
+# mhhw_z is intentionally omitted (freshwater, no tide): leaves the MHHW frame
+# unpublished so sea_surface_estimator's tide plausibility bound stays disabled
+# (#278). A point on a ring edge counts as inside.
+
+datum_polygons:
+  - name: "Lake Massabesic"
+    override: true
+    chart_datum_z: 48.88
+    ring:
+      - [43.0178, -71.4029]   # NW
+      - [43.0178, -71.3358]   # NE
+      - [42.9474, -71.3358]   # SE
+      - [42.9474, -71.4029]   # SW
