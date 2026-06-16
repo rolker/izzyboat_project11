@@ -111,6 +111,19 @@ def generate_launch_description():
                             parameters=[{
                                 'bind_port': 20002,
                                 'frame_id': 'bizzy/m3',
+                                # Archive the M3's raw Kongsberg EM stream as
+                                # genuine .all files (Caris/Qimera/MB-System)
+                                # alongside the sonar bags. Use an `m3_all`
+                                # subdir of the sonar-log base, NOT the bag's
+                                # own `<base>/<sonar_log_subdirectory>` dir:
+                                # the sonar_logger rosbag2 recorder errors if
+                                # its target dir pre-exists, and the bridge
+                                # makedirs its save dir -- so writing there (or
+                                # to that session parent) would race the bag.
+                                # `<base>/m3_all` is a collision-free sibling.
+                                'save_all_dir': PathJoinSubstitution([
+                                    sonar_log_directory, 'm3_all'
+                                ]),
                             }],
                             emulate_tty=True
                         ),
