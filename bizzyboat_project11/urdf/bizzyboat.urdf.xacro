@@ -129,6 +129,17 @@
     </visual>
   </link>
 
+  <!-- ========== Reference frames ========== -->
+  <!-- Measured water surface, 2026-06-15 Lake Massabesic: draft reference point
+       +0.180 m above base_link, waterline 0.150 m below that ref => waterline
+       +0.030 m above base_link (base_link sits ~30 mm below the surface). -->
+  <link name="bizzy/waterline"/>
+  <joint name="base_to_waterline" type="fixed">
+    <parent link="bizzy/base_link"/>
+    <child link="bizzy/waterline"/>
+    <origin xyz="0 0 0.030" rpy="0 0 0"/>
+  </joint>
+
 
   <!-- ========== Cameras (4x OAK-1 PoE) ========== -->
   <!-- Mounted at top of mast on 3D-printed bracket, 90deg apart.
@@ -246,15 +257,15 @@
     x="-0.23" y="0.0" z="-0.145"/>
 
   <!-- ========== Garmin GCV-20 Sidescan ========== -->
-  <!-- Centered, ~0.15 m forward of base_link, flush against the hull underside.
-       z = -0.30 is the flat hull bottom (hull depth 0.30 below the deck/base_link
+  <!-- Measured 2026-06-15 (Lake Massabesic): essentially centered (3 mm aft of
+       base_link), against the hull underside. z = -0.29 is the transducer face,
+       just above the flat hull bottom (hull depth ~0.30 below the deck/base_link
        plane per scripts/generate_hull_mesh.py). The garmin_sidescan driver stamps
        each channel image with a per-channel frame_id — the base frame_id param
        ("bizzy/garmin_sidescan", set in launch/sidescan_launch.py) plus a channel
        suffix, giving "bizzy/garmin_sidescan_down/_port/_starboard"; this macro
-       supplies the matching TF frames.
-       Offsets are approximate — confirm by measurement. -->
+       supplies the matching TF frames. -->
   <xacro:garmin_sidescan parent="bizzy/base_link" name="garmin_sidescan"
-    x="0.15" y="0.0" z="-0.30"/>
+    x="-0.003" y="0.0" z="-0.29"/>
 
 </robot>
