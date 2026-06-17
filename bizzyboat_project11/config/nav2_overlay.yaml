@@ -210,3 +210,22 @@ controller_server:
       # `ros2 param set /bizzy/controller_server FollowPath.cross_track_error_slew_rate 0.0`
       # is the instant revert hatch.
       cross_track_error_slew_rate: 3.0
+      # 2026-06-16 field tune (gabby): override the base FollowPath PID. The
+      # base p=-20 limit-cycles the line-follower at survey speeds >~3 kt — the
+      # cross-track loop gain scales with boat speed, so -20 sits past the
+      # stability margin above ~3 kt (sustained ~±1 m weave at 3.5 kt, output
+      # ±23). p=-13 restores margin: bounded ~±0.25 m, output ~±5, stable across
+      # 3.0-3.75 kt (boat saturates ~3.85 kt). d -0.6→-1.2 kept (operator
+      # preference; minor effect — the weave was over-gain, not under-damped).
+      # Proper fix is speed-normalised gains (gain scheduling) — see deployment
+      # log 2026-06-16 + wrap-up. Live-set during the session; banked here so it
+      # survives a nav relaunch. Other pid.* keys match the base.
+      pid:
+        p: -13.0
+        i: -0.5
+        d: -1.2
+        i_clamp_max: 30.0
+        i_clamp_min: -30.0
+        u_clamp_max: 90.0
+        u_clamp_min: -90.0
+        activate_state_publisher: true

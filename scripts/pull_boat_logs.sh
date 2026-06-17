@@ -199,7 +199,7 @@ for host in "${HOSTS[@]}"; do
   # transfers (per-file visibility). Together: filenames scroll by + a running total.
   common=(-h --partial --partial-dir=.rsync-partial --info=progress2,name1 --mkpath)
   extra=()
-  [[ "$link" != wifi ]] && extra+=(-z)          # compress on the thin VPN path
+  extra+=(-z)                                   # always compress: wifi links aren't always strong
   [[ -n "$bw" ]]        && extra+=(--bwlimit="$bw")
   [[ $DRY_RUN -eq 1 ]]  && extra+=(--dry-run)
   ssh_cmd="ssh -o ConnectTimeout=8"     # lean: key/user from ~/.ssh/config
