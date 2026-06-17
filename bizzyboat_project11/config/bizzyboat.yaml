@@ -237,6 +237,7 @@
             - mavros_velocity_body
             - tf
             - tf_static
+            - usb_camera
             - sidescan_port
             - sidescan_starboard
             - watercolumn_down
@@ -311,6 +312,11 @@
               watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 25}
               sidescan_nadir_depth: {source: sensors/sidescan/garmin_sidescan/nadir_depth, period: 1.0}
               sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
+              # USB camera on VPN at 0.5 Hz (2026-06-17 field tune, gabby): self-
+              # contained JPEG frames, period 2.0 s, queue_size 1 (fail-fresh). Baked
+              # from the in-session remote_advertise on the vpn connection — a low-rate
+              # still feed for the operator within the constrained VPN byte budget.
+              usb_camera: {source: sensors/cameras/usb/image_raw/compressed, period: 2.0, queue_size: 1}
 
           # Redundant cell-VPN downlink (#145): a thin always-on awareness channel
           # carried concurrently over the cell tunnel. Curated to the safety-
