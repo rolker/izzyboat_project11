@@ -217,9 +217,10 @@ controller_server:
       # ±23). p=-13 restores margin: bounded ~±0.25 m, output ~±5, stable across
       # 3.0-3.75 kt (boat saturates ~3.85 kt). d -0.6→-1.2 kept (operator
       # preference; minor effect — the weave was over-gain, not under-damped).
-      # Proper fix is speed-normalised gains (gain scheduling) — see deployment
-      # log 2026-06-16 + wrap-up. Live-set during the session; banked here so it
-      # survives a nav relaunch. Other pid.* keys match the base.
+      # Proper fix is speed-normalised gains (gain scheduling) — now enabled
+      # below via gain_ref_speed (rolker/unh_marine_navigation#76, echoboats#292).
+      # Live-set during the session; banked here so it survives a nav relaunch.
+      # Other pid.* keys match the base.
       pid:
         p: -13.0
         i: -0.5
@@ -229,3 +230,17 @@ controller_server:
         u_clamp_max: 90.0
         u_clamp_min: -90.0
         activate_state_publisher: true
+        # Speed-normalise the cross-track gain (1/v law, rolker/unh_marine_navigation#76):
+        # the outer cross-track loop gain is ∝ v·p, so a flat p loses margin as
+        # speed rises (the -20→-13 field tune above only re-anchored at 3.5 kt).
+        # crab_angle is scaled by gain_ref_speed / max(target_speed, gain_v_min)
+        # right after the PID, holding the cross-track response ~constant across
+        # speed. REQUIRES the #76 build of marine_nav_crabbing_path_follower on
+        # gabby (core_ws) — older binaries don't declare these keys and ignore
+        # them (inert, harmless). NOT pre-tested: anchor 1.8 m/s = 3.5 kt, where
+        # p=-13 is field-validated, so this is a NO-OP at 3.5 kt and only adjusts
+        # off-anchor (3.0 kt → eff -15.2, 4.0 kt → eff -11.4). Tune live + record
+        # final anchor (echoboats#292). Live-tunable / instant revert hatch:
+        # `ros2 param set /bizzy/controller_server FollowPath.pid.gain_ref_speed 0.0`
+        gain_ref_speed: 1.8   # 3.5 kt anchor; 0.0 = disabled (flat-gain behaviour)
+        gain_v_min: 0.5       # divisor floor; no blow-up at creep / station-keep
