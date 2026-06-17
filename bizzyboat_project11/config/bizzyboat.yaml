@@ -66,6 +66,7 @@
         connections_list:
           - wifi
           - vpn
+          - cell
         connections:
           wifi:
             maximum_bytes_per_second: 1500000
@@ -310,6 +311,44 @@
               watercolumn_down: {source: sensors/sidescan/garmin_sidescan/sonar_image_down, queue_size: 25}
               sidescan_nadir_depth: {source: sensors/sidescan/garmin_sidescan/nadir_depth, period: 1.0}
               sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
+
+          # Redundant cell-VPN downlink (#145): a thin always-on awareness channel
+          # carried concurrently over the cell tunnel. Curated to the safety-
+          # critical minimum — deliberately NO video / costmap / sidescan /
+          # pointclouds. The CAMP boat-monitoring topics (orientation / position /
+          # velocity) match platform_sender's nav sources above, so CAMP can track
+          # the boat over cell alone. tf left unthrottled per request; the byte cap
+          # is provisional — raise if tf saturates it, tune down on-water.
+          cell:
+            maximum_bytes_per_second: 300000
+            topics_list:
+            - heartbeat
+            - heartbeat_nav
+            - command_response
+            - battery
+            - collision_monitor_state
+            - platforms
+            - mavros_orientation
+            - mavros_position_ekf
+            - mavros_velocity_body
+            - mavros_gps_status
+            - tf
+            - tf_static
+            - local_costmap_footprint
+            topics:
+              heartbeat: {source: marine/heartbeat}
+              heartbeat_nav: {source: marine/status/mission_manager}
+              command_response: {source: marine/response}
+              battery: {source: /bizzy/mavros/battery}
+              collision_monitor_state: {source: collision_monitor_state}
+              platforms: {source: /marine/platforms}
+              mavros_orientation: {source: mavros/imu/data}
+              mavros_position_ekf: {source: mavros/global_position/global}
+              mavros_velocity_body: {source: mavros/local_position/velocity_body}
+              mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
+              tf: {source: /tf, queue_size: 25}
+              tf_static: {source: /tf_static}
+              local_costmap_footprint: {source: local_costmap/published_footprint}
 
 /**/logger:
   ros__parameters:

@@ -9,6 +9,7 @@
         connections_list:
           - wifi
           - vpn
+          - cell
         connections:
           wifi:
             host: gabby.bizzy.p11.lan
@@ -26,6 +27,21 @@
             host: gabby.vpn.bizzy.p11.lan
             port: 4200
             return_host: salmon.vpn.bizzy.p11.lan
+            return_port: 4200
+            topics_list:
+            - command
+            - joystick_helm
+            topics:
+              command: {source: /bizzy/marine/command}
+              joystick_helm: {source: /bizzy/piloting_mode/manual/helm}
+
+          # Redundant cell-VPN path (#145): same safety-critical uplink as
+          # wifi/vpn, carried concurrently over the cell tunnel. Names resolve to
+          # the cell NETMAP ranges (gabby.cell -> .23.5, salmon.cell -> .24.142).
+          cell:
+            host: gabby.cell.bizzy.p11.lan
+            port: 4200
+            return_host: salmon.cell.bizzy.p11.lan
             return_port: 4200
             topics_list:
             - command
