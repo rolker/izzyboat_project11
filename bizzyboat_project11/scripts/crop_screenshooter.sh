@@ -7,13 +7,15 @@
 # Usage:  crop_screenshooter.sh <YYYY-MM-DD> [region]
 #   region = a named preset (default: middle) or a raw ffmpeg crop "w:h:x:y".
 #
-# Presets are tuned to BIZZYBOAT's operator monitor layout (3840x5760 3-monitor
-# stack). The screenshooter is reused on other platforms with DIFFERENT layouts,
-# so on those pass a raw w:h:x:y crop instead. Re-check per deployment if the
-# monitor arrangement changes.
-#   middle      annunciator + CAMP/chart + camera grid + segmentation + the
-#               bottom sidescan waterfall (terminals flank it). 3840:2250:0:2000
-#   top-middle  the above PLUS the top screen above it.            3840:4250:0:0
+# Presets are tuned to BIZZYBOAT's operator monitor layout (3840x5760 stack). The
+# three monitors are NOT equal 1920-tall thirds: verified against a 2026-06-17
+# operator frame, the top wallpaper/camera monitor ends ~y2000 and the MIDDLE
+# operator monitor spans y2156..4304 (app title bars -> status bar). The
+# screenshooter is reused on other platforms with DIFFERENT layouts, so on those
+# pass a raw w:h:x:y crop instead. Re-check per deployment if the layout changes.
+#   middle      CAMP/chart + map + rqt camera grid + segmentation + the bottom
+#               sidescan diagnostics + annunciator + status bar. 3840:2148:0:2156
+#   top-middle  the above PLUS the top monitor.                   3840:4304:0:0
 #
 # Source (from ccomjhc_project11/scripts/screenshooter.bash):
 #   ~/data/logs/operator/<date>/screenshots/operator_<date>.{mp4,csv}
@@ -32,8 +34,8 @@ LOCAL_TZ="${LOCAL_TZ:-EDT}"
 
 # --- resolve region preset -> ffmpeg crop w:h:x:y ---
 case "$REGION" in
-  middle)                            CROP="3840:2250:0:2000" ;;
-  top-middle|middle-top|top+middle)  CROP="3840:4250:0:0" ;;
+  middle)                            CROP="3840:2148:0:2156" ;;
+  top-middle|middle-top|top+middle)  CROP="3840:4304:0:0" ;;
   *:*:*:*)                           CROP="$REGION" ;;   # raw w:h:x:y override
   *) echo "unknown region '$REGION' (use: middle | top-middle | w:h:x:y)" >&2; exit 1 ;;
 esac
