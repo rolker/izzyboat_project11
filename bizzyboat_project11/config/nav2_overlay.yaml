@@ -243,4 +243,9 @@ controller_server:
         # final anchor (echoboats#292). Live-tunable / instant revert hatch:
         # `ros2 param set /bizzy/controller_server FollowPath.pid.gain_ref_speed 0.0`
         gain_ref_speed: 1.8   # 3.5 kt anchor; 0.0 = disabled (flat-gain behaviour)
-        gain_v_min: 0.5       # divisor floor; no blow-up at creep / station-keep
+        # 2026-06-17 field tune (gabby): 0.5→1.0. At 1 kt (v=0.514) the old 0.5
+        # floor let the schedule boost the cross-track gain ~3.5× (1.8/0.514),
+        # over-compensating near minimum steerage → oscillation. Raising the floor
+        # to 1.0 caps the low-speed boost at 1.8× (1.8/max(v,1.0)); cruise (≥1.8 m/s)
+        # unaffected. Live-set during the session, banked here so it survives a relaunch.
+        gain_v_min: 1.0       # divisor floor; caps low-speed gain boost at 1.8×
