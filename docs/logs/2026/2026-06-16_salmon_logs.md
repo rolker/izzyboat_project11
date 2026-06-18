@@ -17,3 +17,4 @@ Started: 2026-06-16 11:29 -04:00
 - Deployment issue #6a53346 `## Hosts in use` still reads _TBD_ — salmon was the operator station this run; record from dev (field side is read-only on the issue).
 - Stamp the salmon log link under the issue's `## Logs` (currently lists only the dev log) next dev-side `/start-deployment`.
 - `pull_qps_data.sh` (rclone/SFTP, mercat) has no compression. Low priority — QPS/QINSy raw is largely incompressible — but worth a look if mercat pulls over a thin link.
+
