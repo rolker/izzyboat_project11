@@ -320,8 +320,10 @@
 
           # Redundant cell-VPN downlink (#145): a thin always-on awareness channel
           # carried concurrently over the cell tunnel. Curated to the safety-
-          # critical minimum — deliberately NO video / costmap / sidescan /
-          # pointclouds. The CAMP boat-monitoring topics (orientation / position /
+          # critical minimum — historically NO video / costmap / sidescan /
+          # pointclouds; EXCEPT forward/port/starboard segmentation (compressed +
+          # camera_info), added 2026-06-18 per operator request (see topics below;
+          # ~48 KB/s of the 300 KB/s cap). The CAMP boat-monitoring topics (orientation / position /
           # velocity) match platform_sender's nav sources above, so CAMP can track
           # the boat over cell alone. tf left unthrottled per request; the byte cap
           # is provisional — raise if tf saturates it, tune down on-water.
@@ -341,6 +343,14 @@
             - tf
             - tf_static
             - local_costmap_footprint
+            # Segmentation on cell (added 2026-06-18 per operator request; overrides
+            # the "no video" note above). Mirrors the VPN segmentation routing.
+            - oak_segmentation_forward
+            - oak_segmentation_forward_info
+            - oak_segmentation_port
+            - oak_segmentation_port_info
+            - oak_segmentation_starboard
+            - oak_segmentation_starboard_info
             topics:
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
@@ -355,6 +365,14 @@
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
               local_costmap_footprint: {source: local_costmap/published_footprint}
+              # Segmentation on cell (added 2026-06-18, see topics_list note). Compressed
+              # at queue_size 2 (matches VPN); camera_info bare. Full rate (no period).
+              oak_segmentation_forward:        {source: sensors/cameras/oak_forward/segmentation/compressed, queue_size: 2}
+              oak_segmentation_forward_info:   {source: sensors/cameras/oak_forward/segmentation/camera_info}
+              oak_segmentation_port:           {source: sensors/cameras/oak_port/segmentation/compressed, queue_size: 2}
+              oak_segmentation_port_info:      {source: sensors/cameras/oak_port/segmentation/camera_info}
+              oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, queue_size: 2}
+              oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
 
 /**/logger:
   ros__parameters:
