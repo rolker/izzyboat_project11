@@ -76,6 +76,67 @@ Two reading rules for the rest of this document:
 - Anything still open that needs on-water evidence is tagged **"harvest from
   production"** — make sure it's recorded, then mine the operational bags.
 
+## 2026-06-18 update — two more surveys + the 06-15 wave lands
+
+Two further Massabesic surveys ran and wrapped — **2026-06-16** ([`#289`](https://github.com/rolker/unh_echoboats_project11/issues/289)
+→ PR [`#291`](https://github.com/rolker/unh_echoboats_project11/pull/291)) and **2026-06-17**
+([`#295`](https://github.com/rolker/unh_echoboats_project11/issues/295) → PR [`#297`](https://github.com/rolker/unh_echoboats_project11/pull/297)) —
+and much of the 06-15 "new threads" wave converted from idea to merged config.
+
+### Lake datum — resolved, and now a polygon
+The 06-12 "+52.3 m" estimate was the **boat on the trailer** (~3.6 m above the water).
+Corrected to **48.88 m** full-pool ellipsoidal (48.767 m surface + 0.114 m below-full
+gauge). Landed as a scalar ([`#284`](https://github.com/rolker/unh_echoboats_project11/pull/284),
+closes #278) then **superseded by a polygon-keyed datum config** ([`#286`](https://github.com/rolker/unh_echoboats_project11/pull/286),
+closes #285) — the scalar `lake_datum` is gone. Because survey data is recorded
+**WGS84-ellipsoidal**, the datum is a downstream reduction offset and stays corrigible.
+Follow-ups: propagate 48.88 into the store/costmap chain ([`unh_marine_autonomy#170`](https://github.com/rolker/unh_marine_autonomy/issues/170)),
+wire the datum config on the sim side ([`#288`](https://github.com/rolker/unh_echoboats_project11/issues/288)),
+and the deferred SBG ~30 m-gap reconciliation. *(Corrects the 06-15 section's +52.3 m.)*
+
+### Chart/bathy costmap — unblocked, fully ticketed (still the top consumer gap)
+The datum no longer blocks it. The store importer is ready to merge
+([`unh_marine_autonomy#148`](https://github.com/rolker/unh_marine_autonomy/pull/148), now
+conflict-free) and the path is end-to-end ticketed: Chart source layer
+([`#163`](https://github.com/rolker/unh_marine_autonomy/issues/163), core merged as #165),
+the **`bathymetry_layer` Nav2 plugin** ([`#164`](https://github.com/rolker/unh_marine_autonomy/issues/164) —
+the still-unowned consumer), datum propagation (#170), and the nav-config forward fix
+that re-enables s57 + adds the override layer ([`echoboats#276`](https://github.com/rolker/unh_echoboats_project11/issues/276),
+supersedes the #263 interim disable). An interim static-prior costmap was spiked then
+**paused** in favour of this durable path.
+
+### Operational stability — the real survey bottleneck
+- **CAMP lockups/leak** — now concretely filed: [`camp#96`](https://github.com/rolker/camp/issues/96)
+  (GDAL-dataset leak, candidate root cause), [`camp#98`](https://github.com/rolker/camp/issues/98)
+  (crash on map zoom/pan during live ops, OOM), [`camp#97`](https://github.com/rolker/camp/issues/97)
+  (raster-load progress bar). RCA filed, fix pending.
+- **Network/transport** — band-aids merged: udp_bridge `queue_size` fail-fresh sizing
+  ([`#290`](https://github.com/rolker/unh_echoboats_project11/pull/290)) and a **redundant cell
+  link for safety-critical topics** ([`#294`](https://github.com/rolker/unh_echoboats_project11/pull/294),
+  #145). The durable udp_bridge freshness-gate/backpressure RCA and gabby CAKE/AQM tuning
+  remain to be filed.
+- **rqt_marine_control GUI-init deadlock** — a blocking `connect()` froze the whole rqt
+  GUI at the lake; RCA [`rqt_operator_tools#78`](https://github.com/rolker/rqt_operator_tools/issues/78)
+  (a field-breaking regression in the otherwise "complete" marine_control substrate).
+
+### Nav / control + payload
+- **Cross-track gain schedule activated on BizzyBoat** (`gain_ref_speed 1.8`,
+  [`#293`](https://github.com/rolker/unh_echoboats_project11/pull/293)) — the speed-normalized
+  gain that killed the 3.5 kt crabbing limit cycle is now live on the boat.
+- **Measured waterline frame + sidescan offsets** in the URDF
+  ([`#283`](https://github.com/rolker/unh_echoboats_project11/pull/283), #282).
+- **M3 `.all` recording** fully landed incl. runtime on/off (rolker/marine_tools#47/#52/#55)
+  + bag→XTF (#49); a temperature-derived SVS-failover is the next sound-speed robustness
+  item (marine_tools#53, ties to the AML all-NUL fault echoboats#163).
+
+### Operator quick wins
+Ops-logger multi-line entry merged (rolker/rqt_operator_tools#72); the screenshooter
+crop/timestamp tool is now ticketed ([`#296`](https://github.com/rolker/unh_echoboats_project11/issues/296)
+/ PR [`#298`](https://github.com/rolker/unh_echoboats_project11/pull/298)). Annunciator
+RTCM/NTRIP + Starlink-tile runtime checks (#274/#275) still open.
+
+---
+
 ## 2026-06-15 update — Massabesic survey window: shakedown findings + infrastructure wave
 
 The survey window has opened. The 2026-06-07 "no more dev experiments" framing held
@@ -98,8 +159,11 @@ foundations for the next season.
   and the **main deployment bag** ([`#271`](https://github.com/rolker/unh_echoboats_project11/pull/271)) + bridged ([`#257`](https://github.com/rolker/unh_echoboats_project11/issues/257)).
 - **Generated bathy validated** vs Friday's M3 (nadir depths in range; mean 5.25 m =
   published 17 ft avg) — but the store **chart layer was ingested surface-relative**,
-  not ellipsoidal; needs **re-import with `depth_offset ≈ +52.3 m`** (measured lake
-  surface from RTK — see rolker/unh_marine_autonomy#86).
+  not ellipsoidal; needs **re-import referenced to the lake datum**. *(The +52.3 m
+  figure logged here was wrong — it was the boat on the trailer (~3.6 m high).
+  Corrected 2026-06-16 to the **48.88 m full-pool ellipsoidal surface** and moved to a
+  polygon-keyed datum config — see the 06-18 update above and rolker/unh_marine_autonomy#86 /
+  #170.)*
 
 ### Landed 06-12 → 06-15 (parallel-driver wave)
 - **marine_control — device-control framework, essentially complete.** Bridge-correct
@@ -114,7 +178,9 @@ foundations for the next season.
   ellipsoidal, content-hash sync. Phase-2 import in flight (#148). Feeds the chart/bathy
   costmap + multibeam coverage in CAMP.
 - **Lake-datum support** — rolker/mru_transform#26 (polygon-keyed datum + `lake_datum`
-  override); Massabesic ellipsoidal surface measured at **52.3 m**.
+  override); Massabesic ellipsoidal surface initially logged at 52.3 m. *(Corrected
+  2026-06-16 to **48.88 m** full pool; the 52.3 m reading was the boat on the trailer.
+  See the 06-18 update above.)*
 - **Unified perception Contact data model** — sensor- and kinematic-agnostic
   (Autoware-pattern object + curation; `vision_msgs` as the observation layer projecting
   up; AIS/radar stay their own types). Design rolker/unh_marine_autonomy#156 → message PR
