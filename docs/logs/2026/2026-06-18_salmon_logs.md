@@ -1,6 +1,8 @@
-# 2026-06-18 — salmon log (BizzyBoat deployment #295)
+# 2026-06-18 — salmon log (BizzyBoat deployment #299)
 
-Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/295
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/299
+
+> Issue number corrected #295→#299 during the dev-side #299 wrap-up (salmon had re-attached to the prior deployment's number).
 Host: salmon
 Side: field
 Started: 2026-06-18 09:00 -04:00
@@ -61,4 +63,4 @@ Started: 2026-06-18 09:00 -04:00
 
 **2026-06-18 16:19 -04:00** — Battery update (CSV now to 15:56:03): discharge has LEVELED OFF. Now 24.99V. Afternoon rate eased: -1.11V/hr (14:00) -> -0.44V/hr (15:00) -> flat 24.88-24.99V over last ~40min (15:14-15:56). Day low still 24.62V @14:35, not exceeded since; slight recovery = load likely eased (ops/sonar paused / boat idle), inferred from voltage curve (current_a still 0.0, no measured load). Day peak 28.83V ~09:00. Data gap 15:18->15:50 (~32min, logger/sync gap). CSV trails live ~23min (gabby pull lag).
 
-**2026-06-18 18:57 -04:00** — DEPLOYMENT WRAP-UP (salmon, #295). Committed + pushed to origin/jazzy: (1) RMW switch operator stack zenoh->Fast DDS localhost-only [477dcc1], (2) this salmon log [f60645b]. All workspace repos clean. Key outcomes today: zenoh invalid-qos-keyexpr crashes RESOLVED via Fast DDS switch (baseline stack stable); remaining KNOWN ISSUE deferred — extra 'extra-cameras' rqt grid SIGSEGVs in hevc_cuvid (~8 concurrent NVDEC sessions), fix = software-decode/de-dup (not applied). Segmentation fwd/port/stbd over cell healthy (0 loss). Sonar: 12:37 & 13:19 sessions had no pings (pre-imaging); live 13:48 session good (141k+ pings, balanced, snapshot XTF written). 06-17 sidescan -> 219k-ping XTF. Battery: full overnight 28.83V ~09:00 -> discharged to day-low 24.62V @14:35 -> leveled ~25.0V (voltage-only, no current/SOC). CAVEAT: ~/.bashrc RMW default change is salmon-LOCAL only (not version-controlled); committed start script sets RMW per-window so launches are Fast DDS regardless.
+**2026-06-18 18:57 -04:00** — DEPLOYMENT WRAP-UP (salmon, #299). Committed + pushed to origin/jazzy: (1) RMW switch operator stack zenoh->Fast DDS localhost-only [477dcc1], (2) this salmon log [f60645b]. All workspace repos clean. Key outcomes today: zenoh invalid-qos-keyexpr crashes RESOLVED via Fast DDS switch (baseline stack stable); remaining KNOWN ISSUE deferred — extra 'extra-cameras' rqt grid SIGSEGVs in hevc_cuvid (~8 concurrent NVDEC sessions), fix = software-decode/de-dup (not applied). Segmentation fwd/port/stbd over cell healthy (0 loss). Sonar: 12:37 & 13:19 sessions had no pings (pre-imaging); live 13:48 session good (141k+ pings, balanced, snapshot XTF written). 06-17 sidescan -> 219k-ping XTF. Battery: full overnight 28.83V ~09:00 -> discharged to day-low 24.62V @14:35 -> leveled ~25.0V (voltage-only, no current/SOC). CAVEAT: ~/.bashrc RMW default change is salmon-LOCAL only (not version-controlled); committed start script sets RMW per-window so launches are Fast DDS regardless.
