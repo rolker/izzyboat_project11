@@ -14,7 +14,7 @@ source /home/field/project11/layers/main/site_ws/install/setup.bash
 set -v
 
 export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
-export RMW_IMPLEMENTATION=rmw_zenoh_cpp
+export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 if /usr/bin/tmux has-session -t project11 2>/dev/null; then
     echo "WARNING: tmux session 'project11' already exists. Not starting a new one."
@@ -23,23 +23,29 @@ if /usr/bin/tmux has-session -t project11 2>/dev/null; then
 fi
 
 /usr/bin/tmux new -d -s project11
-/usr/bin/tmux rename-window -t project11 zenoh
+/usr/bin/tmux rename-window -t project11 shell
 
-# Zenoh router: must be up before any ROS node connects
-/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
-/usr/bin/tmux send-keys "ros2 run rmw_zenoh_cpp rmw_zenohd" C-m
-sleep 2
+# Zenoh router: DISABLED 2026-06-18 — switched RMW to rmw_fastrtps_cpp (Fast DDS),
+# which has no separate router daemon (discovery is built into the RMW). RMW is now
+# rmw_fastrtps_cpp with ROS_AUTOMATIC_DISCOVERY_RANGE=LOCALHOST (set in ~/.bashrc).
+# Reason: rmw_zenoh_cpp build skew caused 'invalid qos keyexpr' liveliness aborts
+# (SIGABRT) that crashed CAMP + diagnostics rqt. To re-enable zenoh, restore the
+# RMW exports to rmw_zenoh_cpp and uncomment the router lines below.
+# /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
+# /usr/bin/tmux send-keys "ros2 run rmw_zenoh_cpp rmw_zenohd" C-m
+# Leave the first window as a plain sourced shell (handy for ros2 CLI checks).
+/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash" C-m
 
 # Core: UDP bridge, diagnostic aggregator, network monitor, operator core, state publisher
 /usr/bin/tmux new-window -t project11 -n core
-/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
+/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_fastrtps_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_core_launch.py" C-m
 
 # UI: camp + three rqt instances (bizzyboat, bizzyboat-diagnostics, logger
 # perspectives) + joystick, etc. The diagnostics and operator-log rqt windows
 # are launched from operator_ui_launch.py rather than a separate tmux window.
 /usr/bin/tmux new-window -t project11 -n ui
-/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
+/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_fastrtps_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_ui_launch.py" C-m
 
 # Johnny5 PTZ camera (axis) from molab_hardware
@@ -47,7 +53,7 @@ sleep 2
 # site; the boat's USB front camera is used instead. Re-enable when the mobile
 # lab / Johnny5 PTZ is present again.
 #/usr/bin/tmux new-window -t project11 -n johnny5
-#/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
+#/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" C-m
 #/usr/bin/tmux send-keys "ros2 launch molab_hardware johnny5_launch.py" C-m
 
 # Screenshooter: full-screen captures into ~/data/logs/operator_raw/...
