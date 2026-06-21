@@ -19,17 +19,24 @@
        while +X stays forward — marine_sidescan_mosaic (#200) extracts heading
        from +Z via ecefPoseToGeoBeam and consumes exactly this tilted boresight.
 
-       Default grazing_deg = 62.5 = 90 - SideVu_fan/2 = 90 - 27.5 (half the
-       55-deg SideVu fan off nadir). This places the INNER edge of the fan at
-       nadir, tiling cleanly against the _down (ClearVu) beam with no nadir gap
-       or overlap. The fan half-width (55 deg) is published by the driver per
-       marine_tools#62, so this default can be refined after calibration.
+       Default grazing_deg = 35 (boresight depression below horizontal),
+       MEASURED from field sonar bags (Massabesic + bizzy runs, 2026-06-21):
+       the bottom-return angular profile I(phi) = asin(nadir_depth / slant_range)
+       peaks near 38 deg, and the near-nadir backscatter steep-bias puts the true
+       boresight a few degrees shallower (~35). A roll-day regression (per-ping
+       steep-edge vs vessel roll, opposite-sign +/-1 slopes per channel)
+       validated the geometry. This matches the recreational side-imaging norm
+       of ~20-40 deg, nominal ~30 (Garmin/Humminbird/Navico patents:
+       US7652952B2, US11137495B2); survey towfish run ~10.
 
-       Alternative: classic side-imaging aims the boresight ~20-30 deg below
-       horizontal for longer far across-track range; set grazing_deg to that
-       after field calibration if desired (it trades the clean nadir tiling for
-       a nadir gap). The default keeps the nadir seam clean out of the box. -->
-  <xacro:macro name="garmin_sidescan" params="parent name x:=0 y:=0 z:=0 grazing_deg:=62.5">
+       This is NOT the 90 - fan/2 = 62.5 "half-fan off nadir" that once shipped
+       (#303) — that was a tiling heuristic, ~27 deg too steep, and not how a
+       side-imaging sonar is aimed. The 55-deg fan (published by the driver,
+       marine_tools#62) could not be cleanly cross-checked here (the shallow
+       -3 dB edge falls outside the range window in shallow water; a 50-60 m
+       range pass over 10-15 m water would resolve it). Override grazing_deg
+       for further calibration. See issue #305 / #185. -->
+  <xacro:macro name="garmin_sidescan" params="parent name x:=0 y:=0 z:=0 grazing_deg:=35.0">
 
     <!-- Mount frame, aligned with base_link (X fwd, Y port, Z up). -->
     <link name="bizzy/${name}"/>
@@ -73,8 +80,8 @@
            ros2 run xacro xacro bizzyboat.urdf.xacro > /tmp/bizzy.urdf
            ros2 run robot_state_publisher robot_state_publisher /tmp/bizzy.urdf &
            ros2 run tf2_ros tf2_echo bizzy/base_link bizzy/garmin_sidescan_port
-         Expected rotation maps child +Z to ~[0, 0.462, -0.887] in bizzy/base_link
-         (62.5 deg depression toward port); +X stays [1, 0, 0] (forward). -->
+         Expected rotation maps child +Z to ~[0, 0.819, -0.574] in bizzy/base_link
+         (35 deg depression toward port); +X stays [1, 0, 0] (forward). -->
 
   </xacro:macro>
 </robot>
