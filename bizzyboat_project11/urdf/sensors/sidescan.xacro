@@ -80,8 +80,8 @@
            ros2 run xacro xacro bizzyboat.urdf.xacro > /tmp/bizzy.urdf
            ros2 run robot_state_publisher robot_state_publisher /tmp/bizzy.urdf &
            ros2 run tf2_ros tf2_echo bizzy/base_link bizzy/garmin_sidescan_port
-         Expected rotation maps child +Z to ~[0, 0.462, -0.887] in bizzy/base_link
-         (62.5 deg depression toward port); +X stays [1, 0, 0] (forward). -->
+         Expected rotation maps child +Z to ~[0, 0.819, -0.574] in bizzy/base_link
+         (35 deg depression toward port); +X stays [1, 0, 0] (forward). -->
 
   </xacro:macro>
 </robot>
