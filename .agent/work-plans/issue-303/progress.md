@@ -85,3 +85,23 @@ manual field check (matches the rendered values above).
 
 ### Next step
 Code review of `feature/issue-303` (commit `7ed439e`), then PR.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-06-21 13:16 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-303 at `164d625`
+**Mode**: pre-push
+**Depth**: Standard (reason: project-repo plan.md present in diff = override trigger; raw 252-line total inflated by 218 lines of plan/progress process docs — code surface is one xacro file, +34 −10)
+**Must-fix**: 0 | **Suggestions**: 0
+**Round**: 1 | **Ship**: recommended — no must-fix; math verified independently and by render, +X-forward preserved so #200 unaffected.
+
+### Findings
+- [ ] No issues found. LGTM.
+
+### Notes
+- Rotation math verified independently and by rendering the macro under Jazzy xacro: port rpy `-2.661627` = `-(pi/2 + 62.5deg)`, starboard `+2.661627`, `_down` `pi` unchanged; port +Z `[0,0.462,-0.887]`, +X `[1,0,0]`.
+- Adversarial Lens A "must-fix" (comment "inner edge at nadir" allegedly inconsistent) evaluated and **rejected as a false positive**: in sidescan terms the inner edge is the near-nadir one; boresight 62.5deg + half-fan 27.5deg = 90deg (nadir) inner edge — comment is correct.
+- Sole macro caller `bizzyboat.urdf.xacro:268` uses keyword args, no `grazing_deg` override → backward compatible.
