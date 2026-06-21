@@ -8,9 +8,21 @@ https://github.com/rolker/unh_echoboats_project11/issues/303
 
 `bizzyboat_project11/urdf/sensors/sidescan.xacro` mounts `_port`/`_starboard`
 as pure ±90° rotations about X (boresight horizontal, abeam). A placeholder
-comment notes this is uncalibrated. Real side-scan fires 20–30° below
-horizontal; for the SideVü 55° fan the boresight center should sit at
-90° − fan/2 = 62.5° depression below horizontal (27.5° off nadir).
+comment notes this is uncalibrated. Side-scan boresights should fire below
+horizontal by a grazing (depression) angle; this plan makes that angle an
+explicit `grazing_deg` macro param.
+
+**Default `grazing_deg = 62.5` = 90 − SideVü_fan/2 = 90 − 27.5** (half the
+55° SideVü fan off nadir). This places the **inner edge of the SideVü fan at
+nadir**, so the port/starboard fan tiles cleanly against the `_down` (ClearVü)
+beam with no nadir gap or overlap. The fan half-width is now published by the
+driver per marine_tools#62, so this default can be refined post-calibration.
+
+The classic "side-imaging" aim of ~20–30° below horizontal (for longer far
+across-track range) is available as an **alternative**: set `grazing_deg` to
+that value after field calibration. It trades the clean nadir tiling for a
+nadir gap, so it is not the default — the default keeps the nadir seam clean
+out of the box.
 
 `_down` (ClearVü) is correct and unchanged.
 
@@ -30,9 +42,10 @@ Result:
 - stbd +Z direction in parent: `[0, −cos(grazing_deg), −sin(grazing_deg)]` ✓
 - both +X directions in parent: `[1, 0, 0]` (forward, unchanged) ✓
 
-Default: `grazing_deg = 62.5` (derived from 90 − 55/2 for the SideVü 55° fan;
-the fan value is now published by the driver per marine_tools#62 and can be
-used to refine this parameter post-calibration).
+Default: `grazing_deg = 62.5` (= 90 − 55/2 for the SideVü 55° fan, half-fan
+off nadir — inner fan edge at nadir, tiling against `_down`; see Context). The
+fan value is now published by the driver per marine_tools#62 and can be used to
+refine this parameter post-calibration.
 
 ## Approach
 
@@ -52,13 +65,17 @@ used to refine this parameter post-calibration).
    re-calibrate (`grazing_deg` param).
 
 5. **Document a manual TF check** — no xacro unit-test harness exists in
-   `bizzyboat_project11`. Add a comment block (or a minimal `check_sidescan.py`
-   script in `bizzyboat_project11/scripts/`) describing how to verify:
+   `bizzyboat_project11`. Add a comment block in the xacro describing how to
+   verify against the real frames the macro produces. The macro is called as
+   `name="garmin_sidescan" parent="bizzy/base_link"` (bizzyboat.urdf.xacro:268),
+   so the port link is `bizzy/garmin_sidescan_port` (matching the deployed
+   driver frame from `launch/sidescan_launch.py`):
    ```
-   ros2 run xacro xacro sidescan.xacro name:=sidescan parent:=base_link \
-     | robot_state_publisher --ros-args -p robot_description:="$(cat)"
-   ros2 run tf2_ros tf2_echo base_link bizzy/sidescan_port
-   # Expected: Z axis ~[0, 0.462, −0.887] in base_link frame (62.5° depression)
+   ros2 run xacro xacro bizzyboat.urdf.xacro > /tmp/bizzy.urdf
+   ros2 run robot_state_publisher robot_state_publisher /tmp/bizzy.urdf &
+   ros2 run tf2_ros tf2_echo bizzy/base_link bizzy/garmin_sidescan_port
+   # Expected: child +Z ~[0, 0.462, −0.887] in bizzy/base_link (62.5° depression);
+   #           +X stays [1, 0, 0] (forward)
    ```
 
 ## Files to Change
@@ -93,7 +110,7 @@ used to refine this parameter post-calibration).
 
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
-| `_port`/`_starboard` boresight direction | `marine_sidescan_mosaic` heading extraction (unh_marine_autonomy#200) | Mitigated — `+X` stays forward; no API change needed |
+| `_port`/`_starboard` boresight direction | `marine_sidescan_mosaic` heading extraction (unh_marine_autonomy#200) | No update needed — #200 reads the +Z boresight via `ecefPoseToGeoBeam` and `+X` stays forward, so it consumes the tilted boresight directly (see resolved Open Question) |
 | `grazing_deg` default | Field calibration notes / deployment docs | No — follow-up when measured |
 | `garmin_sidescan` macro params | Any `.xacro` files that call the macro (need to verify no callers pass positional args beyond `x y z`) | Verify callers — `grazing_deg` has a default, so no breakage expected |
 
@@ -102,8 +119,12 @@ used to refine this parameter post-calibration).
 - [x] Verify call sites of `garmin_sidescan` — `bizzyboat.urdf.xacro` is the
   only caller and uses keyword args (`parent`, `name`, `x`, `y`, `z`); the
   new defaulted `grazing_deg` param is safe.
-- [ ] Confirm marine_sidescan_mosaic (#200) truly depends only on `+X`
-  forward (not on `+Z` being horizontal) before merging.
+- [x] Confirm marine_sidescan_mosaic (#200) truly depends only on `+X`
+  forward (not on `+Z` being horizontal). **Resolved:** #200 (Stage 2
+  projection) reads the sensor **+Z** boresight via `ecefPoseToGeoBeam`
+  (azimuth + depression), and the about-X roll here **preserves +X forward**.
+  The tilt is therefore exactly the boresight #200 consumes — no breakage; the
+  tilt is a feature #200 already accounts for, not an unexpected change.
 
 ## Estimated Scope
 

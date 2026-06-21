@@ -11,13 +11,25 @@
        Per-channel range axis is the frame's local +Z (rviz_sonar_image places a
        fixed beam's samples along +Z when rx/tx steering = 0):
          _down       +Z points down   (matches the M3/DeltaT transducer convention)
-         _port       +Z points to port (+Y)
-         _starboard  +Z points to starboard (-Y)
+         _port       +Z tilted down by grazing_deg toward port    (+X stays forward)
+         _starboard  +Z tilted down by grazing_deg toward starboard (+X stays forward)
 
-       PLACEHOLDER: side-scan grazing tilt is 0 (port/starboard beams horizontal).
-       Real side-scan fires a few tens of degrees below horizontal — refine the
-       _port/_starboard pitch once the install is measured/calibrated. -->
-  <xacro:macro name="garmin_sidescan" params="parent name x:=0 y:=0 z:=0">
+       Grazing tilt: the _port/_starboard boresights are rolled about the mount
+       X axis so they fire grazing_deg below horizontal (a depression angle),
+       while +X stays forward — marine_sidescan_mosaic (#200) extracts heading
+       from +Z via ecefPoseToGeoBeam and consumes exactly this tilted boresight.
+
+       Default grazing_deg = 62.5 = 90 - SideVu_fan/2 = 90 - 27.5 (half the
+       55-deg SideVu fan off nadir). This places the INNER edge of the fan at
+       nadir, tiling cleanly against the _down (ClearVu) beam with no nadir gap
+       or overlap. The fan half-width (55 deg) is published by the driver per
+       marine_tools#62, so this default can be refined after calibration.
+
+       Alternative: classic side-imaging aims the boresight ~20-30 deg below
+       horizontal for longer far across-track range; set grazing_deg to that
+       after field calibration if desired (it trades the clean nadir tiling for
+       a nadir gap). The default keeps the nadir seam clean out of the box. -->
+  <xacro:macro name="garmin_sidescan" params="parent name x:=0 y:=0 z:=0 grazing_deg:=62.5">
 
     <!-- Mount frame, aligned with base_link (X fwd, Y port, Z up). -->
     <link name="bizzy/${name}"/>
@@ -36,21 +48,33 @@
       <origin xyz="0 0 0" rpy="${pi} 0 0"/>
     </joint>
 
-    <!-- Port side-scan beam: +Z to port (+Y). -->
+    <!-- Port side-scan beam: +Z tilted grazing_deg below horizontal toward port.
+         Roll about mount X by -(pi/2 + grazing_rad); +Z -> [0, cos g, -sin g]
+         in the mount frame (port and down), +X stays forward. -->
     <link name="bizzy/${name}_port"/>
     <joint name="${name}_to_${name}_port" type="fixed">
       <parent link="bizzy/${name}"/>
       <child link="bizzy/${name}_port"/>
-      <origin xyz="0 0 0" rpy="${-pi/2} 0 0"/>
+      <origin xyz="0 0 0" rpy="${-pi/2 - grazing_deg * pi / 180} 0 0"/>
     </joint>
 
-    <!-- Starboard side-scan beam: +Z to starboard (-Y). -->
+    <!-- Starboard side-scan beam: +Z tilted grazing_deg below horizontal toward
+         starboard. Roll about mount X by +(pi/2 + grazing_rad); +Z ->
+         [0, -cos g, -sin g] in the mount frame (stbd and down), +X stays forward. -->
     <link name="bizzy/${name}_starboard"/>
     <joint name="${name}_to_${name}_starboard" type="fixed">
       <parent link="bizzy/${name}"/>
       <child link="bizzy/${name}_starboard"/>
-      <origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+      <origin xyz="0 0 0" rpy="${pi/2 + grazing_deg * pi / 180} 0 0"/>
     </joint>
+
+    <!-- Manual TF check (no xacro unit-test harness in this package): render the
+         full robot and echo the port boresight against the mount parent.
+           ros2 run xacro xacro bizzyboat.urdf.xacro > /tmp/bizzy.urdf
+           ros2 run robot_state_publisher robot_state_publisher /tmp/bizzy.urdf &
+           ros2 run tf2_ros tf2_echo bizzy/base_link bizzy/garmin_sidescan_port
+         Expected rotation maps child +Z to ~[0, 0.462, -0.887] in bizzy/base_link
+         (62.5 deg depression toward port); +X stays [1, 0, 0] (forward). -->
 
   </xacro:macro>
 </robot>
