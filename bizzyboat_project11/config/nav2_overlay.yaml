@@ -141,7 +141,8 @@ collision_monitor:
 # BizzyBoat (use_ca_safety:=true), replacing the Collision Monitor block above
 # (kept as the use_ca_safety:=false fallback). Per-rig tuning: the reflex cloud
 # feed + zone geometry mirroring the Collision Monitor it supersedes (20 m
-# slowdown box / 5 m x 4 m stop), now speed-scaled. Base wiring (frames, cmd_vel
+# slowdown box / 5 m x 2 m stop after the 2026-06-22 width-halving tune),
+# now speed-scaled. Base wiring (frames, cmd_vel
 # topics, odom, viz topics) is in seafloor's nav2_params.base.yaml.
 # NB: reverse-yaw passthrough stays OFF (cancel_yaw_during_reverse: true) until
 # the sim yaw-sign-in-reverse test passes — see #64.
@@ -150,10 +151,13 @@ ca_safety:
     pointcloud_topic: "collision_monitor/pointcloud"
     slowdown_min_length: 5.0
     slowdown_max_length: 20.0
-    slowdown_width: 6.0
+    # 2026-06-22 field tune (gabby): narrowed both CA boxes to half width
+    # (slowdown 6.0 -> 3.0, stop 4.0 -> 2.0) — validated on water this
+    # deployment. Lengths unchanged.
+    slowdown_width: 3.0
     ttc_time_constant: 4.0
     stop_length: 5.0
-    stop_width: 4.0
+    stop_width: 2.0
     reverse_speed: 0.5
     reverse_distance: 3.0
     reverse_duration: 4.0
@@ -187,11 +191,14 @@ controller_server:
       # Validated on water — boat routed around a moored sailboat twice. SIM-validate
       # before trusting widely. anchor_behind_distance anchors the detour entry behind
       # the boat so the tracker actually follows it (#59 fix).
+      # 2026-06-22 field tune (gabby): obstacle_avoidance_weight back to 1.0
+      # (1:1 with line_following) — operator wanted stronger avoidance this
+      # deployment. Validated on water.
       max_deviation: 6.0
       along_track_spacing: 2.0
       lateral_resolution: 0.5
       line_following_weight: 1.0
-      obstacle_avoidance_weight: 0.5
+      obstacle_avoidance_weight: 1.0
       smoothness_weight: 2.0
       chatter_damping_weight: 0.5
       max_lateral_change: 1.0
