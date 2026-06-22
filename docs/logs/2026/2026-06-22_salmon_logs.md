@@ -1,6 +1,7 @@
-# 2026-06-22 — salmon log (BizzyBoat deployment — ref TBD)
+# 2026-06-22 — salmon log (BizzyBoat deployment #309)
 
-Deployment issue: unverified on field side (`gh` not available in this session). Prior deployment was #299 (2026-06-18). Reconcile the correct deployment number at dev-side wrap-up.
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/309
+<!-- backfilled at wrap-up: "ref TBD / unverified on field side" reconciled to #309 (Deployment 2026-06-22: Lake Massabesic survey). NOT #299 (that was 2026-06-18). -->
 Host: salmon
 Side: field
 Started: 2026-06-22 (start time not recorded; first logged entry below)
