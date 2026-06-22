@@ -1,0 +1,17 @@
+# 2026-06-22 — salmon log (BizzyBoat deployment — ref TBD)
+
+Deployment issue: unverified on field side (`gh` not available in this session). Prior deployment was #299 (2026-06-18). Reconcile the correct deployment number at dev-side wrap-up.
+Host: salmon
+Side: field
+Started: 2026-06-22 (start time not recorded; first logged entry below)
+
+> **Stamp this `salmon` log link under the deployment issue's `## Logs` section from dev next time `/start-deployment` runs there.** Field side is read-only on the issue (no `gh`).
+
+## 2026-06-22
+
+
+**2026-06-22 17:08 -04:00** — Back at the dock (operator-reported). Today's sonar data not yet available for XTF export; will export when operator gives the go-ahead. Note: latest synced bizzyboat_sonar bag on salmon is 2026-06-19; today's run not yet pulled.
+
+**2026-06-22 17:17 -04:00** — Deployment mode was never formally started for today's run (no /start-deployment on salmon), hence no deployment issue/ID for this log. Stability notes (operator-reported): CAMP was solid throughout — no crashes (contrast with 2026-06-18 recurring zenoh RMW liveliness-keyexpr crashes). rqt echogram plugin tested and solid.
+
+**2026-06-22 17:21 -04:00** — Re-exported sidescan XTF files for the Summer Hydro students. Re-ran bag_to_xtf (bag_analysis) over all bizzyboat_sonar bags since 2026-06-12 because the prior exports (written 06-18 19:15-19:22) predated the b5dcc07 PINGVerter/PING-Mapper ingestibility fix (landed 06-19 06:59) — all existing files were stale. Result: 11 files exported (standard layout) to ~/share/xtf/<date>/<timestamp>.xtf, 9.4 GB total; 5 bags skipped as they contained no sidescan data (port/starboard msgs=0). Not yet exported: today's (06-22) run, pending data pull. Out of scope: 3 bizzy_sidescan raw-debug bags (06-12 x2, 06-15) lack /tf so bag_to_xtf can't georeference them.
