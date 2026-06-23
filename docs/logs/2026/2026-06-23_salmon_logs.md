@@ -1,6 +1,7 @@
-# 2026-06-23 — salmon log (BizzyBoat deployment — issue pending)
+# 2026-06-23 — salmon log (BizzyBoat deployment #313)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/313
+<!-- backfilled at wrap-up: issue-less field start (#533) linked to #313 (today's deployment), NOT #309 — see wrap-up correction on the 17:31 entry -->
 Host: salmon
 Side: field
 Started: 2026-06-23 09:15 -04:00
@@ -18,3 +19,5 @@ Started: 2026-06-23 09:15 -04:00
 **2026-06-23 17:27 -04:00** — Boat recovered at pier, logs downloading. Wrap-up initiated from salmon (field side) — full /wrap-up-deployment must run on a dev host (no gh here). Committing + pushing this salmon log to gitcloud for dev-side collection. NOTE for dev wrap-up: this was an ISSUE-LESS start (#533) — header marker 'Deployment issue: pending'; backfill + create the deployment issue on dev before closing.
 
 **2026-06-23 17:31 -04:00** — Reconcile note: gitcloud/jazzy fetch shows dev-side wrap-up already active for THIS deployment under issue #309 (power/V-drop analysis, GPS dock times cast-off 09:58 / docked 16:30, RCA #311/#312 — all matching today's power-loss). DEV WRAP-UP: link this salmon log AND gabby log to #309's ## Logs and clear their 'pending' markers — do NOT create a new deployment issue. My earlier 'create the issue' note is superseded by #309's existence. Battery brownout finding here (28.7V->20.6V, no low-batt alarm) corroborates #309 power RCA.
+
+> **Wrap-up correction (dev)**: This is WRONG — #309 is *yesterday's* deployment ("Deployment 2026-06-**22**: Lake Massabesic survey"), already CLOSED 2026-06-23 11:20, and #311/#312 are its RCA follow-ups. salmon conflated the two because both days had power loss at the same site and #309's wrap-up logs were on gitcloud. Today's deployment is **#313** (created on dev the morning of 2026-06-23). gabby + salmon logs are linked to **#313**, not #309. Today's events *corroborate* the still-open #311 (trackline) and #312 (gyro) — added as comments there — but are a distinct deployment.

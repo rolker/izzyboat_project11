@@ -1,6 +1,7 @@
-# 2026-06-23 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-06-23 — gabby log (BizzyBoat deployment #313)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/313
+<!-- backfilled at wrap-up: issue-less field start (#533) linked to #313, the deployment dev created the morning of 2026-06-23 -->
 Host: gabby
 Side: field
 Started: 2026-06-23 09:14 -04:00
@@ -40,6 +41,8 @@ Started: 2026-06-23 09:14 -04:00
 **2026-06-23 15:13 -04:00** — Set sidescan range to 5 m at operator request: range_m 40.0 -> 5.0 (within 1-60 bounds). Verified via param get: range_m = 5.0 (zenoh set confirmed). Runtime param, not durable across node relaunch.
 
 **2026-06-23 15:13 -04:00** — Set sidescan range to 35 m at operator request: range_m 5.0 -> 35.0. Verified via param get: range_m = 35.0 (zenoh set confirmed).
+
+> **Wrap-up correction (operator)**: gabby's conclusion that `range_m` affects only the sidescan channel and the down-view stuck-at-~1.8 m was independent/device-side is **walked back**. Operator observed that setting the sidescan range to **5 m got the down-view channel auto-tracking the bottom again** — i.e. there IS an interaction between the sidescan `range_m` setting and the down-view auto-track. The "device-side, unrelated" attribution (entries 15:12 and 15:13, and open-item #5) is incorrect; this is a real cross-channel behavior worth a follow-up.
 
 **2026-06-23 17:23 -04:00** — RECOVERY: back at the dock. Operator: boat ran out of power and was towed in. Phase = recovery. (Power-exhaustion underway -> tow recovery; key RCA item for wrap-up.)
 
