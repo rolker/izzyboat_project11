@@ -484,6 +484,18 @@
       # confirm command intent + takeover timing (#209). Both low-rate.
       - /bizzy/marine/command
       - /bizzy/piloting_mode/manual/helm
+      # Trackline geometry + mission-manager command stream. The boat
+      # already logs the helm command bus (/marine/command) and mission
+      # *status* (/marine/status/mission_manager), but NOT the mission_plan
+      # itself (the trackline geometry sent from the operator) nor the
+      # mission_manager command stream (execute/clear/next). Without these
+      # the bag can't answer "what trackline was sent" vs "where the boat
+      # went". Added to debug the recurring "new trackline executed → boat
+      # heads off in the wrong direction; clear + resend recovers" event
+      # (2026-06-23 gabby; operator recalled a prior occurrence). Both
+      # std_msgs/String, low-rate, verified live on gabby 2026-06-23.
+      - /bizzy/marine/mission_plan
+      - /bizzy/marine/mission_manager/command
       - /marine/platforms
       - /rosout
       - /tf

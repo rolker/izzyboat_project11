@@ -77,6 +77,13 @@ declare -a SRC_mercat=(
 # Optional extra for Linux hosts, enabled with --ros-log.
 ROS_LOG_DIR=".ros/log"
 
+# Per-host rsync exclude patterns (one --exclude per entry, applied to all of
+# that host's sources). mercat's Qinsy projects hold large .qpd raw-data files
+# we don't want on the operator station — the .db/.dyngrid alongside them are
+# what we use. Patterns are rsync filter rules (match by basename or path).
+declare -a EXCLUDE_gabby=()
+declare -a EXCLUDE_mercat=( "*.qpd" )
+
 # Auto-detect tries these in order, using the first reachable address.
 LINK_ORDER=(wifi wireguard)
 
@@ -202,6 +209,10 @@ for host in "${HOSTS[@]}"; do
   extra+=(-z)                                   # always compress: wifi links aren't always strong
   [[ -n "$bw" ]]        && extra+=(--bwlimit="$bw")
   [[ $DRY_RUN -eq 1 ]]  && extra+=(--dry-run)
+  # Per-host excludes (e.g. mercat's *.qpd raw-data files). Empty host arrays
+  # add nothing.
+  declare -n host_excludes="EXCLUDE_$host"
+  for pat in "${host_excludes[@]}"; do extra+=(--exclude="$pat"); done
   ssh_cmd="ssh -o ConnectTimeout=8"     # lean: key/user from ~/.ssh/config
 
   printf '\n=== %s (%s) via %s [%s]%s ===\n' \
