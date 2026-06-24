@@ -29,3 +29,20 @@ issue: 326
 
 ### Open questions
 - [ ] No open questions — plan is review-plan-ready.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-06-24 23:29 +00:00
+**By**: Claude Code Agent (Claude Opus)
+<!-- Independent fresh-context review. Plan author was a Sonnet-model agent; the
+     shared workspace AGENT_NAME is not, by itself, evidence of self-review, so no
+     self-review annotation is applied. -->
+
+**Plan**: `.agent/work-plans/issue-326/plan.md` at `968fc54`
+**PR**: PR-less (--issue mode; gh not authenticated on host)
+**Verdict**: approve-with-suggestions
+
+### Findings
+- [ ] (risk) Source artifacts `~/data/logs/analysis/2026-06-24/` (incl. `speed_endurance_range_curve.png`) absent on this host — confirm implementer can reach them or run implementation where the data lives — `plan.md:19,61`
+- [ ] (suggestion) Stale "Range-optimal speed ~3–3.5 kt" is on line 13 of `docs/analysis/2026-06-23/README.md`, not line 14 — target by text, not line number — `plan.md:59`
+- [ ] (suggestion) Insert new subsection after `#### SOC ↔ voltage reference` (`bizzyboat_power.md:76`), just before `## Power model` — avoids splitting that subsection — `plan.md:35`
