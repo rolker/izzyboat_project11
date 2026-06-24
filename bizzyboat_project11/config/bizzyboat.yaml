@@ -113,6 +113,11 @@
             - mavros_velocity
             - mavros_position_ekf
             - mavros_velocity_body
+            - mavros_state
+            - mavros_rc_out
+            - mavros_rc_in
+            - mavros_cmd_vel
+            - sound_speed
             - tf
             - tf_static
             - usb_camera
@@ -180,6 +185,13 @@
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
               mavros_position_ekf: {source: mavros/global_position/global}
               mavros_velocity_body: {source: mavros/local_position/velocity_body}
+              # rqt_boat_state operator panel (rqt_operator_tools#85): FCU mode,
+              # actual/RC PWM, autonomy setpoint, and sound speed.
+              mavros_state: {source: mavros/state}
+              mavros_rc_out: {source: mavros/rc/out}
+              mavros_rc_in: {source: mavros/rc/in}
+              mavros_cmd_vel: {source: mavros/setpoint_velocity/cmd_vel}
+              sound_speed: {source: sensors/sound_speed/sound_speed}
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
               usb_camera: {source: sensors/cameras/usb/image_raw/compressed, period: 1.0}
@@ -235,6 +247,11 @@
             - mavros_velocity
             - mavros_position_ekf
             - mavros_velocity_body
+            - mavros_state
+            - mavros_rc_out
+            - mavros_rc_in
+            - mavros_cmd_vel
+            - sound_speed
             - tf
             - tf_static
             - usb_camera
@@ -300,6 +317,13 @@
               mavros_velocity: {source: mavros/global_position/raw/gps_vel}
               mavros_position_ekf: {source: mavros/global_position/global}
               mavros_velocity_body: {source: mavros/local_position/velocity_body}
+              # rqt_boat_state operator panel (rqt_operator_tools#85): FCU mode,
+              # actual/RC PWM, autonomy setpoint, and sound speed.
+              mavros_state: {source: mavros/state}
+              mavros_rc_out: {source: mavros/rc/out}
+              mavros_rc_in: {source: mavros/rc/in}
+              mavros_cmd_vel: {source: mavros/setpoint_velocity/cmd_vel}
+              sound_speed: {source: sensors/sound_speed/sound_speed}
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
               # Sidescan port/stbd + water-column (down) imagery at full rate on
@@ -339,6 +363,11 @@
             - mavros_orientation
             - mavros_position_ekf
             - mavros_velocity_body
+            - mavros_state
+            - mavros_rc_out
+            - mavros_rc_in
+            - mavros_cmd_vel
+            - sound_speed
             - mavros_gps_status
             - tf
             - tf_static
@@ -361,6 +390,13 @@
               mavros_orientation: {source: mavros/imu/data}
               mavros_position_ekf: {source: mavros/global_position/global}
               mavros_velocity_body: {source: mavros/local_position/velocity_body}
+              # rqt_boat_state operator panel (rqt_operator_tools#85): FCU mode,
+              # actual/RC PWM, autonomy setpoint, and sound speed.
+              mavros_state: {source: mavros/state}
+              mavros_rc_out: {source: mavros/rc/out}
+              mavros_rc_in: {source: mavros/rc/in}
+              mavros_cmd_vel: {source: mavros/setpoint_velocity/cmd_vel}
+              sound_speed: {source: sensors/sound_speed/sound_speed}
               mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
