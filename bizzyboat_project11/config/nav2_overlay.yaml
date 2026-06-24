@@ -25,9 +25,12 @@ local_costmap:
       # between camera views.
       # chart_layer (base's s57_layer::S57Layer) commented out for bizzyboat 2026-06-12
       # per operator; the base's chart_layer config block stays defined but unreferenced.
+      # bathymetry_layer (#319) provides the store-backed depth prior (NH GRANIT
+      # contour chart + M3 survey draft) in place of the disabled s57 chart_layer.
       plugins:
         # - "chart_layer"
         - "sea_surface_layer"
+        - "bathymetry_layer"
         - "inflation_layer"
       sea_surface_layer:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
@@ -83,6 +86,25 @@ local_costmap:
         # rolker/seafloor_echoboat_project11#35) so Smac plans around buoys too.
         # Empty-string would disable the publication.
         published_topic: <robot_namespace>/sea_surface/lethal_grid
+      bathymetry_layer:
+        plugin: "bathymetry_layer::BathymetryLayer"
+        enabled: True
+        # Store on the boat (field user data root, mirrors dev ~/data/stores).
+        # The store (NH GRANIT chart prior + M3 draft) must be synced here before
+        # the layer contributes; until then it logs once and no-ops (safe).
+        store_path: "/home/field/data/stores/bathymetry"
+        minimum_depth: 1.0
+        maximum_caution_depth: 2.5
+        # COUPLED to the chart prior's import uncertainty (5.0 m). shallowestReliable
+        # rejects cells with uncertainty > max_uncertainty and a present-but-rejected
+        # cell is written LETHAL — so a tighter gate (e.g. the 0.5 m default) would
+        # make the whole chart-covered lake lethal. Keep >= the chart's 5.0 m.
+        max_uncertainty: 5.0
+        max_age: 0.0
+        # Closed lake basin: the chart prior is masked to the lake outline, so
+        # no-data cells are land. Mark them lethal (unh_marine_autonomy#216).
+        unsurveyed_is_lethal: True
+        map_tide_frame: <tf_prefix>/map_tide
 
 global_costmap:
   global_costmap:
@@ -95,7 +117,20 @@ global_costmap:
       plugins:
         # - "chart_layer"
         - "sea_surface_relay"
+        - "bathymetry_layer"
         - "inflation_layer"
+      bathymetry_layer:
+        plugin: "bathymetry_layer::BathymetryLayer"
+        enabled: True
+        # See the local_costmap bathymetry_layer block for the store_path,
+        # max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal rationale.
+        store_path: "/home/field/data/stores/bathymetry"
+        minimum_depth: 1.0
+        maximum_caution_depth: 2.5
+        max_uncertainty: 5.0
+        max_age: 0.0
+        unsurveyed_is_lethal: True
+        map_tide_frame: <tf_prefix>/map_tide
 
 collision_monitor:
   ros__parameters:
