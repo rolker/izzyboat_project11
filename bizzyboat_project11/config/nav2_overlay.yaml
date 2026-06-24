@@ -132,6 +132,23 @@ global_costmap:
         max_age: 0.0
         unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide
+      # Match the local costmap's inflation (echoboat_project11/nav2_params.base.yaml:
+      # cost_scaling_factor 1.0, inflation_radius 3.0). The base's GLOBAL inflation is
+      # still BEN's tuning (150.0 m / 0.05) — an intentional coastline standoff for a
+      # larger ASV that was inherited when the echoboat LOCAL costmap was retuned but
+      # the GLOBAL was missed. Harmless on bizzy until the bathymetry_layer (#319) put
+      # a hard-lethal depth prior (all land + unsurveyed via unsurveyed_is_lethal) on
+      # the global costmap: a 150 m inflation of that lethal mask floods Lake
+      # Massabesic's <300 m navigable corridors and even the boat's own start cell
+      # (headless sim, #327). The bathymetry clearance ramp (shallow = high cost)
+      # already provides depth-based shore-keepoff, so the large geometric inflation is
+      # redundant here. Override only the two tuning fields; the plugin type and the
+      # rest of the inflation_layer config deep-merge from the base. Scoped to the
+      # bizzy overlay so the seafloor echoboat (chart_layer + obstacle_layer, open
+      # water) keeps BEN's standoff.
+      inflation_layer:
+        cost_scaling_factor: 1.0
+        inflation_radius: 3.0
 
 collision_monitor:
   ros__parameters:
