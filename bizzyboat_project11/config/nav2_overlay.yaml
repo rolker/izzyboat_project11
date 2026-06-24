@@ -89,10 +89,11 @@ local_costmap:
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
         enabled: True
-        # Store on the boat (field user data root, mirrors dev ~/data/stores).
-        # The store (NH GRANIT chart prior + M3 draft) must be synced here before
-        # the layer contributes; until then it logs once and no-ops (safe).
-        store_path: "/home/field/data/stores/bathymetry"
+        # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
+        # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
+        # (NH GRANIT chart prior + M3 draft) must exist there before the layer
+        # contributes; until then it logs once and no-ops (safe).
+        store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         # COUPLED to the chart prior's import uncertainty (5.0 m). shallowestReliable
@@ -122,9 +123,9 @@ global_costmap:
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
         enabled: True
-        # See the local_costmap bathymetry_layer block for the store_path,
-        # max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal rationale.
-        store_path: "/home/field/data/stores/bathymetry"
+        # See the local_costmap bathymetry_layer block for the store_path (~ expands
+        # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
+        store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         max_uncertainty: 5.0
