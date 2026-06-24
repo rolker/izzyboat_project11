@@ -57,7 +57,21 @@ A full charge cycle with no recharge between deployments (opening resting voltag
   (bollard) and shrinks ~0.3–0.4 V as the boat speeds up (prop unloads). The 67 A anchor is the
   *running* load; bollard/acceleration current is **higher**.
 - **Discharge rate accelerates toward empty:** ~0.5 V/hr on the plateau-edge → **~1.5 V/hr in the
-  knee** (the last volt goes ~3× faster).
+  knee** (the last volt goes ~3× faster). **2026-06-23 update (first full-discharge):** the final
+  knee was steeper still — ~23.0 V (15:00) → 20.6 V (15:52) loaded ≈ **~2.8 V/hr** in the last hour.
+
+### Validated full-discharge — 2026-06-23 (first run to BMS cutoff)
+The 2026-06-23 Massabesic survey ([#313](https://github.com/rolker/unh_echoboats_project11/issues/313))
+is the **first real full-charge → BMS hard-cutoff on the water** (the 2026-05-22 drain-to-LVD
+stopped at 21.2 V). It validates the **quadratic** PWM-coulomb model and corrects two figures:
+- **Quadratic coulomb = 272.6 Ah consumed in-water; the pack (273 Ah nameplate) actually emptied.**
+  A near-exact hit → **use the quadratic model.** The *linear* model over-predicts (~323 Ah, +19 %).
+- **The V-drop energy model under-counts badly — do not trust it for absolute energy.** On 06-22 it
+  read "~4154 Wh ≈ 59 % used"; the validated coulomb-quad says **~98 %**. (06-22 and 06-23 both ran
+  the pack ~dry — two consecutive days at the edge.)
+- **Real survey endurance ≈ 6 h / one full pack** at ~42 A average draw (06-23: 19.2 nm in 6.16 h;
+  06-22: 6.5 h). The "8–12 h" cruise extrapolation below was optimistic.
+- **Usable capacity to the BMS cutoff ≈ the full ~273 Ah nameplate** (cutoff ~20.6 V loaded).
 
 ## Power model (sensor-free) and its limits
 Current ≈ **f(PWM, SOC, boat speed, steering)**. Estimated via the V-drop model
@@ -67,9 +81,12 @@ counting (idle 8 A / full 67 A anchors; quadratic per the propeller power law).
 - **Constant R_int** — a fair approximation (§B: load sag is only mildly SOC-dependent,
   validated across 7 deployments), so a minor limitation; the strong dependence is on **PWM**.
 - **Speed / steering axes uncalibrated** — and not separable from opportunistic field bags.
-- Cross-deployment coulomb estimate **over-predicts ~20–30 %** vs the 273 Ah pack — a built-in
-  self-consistency check (a single cycle cannot exceed the pack). **Treat all energy / endurance
-  hours as ±30 % heuristics** until #88.
+- **Coulomb model — now anchored by the 2026-06-23 full discharge:** the **quadratic** PWM-coulomb
+  is validated (272.6 Ah predicted, pack emptied at 273 Ah nameplate); the **linear** variant
+  over-predicts ~19 %. Use quadratic. The **V-drop** energy model under-counts substantially (06-22:
+  V-drop "59 %" vs coulomb-quad ~98 %) — trust it for *trends*, not absolute Wh/Ah. The #88 PWM×current
+  sweep is still the unlock for mid-throttle current; until then treat *modeled current* as ±30 %, but
+  **energy/endurance hours are now anchored by a real run-to-empty** (≈ one pack per ~6 h survey).
 
 ## Operational — deployment planning
 *Voltage rules are the reliable output (measured, not modeled) and are **load-conservative**
@@ -94,9 +111,18 @@ when low-SOC).
 | **22 V** | **~15 min** | **recover immediately** |
 | 21.5 V (FCU CRT) | floor | (transient mins already below) |
 
-> ⚠ **No automatic warning today.** The annunciator does not fire at low battery
-> (**#171 / #162**). Until fixed, the operator must watch voltage against this ladder
-> **manually** — students cannot be expected to monitor raw voltage. Class-blocking.
+**Validated 2026-06-23 (full discharge):** the *time-left* column held up — 23 V at 15:05 → dark
+at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 min ✓).
+
+> ✅ **The annunciator now fires** (yellow at the 23.0 V `BATT_LOW_VOLT` threshold) — #171/#162
+> are fixed and **confirmed working on 2026-06-23**. The operator no longer has to watch raw voltage.
+>
+> ⚠ **But the ladder is *time-left*, not *homeward reach*.** On 2026-06-23 the boat ran a box
+> ~1.5–2 nm out; when the annunciator fired at 23 V it had only ~10 % return margin, and the
+> **point of no return was ~2 min later (~22.9 V)** — it died 1.29 nm short of the dock. **For ops
+> >~1.5 nm out, turn back *before* 23 V** (interim: ~23.5–24 V loaded), and on the warning go
+> *straight* home — don't finish the line. A distance-aware reserve rule is
+> [#315](https://github.com/rolker/unh_echoboats_project11/issues/315).
 
 ### Battery management across a day / between cohorts
 - Idle/hotel load (~5–8 A) drains the pack **even dockside**. **Charge to full before each
@@ -108,7 +134,10 @@ when low-SOC).
   (batteries are not field-swappable), so recharge-to-full time bounds the day/cohort cadence.
 
 ### Drive efficiently (extends every mission)
-- **Survey throttle, not full** — full throttle ≈ 4 h to empty; cruise/survey stretches that ~2–3×.
+- **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~42 A average). Full
+  throttle ≈ 4 h; a real survey is **~6 h to empty** — *not* the older 8–12 h cruise extrapolation.
+- **Survey speed is already near range-optimal (~3–3.5 kt)** — 2026-06-23 modeling shows slowing to
+  2 kt buys loiter *time*, not *miles* (fixed ~8 A hotel load); >4 kt range falls off fast.
 - **Steady straight legs are cheapest**; accel-/turn-heavy patterns cost more (bollard load).
 - **Minimize crabbing & oscillation:** align survey lines with the set/drift; address the
   SE-line undulation (#164 — over-steer wastes energy *and* coverage); use gentle/wide turns.
