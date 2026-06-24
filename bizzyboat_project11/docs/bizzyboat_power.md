@@ -73,6 +73,32 @@ stopped at 21.2 V). It validates the **quadratic** PWM-coulomb model and correct
   06-22: 6.5 h). The "8–12 h" cruise extrapolation below was optimistic.
 - **Usable capacity to the BMS cutoff ≈ the full ~273 Ah nameplate** (cutoff ~20.6 V loaded).
 
+#### SOC ↔ voltage reference (from the 2026-06-23 full discharge)
+SOC from the validated quadratic coulomb count; voltage measured at each SOC. **Approximate
+(single discharge, ±).** Resting (OCV) and loaded-at-survey-throttle are within ~0.1–0.2 V on the
+plateau — load sag is small until near empty. This is the OCV lookup the live SOC estimator
+([#318](https://github.com/rolker/unh_echoboats_project11/issues/318)) uses for voltage re-anchoring.
+
+| SOC | Resting (OCV) | Loaded @ survey |
+|---|---|---|
+| **100 %** | ~28.7 V (full) | ~28.5 V |
+| 90 % | 27.9 V | 27.8 V |
+| 80 % | 27.0 V | 27.0 V |
+| 70 % | 26.4 V | 26.5 V |
+| 60 % | 25.9 V | 25.8 V |
+| 50 % | 25.3 V | 25.1 V |
+| 40 % | 24.8 V | 24.7 V |
+| **30 %** | 24.3 V | 24.4 V ← knee begins |
+| 20 % | 23.8 V | 23.7 V |
+| 10 % | 22.9 V | 22.9 V |
+| **0 %** | ~21.5 V (floor) | ~20.6 V (BMS cutoff) |
+
+- Voltage declines ~0.5–0.9 V per 10 % — a *coarse* gauge, steepening below ~30 %; a ~0.3 V
+  sag/measurement error ≈ 5–10 % SOC, so it cannot replace coulomb counting mid-range.
+- **The 23.0 V FCU WARN sits at only ~15 % SOC** — by the time it fires you are near the bottom of
+  the tank (see the turn-back-reserve finding, [#315](https://github.com/rolker/unh_echoboats_project11/issues/315)).
+- Endpoints (100 % / 0 %) are the measured full-charge plateau and BMS cutoff, not interpolated.
+
 ## Power model (sensor-free) and its limits
 Current ≈ **f(PWM, SOC, boat speed, steering)**. Estimated via the V-drop model
 (`marine_tools` `bag_analysis/plots/power.py`: `I = (V_oc − V_load)/R_int`) and/or PWM-coulomb
