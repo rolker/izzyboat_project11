@@ -99,6 +99,51 @@ plateau — load sag is small until near empty. This is the OCV lookup the live 
   the tank (see the turn-back-reserve finding, [#315](https://github.com/rolker/unh_echoboats_project11/issues/315)).
 - Endpoints (100 % / 0 %) are the measured full-charge plateau and BMS cutoff, not interpolated.
 
+## Speed → power, endurance, range (empirical)
+Pooled from **three Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24, ~14 h of steady
+straight-line running). The lake has negligible current, so odometry speed-over-ground ≈
+speed-through-water and the curve is clean across the operational 2–4 kt band. Current/power are
+the **quadratic** PWM-coulomb model; endurance = 273 Ah pack ÷ draw (current **includes** the
+~8 A hotel load); range = speed × endurance. Full reproduction notes + the 3-panel plot:
+[`docs/analysis/2026-06-24/`](../../docs/analysis/2026-06-24/)
+([`speed_endurance_range_curve.png`](../../docs/analysis/2026-06-24/speed_endurance_range_curve.png)).
+
+| Speed | Draw | Endurance | Range (nm) | Range (mi) | Efficiency |
+|---|---|---|---|---|---|
+| 2.0 kt | ~20 A | ~13.5 h | ~27 | ~31 | 4.6 mi/kWh |
+| 2.5 kt | ~24 A | ~11.5 h | ~28 | ~32 | 4.5 mi/kWh |
+| **2.9 kt** | ~29 A | ~9.3 h | ~27 | ~31 | **4.2 mi/kWh** |
+| 3.1 kt | ~35 A | ~7.8 h | ~24 | ~28 | 3.8 mi/kWh |
+| 3.5 kt *(historical cruise)* | ~46 A | ~5.9 h | ~20 | ~23 | 3.35 mi/kWh |
+| 3.9 kt | ~57 A | ~4.8 h | ~18 | ~21 | 2.9 mi/kWh |
+
+**Range plateaus at ~2.0–2.9 kt** (~27–28 nm on a full pack); the historical ~3.5 kt cruise is
+already past it, costing ~25 % range. There's a drag step at ~3.2 kt (draw jumps ~35 → ~46 A
+between 3.1 and 3.5 kt). Below ~2.9 kt the range curve flattens — slower buys *time*, not *miles*
+(the fixed ~8 A hotel load dominates).
+
+**Pick the operating point by the binding constraint:**
+
+| Constraint | Best speed | Why |
+|---|---|---|
+| **Range** (cover the most distance) | **~2.9 kt** | top of the range plateau; faster loses miles quickly |
+| **Endurance / loiter** (stay out longest) | **~2.0 kt** | ~13.5 h vs ~5.9 h at 3.5 kt — more than double the time on station |
+| **Time** (finish a fixed job fastest) | 3.5 kt | ~17 % quicker than 3.0 kt but ~20 % less range — only with reserve to spare |
+
+For mixed range+endurance missions, **~2.9–3.0 kt is the all-around point**: near the efficiency
+plateau, only ~8 % slower than the usual 3.5 kt, but +1.9 h endurance and +5 mi range.
+
+> **Caveat (same as the model below):** no current sensor — current/power are modeled (quadratic
+> PWM, ±~30 %). The *relative* trade-offs and the current/Ah-based columns are robust; absolute
+> amps/watts carry the band. The **endurance hours are anchored** by the 06-23 run-to-empty
+> (273 Ah ÷ 44 A avg = 6.2 h, matching its measured underway time). Pier deployments are excluded
+> (tidal current corrupts speed-over-ground). This pooled curve **partially fills #88** for the
+> operational 2–4 kt band — it is opportunistic field data, not the controlled bench PWM×current
+> sweep #88 still calls for. Related: [#315](https://github.com/rolker/unh_echoboats_project11/issues/315)
+> (distance-aware reserve), [#318](https://github.com/rolker/unh_echoboats_project11/issues/318)
+> (live SOC estimator), [#196](https://github.com/rolker/unh_echoboats_project11/issues/196)
+> (idle/charger current).
+
 ## Power model (sensor-free) and its limits
 Current ≈ **f(PWM, SOC, boat speed, steering)**. Estimated via the V-drop model
 (`marine_tools` `bag_analysis/plots/power.py`: `I = (V_oc − V_load)/R_int`) and/or PWM-coulomb
@@ -162,8 +207,11 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
 ### Drive efficiently (extends every mission)
 - **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~42 A average). Full
   throttle ≈ 4 h; a real survey is **~6 h to empty** — *not* the older 8–12 h cruise extrapolation.
-- **Survey speed is already near range-optimal (~3–3.5 kt)** — 2026-06-23 modeling shows slowing to
-  2 kt buys loiter *time*, not *miles* (fixed ~8 A hotel load); >4 kt range falls off fast.
+- **Survey speed: ~2.9–3.0 kt is the range/endurance sweet spot** — the pooled three-survey curve
+  (§ *Speed → power, endurance, range*) shows range plateaus at ~2.0–2.9 kt; the historical ~3.5 kt
+  cruise is already past it (~25 % less range). Slowing below ~2.9 kt buys loiter *time*, not *miles*
+  (fixed ~8 A hotel load); >3.5 kt range falls off fast. Drop toward ~2 kt only when time-on-station
+  (not distance) is the goal; push to 3.5+ kt only when the clock is the hard limit and reserve has margin.
 - **Steady straight legs are cheapest**; accel-/turn-heavy patterns cost more (bollard load).
 - **Minimize crabbing & oscillation:** align survey lines with the set/drift; address the
   SE-line undulation (#164 — over-steer wastes energy *and* coverage); use gentle/wide turns.
