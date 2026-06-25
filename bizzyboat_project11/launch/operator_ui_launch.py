@@ -15,6 +15,7 @@ def generate_launch_description():
   background_chart = LaunchConfiguration('background_chart')
   diagnostics_rqt = LaunchConfiguration('diagnostics_rqt')
   logger_rqt = LaunchConfiguration('logger_rqt')
+  sonar_rqt = LaunchConfiguration('sonar_rqt')
 
   robot_namespace_arg = DeclareLaunchArgument(
     "robot_namespace", default_value=TextSubstitution(text="bizzy")
@@ -34,6 +35,9 @@ def generate_launch_description():
   )
   logger_rqt_arg = DeclareLaunchArgument(
     "logger_rqt", default_value="true"
+  )
+  sonar_rqt_arg = DeclareLaunchArgument(
+    "sonar_rqt", default_value="true"
   )
 
   launch_operator_ui_include = IncludeLaunchDescription(
@@ -78,13 +82,28 @@ def generate_launch_description():
     emulate_tty=True
   )
 
+  # Sonar rqt: the 'bizzy_sonar' perspective for monitoring the sidescan /
+  # echogram displays during a survey.
+  sonar_rqt_node = Node(
+    package='rqt_gui',
+    executable='rqt_gui',
+    name='rqt_sonar',
+    arguments=['-p', 'bizzy_sonar'],
+    condition=IfCondition(sonar_rqt),
+    respawn=True,
+    respawn_delay=5,
+    emulate_tty=True
+  )
+
   return LaunchDescription([
     robot_namespace_arg,
     operator_namespace_arg,
     background_chart_arg,
     diagnostics_rqt_arg,
     logger_rqt_arg,
+    sonar_rqt_arg,
     launch_operator_ui_include,
     diagnostics_rqt_node,
-    logger_rqt_node
+    logger_rqt_node,
+    sonar_rqt_node
   ])
