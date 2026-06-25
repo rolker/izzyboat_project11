@@ -10,7 +10,10 @@ test #160 stopped at 21.2 V; this one went all the way and the boat was towed in
 ## Headline numbers
 
 - **Distance on the charge:** 35.59 km = **19.22 nm** over **6.16 h** (09:39:20 → 15:48:52); mean SOG 3.1 kt. Died **1.29 nm from the dock**.
-- **Range-optimal speed** ~3–3.5 kt (today was already there); 2 kt buys loiter time, not miles.
+- **Range-optimal speed** ~2.9–3.0 kt (the plateau) — today's ~3.1 kt was just past it. The
+  pooled three-survey speed→power/endurance/range curve ([`docs/analysis/2026-06-24/`](../2026-06-24/),
+  and `bizzyboat_power.md` § *Speed → power, endurance, range*) supersedes the earlier "~3–3.5 kt"
+  estimate. 2 kt buys loiter time, not miles.
 - **Point of no return** 15:07:45 (~22.9 V) — only ~2 min after the 23 V annunciator warning.
 
 ## Plots (committed)
