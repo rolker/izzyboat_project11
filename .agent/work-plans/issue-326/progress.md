@@ -46,3 +46,22 @@ issue: 326
 - [ ] (risk) Source artifacts `~/data/logs/analysis/2026-06-24/` (incl. `speed_endurance_range_curve.png`) absent on this host — confirm implementer can reach them or run implementation where the data lives — `plan.md:19,61`
 - [ ] (suggestion) Stale "Range-optimal speed ~3–3.5 kt" is on line 13 of `docs/analysis/2026-06-23/README.md`, not line 14 — target by text, not line number — `plan.md:59`
 - [ ] (suggestion) Insert new subsection after `#### SOC ↔ voltage reference` (`bizzyboat_power.md:76`), just before `## Power model` — avoids splitting that subsection — `plan.md:35`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-06-25 00:07 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-326 at `afb62c5`
+**Mode**: pre-push
+**Depth**: Standard (reason: safety-relevant operational guidance with quantitative range/endurance claims)
+**Must-fix**: 2 | **Suggestions**: 3
+**Round**: 1 | **Ship**: continue — 2 must-fix, one a genuine range-planning gap; dispatch address-findings then re-review
+
+### Findings
+- [ ] (must-fix) Range figures (~27–28 nm plateau, ~24 nm @3.1kt) are straight-line-idealized; only measured full-discharge (06-23) got ~19.2 nm @3.1kt mean SOG (drew ~44A ≈ 3.5kt bin due to turns) — add real-survey derate + surface "straight-line" at the table — `bizzyboat_project11/docs/bizzyboat_power.md:102-123`
+- [ ] (must-fix) 06-23 quad-coulomb anchor self-contradicts: 273.9 Ah (new README) vs 272.6 Ah (power doc, twice) — reconcile — `docs/analysis/2026-06-24/README.md:38` ↔ `bizzyboat_project11/docs/bizzyboat_power.md:67,156`
+- [ ] (suggestion) 06-23 avg draw 42 A (lines 72,208) vs 44 A (line 139); 44 A matches 273Ah/6.16h — reconcile — `bizzyboat_project11/docs/bizzyboat_power.md:72,139,208`
+- [ ] (suggestion) "drag step at ~3.2 kt" implies discontinuity but quadratic model I=8+59r² is smooth — reword to "climbs steeply" — `bizzyboat_project11/docs/bizzyboat_power.md:121`
+- [ ] (suggestion) "~2.9–3.0 kt" sweet spot has no 3.0kt table row and 2.0–2.9 plateau vs "best=2.9kt" reads ambiguously — clarify or add row — `bizzyboat_project11/docs/bizzyboat_power.md:111-134`
