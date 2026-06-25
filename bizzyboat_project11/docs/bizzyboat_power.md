@@ -129,7 +129,9 @@ load dominates).
 > full-discharge survey (06-23) ran a **3.1 kt mean SOG yet averaged ~44 A** — the 3.5 kt steady
 > bin, not the 35 A the 3.1 kt row implies — and made **19.2 nm**, ~20 % below the ~24 nm the
 > steady 3.1 kt row predicts. **Plan whole-survey range/endurance off the *next-higher* draw bin
-> (~−20 %); use the steady-leg row only for individual transit legs.**
+> (~−20 %); use the steady-leg row only for individual transit legs.** (Preliminary — the derate
+> rests on one full-discharge survey; it is mission-profile-dependent and will firm up as more
+> turn-heavy runs accrue.)
 
 **Pick the operating point by the binding constraint:**
 
@@ -137,11 +139,11 @@ load dominates).
 |---|---|---|
 | **Range** (cover the most distance) | **~2.9 kt** | top of the range plateau; faster loses miles quickly |
 | **Endurance / loiter** (stay out longest) | **~2.0 kt** | ~13.5 h vs ~5.9 h at 3.5 kt — more than double the time on station |
-| **Time** (finish a fixed job fastest) | 3.5 kt | ~17 % quicker than 3.0 kt but ~20 % less range — only with reserve to spare |
+| **Time** (finish a fixed job fastest) | 3.5 kt | finishes a fixed job ~14 % faster than 3.0 kt but ~20 % less range — only with reserve to spare |
 
 For mixed range+endurance missions, **~2.9 kt (top of the ~2.0–2.9 kt plateau) is the all-around
-point** — 3.0 kt sits between the 2.9 and 3.1 kt rows. It's near the efficiency plateau, only
-~8 % slower than the usual 3.5 kt, but +1.9 h endurance and +5 mi range.
+point** — 3.0 kt sits between the 2.9 and 3.1 kt rows. Versus the usual 3.5 kt it's ~17 % slower
+but, from the table, **+3.4 h endurance (9.3 vs 5.9 h) and +8 mi range (31 vs 23 mi)**.
 
 > **Caveat (same as the model below):** no current sensor — current/power are modeled (quadratic
 > PWM, ±~30 %). The *relative* trade-offs and the current/Ah-based columns are robust; absolute
