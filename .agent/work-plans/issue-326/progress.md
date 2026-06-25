@@ -65,3 +65,22 @@ issue: 326
 - [ ] (suggestion) 06-23 avg draw 42 A (lines 72,208) vs 44 A (line 139); 44 A matches 273Ah/6.16h — reconcile — `bizzyboat_project11/docs/bizzyboat_power.md:72,139,208`
 - [ ] (suggestion) "drag step at ~3.2 kt" implies discontinuity but quadratic model I=8+59r² is smooth — reword to "climbs steeply" — `bizzyboat_project11/docs/bizzyboat_power.md:121`
 - [ ] (suggestion) "~2.9–3.0 kt" sweet spot has no 3.0kt table row and 2.0–2.9 plateau vs "best=2.9kt" reads ambiguously — clarify or add row — `bizzyboat_project11/docs/bizzyboat_power.md:111-134`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-06-25 00:32 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-326 at `f56acad`
+**Mode**: pre-push
+**Depth**: Standard (reason: safety-relevant operational planning guidance with quantitative range/endurance claims)
+**Must-fix**: 1 | **Suggestions**: 2
+**Round**: 2 | **Ship**: recommended — lone must-fix is a mechanical recompute against the doc's own table; Round 1's 2 must-fixes are resolved, count not rising
+
+<!-- Round 1 must-fixes verified fixed: 272.6 Ah reconciled across all 3 files; 42A→44A unified; "drag step" reworded to smooth quadratic climb; steady-leg labeling + derate note + constraint table added. New must-fix below was introduced by the address-findings prose rewrite. -->
+
+### Findings
+- [ ] (must-fix) "all-around point" sentence names ~2.9 kt but quotes the 3.1 kt row's deltas + an ~8% speed figure matching neither row — 2.9-vs-3.5 is ~17% slower, +3.4 h, +8 mi (not ~8%, +1.9 h, +5 mi); recompute from the table or restate subject as 3.1 kt — `bizzyboat_project11/docs/bizzyboat_power.md:142-144`
+- [ ] (suggestion) "~17% quicker than 3.0 kt" is the speed ratio (3.5/3.0); time-to-finish a fixed job is only ~14% shorter — clarify wording — `bizzyboat_project11/docs/bizzyboat_power.md:140`
+- [ ] (suggestion) ~−20% real-survey derate rests on a single full-discharge survey (06-23); already hedged, optionally note it's preliminary / mission-profile-dependent — `bizzyboat_project11/docs/bizzyboat_power.md:127-132`
