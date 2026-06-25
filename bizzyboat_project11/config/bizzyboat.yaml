@@ -368,6 +368,7 @@
             - mavros_rc_in
             - mavros_cmd_vel
             - sound_speed
+            - sidescan_water_temperature
             - mavros_gps_status
             - tf
             - tf_static
@@ -397,6 +398,9 @@
               mavros_rc_in: {source: mavros/rc/in}
               mavros_cmd_vel: {source: mavros/setpoint_velocity/cmd_vel}
               sound_speed: {source: sensors/sound_speed/sound_speed}
+              # Garmin transducer water temperature — tiny scalar, carried on the thin
+              # cell channel too (already on wifi/vpn). Pairs with sound_speed above.
+              sidescan_water_temperature: {source: sensors/sidescan/garmin_sidescan/water_temperature}
               mavros_gps_status: {source: mavros/gpsstatus/gps1/raw}
               tf: {source: /tf, queue_size: 25}
               tf_static: {source: /tf_static}
