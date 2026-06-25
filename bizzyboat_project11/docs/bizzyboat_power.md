@@ -69,7 +69,7 @@ stopped at 21.2 V). It validates the **quadratic** PWM-coulomb model and correct
 - **The V-drop energy model under-counts badly — do not trust it for absolute energy.** On 06-22 it
   read "~4154 Wh ≈ 59 % used"; the validated coulomb-quad says **~98 %**. (06-22 and 06-23 both ran
   the pack ~dry — two consecutive days at the edge.)
-- **Real survey endurance ≈ 6 h / one full pack** at ~42 A average draw (06-23: 19.2 nm in 6.16 h;
+- **Real survey endurance ≈ 6 h / one full pack** at ~44 A average draw (06-23: 19.2 nm in 6.16 h;
   06-22: 6.5 h). The "8–12 h" cruise extrapolation below was optimistic.
 - **Usable capacity to the BMS cutoff ≈ the full ~273 Ah nameplate** (cutoff ~20.6 V loaded).
 
@@ -104,11 +104,12 @@ Pooled from **three Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24, ~14 h
 straight-line running). The lake has negligible current, so odometry speed-over-ground ≈
 speed-through-water and the curve is clean across the operational 2–4 kt band. Current/power are
 the **quadratic** PWM-coulomb model; endurance = 273 Ah pack ÷ draw (current **includes** the
-~8 A hotel load); range = speed × endurance. Full reproduction notes + the 3-panel plot:
-[`docs/analysis/2026-06-24/`](../../docs/analysis/2026-06-24/)
+~8 A hotel load); range = speed × endurance. **The table is for steady straight-line legs** —
+real lawn-mower surveys draw more (see the derate note below). Full reproduction notes + the
+3-panel plot: [`docs/analysis/2026-06-24/`](../../docs/analysis/2026-06-24/)
 ([`speed_endurance_range_curve.png`](../../docs/analysis/2026-06-24/speed_endurance_range_curve.png)).
 
-| Speed | Draw | Endurance | Range (nm) | Range (mi) | Efficiency |
+| Speed (steady leg) | Draw | Endurance | Range (nm) | Range (mi) | Efficiency |
 |---|---|---|---|---|---|
 | 2.0 kt | ~20 A | ~13.5 h | ~27 | ~31 | 4.6 mi/kWh |
 | 2.5 kt | ~24 A | ~11.5 h | ~28 | ~32 | 4.5 mi/kWh |
@@ -117,10 +118,18 @@ the **quadratic** PWM-coulomb model; endurance = 273 Ah pack ÷ draw (current **
 | 3.5 kt *(historical cruise)* | ~46 A | ~5.9 h | ~20 | ~23 | 3.35 mi/kWh |
 | 3.9 kt | ~57 A | ~4.8 h | ~18 | ~21 | 2.9 mi/kWh |
 
-**Range plateaus at ~2.0–2.9 kt** (~27–28 nm on a full pack); the historical ~3.5 kt cruise is
-already past it, costing ~25 % range. There's a drag step at ~3.2 kt (draw jumps ~35 → ~46 A
-between 3.1 and 3.5 kt). Below ~2.9 kt the range curve flattens — slower buys *time*, not *miles*
-(the fixed ~8 A hotel load dominates).
+**Range plateaus at ~2.0–2.9 kt** (~27–28 nm of *steady-leg* distance on a full pack); the
+historical ~3.5 kt cruise is already past it, costing ~25 % range. Draw **climbs steeply through
+~3.2 kt** (~35 → ~46 A from 3.1 to 3.5 kt — the quadratic prop law, smooth, not a true step).
+Below ~2.9 kt the range curve flattens — slower buys *time*, not *miles* (the fixed ~8 A hotel
+load dominates).
+
+> ⚠ **Derate for real surveys (turns cost energy).** The table is steady-leg; a lawn-mower
+> pattern's turns and accel/decel raise the **average** draw by roughly one speed bin. The only
+> full-discharge survey (06-23) ran a **3.1 kt mean SOG yet averaged ~44 A** — the 3.5 kt steady
+> bin, not the 35 A the 3.1 kt row implies — and made **19.2 nm**, ~20 % below the ~24 nm the
+> steady 3.1 kt row predicts. **Plan whole-survey range/endurance off the *next-higher* draw bin
+> (~−20 %); use the steady-leg row only for individual transit legs.**
 
 **Pick the operating point by the binding constraint:**
 
@@ -130,8 +139,9 @@ between 3.1 and 3.5 kt). Below ~2.9 kt the range curve flattens — slower buys 
 | **Endurance / loiter** (stay out longest) | **~2.0 kt** | ~13.5 h vs ~5.9 h at 3.5 kt — more than double the time on station |
 | **Time** (finish a fixed job fastest) | 3.5 kt | ~17 % quicker than 3.0 kt but ~20 % less range — only with reserve to spare |
 
-For mixed range+endurance missions, **~2.9–3.0 kt is the all-around point**: near the efficiency
-plateau, only ~8 % slower than the usual 3.5 kt, but +1.9 h endurance and +5 mi range.
+For mixed range+endurance missions, **~2.9 kt (top of the ~2.0–2.9 kt plateau) is the all-around
+point** — 3.0 kt sits between the 2.9 and 3.1 kt rows. It's near the efficiency plateau, only
+~8 % slower than the usual 3.5 kt, but +1.9 h endurance and +5 mi range.
 
 > **Caveat (same as the model below):** no current sensor — current/power are modeled (quadratic
 > PWM, ±~30 %). The *relative* trade-offs and the current/Ah-based columns are robust; absolute
@@ -205,7 +215,7 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
   (batteries are not field-swappable), so recharge-to-full time bounds the day/cohort cadence.
 
 ### Drive efficiently (extends every mission)
-- **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~42 A average). Full
+- **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~44 A average). Full
   throttle ≈ 4 h; a real survey is **~6 h to empty** — *not* the older 8–12 h cruise extrapolation.
 - **Survey speed: ~2.9–3.0 kt is the range/endurance sweet spot** — the pooled three-survey curve
   (§ *Speed → power, endurance, range*) shows range plateaus at ~2.0–2.9 kt; the historical ~3.5 kt

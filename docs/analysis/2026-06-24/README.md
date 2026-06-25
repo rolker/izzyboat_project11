@@ -35,8 +35,8 @@ the operational ~2–4 kt band.
 - **In-water window = GPS dock departure/return** (the boat is tied to a dock at the lake,
   so the crane-altitude launch/recovery detector does not apply): dock ref = median of the
   first 90 s of fixes; departure = first fix sustained > 10 m; return = last fix > 10 m.
-- **Validation:** the 06-23 full-charge → BMS-cutoff run gives 273.9 Ah (quad) over its
-  in-water window vs the 273 Ah pack nameplate (it actually emptied), and 273 Ah ÷ 44 A
+- **Validation:** the 06-23 full-charge → BMS-cutoff run gives ~272.6 Ah (quad) over its
+  in-water window vs the 273 Ah pack nameplate (it actually emptied), and 273 Ah ÷ ~44 A
   avg = 6.2 h predicted, matching its measured underway time.
 
 ## Caveats
