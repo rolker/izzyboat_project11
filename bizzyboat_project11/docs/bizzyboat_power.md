@@ -100,29 +100,32 @@ plateau — load sag is small until near empty. This is the OCV lookup the live 
 - Endpoints (100 % / 0 %) are the measured full-charge plateau and BMS cutoff, not interpolated.
 
 ## Speed → power, endurance, range (empirical)
-Pooled from **three Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24, ~14 h of steady
+Pooled from **four Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24 / 06-25, ~19 h of steady
 straight-line running). The lake has negligible current, so odometry speed-over-ground ≈
 speed-through-water and the curve is clean across the operational 2–4 kt band. Current/power are
 the **quadratic** PWM-coulomb model; endurance = 273 Ah pack ÷ draw (current **includes** the
-~8 A hotel load); range = speed × endurance. **The table is for steady straight-line legs** —
-real lawn-mower surveys draw more (see the derate note below). Full reproduction notes + the
-3-panel plot: [`docs/analysis/2026-06-24/`](../../docs/analysis/2026-06-24/)
-([`speed_endurance_range_curve.png`](../../docs/analysis/2026-06-24/speed_endurance_range_curve.png)).
+~8 A hotel load); range = speed × endurance. The **Throttle** column is **measured**
+(`rc/out.ch_0`, throttle % = (PWM − 1500) / 5). **The table is for steady straight-line legs** —
+real lawn-mower surveys draw more (see the derate note below). Full reproduction notes + plots:
+[`docs/analysis/2026-06-24/`](../../docs/analysis/2026-06-24/)
+([`speed_endurance_range_curve.png`](../../docs/analysis/2026-06-24/speed_endurance_range_curve.png)),
+[`docs/analysis/2026-06-25/`](../../docs/analysis/2026-06-25/) (throttle characterization).
 
-| Speed (steady leg) | Draw | Endurance | Range (nm) | Range (mi) | Efficiency |
-|---|---|---|---|---|---|
-| 2.0 kt | ~20 A | ~13.5 h | ~27 | ~31 | 4.6 mi/kWh |
-| 2.5 kt | ~24 A | ~11.5 h | ~28 | ~32 | 4.5 mi/kWh |
-| **2.9 kt** | ~29 A | ~9.3 h | ~27 | ~31 | **4.2 mi/kWh** |
-| 3.1 kt | ~35 A | ~7.8 h | ~24 | ~28 | 3.8 mi/kWh |
-| 3.5 kt *(historical cruise)* | ~46 A | ~5.9 h | ~20 | ~23 | 3.35 mi/kWh |
-| 3.9 kt | ~57 A | ~4.8 h | ~18 | ~21 | 2.9 mi/kWh |
+| Speed (steady leg) | Throttle | Draw | Endurance | Range (nm) | Range (mi) | Efficiency |
+|---|---|---|---|---|---|---|
+| 2.0 kt | ~44 % | ~20 A | ~13.5 h | ~27 | ~31 | 4.6 mi/kWh |
+| 2.5 kt | ~50 % | ~24 A | ~11.5 h | ~28 | ~32 | 4.5 mi/kWh |
+| **2.9 kt** | ~62 % | ~29 A | ~9.3 h | ~27 | ~31 | **4.2 mi/kWh** |
+| 3.1 kt | ~66 % | ~35 A | ~7.8 h | ~24 | ~28 | 3.8 mi/kWh |
+| 3.5 kt *(historical cruise)* | ~81 % | ~46 A | ~5.9 h | ~20 | ~23 | 3.35 mi/kWh |
+| 3.9 kt | ~91 % | ~57 A | ~4.8 h | ~18 | ~21 | 2.9 mi/kWh |
 
 **Range plateaus at ~2.0–2.9 kt** (~27–28 nm of *steady-leg* distance on a full pack); the
-historical ~3.5 kt cruise is already past it, costing ~25 % range. Draw **climbs steeply through
-~3.2 kt** (~35 → ~46 A from 3.1 to 3.5 kt — the quadratic prop law, smooth, not a true step).
-Below ~2.9 kt the range curve flattens — slower buys *time*, not *miles* (the fixed ~8 A hotel
-load dominates).
+historical ~3.5 kt cruise is already past it, costing ~25 % range. Draw and throttle **climb
+steeply through ~3.2 kt** (~35 → ~46 A and ~66 → ~81 % throttle from 3.1 to 3.5 kt — the quadratic
+prop law, smooth, not a true step). The **current/throttle cost knee is ~3.0–3.1 kt**: below it the
+draw curve is gentle, above it it ramps hard. Below ~2.9 kt the range curve flattens — slower buys
+*time*, not *miles* (the fixed ~8 A hotel load dominates).
 
 > ⚠ **Derate for real surveys (turns cost energy).** The table is steady-leg; a lawn-mower
 > pattern's turns and accel/decel raise the **average** draw by roughly one speed bin. The only
@@ -155,6 +158,27 @@ but, from the table, **+3.4 h endurance (9.3 vs 5.9 h) and +8 mi range (31 vs 23
 > (distance-aware reserve), [#318](https://github.com/rolker/unh_echoboats_project11/issues/318)
 > (live SOC estimator), [#196](https://github.com/rolker/unh_echoboats_project11/issues/196)
 > (idle/charger current).
+
+### Speed → throttle (PWM): steady vs survey duty
+Two complementary views of the throttle channel (`rc/out.ch_0`; 1500 neutral, 2000 full forward,
+both thrusters slaved), pooled across the four lake surveys. Full detail + plot:
+[`docs/analysis/2026-06-25/`](../../docs/analysis/2026-06-25/)
+([`2026-06-25_cmd_throttle_current.png`](../../docs/analysis/2026-06-25/2026-06-25_cmd_throttle_current.png) —
+commanded speed vs throttle % and current draw).
+
+- **Steady straight-line** (achieved speed, transients removed) → the throttle column in the table
+  above. The clean hydrodynamic map: ~57 % at 2.75 kt, ~64 % at 3.0 kt, ~70 % at 3.2 kt, ~81 % at 3.5 kt.
+- **Ramp-inclusive** (actual throttle binned by **commanded** `setpoint_velocity/cmd_vel.vel_x`, no
+  steady filter — captures accel-onto-line and post-turn recovery). At a given commanded speed the
+  **ramp overhead is small (+0–4 pts)** — the controller tracks well and re-acceleration is brief
+  relative to time-on-line, so the steady throttle is representative for "throttle to hold speed X."
+
+> **Watch the post-turn recovery burst.** The commanded-speed view surfaces a current-heavy regime
+> the steady table hides: ~7 % of survey time at **commanded ~3.9 kt / ~94 % throttle / ~61 A, but
+> the hull only reaches ~3.1 kt** — the controller pushing near-full throttle to re-acquire the line
+> after a turn. Disproportionately costly current for the speed delivered (~28 min/day near full
+> throttle). A gentler post-turn speed ramp would trade a little line-acquisition time for materially
+> lower peak current — a tuning lever, not a hull limit.
 
 ## Power model (sensor-free) and its limits
 Current ≈ **f(PWM, SOC, boat speed, steering)**. Estimated via the V-drop model
@@ -219,18 +243,24 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
 ### Drive efficiently (extends every mission)
 - **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~44 A average). Full
   throttle ≈ 4 h; a real survey is **~6 h to empty** — *not* the older 8–12 h cruise extrapolation.
-- **Survey speed: ~2.9–3.0 kt is the range/endurance sweet spot** — the pooled three-survey curve
-  (§ *Speed → power, endurance, range*) shows range plateaus at ~2.0–2.9 kt; the historical ~3.5 kt
-  cruise is already past it (~25 % less range). Slowing below ~2.9 kt buys loiter *time*, not *miles*
-  (fixed ~8 A hotel load); >3.5 kt range falls off fast. Drop toward ~2 kt only when time-on-station
-  (not distance) is the goal; push to 3.5+ kt only when the clock is the hard limit and reserve has margin.
+- **Survey speed: ~3.0 kt (a touch over) is the all-around cruise sweet spot** — it sits right at the
+  **current/throttle cost knee** (~64 % throttle, ~31–35 A), just past the ~2.9 kt range-optimum and
+  before the steep cost ramp above ~3.2 kt. The pooled four-survey curve (§ *Speed → power, endurance,
+  range*) shows range plateaus at ~2.0–2.9 kt; the historical ~3.5 kt cruise (~81 % throttle, ~46 A) is
+  already well past the knee (~25 % less range). 3.2–3.3 kt is already in the same penalty zone as 3.5 kt.
+  Slowing below ~2.9 kt buys loiter *time*, not *miles* (fixed ~8 A hotel load); >3.5 kt range falls off
+  fast. Drop toward ~2 kt only when time-on-station (not distance) is the goal; push to 3.5+ kt only when
+  the clock is the hard limit and reserve has margin.
 - **Steady straight legs are cheapest**; accel-/turn-heavy patterns cost more (bollard load).
 - **Minimize crabbing & oscillation:** align survey lines with the set/drift; address the
   SE-line undulation (#164 — over-steer wastes energy *and* coverage); use gentle/wide turns.
 
 ## Known gaps / follow-ups
 - **#88** — PWM × current sweep (+ multiple speeds/steering angles) + dockside idle clamp +
-  optional measured full-discharge capacity. The unlock for real (not ±30 %) numbers.
+  optional measured full-discharge capacity. The unlock for real (not ±30 %) numbers. The
+  **measured speed↔throttle map** is now characterized from field data (§ *Speed → throttle (PWM)*,
+  [`docs/analysis/2026-06-25/`](../../docs/analysis/2026-06-25/)); what #88 still owes is the
+  current side (clamp-meter anchors across the PWM range) to retire the ±30 % band.
 - **#171 / #162** — annunciator never warns at LVD → manual voltage watch required (class-blocking).
 - **Recharge curve** — uncharacterized; measure a full charge for cohort-cadence planning (charge-in-place; no battery swap).
 - Cross-deployment power analysis detail: see #167.
