@@ -88,7 +88,10 @@ local_costmap:
         published_topic: <robot_namespace>/sea_surface/lethal_grid
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
-        enabled: True
+        # DISABLED 2026-06-26 (gabby/field): bathymetry prior not ready — the store
+        # rebuilt this morning floods the lake LETHAL (unsurveyed_is_lethal + depth
+        # gate). Slipped in by mistake per operator; re-enable when the prior is vetted.
+        enabled: False
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
@@ -128,7 +131,9 @@ global_costmap:
         - "inflation_layer"
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
-        enabled: True
+        # DISABLED 2026-06-26 (gabby/field): see local_costmap block — bathymetry
+        # prior not ready, floods the lake LETHAL. Re-enable when vetted.
+        enabled: False
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
         store_path: "~/data/stores/bathymetry"
