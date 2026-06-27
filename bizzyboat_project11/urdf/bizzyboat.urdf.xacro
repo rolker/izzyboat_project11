@@ -167,15 +167,35 @@
     pitch="${cam_tilt}" yaw="${pi}"/>
 
 
-  <!-- ========== GNSS Antennas (2x CUAV C-RTK 2HP) ========== -->
-  <!-- Black pucks fore and aft. Baseline ~1.67m.
-       Measured from base_link (center screw hole). -->
+  <!-- ========== FCU GNSS Antennas (2x CUAV C-RTK 2HP) ========== -->
+  <!-- Black pucks fore and aft, feeding the Cube Orange FCU (moving-baseline
+       yaw). Baseline ~1.67m. Measured from base_link (center screw hole).
+       mavros reports global_position already referenced to base_link, so these
+       frames are not on the mru_transform position path; the FCU GPS position
+       reference is gnss_forward. -->
 
   <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_forward"
     x="0.835" y="0.0" z="0.89"/>
 
   <xacro:gnss_antenna parent="bizzy/base_link" name="gnss_aft"
     x="-0.835" y="0.0" z="0.89"/>
+
+  <!-- ========== SBG Ellipse-D GNSS Antennas (dual-antenna INS) ========== -->
+  <!-- Separate from the C-RTK pucks (4 antennas total on the boat). Baseline
+       ~2.05m, consistent with the SBG flash lever arms (sbg_ellipse_d_configure
+       .yaml: primary -0.488 aft / secondary +1.567 fwd in the SBG IMU frame).
+       Positions below are measured from base_link directly and cross-check
+       against (lever arm + IMU offset) and an independent GPS baseline estimate
+       (FCU - SBG_primary = 1.843 m fwd) to ~3-6 cm.
+       sbg_gnss_primary (aft) is the phase center that sbg/gps_pos and the
+       ros_standard imu/nav_sat_fix report at -> this is the frame the SBG
+       NavSatFix must be stamped with so mru_transform offsets to base_link. -->
+
+  <xacro:gnss_antenna parent="bizzy/base_link" name="sbg_gnss_primary"
+    x="-1.073" y="0.0" z="0.8825"/>
+
+  <xacro:gnss_antenna parent="bizzy/base_link" name="sbg_gnss_secondary"
+    x="0.973" y="0.0" z="0.88"/>
 
 
   <!-- ========== Factory USB Camera ========== -->
@@ -248,13 +268,19 @@
     x="-0.23" y="0.0" z="-0.18"/>
 
   <!-- ========== Kongsberg M3 Multibeam ========== -->
-  <!-- Loaner unit sharing the DeltaT cavity (x); transducer-face z from the
-       #77 install log ([MEAS] rough). Frame consumed by cube_bathymetry's
-       TF lookup; kongsberg_em_bridge must stamp frame_id "bizzy/m3" (set its
-       frame_id param in the launch). Offsets + orientation to be confirmed by
-       a patch test. -->
+  <!-- Loaner unit mounted IN the DeltaT cavity (same physical location), but
+       the M3 and DeltaT reference their acoustic frames to different points, so
+       their base_link offsets legitimately differ (M3 -0.29/-0.28 vs DeltaT
+       -0.23/-0.18 — not a discrepancy). M3 transducer-face offsets measured
+       2026-06-27 (x=-0.29, z=-0.28); supersedes the earlier #77 install-log
+       rough values (-0.23, -0.145 — the z was ~half the true face depth, a
+       13.5 cm sounding-depth bias). Face z=-0.28 sits just above the hull
+       bottom (~-0.30 below base_link), matching the Garmin face at -0.29.
+       Frame consumed by cube_bathymetry's TF lookup; kongsberg_em_bridge must
+       stamp frame_id "bizzy/m3". Orientation still to be confirmed by a patch
+       test. -->
   <xacro:m3_multibeam parent="bizzy/base_link" name="m3"
-    x="-0.23" y="0.0" z="-0.145"/>
+    x="-0.29" y="0.0" z="-0.28"/>
 
   <!-- ========== Garmin GCV-20 Sidescan ========== -->
   <!-- Measured 2026-06-15 (Lake Massabesic): essentially centered (3 mm aft of
