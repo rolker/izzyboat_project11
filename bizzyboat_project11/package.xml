@@ -36,6 +36,15 @@
   <exec_depend>usb_cam</exec_depend>
   <depend>xacro</depend>
 
+  <!-- Test-only: unit tests for the M3 bag-retrofit utility (#342). -->
+  <test_depend>ament_cmake_pytest</test_depend>
+  <test_depend>rclpy</test_depend>
+  <test_depend>rosbag2_py</test_depend>
+  <test_depend>rosidl_runtime_py</test_depend>
+  <test_depend>geometry_msgs</test_depend>
+  <test_depend>tf2_msgs</test_depend>
+  <test_depend>std_msgs</test_depend>
+
   <export>
     <build_type>ament_cmake</build_type>
   </export>
