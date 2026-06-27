@@ -30,9 +30,19 @@ def generate_launch_description():
                 # SBG INS driver. Subscribes to RTCM via the remapping below
                 # so it shares /bizzy/sensors/rtcm with rtcm_relay. The
                 # `sensors` namespace (not `sensors/sbg`) leaves the
-                # driver's internal `sbg/` topic prefix to land output
-                # topics at /bizzy/sensors/sbg/<name> instead of the
-                # doubled /bizzy/sensors/sbg/sbg/<name>.
+                # driver's internal `sbg/` topic prefix to land the
+                # proprietary output topics at /bizzy/sensors/sbg/<name>
+                # instead of the doubled /bizzy/sensors/sbg/sbg/<name>.
+                #
+                # The driver's ros_standard publishers use an `imu/` prefix
+                # (imu/data, imu/nav_sat_fix, imu/velocity, ...) which would
+                # land them at /bizzy/sensors/imu/<name> — ambiguous against
+                # any other IMU and split from the rest of the SBG output.
+                # Remap each under `sbg/` so ALL SBG topics (proprietary and
+                # standard) group under /bizzy/sensors/sbg/. The standard
+                # topics had no consumers (mru_transform still reads mavros),
+                # so this rename is safe; the proprietary `sbg/<name>` topics
+                # are unchanged (zda_launch consumes sbg/utc_time by name).
                 Node(
                     package='sbg_driver',
                     executable='sbg_device',
@@ -40,6 +50,13 @@ def generate_launch_description():
                     parameters=[sbg_config],
                     remappings=[
                         ('ntrip_client/rtcm', 'rtcm'),
+                        ('imu/data', 'sbg/imu/data'),
+                        ('imu/nav_sat_fix', 'sbg/imu/nav_sat_fix'),
+                        ('imu/velocity', 'sbg/imu/velocity'),
+                        ('imu/mag', 'sbg/imu/mag'),
+                        ('imu/temp', 'sbg/imu/temp'),
+                        ('imu/pos_ecef', 'sbg/imu/pos_ecef'),
+                        ('imu/utc_ref', 'sbg/imu/utc_ref'),
                     ],
                     respawn=True,
                     respawn_delay=5,

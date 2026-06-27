@@ -16,10 +16,19 @@
       blue: 0.0
 
     nav:
+      # SBG INS primary, FCU fallback (#339) — list order is preference, as on
+      # izzyboat (posmv, mru). SBG topics are the namespaced ros_standard
+      # messages from sbg_launch (use_enu:true).
       source_names:
-        - mru
+        - sbg
+        - fcu
       sources:
-        mru:
+        sbg:
+          topics:
+            orientation: "sensors/sbg/imu/data"
+            position: "sensors/sbg/imu/nav_sat_fix"
+            velocity: "sensors/sbg/imu/velocity"
+        fcu:
           topics:
             orientation: "mavros/imu/data"
             position: "mavros/global_position/global"
@@ -45,14 +54,29 @@
 
 /**/mru_transform:
   ros__parameters:
+    # SBG INS primary, FCU fallback (#339). Arbitration is "newest fresh
+    # sample wins, priority (sensor_names order) breaks ties"; the SBG runs
+    # faster (imu/data ~25 Hz vs FCU ~10 Hz) so it dominates while healthy and
+    # the FCU takes over only on a real SBG dropout past sensor_timeout. SBG
+    # topics are the namespaced ros_standard messages (use_enu:true); frame_id
+    # sbg_gnss_primary (identity vs base_link) serves both the fix lever-arm
+    # and the gyro path. SBG attitude verified vehicle-aligned on the boat
+    # 2026-06-27 (yaw matches FCU to 0.01 deg; roll/pitch match the tie-up).
     sensors:
-      mru:
+      sbg:
+        topics:
+          orientation: "sensors/sbg/imu/data"
+          position: "sensors/sbg/imu/nav_sat_fix"
+          velocity: "sensors/sbg/imu/velocity"
+      fcu:
         topics:
           orientation: "mavros/imu/data"
           position: "mavros/global_position/global"
           velocity: "mavros/local_position/velocity_body"
     sensor_names:
-    - mru
+    - sbg
+    - fcu
+    sensor_timeout: 0.5
 
 /**/udp_bridge:
   ros__parameters:
@@ -460,16 +484,22 @@
       - /bizzy/sensors/cameras/oak_aft/rgb/image_raw/compressed
       - /bizzy/sensors/cameras/oak_port/rgb/camera_info
       - /bizzy/sensors/cameras/oak_port/rgb/image_raw/compressed
-      # SBG Ellipse-D INS — 50 Hz IMU/EKF, 5 Hz GPS, 1 Hz status/UTC
-      - /bizzy/sensors/sbg/imu_data
-      - /bizzy/sensors/sbg/ekf_nav
-      - /bizzy/sensors/sbg/ekf_quat
-      - /bizzy/sensors/sbg/mag
-      - /bizzy/sensors/sbg/gps_pos
-      - /bizzy/sensors/sbg/gps_vel
-      - /bizzy/sensors/sbg/gps_hdt
+      # SBG Ellipse-D INS — standard ROS messages (REP-103, use_enu:true),
+      # grouped under sbg/imu/ via sbg_launch remaps (#339). These replace
+      # the proprietary sbg/* dumps: imu/data carries EKF attitude + raw
+      # gyro/accel (was ekf_quat + imu_data), nav_sat_fix the ellipsoidal
+      # fix (was gps_pos / ekf_nav), velocity the ENU velocity (was gps_vel).
+      - /bizzy/sensors/sbg/imu/data
+      - /bizzy/sensors/sbg/imu/nav_sat_fix
+      - /bizzy/sensors/sbg/imu/velocity
+      - /bizzy/sensors/sbg/imu/mag
+      - /bizzy/sensors/sbg/imu/temp
+      - /bizzy/sensors/sbg/imu/pos_ecef
+      - /bizzy/sensors/sbg/imu/utc_ref
+      # SBG solution/health status retained — proprietary, but it has NO
+      # standard equivalent (RTK fix type, EKF solution mode, aiding status).
+      # Diagnostic for SBG-as-primary nav. Drop if strict standard-only.
       - /bizzy/sensors/sbg/status
-      - /bizzy/sensors/sbg/utc_time
       # AML SVS sound-speed probe. Out-of-water → 0.0 m/s with the
       # current `regex` parser (probe firmware emits literal `0.000` when
       # the head is dry; the regex matches it). Parse failures → NaN.
@@ -583,9 +613,9 @@
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_config
       # Sound-speed for bathy correction in post-processing.
       - /bizzy/sensors/sound_speed/sound_speed
-      # SBG INS for sonar motion compensation + georeferencing.
-      - /bizzy/sensors/sbg/imu_data
-      - /bizzy/sensors/sbg/ekf_quat
+      # SBG INS streams dropped (#339): sonar motion-comp / georeferencing
+      # comes from TF below (base_link attitude via mru_transform), and the
+      # raw SBG topics are in the main bag if needed for offline review.
       - /tf
       - /tf_static
     storage:
