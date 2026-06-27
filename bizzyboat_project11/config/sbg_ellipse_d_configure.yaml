@@ -179,8 +179,13 @@
     output:
       time_reference: "ros"
       ros_standard: true
-      use_enu: false
-      frame_id: "imu_link_ned"
+      # Driver-side output convention (NOT pushed to device flash) — kept in
+      # sync with sbg_ellipse_d.yaml. use_enu:true is required for the
+      # ros_standard messages to publish; frame_id is the SBG primary GNSS
+      # antenna so mru_transform offsets fixes to base_link. See the runtime
+      # config for the full rationale + the boat-side alignment check.
+      use_enu: true
+      frame_id: "bizzy/sbg_gnss_primary"
 
       # Rate-code mapping:
       #   0     = off
