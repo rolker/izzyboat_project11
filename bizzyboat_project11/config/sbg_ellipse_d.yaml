@@ -53,10 +53,27 @@
     output:
       time_reference: "ros"
       ros_standard: true
-      # NED matches QINSy/FCU; flip to ENU only if downstream expects REP-103.
-      use_enu: false
-      # TODO: align with URDF frame once an SBG link is added.
-      frame_id: "imu_link_ned"
+      # ENU (REP-103) is REQUIRED for the ros_standard messages: the driver
+      # gates ALL standard publishers (imu/data, imu/nav_sat_fix, imu/velocity)
+      # on use_enu — with use_enu:false it logs "ROS standard message are
+      # disabled" and publishes none (sbg_driver message_publisher.cpp). So
+      # this must be true for the SBG to feed mru_transform (#339). QINSy reads
+      # the device serial directly and is unaffected by this driver-side flag.
+      use_enu: true
+      # Antenna frame for the standard messages. The driver stamps ALL messages
+      # with this single frame_id. We point it at the SBG *primary* GNSS antenna
+      # (sbg_gnss_primary, where imu/nav_sat_fix's position is actually
+      # reported) so mru_transform's PositionSensor offsets the fix to base_link
+      # by the correct lever arm. That frame has identity rotation vs base_link,
+      # so it also correctly serves the gyro/attitude path (mru_transform uses
+      # the orientation quaternion directly as base_link attitude and only
+      # rotates angular velocity by this frame — identity here).
+      # ASSUMES the SBG output is vehicle-axis-aligned (config misRoll/Pitch/Yaw
+      # = 0). >>> VERIFY ON THE BOAT <<<: with use_enu:true, confirm imu/data
+      # attitude matches the FCU/known heading and that there's no residual
+      # mounting rotation; if there is, split into a real sbg_imu frame + a
+      # relay that re-stamps imu/nav_sat_fix to sbg_gnss_primary instead.
+      frame_id: "bizzy/sbg_gnss_primary"
 
       # Per-log output-mode params. With confWithRos: false above, these
       # are NOT pushed to the device — the device-side flash is the
