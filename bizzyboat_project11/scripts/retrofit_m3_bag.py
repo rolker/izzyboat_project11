@@ -41,6 +41,13 @@ honest when a manual shift is forced. Use --report-only to see it without writin
 (exits non-zero if any correction would apply, so it doubles as a "does this bag
 need fixing?" probe in batch scripts).
 
+Under --no-timing the offsets are STILL measured (just not applied) and a skew
+assessment runs: if a real clock skew is present (a large fraction of pings on one
+non-zero integer second, vs. a latency tail centred on 0 s) it is reported and the
+exit code is 3 -- so skipping the timing fix on a bag that genuinely needs it is
+never silent. Exit codes: 0 = clean; 2 = a correction would apply (--report-only);
+3 = real skew detected under --no-timing.
+
 File handling (default: in-place with backup) — downstream paths reference the
 original bag name, so the corrected bag takes the original name and the original
 is preserved as a backup. Persist-then-rename: the corrected bag is written to a
@@ -95,6 +102,14 @@ M3_XYZ = (-0.29, 0.0, -0.28)   # measured 2026-06-27 (#339); supersedes (-0.23,0
 # [0, 0.5], so this is "within (0.5 - 0.3) = 0.2 s of a half-second boundary".
 AMBIG_THRESHOLD = 0.3
 
+# When the timing fix is skipped (--no-timing) we STILL measure the offsets so a
+# genuinely skewed bag is not silently passed over. A real #338 clock skew puts a
+# large fraction of pings on a single NON-ZERO integer second (e.g. -9 s covered
+# ~100% on 2026-06-26); receive-latency jitter instead peaks at 0 s with a small
+# decaying tail (largest non-zero bin ~2% on a clean pre-skew bag). A non-zero bin
+# holding at least this fraction of pings is treated as a real skew to investigate.
+SKEW_BIN_FRACTION = 0.05
+
 
 def correct_stamp(stamp_ns, recv_ns, forced=None):
     """Compute the integer-second stamp correction, preserving the fraction.
@@ -127,6 +142,36 @@ def print_histogram(hist):
         return
     for n in sorted(hist):
         print(f'  {n:+d} s: {hist[n]}')
+
+
+def assess_skew(hist):
+    """Classify an integer-offset histogram: real clock skew vs. receive latency.
+
+    Returns (is_skew, detail). A genuine #338 skew shows a dominant NON-ZERO
+    offset -- either the most-populated bin is non-zero, or a single non-zero bin
+    holds >= SKEW_BIN_FRACTION of pings (a bag that straddles a skew jump, where
+    0 s may still be the plurality). Receive latency instead peaks at 0 s with a
+    decaying tail, so no non-zero bin grows large.
+    """
+    total = sum(hist.values())
+    if total == 0:
+        return False, 'no M3 detections to assess'
+    mode_n = max(hist, key=lambda n: hist[n])
+    nonzero = {n: c for n, c in hist.items() if n != 0}
+    top_nz, top_nz_frac = 0, 0.0
+    if nonzero:
+        top_nz = max(nonzero, key=lambda n: nonzero[n])
+        top_nz_frac = nonzero[top_nz] / total
+    is_skew = mode_n != 0 or top_nz_frac >= SKEW_BIN_FRACTION
+    zero_frac = hist.get(0, 0) / total
+    if is_skew:
+        detail = (f'dominant offset {top_nz:+d} s on {top_nz_frac:.1%} of pings '
+                  f'(mode {mode_n:+d} s) -- looks like a real clock skew')
+    else:
+        detail = (f'offset mode 0 s ({zero_frac:.1%} of pings); largest non-zero bin '
+                  f'{top_nz:+d} s on {top_nz_frac:.1%} -- consistent with receive '
+                  f'latency, no clock skew')
+    return is_skew, detail
 
 
 def rewrite_tf(msg):
@@ -182,25 +227,34 @@ def stream(rd, wr, msgcls, a, counters, offsets):
     """
     while rd.has_next():
         topic, data, ts = rd.read_next()
-        if topic == M3_DETECTIONS_TOPIC and not a.no_timing:
+        if topic == M3_DETECTIONS_TOPIC:
             m = deserialize_message(data, msgcls[topic])
             stamp_ns = m.header.stamp.sec * NS + m.header.stamp.nanosec
             measured_n, applied_n, new_ns, ambiguous = correct_stamp(stamp_ns, ts, a.offset)
-            offsets.append(measured_n)
-            if ambiguous:
-                counters['ambiguous'] += 1
-                print(f'WARN: ping offset {(stamp_ns - ts) / 1e9:+.3f}s is near a '
-                      f'rounding boundary (measured n={measured_n:+d}s)', file=sys.stderr)
-            if applied_n != 0:
-                m.header.stamp.sec = new_ns // NS
-                m.header.stamp.nanosec = new_ns % NS
-                counters['timing'] += 1
-                if wr:
-                    wr.write(topic, serialize_message(m), ts)
-            else:
+            offsets.append(measured_n)          # always: feeds the histogram + skew check
+            if a.no_timing:
+                # Diagnostic-only: measure the offset so a genuinely skewed bag is
+                # still caught (see assess_skew in _summary), but never touch the
+                # stamp. Per-ping ambiguous WARNs are suppressed here; the
+                # end-of-run skew assessment is the signal.
                 counters['pass'] += 1
                 if wr:
-                    wr.write(topic, data, ts)          # unchanged -> byte passthrough
+                    wr.write(topic, data, ts)
+            else:
+                if ambiguous:
+                    counters['ambiguous'] += 1
+                    print(f'WARN: ping offset {(stamp_ns - ts) / 1e9:+.3f}s is near a '
+                          f'rounding boundary (measured n={measured_n:+d}s)', file=sys.stderr)
+                if applied_n != 0:
+                    m.header.stamp.sec = new_ns // NS
+                    m.header.stamp.nanosec = new_ns % NS
+                    counters['timing'] += 1
+                    if wr:
+                        wr.write(topic, serialize_message(m), ts)
+                else:
+                    counters['pass'] += 1
+                    if wr:
+                        wr.write(topic, data, ts)          # unchanged -> byte passthrough
         elif topic == TF_STATIC_TOPIC and not a.no_tf:
             m = deserialize_message(data, msgcls[topic])
             if rewrite_tf(m):
@@ -338,8 +392,11 @@ def main(argv=None):
         rd, _sid, _topics, msgcls = open_reader(in_bag)
         stream(rd, None, msgcls, a, counters, offsets)
         del rd
-        _summary(in_bag, None, counters, offsets, a, wrote=False)
-        # Non-zero exit if any correction WOULD apply (batch "needs fixing?" probe).
+        skew = _summary(in_bag, None, counters, offsets, a, wrote=False)
+        # Exit codes: 3 = real skew detected under --no-timing (investigate);
+        # 2 = a correction WOULD apply (batch "needs fixing?" probe); 0 = clean.
+        if skew:
+            return 3
         return 2 if (counters['tf'] or counters['timing']) else 0
 
     # --- non-destructive sibling (--out) -----------------------------------
@@ -353,8 +410,8 @@ def main(argv=None):
         if not validate_written(out):
             _remove(out)
             sys.exit('aborting: written bag failed validation (input untouched)')
-        _summary(out, None, counters, offsets, a, wrote=True)
-        return 0
+        skew = _summary(out, None, counters, offsets, a, wrote=True)
+        return 3 if skew else 0
 
     # --- in-place with backup ----------------------------------------------
     temp, backup = inplace_paths(in_bag)
@@ -375,14 +432,17 @@ def main(argv=None):
         sys.exit('aborting: written bag failed validation; original untouched')
 
     _swap_in_place(in_bag, temp, backup, in_is_dir)
-    _summary(in_bag, backup, counters, offsets, a, wrote=True)
-    return 0
+    skew = _summary(in_bag, backup, counters, offsets, a, wrote=True)
+    return 3 if skew else 0
 
 
 def _summary(target, backup, counters, offsets, a, wrote):
-    """Print the histogram and a one-line outcome."""
+    """Print the histogram and a one-line outcome; under --no-timing also run and
+    print the skew assessment. Returns True iff --no-timing is set AND a real clock
+    skew was detected (the caller turns that into exit code 3)."""
+    hist = build_histogram(offsets)
     print('integer-second offset histogram (M3 detections, measured):')
-    print_histogram(build_histogram(offsets))
+    print_histogram(hist)
     verb = 'wrote' if wrote else 'would correct'
     print(f'{verb}: {counters["tf"]} tf_static, {counters["timing"]} timing; '
           f'{counters["pass"]} passthrough; {counters["ambiguous"]} ambiguous-band WARN')
@@ -390,9 +450,21 @@ def _summary(target, backup, counters, offsets, a, wrote):
         print(f'  -> {target}')
         if backup:
             print(f'  backup: {backup}')
+
+    skew_detected = False
+    if a.no_timing:
+        is_skew, detail = assess_skew(hist)
+        print(f'no-timing skew check: {detail}')
+        if is_skew:
+            skew_detected = True
+            print('WARN: a real clock skew is present but the timing fix was '
+                  'skipped (--no-timing) -- investigate; this bag likely needs the '
+                  'timing correction.', file=sys.stderr)
+
     if not a.no_timing and not a.no_tf and not counters['tf'] and not counters['timing']:
         print('NOTE: nothing matched -- no /tf_static bizzy/m3 frame and no M3 '
               'detection corrections. Is this an M3 bag?', file=sys.stderr)
+    return skew_detected
 
 
 if __name__ == '__main__':

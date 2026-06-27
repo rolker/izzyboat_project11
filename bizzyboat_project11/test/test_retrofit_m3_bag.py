@@ -394,3 +394,72 @@ def test_stale_temp_blocks_then_force_clears(tmp_path, msgs):
     rc = rm.main([str(bag), '--force'])
     assert rc == 0
     assert (tmp_path / 'm3bag.orig').exists()
+
+
+# ======================================================================
+# Skew assessment (assess_skew) + --no-timing reporting (#342 follow-up)
+# ======================================================================
+
+def test_assess_skew_latency_is_not_skew():
+    # Mode at 0 s with a small decaying tail (largest non-zero ~2%): latency.
+    is_skew, detail = rm.assess_skew({0: 970, -1: 22, -2: 5, -3: 3})
+    assert is_skew is False
+    assert 'latency' in detail
+
+
+def test_assess_skew_clean_skew_detected():
+    # Dominant non-zero mode (the 2026-06-26 shape): real skew.
+    is_skew, detail = rm.assess_skew({-9: 3090, -10: 1})
+    assert is_skew is True
+    assert 'skew' in detail
+
+
+def test_assess_skew_straddle_detected():
+    # 0 s is the plurality but a large non-zero bin (bag straddles a jump): skew.
+    assert rm.assess_skew({0: 60, -6: 40})[0] is True
+
+
+def test_assess_skew_empty_is_not_skew():
+    assert rm.assess_skew({})[0] is False
+
+
+def test_assess_skew_threshold_boundary():
+    # SKEW_BIN_FRACTION = 0.05: 4% non-zero -> latency; 5% -> skew.
+    assert rm.assess_skew({0: 96, -1: 4})[0] is False
+    assert rm.assess_skew({0: 95, -1: 5})[0] is True
+
+
+def test_no_timing_skew_exits_3_without_touching_stamps(tmp_path, msgs):
+    """--no-timing on a genuinely skewed bag reports the skew (exit 3) and leaves
+    the detection stamps unchanged."""
+    bag = tmp_path / 'm3skew'
+    _make_bag(bag, msgs, detection_offsets=[6.02, 6.03, 6.04, 6.01])
+    out = tmp_path / 'out'
+    rc = rm.main([str(bag), '--no-timing', '--out', str(out)])
+    assert rc == 3
+
+    geometry = msgs[0]
+    _sid, _tmd, msgs_out = _read_all(out)
+    det = [m for m in msgs_out if m[0] == rm.M3_DETECTIONS_TOPIC]
+    assert det
+    for (_topic, data, ts) in det:
+        ps = deserialize_message(data, geometry.PointStamped)
+        stamp_ns = ps.header.stamp.sec * NS + ps.header.stamp.nanosec
+        assert round((stamp_ns - ts) / 1e9) == 6        # NOT shifted to 0
+
+
+def test_no_timing_latency_exits_0(tmp_path, msgs):
+    """--no-timing on a latency-only bag finds no skew and exits 0."""
+    bag = tmp_path / 'm3lat'
+    _make_bag(bag, msgs, detection_offsets=[0.04] * 20 + [-1.05])  # 1/21 ~ 4.8% < 5%
+    rc = rm.main([str(bag), '--no-timing', '--out', str(tmp_path / 'out')])
+    assert rc == 0
+
+
+def test_no_timing_report_only_skew_exits_3_and_no_write(tmp_path, msgs):
+    """--no-timing --report-only detects the skew (exit 3) and writes nothing."""
+    bag = tmp_path / 'm3skew_ro'
+    _make_bag(bag, msgs, detection_offsets=[6.02, 6.03, 6.04])
+    rc = rm.main([str(bag), '--no-timing', '--report-only'])
+    assert rc == 3
+    assert not (tmp_path / 'm3skew_ro.orig').exists()
