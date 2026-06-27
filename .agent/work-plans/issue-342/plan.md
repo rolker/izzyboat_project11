@@ -143,17 +143,19 @@ sibling (`--out`) mode is also supported.
 ## Open Questions
 
 - [x] **Resolved (Plan Review suggestion)** — bare `.mcap` write-validation gating
-  the in-place backup atomicity: `validate_written(path, storage_id)` opens a
-  `SequentialReader` on the freshly-written output and reads one message; if that
-  raises (or the rosbag2 mcap writer produced an unexpected layout), it falls back
-  to a `size > 0` heuristic and emits a WARN that validation was degraded. The
-  in-place swap (rename original → `.orig`, temp → original) runs **only** after
-  `validate_written` passes, so a failed/partial write never replaces the original.
-  **Caveat carried to the PR**: boat bags are bare `.mcap`; rosbag2's
-  `SequentialWriter` may emit a *directory* bag rather than a single bare file for
-  mcap output. The script handles both input forms; the bare-file *output*
-  round-trip should be smoke-tested on a real boat bag before bulk use (noted in
-  the PR body), since the synthetic-bag tests exercise the directory form.
+  the in-place backup atomicity: `validate_written(path)` opens a
+  `SequentialReader` on the freshly-written output and reads one message. It is
+  **fail-closed** — any failure aborts (no `size > 0` fallback), because in
+  destructive in-place mode a validation failure must stop rather than be papered
+  over. The in-place swap (rename original → `.orig`, install corrected → original)
+  runs **only** after `validate_written` passes; if the final move fails, the
+  original is rolled back from `.orig`, and the installed bag is re-validated
+  (restored on failure), so a failed/partial write never replaces the original.
+  **Bag form is preserved**: rosbag2's `SequentialWriter` only emits *directory*
+  bags, so for a bare `.mcap` input the single inner segment is extracted to the
+  original name (a multi-segment write aborts and asks for `--out`). The bare-file
+  round-trip is covered by `test_inplace_bare_mcap_stays_bare`; still worth a
+  smoke-test on a real boat bag before bulk use (noted in the PR body).
 
 ## Estimated Scope
 
