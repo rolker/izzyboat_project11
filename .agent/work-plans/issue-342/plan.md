@@ -50,8 +50,15 @@ sibling (`--out`) mode is also supported.
      `[0.3, 0.7]`; return `n`, corrected stamp, and `bool` warning flag.
    - `build_histogram(offsets: list[int]) -> dict[int, int]`: count-by-integer.
    - `print_histogram(hist)`: one line per integer offset key.
+   - **Timing target topic (must-fix, Plan Review)**: the M3 detections topic is
+     pinned as a module constant `M3_DETECTIONS_TOPIC = '/bizzy/sensors/m3/detections'`
+     (type `marine_acoustic_msgs/SonarDetections`), from the recorder config in
+     `bizzyboat.yaml`. `stream()` applies `correct_stamp` only to messages on this
+     topic — mirroring the sidescan precedent's hardcoded `SONAR` target dict. The
+     constant is documented so a namespace/topic-rename is a one-line change.
    - `stream(rd, wr_or_none, args)`: main loop — accumulate histogram,
-     apply corrections, pass everything else through. Returns counters dict.
+     apply corrections (timing on `M3_DETECTIONS_TOPIC`, geometry on `/tf_static`),
+     pass everything else through. Returns counters dict.
    - `main()`: orchestrate — open reader, determine output path (temp or
      `--out`), run `stream()`, then in-place swap if default mode.
    - **In-place swap**: write to `<in_bag>.tmp` (or `.tmp.mcap` for bare);
@@ -88,6 +95,13 @@ sibling (`--out`) mode is also supported.
      produces the same bag, not that it skips work).
    - `test_stream_passthrough`: with `--no-tf` and `--no-timing`, all messages
      pass unchanged; counters confirm zero rewrites.
+   - `test_storage_qos_preserved` (suggestion, Plan Review): round-trip a bag
+     through `main()` and assert the output's `storage_id` and every topic's
+     `TopicMetadata` (name, type, serialization_format, offered_qos_profiles)
+     match the input — covers review-issue action #1 (storage/QoS preservation),
+     which message-byte checks alone do not.
+   - `test_correct_stamp_only_target_topic`: a non-M3 topic carrying a stale
+     stamp is left untouched (timing applies only to `M3_DETECTIONS_TOPIC`).
    - `test_inplace_swap_creates_backup`: after `main()` in default mode on a
      temp bag, the `.orig` backup exists, corrected bag exists at original path,
      and backup contents match the original pre-run input.
@@ -128,10 +142,18 @@ sibling (`--out`) mode is also supported.
 
 ## Open Questions
 
-- [ ] For bare `.mcap` output in the in-place path: confirm that `SequentialReader`
-  can validate a freshly-written bare `.mcap` (open + read one message) without
-  ROS middleware; if not, use file-size > 0 as the "fully written" heuristic
-  instead. Implementer should test this on a real boat bag before committing.
+- [x] **Resolved (Plan Review suggestion)** — bare `.mcap` write-validation gating
+  the in-place backup atomicity: `validate_written(path, storage_id)` opens a
+  `SequentialReader` on the freshly-written output and reads one message; if that
+  raises (or the rosbag2 mcap writer produced an unexpected layout), it falls back
+  to a `size > 0` heuristic and emits a WARN that validation was degraded. The
+  in-place swap (rename original → `.orig`, temp → original) runs **only** after
+  `validate_written` passes, so a failed/partial write never replaces the original.
+  **Caveat carried to the PR**: boat bags are bare `.mcap`; rosbag2's
+  `SequentialWriter` may emit a *directory* bag rather than a single bare file for
+  mcap output. The script handles both input forms; the bare-file *output*
+  round-trip should be smoke-tested on a real boat bag before bulk use (noted in
+  the PR body), since the synthetic-bag tests exercise the directory form.
 
 ## Estimated Scope
 
