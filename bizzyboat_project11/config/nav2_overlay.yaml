@@ -88,10 +88,13 @@ local_costmap:
         published_topic: <robot_namespace>/sea_surface/lethal_grid
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
-        # DISABLED 2026-06-26 (gabby/field): bathymetry prior not ready — the store
-        # rebuilt this morning floods the lake LETHAL (unsurveyed_is_lethal + depth
-        # gate). Slipped in by mistake per operator; re-enable when the prior is vetted.
-        enabled: False
+        # Re-enabled 2026-06-27 (#276). The Jun-26 field disable was for an
+        # UNCORRECTED store: the chart re-import (unh_marine_autonomy#221,
+        # --depth-offset 48.88) makes the lake water navigable (0% depth-lethal,
+        # clearance ~1.5-7.6 m at full pool) and the depth prior now reports current
+        # promptly (#226 robot-first core-readiness fix). Land / no-data stays LETHAL
+        # via unsurveyed_is_lethal (intended closed-basin shore keepout).
+        enabled: True
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
@@ -131,9 +134,9 @@ global_costmap:
         - "inflation_layer"
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
-        # DISABLED 2026-06-26 (gabby/field): see local_costmap block — bathymetry
-        # prior not ready, floods the lake LETHAL. Re-enable when vetted.
-        enabled: False
+        # Re-enabled 2026-06-27 (#276): see local_costmap block — corrected store
+        # (unh_marine_autonomy#221) + readiness fix (#226).
+        enabled: True
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
         store_path: "~/data/stores/bathymetry"
