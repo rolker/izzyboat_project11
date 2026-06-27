@@ -59,12 +59,29 @@ issue: 342
 Tests: 19/19 pass locally (pytest, jazzy sourced). Static analysis run (flake8 ament profile; package registers no lint test, so not CI-caught). Copilot off (not opted in). Reviewed against local `origin/jazzy` (fetch failed offline).
 
 ### Findings
-- [ ] (must-fix) Default in-place mode silently installs a *directory* bag at a bare `.mcap`'s original filename (verified: `.mcap` URI → rosbag2 directory bag); guard output-form ≠ input-form or require `--out` for bare files — `retrofit_m3_bag.py:260-266,308-327`
-- [ ] (suggestion) `validate_written` degrades to `size>0` on any reader exception; in destructive in-place mode a validation exception should abort, not fall back — `retrofit_m3_bag.py:158-178,321`
-- [ ] (suggestion) Two-rename in-place swap is non-atomic; SIGINT between renames leaves the bag only at `.orig` and the re-run guard then refuses — add rollback + recovery hint — `retrofit_m3_bag.py:311,326-327`
-- [ ] (suggestion) Input reader `rd` not released before the in-place rename (works on Linux; release for robustness) — `retrofit_m3_bag.py:317-327`
-- [ ] (suggestion) `AMBIG_HI=0.7` is dead (frac maxes at 0.5); behavior correct but constant + docstring "|frac| in [0.3,0.7]" mislead — `retrofit_m3_bag.py:89,102`
-- [ ] (suggestion) Stale `.tmp` from a SIGKILLed run blocks all future runs with no auto-clean/--force — `retrofit_m3_bag.py:309-312`
-- [ ] (suggestion) Histogram under `--offset N` records the forced value, undercutting its "validates the PPS assumption" claim — `retrofit_m3_bag.py:100,191`
-- [ ] (suggestion) Banker's-rounding direction at exactly n+0.5 untested; `test_correct_stamp_ambiguous_band` discards `n` — `test_retrofit_m3_bag.py:70-75`
-- [ ] (suggestion) flake8 ament profile (not run in this package's CI): unused `import os` (F401), plus D401/D403 docstring nits on test helpers — `test_retrofit_m3_bag.py:16,93,165`
+- [x] (must-fix) Default in-place mode silently installs a *directory* bag at a bare `.mcap`'s original filename (verified: `.mcap` URI → rosbag2 directory bag); guard output-form ≠ input-form or require `--out` for bare files — `retrofit_m3_bag.py:260-266,308-327`
+- [x] (suggestion) `validate_written` degrades to `size>0` on any reader exception; in destructive in-place mode a validation exception should abort, not fall back — `retrofit_m3_bag.py:158-178,321`
+- [x] (suggestion) Two-rename in-place swap is non-atomic; SIGINT between renames leaves the bag only at `.orig` and the re-run guard then refuses — add rollback + recovery hint — `retrofit_m3_bag.py:311,326-327`
+- [x] (suggestion) Input reader `rd` not released before the in-place rename (works on Linux; release for robustness) — `retrofit_m3_bag.py:317-327`
+- [x] (suggestion) `AMBIG_HI=0.7` is dead (frac maxes at 0.5); behavior correct but constant + docstring "|frac| in [0.3,0.7]" mislead — `retrofit_m3_bag.py:89,102`
+- [x] (suggestion) Stale `.tmp` from a SIGKILLed run blocks all future runs with no auto-clean/--force — `retrofit_m3_bag.py:309-312`
+- [x] (suggestion) Histogram under `--offset N` records the forced value, undercutting its "validates the PPS assumption" claim — `retrofit_m3_bag.py:100,191`
+- [x] (suggestion) Banker's-rounding direction at exactly n+0.5 untested; `test_correct_stamp_ambiguous_band` discards `n` — `test_retrofit_m3_bag.py:70-75`
+- [x] (suggestion) flake8 ament profile (not run in this package's CI): unused `import os` (F401), plus D401/D403 docstring nits on test helpers — `test_retrofit_m3_bag.py:16,93,165`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-06-27 21:41 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-342 at `adafe2a`
+**Mode**: pre-push
+**Depth**: Deep (reason: 795 lines of new code ≥ 200; plan.md is a project-repo governance trigger)
+**Must-fix**: 0 | **Suggestions**: 1
+**Round**: 2 | **Ship**: recommended — all 9 Round-1 findings resolved; 0 must-fix; remaining item is doc-only
+
+Round-1 closure verified: bare-`.mcap`→bare-`.mcap` form preserved (`inplace_paths` + `_swap_in_place` single-segment extraction, `test_inplace_bare_mcap_stays_bare`); `validate_written` now fail-closed (no `size>0` fallback); in-place swap has try/except rollback from backup; `del rd` before swap; single `AMBIG_THRESHOLD=0.3`; `--force` for stale `.tmp`; histogram records measured `n`; `test_correct_stamp_half_rounds_to_even` + `test_storage_and_metadata_preserved` added. Tests: 22/22 pass (pytest, jazzy sourced; now CI-registered via `ament_add_pytest_test`). Static analysis: `ament_flake8` clean. Two disjoint-lens Claude Adversarial passes (A logic, B systemic/safety) found no new actionable bugs — flagged items (`del wr` finalization on Windows/networked FS, the inherent SIGKILL window in the FS swap, stale-`.orig` handling) are inapplicable to this Linux-only manual tool, already mitigated, or inherent-and-acceptable given the mandatory backup. Copilot off (not opted in). Reviewed against local `origin/jazzy` (94a9ea5; fetch failed offline — branch is pure additions, base unchanged).
+
+### Findings
+- [ ] (suggestion) `plan.md:148-151` still describes `validate_written` falling back to a `size>0` heuristic; the implementation intentionally dropped that fallback (Round-1 finding #2). Doc-only — update the plan to match the shipped fail-closed behavior. — `.agent/work-plans/issue-342/plan.md:148-151`
