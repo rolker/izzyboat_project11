@@ -6,15 +6,15 @@ use lightweight fakes and need no ROS messages. Integration tests build a real
 rosbag2 bag and round-trip it through main(); they request the `msgs` fixture,
 which skips them if the message packages aren't on the path.
 
-Note: rosbag2's SequentialWriter always emits a *directory* bag (metadata.yaml +
-<name>_0.mcap), even for a .mcap URI, so the integration fixtures are directory
-bags. The bare-single-.mcap input form (boat bags) is covered by the
-detect_storage / inplace_paths pure tests; bare-file *reading* is exercised by
-the boat in practice and confirmed to work with storage_id='mcap'.
+rosbag2's SequentialWriter always emits a *directory* bag (metadata.yaml +
+<name>_0.mcap), even for a .mcap URI. Directory-bag round-trips use that form
+directly; the bare-single-.mcap input form (boat bags) is built by extracting a
+dir bag's inner segment and is covered by test_inplace_bare_mcap_stays_bare.
 """
 import importlib.util
 import os
 import pathlib
+import shutil
 import types
 
 import pytest
@@ -38,21 +38,23 @@ NS = rm.NS
 # ======================================================================
 
 def test_correct_stamp_healthy():
-    """~0.04 s offset -> n=0, stamp unchanged, not ambiguous."""
+    """A ~0.04 s offset yields n=0, stamp unchanged, not ambiguous."""
     recv = 100 * NS
     stamp = recv + int(0.04 * NS)
-    n, new_ns, ambiguous = rm.correct_stamp(stamp, recv)
-    assert n == 0
+    measured, applied, new_ns, ambiguous = rm.correct_stamp(stamp, recv)
+    assert measured == 0
+    assert applied == 0
     assert new_ns == stamp
     assert ambiguous is False
 
 
 def test_correct_stamp_six_second_preserves_fraction():
-    """~6.03 s offset -> n=6, 6 whole seconds removed, sub-second fraction kept."""
+    """A ~6.03 s offset removes 6 whole seconds, keeping the sub-second fraction."""
     recv = 100 * NS
     stamp = recv + int(6.03 * NS)
-    n, new_ns, ambiguous = rm.correct_stamp(stamp, recv)
-    assert n == 6
+    measured, applied, new_ns, ambiguous = rm.correct_stamp(stamp, recv)
+    assert measured == 6
+    assert applied == 6
     assert new_ns == stamp - 6 * NS
     assert new_ns % NS == stamp % NS          # PPS-disciplined fraction untouched
     assert ambiguous is False
@@ -62,8 +64,9 @@ def test_correct_stamp_seven_second_step():
     """A later 7 s step is handled per-message (multi-step drift)."""
     recv = 200 * NS
     stamp = recv + int(7.02 * NS)
-    n, new_ns, _ = rm.correct_stamp(stamp, recv)
-    assert n == 7
+    measured, applied, new_ns, _ = rm.correct_stamp(stamp, recv)
+    assert measured == 7
+    assert applied == 7
     assert new_ns == stamp - 7 * NS
 
 
@@ -71,16 +74,27 @@ def test_correct_stamp_ambiguous_band():
     """A ~0.5 s offset lands in the ambiguous rounding band -> WARN flag."""
     recv = 100 * NS
     stamp = recv + int(0.5 * NS)
-    _n, _new, ambiguous = rm.correct_stamp(stamp, recv)
+    measured, _applied, _new, ambiguous = rm.correct_stamp(stamp, recv)
+    assert ambiguous is True
+    assert measured == 0                       # round(0.5) -> 0 (banker's)
+
+
+def test_correct_stamp_half_rounds_to_even():
+    """Exactly n+0.5 rounds to even (round(2.5) -> 2) and flags ambiguous."""
+    recv = 100 * NS
+    stamp = recv + 2 * NS + NS // 2            # exactly +2.5 s
+    measured, _applied, _new, ambiguous = rm.correct_stamp(stamp, recv)
+    assert measured == 2
     assert ambiguous is True
 
 
-def test_correct_stamp_forced_override():
-    """--offset forces the integer regardless of the measured value."""
+def test_correct_stamp_forced_override_keeps_measured():
+    """--offset forces the applied shift but the measured value is preserved."""
     recv = 100 * NS
     stamp = recv + int(6.03 * NS)
-    n, new_ns, _ = rm.correct_stamp(stamp, recv, forced=7)
-    assert n == 7
+    measured, applied, new_ns, _ = rm.correct_stamp(stamp, recv, forced=7)
+    assert measured == 6                       # histogram stays honest
+    assert applied == 7
     assert new_ns == stamp - 7 * NS
 
 
@@ -90,7 +104,7 @@ def test_build_histogram():
 
 
 def _fake_tf(*child_frames):
-    """A duck-typed TFMessage with the fields rewrite_tf touches."""
+    """Return a duck-typed TFMessage with the fields rewrite_tf touches."""
     transforms = []
     for cf in child_frames:
         transforms.append(types.SimpleNamespace(
@@ -149,7 +163,7 @@ def test_inplace_paths_bare_mcap(tmp_path):
 
 
 # ======================================================================
-# Integration tests (real rosbag2 directory-bag round-trip)
+# Integration tests (real rosbag2 bag round-trip)
 # ======================================================================
 
 @pytest.fixture
@@ -162,7 +176,7 @@ def msgs():
 
 
 def _topic_md(name, type_str):
-    """TopicMetadata for the installed rosbag2 (jazzy: id first positional)."""
+    """Build a TopicMetadata for the installed rosbag2 (jazzy: id first positional)."""
     return TopicMetadata(0, name, type_str, 'cdr')
 
 
@@ -211,6 +225,18 @@ def _make_bag(path, msgs, *, detection_offsets, tf_old=True):
     del wr
 
 
+def _make_bare_mcap(tmp_path, msgs, name, **kw):
+    """Build a genuine bare single .mcap file by extracting a dir bag's segment."""
+    src = tmp_path / 'src'
+    _make_bag(src, msgs, **kw)
+    inner = [f for f in os.listdir(src) if f.endswith('.mcap')]
+    assert len(inner) == 1
+    bare = tmp_path / name
+    shutil.move(str(src / inner[0]), str(bare))
+    shutil.rmtree(src)
+    return bare
+
+
 def _read_all(path):
     """Return (storage_id, {topic: TopicMetadata}, [(topic, data, ts)])."""
     rd = SequentialReader()
@@ -249,9 +275,25 @@ def test_inplace_creates_backup_and_corrects(tmp_path, msgs):
     m3 = [t for t in msg.transforms if t.child_frame_id == rm.M3_FRAME][0]
     assert (m3.transform.translation.x, m3.transform.translation.y,
             m3.transform.translation.z) == rm.M3_XYZ
-    # Unrelated frame untouched.
     other = [t for t in msg.transforms if t.child_frame_id == 'bizzy/imu'][0]
-    assert other.transform.translation.x == 1.0
+    assert other.transform.translation.x == 1.0       # unrelated frame untouched
+
+
+def test_inplace_bare_mcap_stays_bare(tmp_path, msgs):
+    """A bare single .mcap input yields a bare .mcap output (not a directory)."""
+    bare = _make_bare_mcap(tmp_path, msgs, 'boat.mcap', detection_offsets=[6.03])
+    assert bare.is_file()
+    rc = rm.main([str(bare)])
+    assert rc == 0
+    assert (tmp_path / 'boat.mcap').is_file()          # still a bare FILE
+    assert (tmp_path / 'boat.orig.mcap').is_file()     # backup is the original file
+    geometry = msgs[0]
+    _sid, _tmd, out = _read_all(tmp_path / 'boat.mcap')
+    det = [m for m in out if m[0] == rm.M3_DETECTIONS_TOPIC]
+    assert len(det) == 1
+    ps = deserialize_message(det[0][1], geometry.PointStamped)
+    stamp_ns = ps.header.stamp.sec * NS + ps.header.stamp.nanosec
+    assert abs((stamp_ns - det[0][2]) / 1e9) < 0.5
 
 
 def test_storage_and_metadata_preserved(tmp_path, msgs):
@@ -318,9 +360,8 @@ def test_report_only_clean_bag_exit_zero(tmp_path, msgs):
 
 def test_only_target_topic_timed(tmp_path, msgs):
     """Timing correction touches only M3_DETECTIONS_TOPIC, not other headers."""
-    geometry, tf2, std = msgs
+    geometry, _tf2, _std = msgs
     bag = tmp_path / 'm3bag'
-    # A non-M3 PointStamped topic carrying a +6 s stamp must be left untouched.
     wr = SequentialWriter()
     wr.open(StorageOptions(uri=str(bag), storage_id='mcap'), ConverterOptions('', ''))
     wr.create_topic(_topic_md('/other/stamped', 'geometry_msgs/msg/PointStamped'))
@@ -338,3 +379,18 @@ def test_only_target_topic_timed(tmp_path, msgs):
     ps_out = deserialize_message(msgs_out[0][1], geometry.PointStamped)
     out_ns = ps_out.header.stamp.sec * NS + ps_out.header.stamp.nanosec
     assert out_ns == stamp_ns                          # unchanged (not the M3 topic)
+
+
+def test_stale_temp_blocks_then_force_clears(tmp_path, msgs):
+    """A leftover .tmp blocks an in-place run; --force clears it."""
+    bag = tmp_path / 'm3bag'
+    _make_bag(bag, msgs, detection_offsets=[6.03])
+    stale = tmp_path / 'm3bag.tmp'
+    stale.mkdir()
+    (stale / 'junk').write_text('x')
+    with pytest.raises(SystemExit):
+        rm.main([str(bag)])
+    assert stale.exists()                              # untouched without --force
+    rc = rm.main([str(bag), '--force'])
+    assert rc == 0
+    assert (tmp_path / 'm3bag.orig').exists()
