@@ -54,10 +54,11 @@
 
 /**/mru_transform:
   ros__parameters:
-    # SBG INS primary, FCU fallback (#339). Arbitration is "newest fresh
-    # sample wins, priority (sensor_names order) breaks ties"; the SBG runs
-    # faster (imu/data ~25 Hz vs FCU ~10 Hz) so it dominates while healthy and
-    # the FCU takes over only on a real SBG dropout past sensor_timeout. SBG
+    # SBG INS primary, FCU fallback (#339). Arbitration is strict
+    # priority-preference (sensor_names order): the highest-priority *fresh*
+    # source owns the output, so the SBG drives nav whenever it is healthy and
+    # the FCU takes over only on a real SBG dropout past sensor_timeout —
+    # regardless of relative sample rates. SBG
     # topics are the namespaced ros_standard messages (use_enu:true); frame_id
     # sbg_gnss_primary (identity vs base_link) serves both the fix lever-arm
     # and the gyro path. SBG attitude verified vehicle-aligned on the boat
