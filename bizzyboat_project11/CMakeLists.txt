@@ -24,4 +24,11 @@ ament_export_dependencies(
   xacro
 )
 
+if(BUILD_TESTING)
+  find_package(ament_cmake_pytest REQUIRED)
+  # Unit tests for the one-off bag-retrofit utility (#342). The script itself is
+  # not installed (manual offline tool, like retrofit_sidescan_bag.py).
+  ament_add_pytest_test(test_retrofit_m3_bag test/test_retrofit_m3_bag.py)
+endif()
+
 ament_package()
