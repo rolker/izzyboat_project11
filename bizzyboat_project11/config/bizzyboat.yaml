@@ -103,6 +103,7 @@
             - diagnostics
             - heartbeat
             - heartbeat_nav
+            - mission_tasks
             - hover_viz
             - local_costmap_windowed
             - local_costmap_footprint
@@ -157,6 +158,12 @@
               diagnostics: {source: /diagnostics}
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
+              # Structured running-task state for CAMP's task view (camp#123).
+              # Sibling of heartbeat_nav; same full-rate cadence (the boat
+              # publishes it periodically). Carries task poses, so it can be
+              # larger than the flattened heartbeat over cell — tune cadence
+              # after measuring the link budget, not blind (PR#239 review).
+              mission_tasks: {source: marine/status/mission_tasks}
               hover_viz: {source: hover_visualization}
               # Cropped local-costmap window for operator SA (unh_marine_navigation#38,
               # #127). Replaces the raw local_costmap, whose full grid lost ~78% over
@@ -243,6 +250,7 @@
             - diagnostics
             - heartbeat
             - heartbeat_nav
+            - mission_tasks
             - hover_viz
             - local_costmap_windowed
             - local_costmap_footprint
@@ -290,6 +298,12 @@
               diagnostics: {source: /diagnostics}
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
+              # Structured running-task state for CAMP's task view (camp#123).
+              # Sibling of heartbeat_nav; same full-rate cadence (the boat
+              # publishes it periodically). Carries task poses, so it can be
+              # larger than the flattened heartbeat over cell — tune cadence
+              # after measuring the link budget, not blind (PR#239 review).
+              mission_tasks: {source: marine/status/mission_tasks}
               hover_viz: {source: hover_visualization}
               # Reflex collision cloud + danger-zone polygons + state (#170). Sent
               # unthrottled on VPN too: each is small (cloud <2 KB/msg, polygons +
@@ -381,6 +395,7 @@
             topics_list:
             - heartbeat
             - heartbeat_nav
+            - mission_tasks
             - command_response
             - battery
             - collision_monitor_state
@@ -409,6 +424,12 @@
             topics:
               heartbeat: {source: marine/heartbeat}
               heartbeat_nav: {source: marine/status/mission_manager}
+              # Structured running-task state for CAMP's task view (camp#123).
+              # Sibling of heartbeat_nav; same full-rate cadence (the boat
+              # publishes it periodically). Carries task poses, so it can be
+              # larger than the flattened heartbeat over cell — tune cadence
+              # after measuring the link budget, not blind (PR#239 review).
+              mission_tasks: {source: marine/status/mission_tasks}
               command_response: {source: marine/response}
               battery: {source: /bizzy/mavros/battery}
               collision_monitor_state: {source: collision_monitor_state}
@@ -476,6 +497,7 @@
       - /bizzy/mhhw_offset
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
+      - /bizzy/marine/status/mission_tasks
       - /bizzy/robot_description
       - /bizzy/sensors/cameras/oak_forward/rgb/camera_info
       - /bizzy/sensors/cameras/oak_forward/rgb/image_raw/compressed
