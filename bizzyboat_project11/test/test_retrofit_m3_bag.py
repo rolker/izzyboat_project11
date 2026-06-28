@@ -254,7 +254,7 @@ def _read_all(path):
 def test_inplace_creates_backup_and_corrects(tmp_path, msgs):
     """Default mode: corrected bag at original name, original preserved as .orig."""
     bag = tmp_path / 'm3bag'
-    _make_bag(bag, msgs, detection_offsets=[0.04, 6.03, 6.03])
+    _make_bag(bag, msgs, detection_offsets=[6.03, 6.03, 6.03])
     rc = rm.main([str(bag)])
     assert rc == 0
     assert (tmp_path / 'm3bag.orig').exists()
@@ -427,6 +427,57 @@ def test_assess_skew_threshold_boundary():
     # SKEW_BIN_FRACTION = 0.05: 4% non-zero -> latency; 5% -> skew.
     assert rm.assess_skew({0: 96, -1: 4})[0] is False
     assert rm.assess_skew({0: 95, -1: 5})[0] is True
+
+
+# ======================================================================
+# Windowed timing (windowed_skew) — latency-robust upper-envelope skew
+# ======================================================================
+
+def test_windowed_skew_uniform_and_empty():
+    assert rm.windowed_skew([-9, -9, -9, -9], 200) == [-9, -9, -9, -9]
+    assert rm.windowed_skew([0, 0, 0], 200) == [0, 0, 0]
+    assert rm.windowed_skew([], 200) == []
+
+
+def test_windowed_skew_latency_outlier_pulled_up():
+    # Latency is one-sided (offset <= skew): a late ping among a -9 s skew sits
+    # BELOW it (-10) and is corrected up to the envelope -9, not left at -10.
+    assert rm.windowed_skew([-9, -9, -10, -9, -9], 200) == [-9, -9, -9, -9, -9]
+    # A clean (no-skew) baseline with a latency dip stays at 0.
+    assert rm.windowed_skew([0, 0, -1, 0, 0], 200) == [0, 0, 0, 0, 0]
+
+
+def test_windowed_skew_tracks_downward_drift_with_lag():
+    # Max holds the higher value until it leaves the window, so a 0 -> -6 drift
+    # lags by ~half a window (here half=1: index 4 still reads 0).
+    assert rm.windowed_skew([0, 0, 0, 0, -6, -6, -6, -6], 1) == [0, 0, 0, 0, 0, -6, -6, -6]
+
+
+def test_windowed_skew_prefers_least_delayed():
+    # Window holds both -> the envelope (max) wins -> the smaller correction.
+    assert rm.windowed_skew([0, -6], 5) == [0, 0]
+
+
+def test_windowed_corrects_latency_outlier_in_bag(tmp_path, msgs):
+    """End-to-end: a late ping inside a 6 s skew is shifted by the window's
+    envelope (6 s), not its own measured 5 s, so it is not left a second off."""
+    bag = tmp_path / 'm3win'
+    offs = [6.03] * 10 + [5.04] + [6.03] * 10        # one late outlier (below 6) mid-bag
+    _make_bag(bag, msgs, detection_offsets=offs)
+    out = tmp_path / 'out'
+    rc = rm.main([str(bag), '--out', str(out)])
+    assert rc == 0
+
+    geometry = msgs[0]
+    _sid, _tmd, msgs_out = _read_all(out)
+    shifts = []
+    for (_t, data, ts) in [m for m in msgs_out if m[0] == rm.M3_DETECTIONS_TOPIC]:
+        ps = deserialize_message(data, geometry.PointStamped)
+        stamp_ns = ps.header.stamp.sec * NS + ps.header.stamp.nanosec
+        shifts.append(round((stamp_ns - ts) / 1e9))
+    # all shifted by the envelope 6: clean pings residual ~0; the late outlier was
+    # at 5.04, shifted by 6 -> residual ~-0.96 -> round -1 (NOT shifted by its own 5).
+    assert shifts.count(0) == 20 and shifts.count(-1) == 1
 
 
 def test_no_timing_skew_exits_3_without_touching_stamps(tmp_path, msgs):

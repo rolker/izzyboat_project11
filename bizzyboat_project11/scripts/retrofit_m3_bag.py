@@ -20,19 +20,24 @@ Two independent corrections, each toggleable:
     the integer-second clock skew (#338). From Jun 24 2026 the M3's absolute
     time-of-day jumped ahead in WHOLE-second steps (a drifting mercat Windows
     clock) while PPS kept the sub-second fraction correct. So the fix is an
-    INTEGER-second shift that PRESERVES the sub-second fraction:
+    INTEGER-second shift that PRESERVES the sub-second fraction; the per-ping
+    integer comes from a WINDOWED MAXIMUM, not a per-message round:
 
-        n = round(header.stamp - bag_receive_time)   # nearest whole second
-        header.stamp -= n seconds                     # fraction untouched
+        measured[i] = round(stamp[i] - bag_receive_time[i])   # per-message
+        n[i]        = max(measured[i-W .. i+W])                # windowed envelope
+        header.stamp[i] -= n[i] seconds                        # fraction untouched
 
-    This is computed PER MESSAGE against the bag's receive timestamp (the gabby
-    clock, which #338 confirms agreed with every other clock to < 2 ms). Doing it
-    per-message means a bag that straddles a 6 s -> 7 s jump gets each ping
-    corrected by its own integer, and a healthy ping (offset ~0.04 s -> n = 0) is
-    left untouched. The bag receive time only needs ±0.5 s accuracy to pick the
-    right integer; healthy (~0.04 s) and bad (~6.03 s) offsets are both far from a
-    0.5 s rounding boundary. A WARN is emitted for any ping whose fractional
-    offset is within ~0.2 s of a half-second (frac >= 0.3, where frac in [0, 0.5]).
+    Why the window-max: stamp-minus-receive conflates the skew with receive
+    latency, so a ping delivered > 0.5 s late rounds to the WRONG second. A
+    per-message round() therefore mis-shifts every late ping -- on the (pre-skew)
+    2026-06-12 bag that was ~9.6k clean pings dragged off zero. But latency is
+    ONE-SIDED: offset = skew - transit_delay with transit_delay >= 0, so the true
+    skew is the UPPER ENVELOPE -- the max over a window of time-neighbours,
+    i.e. the skew of whichever neighbour arrived least delayed. The receive clock
+    (gabby) agreed with every other clock to < 2 ms (#338). Unlike a mode this
+    survives sustained latency bursts (it needs only one prompt ping per window).
+    The count of pings whose windowed value overrode their own per-message
+    integer is reported as "window override".
 
 The integer-offset HISTOGRAM is always printed (e.g. "0 s: 412, 6 s: 1805") so
 the step structure is visible and the PPS assumption is validated. It always
@@ -79,6 +84,7 @@ import argparse
 import os
 import shutil
 import sys
+from collections import Counter
 
 from rclpy.serialization import deserialize_message, serialize_message
 from rosbag2_py import (ConverterOptions, SequentialReader, SequentialWriter,
@@ -109,6 +115,17 @@ AMBIG_THRESHOLD = 0.3
 # decaying tail (largest non-zero bin ~2% on a clean pre-skew bag). A non-zero bin
 # holding at least this fraction of pings is treated as a real skew to investigate.
 SKEW_BIN_FRACTION = 0.05
+
+# Windowed timing correction (#338). A per-message round(stamp - receive)
+# conflates the integer clock skew with receive latency, so a ping delivered
+# > 0.5 s late rounds to the WRONG second (this over-corrected ~9.6k clean pings on
+# the 2026-06-12 bag). Latency is one-sided (offset <= skew), so each ping takes
+# the MAXIMUM per-message integer over a window of its time-neighbours -- the
+# upper envelope = the skew of the least-delayed neighbour (see windowed_skew).
+# Half-window in PINGS (M3 ~28 Hz, so this ~401-ping window spans ~14 s) -- needs
+# only one promptly-delivered ping per window; larger = more burst-robust but lags
+# a drift crossing more. Tunable.
+SKEW_WINDOW_HALF = 200
 
 
 def correct_stamp(stamp_ns, recv_ns, forced=None):
@@ -174,6 +191,46 @@ def assess_skew(hist):
     return is_skew, detail
 
 
+def windowed_skew(measured, half):
+    """Map per-message integer offsets to a latency-robust per-ping skew.
+
+    Receive latency is ONE-SIDED: offset = skew - transit_delay with
+    transit_delay >= 0 (a ping cannot be received before it was sent, and the
+    gabby receive clock is accurate to < 2 ms, #338). So offset <= skew always,
+    and the true skew is the UPPER ENVELOPE of the offsets -- the MAXIMUM over a
+    window of time-neighbours, recovered from whichever neighbour arrived with the
+    least delay. Unlike the mode, this needs only ONE promptly-delivered ping in
+    the window, so it rejects latency outliers however they cluster, including
+    sustained bursts that a mode cannot survive. It lags a downward-drifting skew
+    by up to half a window at a crossing, where the clock is between integers and
+    +/-1 s is inherent anyway. (A ping with offset ABOVE the skew is physically
+    impossible barring a clock anomaly; if one ever appears, switch max -> a high
+    percentile.)
+
+    O(n * distinct) -- the window slides with incremental counts and there are
+    only a handful of distinct integers.
+    """
+    n = len(measured)
+    if n == 0:
+        return []
+    counts = Counter()
+    out = [0] * n
+    lo, hi = 0, -1                                      # inclusive window bounds
+    for i in range(n):
+        want_hi = min(n - 1, i + half)
+        want_lo = max(0, i - half)
+        while hi < want_hi:
+            hi += 1
+            counts[measured[hi]] += 1
+        while lo < want_lo:
+            counts[measured[lo]] -= 1
+            if counts[measured[lo]] == 0:
+                del counts[measured[lo]]
+            lo += 1
+        out[i] = max(counts)                           # upper-envelope skew
+    return out
+
+
 def rewrite_tf(msg):
     """Set the bizzy/m3 transform's translation in a TFMessage; rotation untouched.
 
@@ -219,42 +276,73 @@ def validate_written(path):
         return False
 
 
-def stream(rd, wr, msgcls, a, counters, offsets):
-    """Read every message; correct the two target topics, pass the rest through.
+def measure_pass(in_bag):
+    """First pass: read the bag once and measure, writing nothing.
 
-    `wr` may be None (report-only): corrections are counted but nothing is written.
-    The histogram (`offsets`) always records the MEASURED integer offset.
+    Returns (measured, tf_hits, total):
+      measured -- list[int], per-message round(stamp - receive) for each M3
+                  detection in bag order (feeds the histogram, the skew check, and
+                  the windowed-mode correction).
+      tf_hits  -- number of /tf_static messages carrying the bizzy/m3 frame
+                  (== how many the geometry fix would rewrite).
+      total    -- total message count (lets report-only derive its passthrough
+                  count arithmetically, without a second read).
     """
+    rd, _sid, _topics, msgcls = open_reader(in_bag)
+    measured, tf_hits, total = [], 0, 0
+    try:
+        while rd.has_next():
+            topic, data, ts = rd.read_next()
+            total += 1
+            if topic == M3_DETECTIONS_TOPIC:
+                m = deserialize_message(data, msgcls[topic])
+                stamp_ns = m.header.stamp.sec * NS + m.header.stamp.nanosec
+                measured.append(correct_stamp(stamp_ns, ts)[0])
+            elif topic == TF_STATIC_TOPIC:
+                m = deserialize_message(data, msgcls[topic])
+                if any(tr.child_frame_id == M3_FRAME for tr in m.transforms):
+                    tf_hits += 1
+    finally:
+        del rd
+    return measured, tf_hits, total
+
+
+def compute_applied(measured, a):
+    """Per-M3-ping integer-second shift to apply: None under --no-timing; a
+    constant under --offset; otherwise the latency-robust windowed mode."""
+    if a.no_timing:
+        return None
+    if a.offset is not None:
+        return [a.offset] * len(measured)
+    return windowed_skew(measured, SKEW_WINDOW_HALF)
+
+
+def stream(rd, wr, msgcls, a, counters, applied):
+    """Second pass: write `rd` to `wr`, applying the geometry fix and the
+    precomputed per-ping timing shift `applied` (None under --no-timing).
+
+    `wr` may be None (count only, no write). M3 detections are consumed in the
+    same order as measure_pass, so `applied[j]` lines up with the j-th detection.
+    """
+    j = 0
     while rd.has_next():
         topic, data, ts = rd.read_next()
         if topic == M3_DETECTIONS_TOPIC:
-            m = deserialize_message(data, msgcls[topic])
-            stamp_ns = m.header.stamp.sec * NS + m.header.stamp.nanosec
-            measured_n, applied_n, new_ns, ambiguous = correct_stamp(stamp_ns, ts, a.offset)
-            offsets.append(measured_n)          # always: feeds the histogram + skew check
-            if a.no_timing:
-                # Diagnostic-only: measure the offset so a genuinely skewed bag is
-                # still caught (see assess_skew in _summary), but never touch the
-                # stamp. Per-ping ambiguous WARNs are suppressed here; the
-                # end-of-run skew assessment is the signal.
+            n = 0 if applied is None else applied[j]
+            j += 1
+            if n != 0:
+                m = deserialize_message(data, msgcls[topic])
+                stamp_ns = m.header.stamp.sec * NS + m.header.stamp.nanosec
+                new_ns = stamp_ns - n * NS
+                m.header.stamp.sec = new_ns // NS
+                m.header.stamp.nanosec = new_ns % NS
+                counters['timing'] += 1
+                if wr:
+                    wr.write(topic, serialize_message(m), ts)
+            else:
                 counters['pass'] += 1
                 if wr:
-                    wr.write(topic, data, ts)
-            else:
-                if ambiguous:
-                    counters['ambiguous'] += 1
-                    print(f'WARN: ping offset {(stamp_ns - ts) / 1e9:+.3f}s is near a '
-                          f'rounding boundary (measured n={measured_n:+d}s)', file=sys.stderr)
-                if applied_n != 0:
-                    m.header.stamp.sec = new_ns // NS
-                    m.header.stamp.nanosec = new_ns % NS
-                    counters['timing'] += 1
-                    if wr:
-                        wr.write(topic, serialize_message(m), ts)
-                else:
-                    counters['pass'] += 1
-                    if wr:
-                        wr.write(topic, data, ts)          # unchanged -> byte passthrough
+                    wr.write(topic, data, ts)          # unchanged -> byte passthrough
         elif topic == TF_STATIC_TOPIC and not a.no_tf:
             m = deserialize_message(data, msgcls[topic])
             if rewrite_tf(m):
@@ -284,7 +372,7 @@ def open_reader(path):
     return rd, sid, topics, msgcls
 
 
-def write_bag(out, sid, topics, rd, msgcls, a, counters, offsets):
+def write_bag(out, sid, topics, rd, msgcls, a, counters, applied):
     """Stream rd into a new bag at `out` (storage `sid`), cleaning up on failure."""
     wr = SequentialWriter()
     wr.open(StorageOptions(uri=out, storage_id=sid), ConverterOptions('', ''))
@@ -292,7 +380,7 @@ def write_bag(out, sid, topics, rd, msgcls, a, counters, offsets):
         wr.create_topic(t)
     ok = False
     try:
-        stream(rd, wr, msgcls, a, counters, offsets)
+        stream(rd, wr, msgcls, a, counters, applied)
         ok = True
     finally:
         del wr                                         # finalize the writer once
@@ -384,15 +472,18 @@ def main(argv=None):
         sys.exit(f'input bag not found: {in_bag}')
     in_is_dir = os.path.isdir(in_bag)
 
-    counters = {'tf': 0, 'timing': 0, 'pass': 0, 'ambiguous': 0}
-    offsets = []
+    # --- pass 1: measure offsets + locate the geometry frame ---------------
+    measured, tf_hits, total = measure_pass(in_bag)
+    applied = compute_applied(measured, a)             # None under --no-timing
+    override = 0 if applied is None else sum(1 for w, m in zip(applied, measured) if w != m)
+    counters = {'tf': 0, 'timing': 0, 'pass': 0, 'override': override}
 
-    # --- report-only: stream without writing -------------------------------
+    # --- report-only: counts are arithmetic from pass 1, no write ----------
     if a.report_only:
-        rd, _sid, _topics, msgcls = open_reader(in_bag)
-        stream(rd, None, msgcls, a, counters, offsets)
-        del rd
-        skew = _summary(in_bag, None, counters, offsets, a, wrote=False)
+        counters['tf'] = tf_hits if not a.no_tf else 0
+        counters['timing'] = 0 if applied is None else sum(1 for n in applied if n != 0)
+        counters['pass'] = total - counters['tf'] - counters['timing']
+        skew = _summary(in_bag, None, counters, measured, a, wrote=False)
         # Exit codes: 3 = real skew detected under --no-timing (investigate);
         # 2 = a correction WOULD apply (batch "needs fixing?" probe); 0 = clean.
         if skew:
@@ -405,12 +496,12 @@ def main(argv=None):
         if os.path.exists(out):
             sys.exit(f'output already exists: {out}')
         rd, sid, topics, msgcls = open_reader(in_bag)
-        write_bag(out, sid, topics, rd, msgcls, a, counters, offsets)
+        write_bag(out, sid, topics, rd, msgcls, a, counters, applied)
         del rd
         if not validate_written(out):
             _remove(out)
             sys.exit('aborting: written bag failed validation (input untouched)')
-        skew = _summary(out, None, counters, offsets, a, wrote=True)
+        skew = _summary(out, None, counters, measured, a, wrote=True)
         return 3 if skew else 0
 
     # --- in-place with backup ----------------------------------------------
@@ -425,27 +516,27 @@ def main(argv=None):
         sys.exit(f'backup already exists (refusing to overwrite): {backup}')
 
     rd, sid, topics, msgcls = open_reader(in_bag)
-    write_bag(temp, sid, topics, rd, msgcls, a, counters, offsets)
+    write_bag(temp, sid, topics, rd, msgcls, a, counters, applied)
     del rd                                             # release input before renaming
     if not validate_written(temp):
         _remove(temp)
         sys.exit('aborting: written bag failed validation; original untouched')
 
     _swap_in_place(in_bag, temp, backup, in_is_dir)
-    skew = _summary(in_bag, backup, counters, offsets, a, wrote=True)
+    skew = _summary(in_bag, backup, counters, measured, a, wrote=True)
     return 3 if skew else 0
 
 
-def _summary(target, backup, counters, offsets, a, wrote):
+def _summary(target, backup, counters, measured, a, wrote):
     """Print the histogram and a one-line outcome; under --no-timing also run and
     print the skew assessment. Returns True iff --no-timing is set AND a real clock
     skew was detected (the caller turns that into exit code 3)."""
-    hist = build_histogram(offsets)
+    hist = build_histogram(measured)
     print('integer-second offset histogram (M3 detections, measured):')
     print_histogram(hist)
     verb = 'wrote' if wrote else 'would correct'
-    print(f'{verb}: {counters["tf"]} tf_static, {counters["timing"]} timing; '
-          f'{counters["pass"]} passthrough; {counters["ambiguous"]} ambiguous-band WARN')
+    print(f'{verb}: {counters["tf"]} tf_static, {counters["timing"]} timing '
+          f'({counters["override"]} via window override); {counters["pass"]} passthrough')
     if wrote:
         print(f'  -> {target}')
         if backup:
