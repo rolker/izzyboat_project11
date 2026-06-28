@@ -279,6 +279,24 @@ def test_inplace_creates_backup_and_corrects(tmp_path, msgs):
     assert other.transform.translation.x == 1.0       # unrelated frame untouched
 
 
+def test_inplace_dir_segment_named_without_tmp(tmp_path, msgs):
+    """In-place on a directory bag must not leave the temp '.tmp' baked into the
+    segment filename or metadata.yaml (regression: writes go to <name>.tmp/, and
+    renaming the dir alone left <name>.tmp_0.mcap)."""
+    bag = tmp_path / 'm3bag'
+    _make_bag(bag, msgs, detection_offsets=[6.03, 6.03])
+    assert rm.main([str(bag)]) == 0
+
+    segs = [f for f in os.listdir(bag) if f.endswith('.mcap')]
+    assert segs == ['m3bag_0.mcap']                    # final name, no '.tmp'
+    assert not any('.tmp' in f for f in os.listdir(bag))
+    meta = (bag / 'metadata.yaml').read_text()
+    assert '.tmp' not in meta
+    # and it still opens with the right data
+    _sid, _tmd, out = _read_all(bag)
+    assert sum(1 for m in out if m[0] == rm.M3_DETECTIONS_TOPIC) == 2
+
+
 def test_inplace_bare_mcap_stays_bare(tmp_path, msgs):
     """A bare single .mcap input yields a bare .mcap output (not a directory)."""
     bare = _make_bare_mcap(tmp_path, msgs, 'boat.mcap', detection_offsets=[6.03])

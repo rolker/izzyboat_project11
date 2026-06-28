@@ -410,6 +410,29 @@ def _inner_mcaps(bag_dir):
     return sorted(f for f in os.listdir(bag_dir) if f.endswith('.mcap'))
 
 
+def _rename_dir_segments(bag_dir, temp_basename, final_basename):
+    """Fix segment names after an in-place directory swap.
+
+    A directory bag is written to `<final>.tmp/`, so rosbag2 bakes that temp
+    basename into the segment filenames (`<final>.tmp_0.mcap`) and metadata.yaml.
+    Renaming the dir to its final name does NOT fix those, leaving a misleading
+    `.tmp` in the segment name. Rename each segment to `<final>_0.mcap` and patch
+    metadata.yaml so the bag uses its real name (rosbag2 reads via metadata, so
+    the bag works regardless, but tools/humans assuming the `<bagname>_N.mcap`
+    convention should not see a `.tmp`).
+    """
+    for fn in os.listdir(bag_dir):
+        if fn.startswith(temp_basename) and fn.endswith('.mcap'):
+            os.rename(os.path.join(bag_dir, fn),
+                      os.path.join(bag_dir, final_basename + fn[len(temp_basename):]))
+    meta = os.path.join(bag_dir, 'metadata.yaml')
+    if os.path.exists(meta):
+        with open(meta) as fh:
+            text = fh.read()
+        with open(meta, 'w') as fh:
+            fh.write(text.replace(temp_basename, final_basename))
+
+
 def _swap_in_place(in_bag, temp, backup, in_is_dir):
     """Move the validated `temp` bag to `in_bag`, preserving the input form.
 
@@ -429,6 +452,8 @@ def _swap_in_place(in_bag, temp, backup, in_is_dir):
     try:
         if in_is_dir:
             os.rename(temp, in_bag)                    # dir -> dir
+            # strip the temp basename baked into segment names + metadata
+            _rename_dir_segments(in_bag, os.path.basename(temp), os.path.basename(in_bag))
         else:
             shutil.move(os.path.join(temp, _inner_mcaps(temp)[0]), in_bag)  # bare -> bare
             _remove(temp)                              # drop the scratch dir + metadata.yaml
