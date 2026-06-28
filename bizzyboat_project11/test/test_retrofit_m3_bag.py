@@ -254,7 +254,7 @@ def _read_all(path):
 def test_inplace_creates_backup_and_corrects(tmp_path, msgs):
     """Default mode: corrected bag at original name, original preserved as .orig."""
     bag = tmp_path / 'm3bag'
-    _make_bag(bag, msgs, detection_offsets=[0.04, 6.03, 6.03])
+    _make_bag(bag, msgs, detection_offsets=[6.03, 6.03, 6.03])
     rc = rm.main([str(bag)])
     assert rc == 0
     assert (tmp_path / 'm3bag.orig').exists()
@@ -277,6 +277,24 @@ def test_inplace_creates_backup_and_corrects(tmp_path, msgs):
             m3.transform.translation.z) == rm.M3_XYZ
     other = [t for t in msg.transforms if t.child_frame_id == 'bizzy/imu'][0]
     assert other.transform.translation.x == 1.0       # unrelated frame untouched
+
+
+def test_inplace_dir_segment_named_without_tmp(tmp_path, msgs):
+    """In-place on a directory bag must not leave the temp '.tmp' baked into the
+    segment filename or metadata.yaml (regression: writes go to <name>.tmp/, and
+    renaming the dir alone left <name>.tmp_0.mcap)."""
+    bag = tmp_path / 'm3bag'
+    _make_bag(bag, msgs, detection_offsets=[6.03, 6.03])
+    assert rm.main([str(bag)]) == 0
+
+    segs = [f for f in os.listdir(bag) if f.endswith('.mcap')]
+    assert segs == ['m3bag_0.mcap']                    # final name, no '.tmp'
+    assert not any('.tmp' in f for f in os.listdir(bag))
+    meta = (bag / 'metadata.yaml').read_text()
+    assert '.tmp' not in meta
+    # and it still opens with the right data
+    _sid, _tmd, out = _read_all(bag)
+    assert sum(1 for m in out if m[0] == rm.M3_DETECTIONS_TOPIC) == 2
 
 
 def test_inplace_bare_mcap_stays_bare(tmp_path, msgs):
@@ -394,3 +412,123 @@ def test_stale_temp_blocks_then_force_clears(tmp_path, msgs):
     rc = rm.main([str(bag), '--force'])
     assert rc == 0
     assert (tmp_path / 'm3bag.orig').exists()
+
+
+# ======================================================================
+# Skew assessment (assess_skew) + --no-timing reporting (#342 follow-up)
+# ======================================================================
+
+def test_assess_skew_latency_is_not_skew():
+    # Mode at 0 s with a small decaying tail (largest non-zero ~2%): latency.
+    is_skew, detail = rm.assess_skew({0: 970, -1: 22, -2: 5, -3: 3})
+    assert is_skew is False
+    assert 'latency' in detail
+
+
+def test_assess_skew_clean_skew_detected():
+    # Dominant non-zero mode (the 2026-06-26 shape): real skew.
+    is_skew, detail = rm.assess_skew({-9: 3090, -10: 1})
+    assert is_skew is True
+    assert 'skew' in detail
+
+
+def test_assess_skew_straddle_detected():
+    # 0 s is the plurality but a large non-zero bin (bag straddles a jump): skew.
+    assert rm.assess_skew({0: 60, -6: 40})[0] is True
+
+
+def test_assess_skew_empty_is_not_skew():
+    assert rm.assess_skew({})[0] is False
+
+
+def test_assess_skew_threshold_boundary():
+    # SKEW_BIN_FRACTION = 0.05: 4% non-zero -> latency; 5% -> skew.
+    assert rm.assess_skew({0: 96, -1: 4})[0] is False
+    assert rm.assess_skew({0: 95, -1: 5})[0] is True
+
+
+# ======================================================================
+# Windowed timing (windowed_skew) — latency-robust upper-envelope skew
+# ======================================================================
+
+def test_windowed_skew_uniform_and_empty():
+    assert rm.windowed_skew([-9, -9, -9, -9], 200) == [-9, -9, -9, -9]
+    assert rm.windowed_skew([0, 0, 0], 200) == [0, 0, 0]
+    assert rm.windowed_skew([], 200) == []
+
+
+def test_windowed_skew_latency_outlier_pulled_up():
+    # Latency is one-sided (offset <= skew): a late ping among a -9 s skew sits
+    # BELOW it (-10) and is corrected up to the envelope -9, not left at -10.
+    assert rm.windowed_skew([-9, -9, -10, -9, -9], 200) == [-9, -9, -9, -9, -9]
+    # A clean (no-skew) baseline with a latency dip stays at 0.
+    assert rm.windowed_skew([0, 0, -1, 0, 0], 200) == [0, 0, 0, 0, 0]
+
+
+def test_windowed_skew_tracks_downward_drift_with_lag():
+    # Max holds the higher value until it leaves the window, so a 0 -> -6 drift
+    # lags by ~half a window (here half=1: index 4 still reads 0).
+    assert rm.windowed_skew([0, 0, 0, 0, -6, -6, -6, -6], 1) == [0, 0, 0, 0, 0, -6, -6, -6]
+
+
+def test_windowed_skew_prefers_least_delayed():
+    # Window holds both -> the envelope (max) wins -> the smaller correction.
+    assert rm.windowed_skew([0, -6], 5) == [0, 0]
+
+
+def test_windowed_corrects_latency_outlier_in_bag(tmp_path, msgs):
+    """End-to-end: a late ping inside a 6 s skew is shifted by the window's
+    envelope (6 s), not its own measured 5 s, so it is not left a second off."""
+    bag = tmp_path / 'm3win'
+    offs = [6.03] * 10 + [5.04] + [6.03] * 10        # one late outlier (below 6) mid-bag
+    _make_bag(bag, msgs, detection_offsets=offs)
+    out = tmp_path / 'out'
+    rc = rm.main([str(bag), '--out', str(out)])
+    assert rc == 0
+
+    geometry = msgs[0]
+    _sid, _tmd, msgs_out = _read_all(out)
+    shifts = []
+    for (_t, data, ts) in [m for m in msgs_out if m[0] == rm.M3_DETECTIONS_TOPIC]:
+        ps = deserialize_message(data, geometry.PointStamped)
+        stamp_ns = ps.header.stamp.sec * NS + ps.header.stamp.nanosec
+        shifts.append(round((stamp_ns - ts) / 1e9))
+    # all shifted by the envelope 6: clean pings residual ~0; the late outlier was
+    # at 5.04, shifted by 6 -> residual ~-0.96 -> round -1 (NOT shifted by its own 5).
+    assert shifts.count(0) == 20 and shifts.count(-1) == 1
+
+
+def test_no_timing_skew_exits_3_without_touching_stamps(tmp_path, msgs):
+    """--no-timing on a genuinely skewed bag reports the skew (exit 3) and leaves
+    the detection stamps unchanged."""
+    bag = tmp_path / 'm3skew'
+    _make_bag(bag, msgs, detection_offsets=[6.02, 6.03, 6.04, 6.01])
+    out = tmp_path / 'out'
+    rc = rm.main([str(bag), '--no-timing', '--out', str(out)])
+    assert rc == 3
+
+    geometry = msgs[0]
+    _sid, _tmd, msgs_out = _read_all(out)
+    det = [m for m in msgs_out if m[0] == rm.M3_DETECTIONS_TOPIC]
+    assert det
+    for (_topic, data, ts) in det:
+        ps = deserialize_message(data, geometry.PointStamped)
+        stamp_ns = ps.header.stamp.sec * NS + ps.header.stamp.nanosec
+        assert round((stamp_ns - ts) / 1e9) == 6        # NOT shifted to 0
+
+
+def test_no_timing_latency_exits_0(tmp_path, msgs):
+    """--no-timing on a latency-only bag finds no skew and exits 0."""
+    bag = tmp_path / 'm3lat'
+    _make_bag(bag, msgs, detection_offsets=[0.04] * 20 + [-1.05])  # 1/21 ~ 4.8% < 5%
+    rc = rm.main([str(bag), '--no-timing', '--out', str(tmp_path / 'out')])
+    assert rc == 0
+
+
+def test_no_timing_report_only_skew_exits_3_and_no_write(tmp_path, msgs):
+    """--no-timing --report-only detects the skew (exit 3) and writes nothing."""
+    bag = tmp_path / 'm3skew_ro'
+    _make_bag(bag, msgs, detection_offsets=[6.02, 6.03, 6.04])
+    rc = rm.main([str(bag), '--no-timing', '--report-only'])
+    assert rc == 3
+    assert not (tmp_path / 'm3skew_ro.orig').exists()
