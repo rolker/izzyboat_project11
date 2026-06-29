@@ -33,12 +33,15 @@ BAGS_DIR="$HOME/data/logs/gabby/logs/bizzyboat_sonar"   # <-- VERIFY corrected b
 TOPIC=/bizzy/sensors/m3/detections
 SURVEY_START="2026-06-12"   # floor: never ingest pre-survey test bags (ISO names sort lexically)
 
-# Deployed curve: prefer the installed share copy, fall back to the source checkout.
-# (|| true: under set -e a failed `ros2 pkg prefix` in a command substitution would
-# otherwise abort the script silently when the workspace overlay isn't sourced.)
+# Deployed curve: prefer the installed share copy (workspace sourced), else fall
+# back to this package's in-tree config — a deterministic sibling of scripts/,
+# since this script lives at bizzyboat_project11/scripts/. (|| true: under set -e a
+# failed `ros2 pkg prefix` in a command substitution would otherwise abort silently
+# when the overlay isn't sourced.)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_PREFIX="$(ros2 pkg prefix bizzyboat_project11 2>/dev/null || true)"
 CURVE="$PKG_PREFIX/share/bizzyboat_project11/config/m3_angular_response_curve.csv"
-[ -f "$CURVE" ] || CURVE="$(find "$HOME" -path '*bizzyboat_project11/config/m3_angular_response_curve.csv' 2>/dev/null | head -1 || true)"
+[ -f "$CURVE" ] || CURVE="$SCRIPT_DIR/../config/m3_angular_response_curve.csv"
 
 # ---- preflight ---------------------------------------------------------------
 echo "curve : $CURVE";          [ -f "$CURVE" ] || { echo "ERROR: curve not found"; exit 1; }
