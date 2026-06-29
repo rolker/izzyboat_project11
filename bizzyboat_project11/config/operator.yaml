@@ -31,9 +31,16 @@
             topics_list:
             - command
             - joystick_helm
+            # Inbound to boat: CAMP's CUBE tile requests -> bizzy CUBE (camp
+            # live-tile view, set up live 2026-06-29). Pairs with the outbound
+            # coverage_catalog/coverage_tiles in bizzyboat.yaml's operator/vpn
+            # connection. vpn only (not safety-critical; control topics above
+            # stay redundant across wifi/vpn/cell, requests don't need to).
+            - coverage_requests
             topics:
               command: {source: /bizzy/marine/command}
               joystick_helm: {source: /bizzy/piloting_mode/manual/helm}
+              coverage_requests: {source: /bizzy/sensors/m3/cube_bathymetry/coverage_requests, queue_size: 10}
 
           # Redundant cell-VPN path (#145): same safety-critical uplink as
           # wifi/vpn, carried concurrently over the cell tunnel. Names resolve to
