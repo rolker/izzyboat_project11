@@ -89,6 +89,13 @@ def generate_launch_description():
     executable='rqt_gui',
     name='rqt_sonar',
     arguments=['-p', 'bizzy_sonar'],
+    # Namespace only the marked-contacts output (rqt_operator_tools#86) into the
+    # operator graph, leaving the node itself at root. The node must stay at root:
+    # the waterfall's tf2 listener subscribes to relative tf/tf_static, so pushing
+    # a namespace here would send it to /operator/tf and break the contact
+    # georeferencing. The input imagery topics are operator-selected absolute names,
+    # so only this one relative output needs remapping.
+    remappings=[('sonar_waterfall/contacts', '/operator/sonar_waterfall/contacts')],
     condition=IfCondition(sonar_rqt),
     respawn=True,
     respawn_delay=5,

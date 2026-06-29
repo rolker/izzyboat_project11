@@ -50,6 +50,10 @@ RECORD_TOPICS = [
     '/rosout',
     '/tf',
     '/tf_static',
+    # Operator-marked sidescan targets (rqt_operator_tools#86): the waterfall
+    # publishes a marine_interfaces/Contact per drawn box, remapped into the
+    # operator namespace by operator_ui_launch.py's rqt_sonar node.
+    '/operator/sonar_waterfall/contacts',
 ]
 
 
