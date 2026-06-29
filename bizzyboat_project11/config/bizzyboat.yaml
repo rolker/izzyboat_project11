@@ -259,6 +259,7 @@
             # via udp_bridge remote_advertise, confirmed working; persisted here).
             - coverage_catalog
             - coverage_tiles
+            - manda_coverage_swath
             - battery
             - command_response
             - diagnostics
@@ -340,6 +341,10 @@
               # over vpn. These two files are a pair; edit them together.
               coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
               coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 0.5}
+              # manda coverage-swath viz marker -> CAMP (enabled via display_topic in
+              # nav2_overlay.yaml). Published per survey_area goal; rate-limited (the
+              # LINE_STRIP grows with coverage). Set up live 2026-06-29.
+              manda_coverage_swath: {source: manda_coverage/coverage_swath, queue_size: 2, period: 1.0}
               # Cropped local-costmap window for operator SA over the constrained VPN
               # link — throttled to 1 Hz (unh_marine_navigation#38, #127). The
               # footprint and path-follower viz are low-bandwidth, sent unthrottled.
