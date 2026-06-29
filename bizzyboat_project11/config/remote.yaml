@@ -1,0 +1,8 @@
+# Minimal udp_bridge endpoint config for the remote-viewer station (#354).
+# Sets only the bridge identity (name: remote) so a non-operator machine can
+# attach to the boat for monitoring. Remotes / connections / forwarded topics
+# are configured live via the udp_bridge rqt plugin rather than statically here.
+/**/udp_bridge:
+  ros__parameters:
+    name: remote
+    maximum_packet_size: 1000
