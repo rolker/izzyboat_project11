@@ -54,15 +54,25 @@
 
 /**/mru_transform:
   ros__parameters:
-    # SBG INS primary, FCU fallback (#339). Arbitration is strict
-    # priority-preference (sensor_names order): the highest-priority *fresh*
-    # source owns the output, so the SBG drives nav whenever it is healthy and
-    # the FCU takes over only on a real SBG dropout past sensor_timeout —
-    # regardless of relative sample rates. SBG
-    # topics are the namespaced ros_standard messages (use_enu:true); frame_id
-    # sbg_gnss_primary (identity vs base_link) serves both the fix lever-arm
-    # and the gyro path. SBG attitude verified vehicle-aligned on the boat
-    # 2026-06-27 (yaw matches FCU to 0.01 deg; roll/pitch match the tie-up).
+    # FCU primary, SBG fallback (reverted 2026-06-29, gabby deployment).
+    # Arbitration is strict priority-preference (sensor_names order, #339): the
+    # highest-priority *fresh* source owns the output, so the FCU drives nav
+    # whenever it is healthy and the SBG takes over only on a real FCU dropout
+    # past sensor_timeout — regardless of relative sample rates.
+    #
+    # Why reverted: with SBG primary, the sea_surface_layer projection showed a
+    # constant ~2 deg roll offset (SBG-minus-FCU, measured underway 2026-06-29),
+    # tilting the costmap and producing aft false positives. mru_transform does
+    # NOT apply the IMU->base_link URDF rotation to attitude (it is passed
+    # through raw — mru_transform.cpp:145), so the SBG mounting/alignment offset
+    # reaches the costmap directly. FCU attitude verified stable the same day
+    # (10 Hz, no dropouts/glitches, valid covariance). Root cause (SBG roll
+    # alignment vs the 2026-06-27 vehicle-align check that reported yaw 0.01 deg
+    # / roll-pitch tie-up) deferred to wrap-up.
+    #
+    # SBG topics are the namespaced ros_standard messages (use_enu:true);
+    # frame_id sbg_gnss_primary (identity vs base_link) serves both the fix
+    # lever-arm and the gyro path.
     sensors:
       sbg:
         topics:
@@ -75,8 +85,8 @@
           position: "mavros/global_position/global"
           velocity: "mavros/local_position/velocity_body"
     sensor_names:
-    - sbg
     - fcu
+    - sbg
     sensor_timeout: 0.5
 
 /**/udp_bridge:
