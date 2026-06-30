@@ -1,6 +1,6 @@
-# 2026-06-29 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-06-29 — gabby log (BizzyBoat deployment — #356)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: #356 <!-- backfilled at wrap-up; field-started issue-less (#533) -->
 Host: gabby
 Side: field
 Started: 2026-06-29 10:14 -04:00

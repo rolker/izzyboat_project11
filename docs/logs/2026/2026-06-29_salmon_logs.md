@@ -1,6 +1,6 @@
-# 2026-06-29 — salmon log (BizzyBoat deployment — issue pending)
+# 2026-06-29 — salmon log (BizzyBoat deployment — #356)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: #356 <!-- backfilled at wrap-up; field-started issue-less (#533) -->
 Host: salmon
 Side: field
 Started: 2026-06-29 10:28 -04:00
@@ -44,3 +44,9 @@ Started: 2026-06-29 10:28 -04:00
 **2026-06-29 18:04 -04:00** — RCA — live sonar display gaps caused by MY udp_bridge stale-packet gate (drop_stale_packets, deployed 11:01). Evidence: udp_bridge_node_145795 log shows 676934 cumulative stale-drops incl sidescan sonar_image_down(153)/port(115)/starboard(113) throttled-windows, plus /tf(1816), cameras(100s), mavros, odom. The gate drops any ping whose packet_number < per-topic high-water (out-of-order/late resend) -> for sonar (every ping = unique seafloor slice) that is a GAP, not a dedup. Operator saw ping-or-two gaps ~every 5m in CAMP live display. DESIGN FLAW: gate is global default-ON + keyed per-TOPIC; correct only for single-stream latest-wins topics (heartbeat/video/costmap - which it DID fix). Wrong for (a) every-sample-matters topics (sonar, pointclouds) and (b) MULTIPLEXED topics like /tf (one topic carries many frames; a late /tf for frame A is dropped because a newer /tf for frame B advanced the high-water) -> drops valid transforms. REASSURANCE: recorded survey sonar is boat-side (gabby bizzyboat_sonar bags, NOT over bridge) so today's bags + XTFs are COMPLETE; gaps were live-display-only. FIX (don't revert - it fixed the latest-wins complaint): make gate opt-IN per-topic (allowlist of latest-wins topics) or exclude sonar/tf/pointcloud; add tests. Stopgap for next run before fix: -p drop_stale_packets:=false (restores pre-change behavior). Stack down; follow-up issue + code change for next session.
 
 **2026-06-29 18:11 -04:00** — CORRECTION to 18:04 RCA: that entry wrongly attributed the operator's observed display gaps to the stale-packet gate. Operator clarified the gaps were in the CUBE bathymetry tiled grids (cube_bathymetry; independent of manda_coverage), where pings are cubed on the boat BEFORE bridging. Evidence: the stale-gate did NOT fire on any cube_bathymetry topic, so it is NOT the cause of the grid gaps. Two findings stand SEPARATELY: (1) the stale-gate IS over-broad and did drop raw sonar_image_*/tf/cameras/etc (real design issue — gate should be opt-in per latest-wins topic, not global; fix next session) but that is the raw-sonar path, not the gridded-display symptom; (2) CUBE grid-gap cause NOT determined — investigation dropped per operator. One observed lead only (unconfirmed): bridge logged 'incompatible QoS (DURABILITY) -> No messages will be sent' on .../cube_bathymetry/coverage_catalog. Recorded survey data is boat-side; gridded product regenerable from raw bags regardless.
+
+> **Wrap-up correction** (operator, 2026-06-30): the 18:11 correction stands —
+> the stale-packet gate is NOT the cause of the CUBE tile display gaps. But the
+> cause is *not established*: the gaps appear in the tiles, which are generated
+> on the boat (before any bridging), which rules out udp_bridge causes
+> entirely. Tracked as an open follow-up (cause unknown), not a closed finding.
