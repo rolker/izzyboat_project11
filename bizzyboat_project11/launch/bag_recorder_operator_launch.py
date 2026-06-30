@@ -75,6 +75,12 @@ def generate_launch_description():
         '--disable-keyboard-controls',
         '-s', 'mcap',
         '--storage-preset-profile', 'zstd_fast',
+        # Split into a fresh mcap every 15 minutes (900 s) so a long
+        # deployment rotates instead of growing one unbounded file: bounds
+        # the data at risk if the recorder dies uncleanly (only the open
+        # split needs reindexing, not the whole session) and lets earlier
+        # splits be copied/synced while recording continues.
+        '--max-bag-duration', '900',
         '-o', out_dir,
         '--topics', *RECORD_TOPICS,
     ]

@@ -329,3 +329,12 @@ controller_server:
         # to 1.0 caps the low-speed boost at 1.8× (1.8/max(v,1.0)); cruise (≥1.8 m/s)
         # unaffected. Live-set during the session, banked here so it survives a relaunch.
         gain_v_min: 1.0       # divisor floor; caps low-speed gain boost at 1.8×
+
+manda_coverage:
+  ros__parameters:
+    # Enable the coverage-swath visualization Marker (visualization_msgs/Marker
+    # LINE_STRIP, ns manda_coverage_swath; SurveyPath.cpp:75-83). Empty string
+    # disables the publisher; a topic name publishes the swath per survey_area
+    # goal. Bridged to the operator over vpn (see manda_coverage_swath in
+    # bizzyboat.yaml's operator/vpn connection). Enabled live 2026-06-29.
+    display_topic: /bizzy/manda_coverage/coverage_swath
