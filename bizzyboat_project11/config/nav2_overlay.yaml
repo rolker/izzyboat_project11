@@ -290,6 +290,13 @@ controller_server:
       # `ros2 param set /bizzy/controller_server FollowPath.cross_track_error_slew_rate 0.0`
       # is the instant revert hatch.
       cross_track_error_slew_rate: 3.0
+      # 2026-07-01 field tune (gabby): look-ahead time for the crabbing tracker.
+      # Node default 0.0 s (pure current-pose tracking). 2.0 s aims the tracker
+      # at where the boat will be in 2 s, which smoothed the zig-zag line-to-line
+      # transitions markedly on the Massabesic survey (less overshoot on the
+      # direction changes). Range [0, 30] s. Live-tunable / revert hatch:
+      # `ros2 param set /bizzy/controller_server FollowPath.lookahead_time 0.0`.
+      lookahead_time: 2.0
       # marine_control panel channel for the INNER crabbing follower. FollowPath
       # is the AvoidanceController decorator wrapping CrabbingPathFollower under
       # the SAME plugin name, so both create a marine_control::ControlServer and,
@@ -352,3 +359,9 @@ manda_coverage:
     # goal. Bridged to the operator over vpn (see manda_coverage_swath in
     # bizzyboat.yaml's operator/vpn connection). Enabled live 2026-06-29.
     display_topic: /bizzy/manda_coverage/coverage_swath
+    # 2026-07-01 field tune (gabby): cap the coverage-path bend angle. Node
+    # default is 60 deg (SurveyPath.cpp:138, range [0, 90]). A live test at
+    # 25 deg noticeably smoothed the survey lines; 45 deg is banked as the new
+    # default — gentler line joins than 60 without the tightest-turn cost of 25.
+    # deg; the coverage planner splits/reshapes turns sharper than this.
+    max_bend_angle: 45.0
