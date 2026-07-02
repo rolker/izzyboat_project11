@@ -5,7 +5,8 @@
 # cache over the bags. This script builds a complete store from scratch:
 #   1. reference layer  — NH GRANIT contour-band midpoint prior (ccomjhc#75
 #      2-band GeoTIFF: midpoint depth + half-band uncertainty), imported once
-#      via marine_bathymetry_store's import_geotiff.
+#      via marine_bathymetry_store's import_geotiff (staged, then atomically
+#      renamed into place — a partial reference layer never survives).
 #   2. survey layer     — one import_bag pass over ALL survey bags (bathy CUBE
 #      product into the bathy store + co-estimated backscatter into --bs-store),
 #      gated against false-deep blunders by the reference prior
@@ -24,6 +25,13 @@
 # with zero scratch disk. If a future survey outgrows RAM, either lower
 # --max-resident-tiles (eviction keeps depth faithful; only revisited-tile
 # uncertainty drifts) or free ~100 GB and switch to batch_regen_bag.
+#
+# Interruption safety: the survey pass writes tiles into the target store
+# progressively over ~1 h, so a `survey/.building` sentinel marks the run;
+# it is removed only after import_bag succeeds AND the post-run tile check
+# passes. A sentinel found at startup means a previous run died mid-write —
+# the script refuses until the partial survey layer is deleted. tile-level
+# atomicity is tracked separately (unh_marine_autonomy#256).
 #
 # Usage:
 #   build_massabesic_store.sh [--reference-tif <wgs84_2band.tif>]
@@ -51,12 +59,18 @@ TOPIC=/bizzy/sensors/m3/detections
 SURVEY_START="2026-06-12"   # floor: pre-survey bags have no M3 detections anyway
 LAKE_DATUM_M=48.88          # full-pool lake surface, WGS84 ellipsoidal
                             # (massabesic_datum_polygons.yaml, unh_echoboats#278)
+MIN_FREE_GB=5               # refuse to start a ~1 h run that would ENOSPC mid-flush
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --reference-tif) REFERENCE_TIF="$2"; shift 2;;
-    --out)           STORE_BATHY="$2"; shift 2;;
-    --bs-out)        STORE_BS="$2"; shift 2;;
+    --reference-tif|--out|--bs-out)
+      [ $# -ge 2 ] || { echo "ERROR: $1 requires a value"; exit 1; }
+      case "$1" in
+        --reference-tif) REFERENCE_TIF="$2";;
+        --out)           STORE_BATHY="$2";;
+        --bs-out)        STORE_BS="$2";;
+      esac
+      shift 2;;
     *) echo "ERROR: unknown argument '$1' (see header for usage)"; exit 1;;
   esac
 done
@@ -87,6 +101,34 @@ if ! grep -q -- '--reference-store' <<<"$IMPORT_HELP"; then
   exit 1
 fi
 
+# Disk headroom: the machine that runs this is chronically near-full, and an
+# ENOSPC an hour in leaves exactly the partial store the sentinel guards
+# against. Fail fast instead.
+mkdir -p "$STORE_BATHY" "$STORE_BS"
+free_gb=$(df --output=avail -B1G "$STORE_BATHY" | tail -1 | tr -d ' ')
+if [ "$free_gb" -lt "$MIN_FREE_GB" ]; then
+  echo "ERROR: only ${free_gb} GB free on the store filesystem (< ${MIN_FREE_GB} GB)."
+  exit 1
+fi
+
+# Single instance: the guards below are check-then-act over a ~1 h write —
+# two concurrent runs would both pass them and interleave tile writes.
+exec 9>"$STORE_BATHY/.build_lock"
+if ! flock -n 9; then
+  echo "ERROR: another build holds $STORE_BATHY/.build_lock — refusing to run."
+  exit 1
+fi
+
+# A survey/.building sentinel means a previous run died mid-write: the tiles
+# present are an unknown subset. Refuse until the operator clears them.
+for d in "$STORE_BATHY" "$STORE_BS"; do
+  if [ -e "$d/survey/.building" ]; then
+    echo "ERROR: $d/survey/.building exists — a previous run was interrupted"
+    echo "       mid-write. Delete $d/survey/ (it is regenerable) and re-run."
+    exit 1
+  fi
+done
+
 # Full regeneration only: refuse to write a survey layer on top of an existing
 # one. A second pass over the same bags would double-count (that is what the
 # old ledger guarded); a fresh dir keeps the semantics trivially correct.
@@ -97,6 +139,21 @@ for d in "$STORE_BATHY/survey" "$STORE_BS/survey"; do
     echo "       after verifying) or remove the old survey layer first."
     exit 1
   fi
+done
+
+# Refuse pre-#96 legacy stores (chart/draft/processed layers, ingest ledger):
+# importing new-model layers next to a legacy `processed` layer of the SAME
+# bags presents the data twice to a layer-priority consumer, and the legacy
+# per-cell registry does not match the new StoreMetadata. Migrate or point at
+# a fresh directory instead.
+for d in "$STORE_BATHY" "$STORE_BS"; do
+  for legacy in chart draft processed .ingested_bags.txt; do
+    if [ -e "$d/$legacy" ]; then
+      echo "ERROR: $d contains pre-#96 legacy content ('$legacy'). Refusing to"
+      echo "       mix store models — use a fresh --out/--bs-out directory."
+      exit 1
+    fi
+  done
 done
 
 # ---- reference layer ---------------------------------------------------------
@@ -113,43 +170,69 @@ else
   fi
   [ -f "$REFERENCE_TIF" ] || { echo "ERROR: $REFERENCE_TIF not found"; exit 1; }
   echo "reference: importing $REFERENCE_TIF (datum $LAKE_DATUM_M m, band-2 uncertainty)"
+  # Stage into a temp sibling and rename into place: an interrupted import
+  # must never leave a partial reference/ that a re-run would silently accept
+  # as complete (the blunder gate would then be missing over part of the lake).
   # No --uncertainty: the 2-band product's own half-band-width band is read
   # (a constant would silently override the honest per-band value, ccomjhc#75).
+  REF_STAGE="$(mktemp -d "$STORE_BATHY/.ref_stage.XXXXXX")"
+  trap 'rm -rf "$REF_STAGE"' EXIT
   ros2 run marine_bathymetry_store import_geotiff \
-    "$STORE_BATHY" reference "$REFERENCE_TIF" \
+    "$REF_STAGE" reference "$REFERENCE_TIF" \
     --cell-size 1.0 \
     --depth-scale -1 --depth-offset "$LAKE_DATUM_M" \
     --platform nh-granit --sensor edp-bathymetry-lakes \
     --survey massabesic-2026
+  mv "$REF_STAGE/reference" "$STORE_BATHY/reference"   # atomic on same FS
+  [ -e "$STORE_BATHY/registry.json" ] || mv "$REF_STAGE/registry.json" "$STORE_BATHY/registry.json"
+  rm -rf "$REF_STAGE"; trap - EXIT
 fi
 
 # ---- select survey bags --------------------------------------------------------
-# Dated dirs at/after SURVEY_START carrying M3 detections + /tf. ISO-8601 names
-# sort lexically, so a string compare on the date prefix is a correct floor.
-BAGS=""
+# Dated dirs at/after SURVEY_START carrying M3 detections + dynamic /tf
+# (anchored: '/tf' alone would also match /tf_static). ISO-8601 names sort
+# lexically, so a string compare on the date prefix is a correct floor.
+BAGS=()
 skipped_pre=0; skipped_notopic=0
 for b in "$BAGS_DIR"/*/; do
   b="${b%/}"
   name="$(basename "$b")"
   [[ "$name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]] || continue
   if [[ "${name:0:10}" < "$SURVEY_START" ]]; then skipped_pre=$((skipped_pre+1)); continue; fi
-  if ! { grep -qE 'm3/detections' "$b/metadata.yaml" 2>/dev/null && \
-         grep -q '/tf' "$b/metadata.yaml" 2>/dev/null; }; then
+  if [ ! -f "$b/metadata.yaml" ]; then
+    # rosbag2 writes metadata.yaml at clean shutdown; data without it is
+    # usually an outage-truncated recording (salvageable — do not silently
+    # lump it in with topic-less bags).
+    if compgen -G "$b/*.mcap" > /dev/null 2>&1; then
+      echo "WARNING: $name has .mcap data but no metadata.yaml (truncated"
+      echo "         recording?) — SKIPPED. Recover/reindex it and re-run."
+    fi
     skipped_notopic=$((skipped_notopic+1)); continue
   fi
-  BAGS="$BAGS $b"
+  if ! { grep -qE "name: ${TOPIC}\s*$" "$b/metadata.yaml" && \
+         grep -qE 'name: /tf\s*$' "$b/metadata.yaml"; }; then
+    skipped_notopic=$((skipped_notopic+1)); continue
+  fi
+  BAGS+=("$b")
 done
-BAGS=$(printf '%s\n' $BAGS | sed '/^$/d')
-n_bags=$(printf '%s\n' "$BAGS" | grep -c .)
+n_bags=${#BAGS[@]}
 
-echo "bags  : $n_bags to import (skipped: $skipped_pre pre-$SURVEY_START, $skipped_notopic no detections/tf)"
+echo "bags  : $n_bags to import (skipped: $skipped_pre pre-$SURVEY_START, $skipped_notopic no metadata/detections/tf)"
 if [ "$n_bags" -eq 0 ]; then echo "ERROR: no survey bags found under $BAGS_DIR"; exit 1; fi
-printf '  + %s\n' $BAGS | sed "s#$BAGS_DIR/##"
+printf '  + %s\n' "${BAGS[@]#"$BAGS_DIR"/}"
 
 # ---- survey pass ---------------------------------------------------------------
 # ONE invocation over all bags: full CUBE hypothesis state is kept across them
 # (chronological order — the glob is lexical = chronological for ISO names).
 # The reference prior only gates blunders; it is never settled as data.
+# Provenance vocabulary per ADR-0005/ADR-0007: platform bizzyboat,
+# sensor kongsberg-m3 (model-named), campaign massabesic-jun2026.
+mkdir -p "$STORE_BATHY/survey" "$STORE_BS/survey"
+touch "$STORE_BATHY/survey/.building" "$STORE_BS/survey/.building"
+trap 'echo "ERROR: survey pass did not complete — partial tiles remain under
+       $STORE_BATHY/survey and $STORE_BS/survey (marked by .building).
+       Delete both survey/ dirs (regenerable) before re-running." >&2' ERR
+
 ros2 run cube_bathymetry import_bag \
   -o "$STORE_BATHY" \
   --reference-store "$STORE_BATHY" \
@@ -162,7 +245,21 @@ ros2 run cube_bathymetry import_bag \
   --base-link-frame bizzy/base_link \
   --level-frame bizzy/base_link_north_up \
   --tide-frame bizzy/map_tide \
-  --platform bizzy --sensor m3 --campaign massabesic_jun2026 \
-  $BAGS
+  --platform bizzyboat --sensor kongsberg-m3 --campaign massabesic-jun2026 \
+  "${BAGS[@]}"
+
+# Post-run: an exit-0 import that produced nothing must not be announced as
+# success (topic drift or all-dropped pings would otherwise ship an empty
+# authoritative store).
+n_bathy=$(find "$STORE_BATHY/survey" -maxdepth 1 -name '*.tif' | wc -l)
+n_bs=$(find "$STORE_BS/survey" -maxdepth 1 -name '*.tif' | wc -l)
+echo "tiles : $n_bathy bathy survey, $n_bs backscatter survey"
+if [ "$n_bathy" -eq 0 ]; then
+  echo "ERROR: import_bag exited 0 but wrote no bathy survey tiles — check -d"
+  echo "       topic ($TOPIC) and the frame overrides against the bags."
+  exit 1
+fi
+trap - ERR
+rm -f "$STORE_BATHY/survey/.building" "$STORE_BS/survey/.building"
 
 echo "=== done -> $STORE_BATHY (reference + survey) + $STORE_BS ($n_bags bags) ==="
