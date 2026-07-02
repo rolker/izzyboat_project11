@@ -111,11 +111,21 @@ if [ "$free_gb" -lt "$MIN_FREE_GB" ]; then
   exit 1
 fi
 
+# Free space on the backscatter store too — it may sit on another filesystem.
+free_bs_gb=$(df --output=avail -B1G "$STORE_BS" | tail -1 | tr -d ' ')
+if [ "$free_bs_gb" -lt "$MIN_FREE_GB" ]; then
+  echo "ERROR: only ${free_bs_gb} GB free on the backscatter-store filesystem (< ${MIN_FREE_GB} GB)."
+  exit 1
+fi
+
 # Single instance: the guards below are check-then-act over a ~1 h write —
-# two concurrent runs would both pass them and interleave tile writes.
+# two concurrent runs would both pass them and interleave tile writes. Lock
+# BOTH stores: two runs with different --out but the same --bs-out must also
+# exclude each other.
 exec 9>"$STORE_BATHY/.build_lock"
-if ! flock -n 9; then
-  echo "ERROR: another build holds $STORE_BATHY/.build_lock — refusing to run."
+exec 8>"$STORE_BS/.build_lock"
+if ! flock -n 9 || ! flock -n 8; then
+  echo "ERROR: another build holds a .build_lock in $STORE_BATHY or $STORE_BS."
   exit 1
 fi
 
@@ -158,9 +168,20 @@ done
 
 # ---- reference layer ---------------------------------------------------------
 if compgen -G "$STORE_BATHY/reference/*.tif" > /dev/null 2>&1; then
+  # NOTE: tiles present = accepted as complete. A partial layer from a
+  # pre-hardening interrupted import is indistinguishable by glob; if in
+  # doubt, delete reference/ and re-import (it is regenerable).
   echo "reference: already present in $STORE_BATHY — skipping import"
   [ -n "$REFERENCE_TIF" ] && echo "  (NOTE: ignoring --reference-tif $REFERENCE_TIF)"
 else
+  if [ -d "$STORE_BATHY/reference" ]; then
+    # A tile-less reference/ dir would make the mv below NEST the staged
+    # layer (reference/reference/) — misfiling the prior and silently
+    # disabling the blunder gate. Refuse instead.
+    echo "ERROR: $STORE_BATHY/reference exists but holds no tiles (interrupted"
+    echo "       earlier import?). Delete it and re-run."
+    exit 1
+  fi
   if [ -z "$REFERENCE_TIF" ]; then
     echo "ERROR: $STORE_BATHY has no reference layer and no --reference-tif given."
     echo "       Generate it (ccomjhc_project11 projects/2026-Lake_Massabesic/"
@@ -176,16 +197,18 @@ else
   # No --uncertainty: the 2-band product's own half-band-width band is read
   # (a constant would silently override the honest per-band value, ccomjhc#75).
   REF_STAGE="$(mktemp -d "$STORE_BATHY/.ref_stage.XXXXXX")"
-  trap 'rm -rf "$REF_STAGE"' EXIT
+  trap 'rm -rf "$REF_STAGE"' EXIT INT TERM
   ros2 run marine_bathymetry_store import_geotiff \
     "$REF_STAGE" reference "$REFERENCE_TIF" \
     --cell-size 1.0 \
     --depth-scale -1 --depth-offset "$LAKE_DATUM_M" \
     --platform nh-granit --sensor edp-bathymetry-lakes \
     --survey massabesic-2026
-  mv "$REF_STAGE/reference" "$STORE_BATHY/reference"   # atomic on same FS
+  # -T: rename onto the destination itself; fails loudly rather than nesting
+  # if a reference/ dir appeared since the guard above.
+  mv -T "$REF_STAGE/reference" "$STORE_BATHY/reference"   # atomic on same FS
   [ -e "$STORE_BATHY/registry.json" ] || mv "$REF_STAGE/registry.json" "$STORE_BATHY/registry.json"
-  rm -rf "$REF_STAGE"; trap - EXIT
+  rm -rf "$REF_STAGE"; trap - EXIT INT TERM
 fi
 
 # ---- select survey bags --------------------------------------------------------

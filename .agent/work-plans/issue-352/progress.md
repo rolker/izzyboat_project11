@@ -28,3 +28,19 @@ issue: 352
 - [ ] (suggestion) bag list as scalar word-splitting; use bash array — `:129` (Lens A)
 - [ ] (suggestion) provenance vocabulary: platform/sensor should be bizzyboat/kongsberg-m3 per ADR-0005/0007; unify campaign id style — `:166` (Governance F2)
 - [ ] (suggestion) PR body must cover: #352 scope pivot rationale (#96 supersession), import_bag-vs-batch_regen, script-not-installed intent, retire uncontrolled ~/build_massabesic_store.sh copies (Governance F1/F3/F4)
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-07-02 12:55 -04:00
+**By**: Claude Code Agent (Claude Fable 5)
+**Verdict**: approved
+**Branch**: feature/issue-352 at `1090133` (+ round-2 fix commit)
+**Mode**: pre-push
+**Depth**: Light re-read (reason: round-2 verification of mechanical fixes)
+**Must-fix**: 1 (fixed in-round) | **Suggestions**: 2 (both applied)
+**Round**: 2 | **Ship**: recommended — round-1 fixes verified correct; the one new must-fix (mv nesting into a tile-less reference/) fixed, guard behavior-tested; suggestions (BS-store lock+df, INT/TERM trap) applied
+
+### Findings
+- [x] (must-fix) mv nests staged reference into pre-existing empty reference/ dir → blunder gate silently absent — fixed: up-front refusal + mv -T — `build_massabesic_store.sh:186`
+- [x] (suggestion) lock + disk preflight covered only the bathy store — second flock + df on --bs-out — `:108`
+- [x] (suggestion) EXIT trap misses SIGINT/SIGTERM → orphaned .ref_stage dirs — trap EXIT INT TERM — `:179`
