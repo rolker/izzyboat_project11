@@ -1,6 +1,6 @@
-# 2026-07-01 — salmon log (BizzyBoat deployment #359)
+# 2026-07-01 — salmon log (BizzyBoat deployment #362)
 
-Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/359 <!-- issue-less field start linked to #359 -->
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/362 <!-- wrap-up correction: originally mislabeled #359 (the 2026-06-30 deployment); operator confirmed this 2026-07-01 post-ops session was part of deployment #362 -->
 Host: salmon
 Side: field
 Started: 2026-07-01 (post-ops dev/data session)

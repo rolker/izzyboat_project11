@@ -1,6 +1,6 @@
-# 2026-07-01 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-07-01 — gabby log (BizzyBoat deployment #362)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/362 <!-- wrap-up backfill: issue-less field start linked to #362 from dev host deadpool -->
 Host: gabby
 Side: field
 Started: 2026-07-01 10:14 -04:00
@@ -51,6 +51,10 @@ Started: 2026-07-01 10:14 -04:00
 
 **2026-07-01 15:15 -04:00** — RCA CONFIRMED (full-speed-off-line): ROOT CAUSE = CrabbingPathFollower::setPlan (crabbing_path_follower.cpp:684-723) resets current_segment_ on a new line but does NOT re-seed the cross-track SLEW LIMITER (slewed_cross_track_error_ / slew_initialized_, header:153-155) nor the PID. With cross_track_error_slew_rate=3.0 enabled (nav2_overlay.yaml:292): on a new line FAR from the boat, the true cross-track error is large but the value fed to the PID is ramped in at only 3 m/s (~10s for a 30m offset). During that ramp crab_angle~=0, so heading=base_heading=line azimuth (lookahead on) => boat drives PARALLEL to / off the line; surge stays at default_speed (no cross-track/heading gating on speed, lines 1032-1037) => FULL SPEED STRAIGHT OFF THE LINE. 'SOMETIMES' = only when the >1s staleness guard (line 847) does NOT fire to re-seed the limiter; AvoidanceController re-issues setPlan every cycle (avoidance_controller.cpp:413) so continuous line-to-line ops never hit the gap => fails; idle >1s or first-line-after-startup => works. GOTO WORKAROUND relocates the boat ONTO the line so no large-offset ramp is needed. Config comment nav2_overlay.yaml:287-289 already warned the limiter delays large-offset re-acquisition. FIX (wrap-up, needs sim+tests, NOT a live hot-patch): in setPlan new_line branch also set slew_initialized_=false (+ reset PID) so a genuinely-new line SNAPS to the true error; same-line reshapes (not new_line) unaffected. INTERACTION: today's lookahead_time=2.0 makes base_heading track the line azimuth when crab is starved -> plausibly worsens the parallel-run; pre-existed at lookahead=0 (this morning's 10:19/10:23/10:25). FALSIFIABLE TEST: if left alone (no goto) it should slowly curve back onto the line over ~10s.
 
+> **Wrap-up correction (2026-07-02, deadpool)**: This root cause is **agent-derived** from a live-ops read-only code investigation and was **NOT operator-confirmed** — the operator was occupied taking manual control and was not aware an RCA had been reached. Treat as a strong hypothesis pending sim + test validation, not a settled root cause. Tracked as a GitHub issue for proper investigation/validation/fix.
+
 **2026-07-01 15:21 -04:00** — PHASE: returning to dock (recovery approaching). OBSERVATION: cameras showing lots of compression artifacts. Operator hypothesis (theirs, unconfirmed): may be regaining wifi on the way in and the link change is affecting the streams. Not yet verified as wifi-related.
+
+> **Wrap-up correction (2026-07-02, deadpool)**: The operator-logger (Pilot) entries at 16:24 and 16:29 supersede the wifi hypothesis: on arrival to Waterworks pier the telemetry went choppy/unresponsive with **all** video streams pixelated **and** XBox commands buffered/delayed, and the Starlink phone app showed **Izzlink connecting/disconnecting continuously**. Root cause points to **Izzlink/Starlink link instability**, not wifi re-acquisition. Tracked as a GitHub issue (see also #145).
 
 **2026-07-01 17:42 -04:00** — AT DOCK. On-water ops complete for the session. Committing/pushing the per-host log at this breakpoint. Camera compression-artifact question (topside-only vs in recordings) left open for wrap-up.
