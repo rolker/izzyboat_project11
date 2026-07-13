@@ -1,3 +1,21 @@
+# ARCHIVE — BizzyBoat / hydrography roadmap (2026 Massabesic campaign era)
+
+> **This is a historical snapshot, not the live roadmap.** It preserves
+> `docs/roadmap.md` as it stood at the end of the 2026 Lake Massabesic
+> campaign (surveys ~June 15 → July 1 2026; final deployment
+> [#362](https://github.com/rolker/unh_echoboats_project11/issues/362),
+> wrapped 2026-07-02). The campaign framing — Summer Hydro survey-prep week,
+> the June 8 dev freeze, "production / survey-prep mode", the harvest-from-
+> production method, and the Appendix A punch list — is retired.
+>
+> The **live roadmap** is [`docs/roadmap.md`](roadmap.md) (reframed around the
+> long-term autonomous-surveying goal and the late-August 2026 Isles of Shoals
+> survey — [#368](https://github.com/rolker/unh_echoboats_project11/issues/368)).
+> Items below that were still open at archive time were carried forward there;
+> issue states referenced below are **as of the snapshot** and may be stale.
+
+---
+
 # BizzyBoat / hydrography roadmap
 
 What we're aiming for, and what's deferred. Scope is BizzyBoat plus the
