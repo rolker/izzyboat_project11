@@ -11,8 +11,9 @@
 > The **live roadmap** is [`docs/roadmap.md`](roadmap.md) (reframed around the
 > long-term autonomous-surveying goal and the late-August 2026 Isles of Shoals
 > survey — [#368](https://github.com/rolker/unh_echoboats_project11/issues/368)).
-> Items below that were still open at archive time were carried forward there;
-> issue states referenced below are **as of the snapshot** and may be stale.
+> Items below that were still open at archive time were either carried forward
+> there or consciously retired; issue states referenced below are **as of the
+> snapshot** and may be stale.
 
 ---
 

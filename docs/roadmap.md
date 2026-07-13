@@ -76,8 +76,9 @@ a few weeks in the office, boat available, no field pressure. The method:
   **bench stress-test rig** (synth topics + mininet + CAMP-stub) is the only
   desk-side way to answer saturation questions before the ROC goes live.
   Promote it or consciously accept boat-time for comms validation — don't
-  let it stay deferred by inertia. (See
-  [#124](https://github.com/rolker/unh_echoboats_project11/issues/124).)
+  let it stay deferred by inertia. (Saturation history:
+  [#124](https://github.com/rolker/unh_echoboats_project11/issues/124), a
+  closed data-review issue — the rig itself has **no tracker yet**.)
 
 ## 2026 Massabesic campaign — outcome (brief)
 
@@ -146,6 +147,41 @@ The ROC makes every comms weakness an operations-stopper. Priority order:
   (stats-timer stall — observability, not data path),
   [`udp_bridge#21`](https://github.com/rolker/udp_bridge/issues/21).
 
+### ROC operator awareness & control *(promoted by the ROC)*
+
+Everything the shore operator knows arrives over the link, and there is no
+walk-to-the-boat fallback. Silent failures and invisible state are
+qualitatively worse at a ROC than at a pier — this cluster of carried
+campaign items graduates from "nice to have" to survey-relevant:
+
+- [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)
+  — operator-side perception/costmap display over the bridge. The
+  campaign-era "genuinely hard" item (bandwidth-aware costmap delivery);
+  sits exactly at the OTH × costmap-trust intersection.
+- [`#183`](https://github.com/rolker/unh_echoboats_project11/issues/183) —
+  CAMP overlay of the CA reflex state (obstacles, slowdown/stop polygons,
+  gating). The operator must see *what the boat is reacting to* from shore.
+- [`#274`](https://github.com/rolker/unh_echoboats_project11/issues/274) /
+  [`#275`](https://github.com/rolker/unh_echoboats_project11/issues/275) —
+  annunciator runtime checks: RTCM/NTRIP correction flow and boat-side
+  Starlink diagnostics reaching the operator panel.
+- [`ros2launch_session#5`](https://github.com/rolker/ros2launch_session/issues/5)
+  — observability mode: detect silent lifecycle aborts / process deaths.
+  The "queued a goal and nothing happened" failure shape cost expert
+  diagnosis time at the pier; at the ROC it costs the survey day.
+  (Related: [`camp#52`](https://github.com/rolker/camp/issues/52) GUI-freeze
+  capture plan,
+  [`#142`](https://github.com/rolker/unh_echoboats_project11/issues/142)
+  host thermals.)
+- **Design thread (carried — not yet issues): platform-aware speed override
+  + on-the-fly trackline editing.** Gentler operator interventions than a
+  full manual takeover (from the 2026-05-21 collision debrief): a speed
+  slider backed by platform `default_speed`/`max_speed` metadata, and
+  dragging a trackline waypoint past an obstacle instead of taking the
+  helm. Both want scoping conversations (message schema, CAMP UI surface)
+  before promotion to issues; at ROC ranges these become the *primary*
+  intervention tools.
+
 ### Survey execution quality
 
 Protect what worked; fix the two guidance RCAs; make speed behavior
@@ -184,7 +220,10 @@ ENC coverage exists again, and the boat works close to charted hazards.
   class of problem (charted-feature inflation steering the boat) returns
   from "moot at the lake". The S57-split direction (chart-bathy vs
   obstacles) and the layer ordering need to be exercised against real ENC
-  data *in sim* before August.
+  data *in sim* before August. Concrete open ticket:
+  [`#276`](https://github.com/rolker/unh_echoboats_project11/issues/276)
+  (re-enable s57 + bathymetry override layer, superseding the #263 interim
+  disable).
 - **Cost-model rework** (midpoint depth + per-band uncertainty, worst-case
   clearance) — the designed enhancement for shore-keepoff; nearshore
   gap-fill is its motivating use case. Enhancement, not a blocker — the
@@ -218,6 +257,10 @@ Swell at the Shoals amplifies attitude/timing errors that a flat lake hides
   temperature-derived SVS failover. Ocean stratification makes sound speed
   matter more than the lake did; an AML fault at the ROC can't be fixed by
   wading out to the boat.
+- [`#137`](https://github.com/rolker/unh_echoboats_project11/issues/137) —
+  M3 intermittent missing pings (suspected ping-rate × depth correlation).
+  Carried from the campaign era; the Shoals' depth range makes the
+  suspected correlation directly testable.
 
 ### Tide / vertical-datum chain *(returns with salt water)*
 
@@ -261,6 +304,12 @@ returns.
   [`uma#185`](https://github.com/rolker/unh_marine_autonomy/issues/185));
   the standalone sidescan store exists — wet validation and the Shoals will
   tell us what it's worth over rock.
+- **Contact curation & distribution** —
+  [`uma#157`](https://github.com/rolker/unh_marine_autonomy/issues/157)
+  (contact manager: CRUD store, curate/confirm, map distribution). The
+  explorer covers *reviewing* the 6 Massabesic marks; #157 is where a
+  reviewed mark becomes a curated, distributable contact (re-survey / ROV
+  target list).
 
 ### Autonomy robustness *(toward the end goal)*
 
