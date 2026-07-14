@@ -1,9 +1,10 @@
 # AGENTS.md — unh_echoboats_project11
 
 Instructions for AI agents working in this repository — including **GitHub
-Copilot code review**, which reads this file when reviewing PRs. The deep
-guide (packages, layout, pitfalls) is
-[`.agents/README.md`](.agents/README.md); read it before making changes.
+Copilot code review**, which reads this file when reviewing PRs. There is no
+`.agents/README.md` deep guide yet (the workspace convention for project
+agent guides; this repo's `.agents/` currently holds deployment config
+only) — start from the top-level `README.md` and `docs/`.
 
 ## Workspace Rules
 
