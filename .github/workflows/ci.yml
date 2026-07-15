@@ -1,0 +1,87 @@
+# CI for unh_echoboats_project11.
+# Based on the workspace template (ros2_agent_workspace .agent/templates/ci_workflow.yml),
+# adapted for a platform-configuration repo: the heavy boat-runtime
+# dependencies are exec_depends (not needed to build), so CI builds both
+# packages, runs the bizzyboat pytest, and validates the boats' URDFs.
+
+name: CI
+
+on:
+  push:
+    branches: [jazzy]
+  pull_request:
+    branches: [jazzy]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    container:
+      image: ros:jazzy-ros-core
+
+    steps:
+      - name: Update apt
+        run: apt-get update
+
+      - name: Install ros dev tools
+        run: DEBIAN_FRONTEND=noninteractive apt-get -y install ros-dev-tools liburdfdom-tools
+
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Init rosdep
+        run: |
+          if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
+            rosdep init
+          fi
+
+      - name: Update rosdep
+        run: rosdep update
+
+      - name: Create workspace
+        run: mkdir -p ../ws/src && ln -s "$GITHUB_WORKSPACE" ../ws/src/unh_echoboats_project11
+
+      - name: Install ROS dependencies
+        working-directory: ../ws
+        # -r continues past the first-party exec_depends (boat runtime
+        # packages like mru_transform, sound_speed_bridge) that have no
+        # rosdep keys — they aren't needed to build or test this repo.
+        run: >
+          DEBIAN_FRONTEND=noninteractive
+          rosdep install --from-paths src --ignore-src -r -y
+
+      - name: Build
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          colcon build --packages-up-to
+          bizzyboat_project11 izzyboat_project11
+          --cmake-args -DBUILD_TESTING=ON'
+
+      - name: Test
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          source install/setup.bash &&
+          colcon test --packages-select
+          bizzyboat_project11 izzyboat_project11
+          --event-handlers console_direct+
+          --return-code-on-test-failure'
+
+      - name: Test results
+        working-directory: ../ws
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          colcon test-result --verbose'
+        if: always()
+
+      - name: Validate URDFs
+        working-directory: ../ws
+        # The measured sensor offsets live in these URDFs — a URDF that no
+        # longer parses means no /tf_static on the boat.
+        run: >
+          bash -c 'source /opt/ros/jazzy/setup.bash &&
+          source install/setup.bash &&
+          xacro src/unh_echoboats_project11/bizzyboat_project11/urdf/bizzyboat.urdf.xacro | check_urdf /dev/stdin &&
+          check_urdf src/unh_echoboats_project11/izzyboat_project11/urdf/izzyboat.urdf'
