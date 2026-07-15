@@ -303,8 +303,9 @@ def generate_launch_description():
                     ),
                 ),
 
-                # Sound-speed bridge (AML SVS on gabby /dev/ttyS1
-                # -> ROS topic + Valeport UDP to M3 on mercat:20003)
+                # Sound-speed bridge (AML SVS on gabby /dev/ttyS0
+                # -> ROS topic + Valeport UDP to M3 on mercat:20003;
+                # ttyS1 belongs to the SBG — see sound_speed_launch.py)
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution([
