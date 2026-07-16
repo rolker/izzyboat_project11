@@ -1,3 +1,9 @@
+# Legacy style predates the workspace yamllint hook (PR #374): aligned-colon
+# tables, 2-space list indents, and long annotated lines fail rules this
+# field-edited file has never been held to. Restyling ~34 sites would create
+# needless merge risk against field-side hotfixes mid-season, so those rules
+# are disabled file-wide pending the deliberate cleanup tracked in #376.
+# yamllint disable rule:colons rule:indentation rule:line-length
 /**/helm_manager:
   ros__parameters:
     output_type: twist
@@ -642,6 +648,12 @@
       # Logging detections lets soundings + grid be re-derived offline by
       # replaying through the pipeline.
       - /bizzy/sensors/m3/detections
+      # Latched SonarInfo acquisition metadata (ADR-0009, marine_tools#69):
+      # pulse length / bandwidth / signal type per TX sector -- the GeoCoder
+      # ensonified-area inputs -- plus what the detections intensities mean.
+      # Republished on change and on a 10 s heartbeat, well inside this bag's
+      # 300 s splits, so every segment carries at least one (#375).
+      - /bizzy/sensors/m3/sonar_info
       # Garmin GCV-20 sidescan (on by default; absent if core_launch sidescan:=false).
       # Decoded per-channel imagery + latched control/status. debug/raw_status
       # carries the GCV :50050 status stream (incl. the unverified depth field)
