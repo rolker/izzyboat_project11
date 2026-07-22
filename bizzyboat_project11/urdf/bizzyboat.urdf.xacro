@@ -146,9 +146,9 @@
        All tilted ~5deg downward (pitch = +0.09 rad in URDF convention).
        Positions are estimated [EST] — refine with measurements. -->
 
-  <xacro:property name="cam_x" value="0.31"/>
-  <xacro:property name="cam_z" value="1.41"/>
-  <xacro:property name="cam_tilt" value="0.09"/>
+  <xacro:property name="camera_x" value="0.31"/>
+  <xacro:property name="camera_z" value="1.41"/>
+  <xacro:property name="camera_tilt" value="0.09"/>
 
   <!-- Camera-mast remount correction (2026-07-20): a new mast brace left the
        whole 4-camera bracket pitched slightly bow-up, so the forward camera
@@ -158,36 +158,61 @@
        deg down; opposite-signed => antisymmetric (fwd-aft)/2 = 1.85 deg).
        Modeled as ONE rotation of a common mast frame about base_link Y
        (bow-up = negative URDF pitch, opposite the +0.09 down-tilt), so all
-       four cameras rotate rigidly together. A per-camera cam_tilt change would
+       four cameras rotate rigidly together. A per-camera camera_tilt change would
        be wrong: it would tilt the aft camera up instead of down. Cameras sit
        at the mast origin (zero offset), so their positions are unchanged; only
-       orientation rotates. Roll component is unmeasured (needs port/stbd
-       horizon data); refine after the on-water test. See
-       docs/logs/2026/2026-07-20_gabby_logs.md. -->
-  <xacro:property name="cam_mast_pitch" value="${-1.85 * pi / 180.0}"/>
+       orientation rotates. See docs/logs/2026/2026-07-20_gabby_logs.md. -->
+
+  <!-- Refinement (2026-07-22, issue #380): calibrated against the 10-min
+       post-correction recording bag_2026-07-20T13.45.16_ffmpeg_seg — 1.43M
+       waterline observations (all 4 cameras, ~3000 frames each), absolute
+       reference = ray-cast to the real Lake Massabesic shoreline (OSM) from
+       the GNSS track. Two independent solves agree to <=0.08 deg; applying
+       these values closes residuals to <=0.011 deg on the same data.
+       Findings: field pitch -1.85 refined to -1.963 deg; roll (unmeasured in
+       the field) is +0.947 deg; the field's +0.47 deg common-mode residual
+       was finite-shore-distance geometry (atan(h/R)), not miscalibration.
+       The bracket is NOT perfectly rigid: per-camera trims below (pitch
+       relative to camera_tilt, roll about each camera's own axis) absorb a
+       +-0.24 deg twist mode and per-camera mount roll, largest on the aft
+       camera. Yaw trims are unobservable from waterline elevation and stay
+       at the cardinal directions. Uncertainty ~+-0.1 deg (systematic).
+       Method, data provenance, and reproduction scripts:
+       docs/analysis/2026-07-20/README.md -->
+  <xacro:property name="camera_mast_pitch" value="${-1.963 * pi / 180.0}"/>
+  <xacro:property name="camera_mast_roll" value="${0.947 * pi / 180.0}"/>
+  <!-- Per-camera trims (deg), same calibration:      pitch    roll -->
+  <xacro:property name="camera_trim_forward_pitch"  value="${ 0.107 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_forward_roll"   value="${-0.572 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_aft_pitch"  value="${ 0.467 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_aft_roll"   value="${-0.777 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_port_pitch" value="${-0.157 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_port_roll"  value="${-0.031 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_starboard_pitch" value="${-0.348 * pi / 180.0}"/>
+  <xacro:property name="camera_trim_starboard_roll"  value="${-0.385 * pi / 180.0}"/>
 
   <link name="bizzy/camera_mast"/>
   <joint name="base_to_camera_mast" type="fixed">
     <parent link="bizzy/base_link"/>
     <child link="bizzy/camera_mast"/>
-    <origin xyz="${cam_x} 0 ${cam_z}" rpy="0 ${cam_mast_pitch} 0"/>
+    <origin xyz="${camera_x} 0 ${camera_z}" rpy="${camera_mast_roll} ${camera_mast_pitch} 0"/>
   </joint>
 
   <xacro:oak_camera parent="bizzy/camera_mast" name="oak_forward"
     x="0" y="0" z="0"
-    pitch="${cam_tilt}" yaw="0"/>
+    roll="${camera_trim_forward_roll}" pitch="${camera_tilt + camera_trim_forward_pitch}" yaw="0"/>
 
   <xacro:oak_camera parent="bizzy/camera_mast" name="oak_port"
     x="0" y="0" z="0"
-    pitch="${cam_tilt}" yaw="${pi/2}"/>
+    roll="${camera_trim_port_roll}" pitch="${camera_tilt + camera_trim_port_pitch}" yaw="${pi/2}"/>
 
   <xacro:oak_camera parent="bizzy/camera_mast" name="oak_starboard"
     x="0" y="0" z="0"
-    pitch="${cam_tilt}" yaw="${-pi/2}"/>
+    roll="${camera_trim_starboard_roll}" pitch="${camera_tilt + camera_trim_starboard_pitch}" yaw="${-pi/2}"/>
 
   <xacro:oak_camera parent="bizzy/camera_mast" name="oak_aft"
     x="0" y="0" z="0"
-    pitch="${cam_tilt}" yaw="${pi}"/>
+    roll="${camera_trim_aft_roll}" pitch="${camera_tilt + camera_trim_aft_pitch}" yaw="${pi}"/>
 
 
   <!-- ========== FCU GNSS Antennas (2x CUAV C-RTK 2HP) ========== -->
