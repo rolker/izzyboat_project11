@@ -24,3 +24,22 @@ issue: 380
 - [x] (suggestion) Dead placeholder lines — `scripts/verify.py` (applied)
 - [x] (suggestion) Deployment note: gabby rebuild+relaunch required or change is a silent no-op — `docs/analysis/2026-07-20/README.md` (applied)
 - [x] (suggestion) flake8 F841/F401 unused var+imports — `scripts/latlon.py`, `scripts/refine.py` (applied)
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-22 13:38 -0400
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #384 at `5098b5c`
+**Sources**: 2 (Copilot R1 @ `5098b5c`, Local Review (Pre-Push) @ `5098b5c`)
+**Cross-source confirmations**: 0 (Copilot's 4 findings all new; the 7 pre-push findings were applied before push)
+**CI**: build-and-test pending at triage time (hosted runners degraded); ADR-0018 local attestation available
+
+### Findings
+- [x] (valid, Copilot) dead `if False` branches in timestamp packing — `docs/analysis/2026-07-20/scripts/geometry.py` (fixed in bf58f5b)
+- [x] (valid, Copilot) unconditional `sys.argv[1]` → IndexError without usage — `docs/analysis/2026-07-20/scripts/verify_urdf.py` (fixed in bf58f5b)
+- [x] (valid, Copilot) mast-comment reads as contradicting new per-camera trims — `bizzyboat_project11/urdf/bizzyboat.urdf.xacro` (clarified in bf58f5b)
+- [x] (valid, Copilot) hard-coded user-specific bag path — `scripts/latlon.py` + `scripts/extract.py` (CAMERA_CAL_BAG env var, bf58f5b)
+
+### False positives
+- (none)
