@@ -62,3 +62,19 @@ issue: 380
 ### False positives
 - (Copilot) geometry.py:63 dead `if False` branches — stale re-flag: removed in bf58f5b, verified absent at 38509bc
 - (Copilot) verify_urdf.py:19 unconditional sys.argv[1] — stale re-flag: usage check added in bf58f5b, present at lines 14-16
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-22 14:16 -0400
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #384 at `edf5057`
+**Sources**: 1 (Copilot R3 @ `edf5057`, "generated 1 comment"); CI build-and-test PASS @ `edf5057`
+**Cross-source confirmations**: 0
+**CI**: all-pass
+
+### Findings
+- [x] (valid, Copilot) verify.py run(): slice step sub//4 is 0 for sub 1-3 -> ValueError — clamped to >=1
+
+### False positives
+- (Copilot, re-anchored threads) verify_urdf.py argv / latlon.py Tem / extract.py 2x fail-fast — all four are open threads carried forward from R1/R2; fixes verified present at edf5057 (bf58f5b, edf5057)

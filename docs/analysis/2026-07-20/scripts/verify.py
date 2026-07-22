@@ -43,6 +43,7 @@ water_z = np.median(wl_z)
 
 def run(sa, sb, sub=24, quiet=True):
     """sa/sb: sign multipliers for alpha (tilt about optical x) and beta (about optical z)."""
+    step = max(1, sub // 4)   # guard: sub < 4 would give slice step 0
     res_all = {}
     for ci, c in enumerate(CAMS):
         R0, t0 = chain_R_t(c)
@@ -65,9 +66,9 @@ def run(sa, sb, sub=24, quiet=True):
         az = np.degrees(np.arctan2(rays_nu[:,:,1], rays_nu[:,:,0]))
         h = pz[:,None] + cam_nu[:,2:3] - water_z
         v = valid & (el > -3.0) & (el < 1.6)
-        eli = el[v][::sub//4]; azi = az[v][::sub//4]; ui = u.reshape(nF,128)[v][::sub//4]
-        xi = np.repeat(px, v.sum(1))[::sub//4]; yi = np.repeat(py, v.sum(1))[::sub//4]
-        hi = (h*np.ones_like(el))[v][::sub//4]
+        eli = el[v][::step]; azi = az[v][::step]; ui = u.reshape(nF,128)[v][::step]
+        xi = np.repeat(px, v.sum(1))[::step]; yi = np.repeat(py, v.sum(1))[::step]
+        hi = (h*np.ones_like(el))[v][::step]
         ddx = np.cos(np.radians(azi)); ddy = np.sin(np.radians(azi))
         Rt = np.full(len(eli), np.inf)
         CH = 3000
