@@ -150,20 +150,43 @@
   <xacro:property name="cam_z" value="1.41"/>
   <xacro:property name="cam_tilt" value="0.09"/>
 
-  <xacro:oak_camera parent="bizzy/base_link" name="oak_forward"
-    x="${cam_x}" y="0" z="${cam_z}"
+  <!-- Camera-mast remount correction (2026-07-20): a new mast brace left the
+       whole 4-camera bracket pitched slightly bow-up, so the forward camera
+       projected the far shoreline as obstacles ~35 m ahead. Estimated in the
+       field from forward-vs-aft segmentation horizons compared to TF: a rigid
+       mast pitch of ~1.85 deg (forward axis measured +2.32 deg up, aft -1.38
+       deg down; opposite-signed => antisymmetric (fwd-aft)/2 = 1.85 deg).
+       Modeled as ONE rotation of a common mast frame about base_link Y
+       (bow-up = negative URDF pitch, opposite the +0.09 down-tilt), so all
+       four cameras rotate rigidly together. A per-camera cam_tilt change would
+       be wrong: it would tilt the aft camera up instead of down. Cameras sit
+       at the mast origin (zero offset), so their positions are unchanged; only
+       orientation rotates. Roll component is unmeasured (needs port/stbd
+       horizon data); refine after the on-water test. See
+       docs/logs/2026/2026-07-20_gabby_logs.md. -->
+  <xacro:property name="cam_mast_pitch" value="${-1.85 * pi / 180.0}"/>
+
+  <link name="bizzy/camera_mast"/>
+  <joint name="base_to_camera_mast" type="fixed">
+    <parent link="bizzy/base_link"/>
+    <child link="bizzy/camera_mast"/>
+    <origin xyz="${cam_x} 0 ${cam_z}" rpy="0 ${cam_mast_pitch} 0"/>
+  </joint>
+
+  <xacro:oak_camera parent="bizzy/camera_mast" name="oak_forward"
+    x="0" y="0" z="0"
     pitch="${cam_tilt}" yaw="0"/>
 
-  <xacro:oak_camera parent="bizzy/base_link" name="oak_port"
-    x="${cam_x}" y="0" z="${cam_z}"
+  <xacro:oak_camera parent="bizzy/camera_mast" name="oak_port"
+    x="0" y="0" z="0"
     pitch="${cam_tilt}" yaw="${pi/2}"/>
 
-  <xacro:oak_camera parent="bizzy/base_link" name="oak_starboard"
-    x="${cam_x}" y="0" z="${cam_z}"
+  <xacro:oak_camera parent="bizzy/camera_mast" name="oak_starboard"
+    x="0" y="0" z="0"
     pitch="${cam_tilt}" yaw="${-pi/2}"/>
 
-  <xacro:oak_camera parent="bizzy/base_link" name="oak_aft"
-    x="${cam_x}" y="0" z="${cam_z}"
+  <xacro:oak_camera parent="bizzy/camera_mast" name="oak_aft"
+    x="0" y="0" z="0"
     pitch="${cam_tilt}" yaw="${pi}"/>
 
 
