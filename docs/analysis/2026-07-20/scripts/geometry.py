@@ -59,7 +59,7 @@ for ci, c in enumerate(CAMS):
     h = (pz[:,None] + campos_nu[:,2:3] - water_z) * np.ones((nF,128))
     v = valid.astype(bool)
     obs["cam"].append(np.full(v.sum(), ci, dtype=np.int8))
-    obs["t"].append(np.repeat(t, v.sum(axis=1) if False else 0) if False else np.repeat(t, valid.sum(axis=1)))
+    obs["t"].append(np.repeat(t, valid.sum(axis=1)))
     obs["el"].append(el[v]); obs["az"].append(az[v]); obs["u"].append(u.reshape(nF,128)[v])
     obs["x"].append(np.repeat(px, valid.sum(axis=1))); obs["y"].append(np.repeat(py, valid.sum(axis=1)))
     obs["h"].append(h[v]); obs["psi"].append(psi[v])

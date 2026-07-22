@@ -93,7 +93,8 @@ boat silently keeps running the old -1.85° mast with no roll.
 
 ```bash
 export CAMERA_CAL_WORKDIR=/tmp/camera_mast_calibration && mkdir -p $CAMERA_CAL_WORKDIR
-# extract.py expects the bag path near the top of the file; then, in order:
+export CAMERA_CAL_BAG=~/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg
+# then, in order:
 python3 scripts/extract.py && python3 scripts/latlon.py && python3 scripts/geometry.py
 python3 scripts/solve.py && python3 scripts/shoreline_solve.py
 python3 scripts/verify.py            # sign search + closure, hand-applied corrections

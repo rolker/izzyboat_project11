@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Get earth->map transform from bag, convert track to lat/lon."""
+import os
 import rosbag2_py, numpy as np, math
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 from scipy.spatial.transform import Rotation as R
 
-BAG = "/home/roland/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg"
-import os
+BAG = os.environ.get("CAMERA_CAL_BAG",
+                     "/home/roland/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg")
 OUT = os.environ.get("CAMERA_CAL_WORKDIR", "/tmp/camera_mast_calibration")
 reader = rosbag2_py.SequentialReader()
 reader.open(rosbag2_py.StorageOptions(uri=BAG, storage_id="mcap"), rosbag2_py.ConverterOptions("",""))

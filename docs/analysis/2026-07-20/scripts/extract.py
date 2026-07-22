@@ -5,9 +5,10 @@ import rosbag2_py
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 import numpy as np
-
-BAG = "/home/roland/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg"
 import os
+
+BAG = os.environ.get("CAMERA_CAL_BAG",
+                     "/home/roland/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg")
 OUT = os.environ.get("CAMERA_CAL_WORKDIR", "/tmp/camera_mast_calibration")
 CAMS = ["oak_forward", "oak_aft", "oak_port", "oak_starboard"]
 SEGT = {f"/bizzy/sensors/cameras/{c}/segmentation": i for i, c in enumerate(CAMS)}

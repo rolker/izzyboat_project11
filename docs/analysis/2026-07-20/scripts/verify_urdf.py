@@ -11,6 +11,10 @@ OUT = os.environ.get("CAMERA_CAL_WORKDIR", "/tmp/camera_mast_calibration")
 CAMS = ["oak_forward", "oak_aft", "oak_port", "oak_starboard"]
 SHORT = ["fwd", "aft", "port", "stbd"]
 
+if len(sys.argv) != 2:
+    print(f"usage: {sys.argv[0]} <expanded.urdf>", file=sys.stderr)
+    sys.exit(2)
+
 # --- parse URDF joints into parent->child transforms
 tree = ET.parse(sys.argv[1])
 joints = {}
