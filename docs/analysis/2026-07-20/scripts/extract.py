@@ -6,6 +6,7 @@ from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 import numpy as np
 import os
+import sys
 
 BAG = os.environ.get("CAMERA_CAL_BAG",
                      "/home/roland/data/logs/gabby/logs/bizzy_images/bag_2026-07-20T13.45.16_ffmpeg_seg")
@@ -72,6 +73,10 @@ while reader.has_next():
 save = {}
 for i, c in enumerate(CAMS):
     fr = frames[i]
+    if not fr:
+        sys.exit(f"error: no segmentation frames for {c} in this bag")
+    if caminfo[i] is None:
+        sys.exit(f"error: no camera_info for {c} in this bag")
     save[f"{c}_t"] = np.array([f[0] for f in fr])
     save[f"{c}_row"] = np.stack([f[1] for f in fr])
     save[f"{c}_valid"] = np.stack([f[2] for f in fr])
@@ -86,6 +91,8 @@ for c in CAMS:
     chain = []
     f = f"bizzy/{c}_optical"
     while f != "bizzy/base_link":
+        if f not in static_tf:
+            sys.exit(f"error: /tf_static has no transform with child {f}")
         parent, q, t = static_tf[f]
         chain.append((f, list(q), list(t)))
         f = parent

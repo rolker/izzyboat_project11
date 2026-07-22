@@ -43,3 +43,22 @@ issue: 380
 
 ### False positives
 - (none)
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-22 13:51 -0400
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #384 at `38509bc`
+**Sources**: 1 (Copilot R2 @ `38509bc`); CI build-and-test PASS @ `38509bc`
+**Cross-source confirmations**: 0
+**CI**: all-pass
+
+### Findings
+- [x] (valid, Copilot) latlon.py: no diagnostic when earth->map transform absent (Tem=None TypeError) — fixed
+- [x] (valid, Copilot) extract.py: np.stack/caminfo crash on cameras with no frames — fail-fast added
+- [x] (valid, Copilot) extract.py: KeyError without context on missing /tf_static frame — fail-fast added
+
+### False positives
+- (Copilot) geometry.py:63 dead `if False` branches — stale re-flag: removed in bf58f5b, verified absent at 38509bc
+- (Copilot) verify_urdf.py:19 unconditional sys.argv[1] — stale re-flag: usage check added in bf58f5b, present at lines 14-16

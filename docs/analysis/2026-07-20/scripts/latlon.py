@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Get earth->map transform from bag, convert track to lat/lon."""
 import os
+import sys
 import rosbag2_py, numpy as np, math
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
@@ -23,6 +24,8 @@ while reader.has_next():
                 Tem = (np.array([q.x,q.y,q.z,q.w]), np.array([v.x,v.y,v.z]))
                 break
     if Tem: break
+if Tem is None:
+    sys.exit("error: no earth -> bizzy/map transform found on /tf in this bag")
 q, t = Tem
 print("earth->map t:", t, " q:", q)
 
