@@ -1,0 +1,22 @@
+# 2026-07-01 — salmon log (BizzyBoat deployment #362)
+
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/362 <!-- wrap-up correction: originally mislabeled #359 (the 2026-06-30 deployment); operator confirmed this 2026-07-01 post-ops session was part of deployment #362 -->
+Host: salmon
+Side: field
+Started: 2026-07-01 (post-ops dev/data session)
+
+**2026-07-01 17:48 -04:00** — End-of-day log (backfilled at shutdown; session ran without live logging). Post-ops dev/data work on salmon, boat at dock / stack shutting down. Three items below: rqt marine_control scroll fix, bathy store rebuild (IN PROGRESS — store currently incomplete), today's XTF export.
+
+**2026-07-01 17:48 -04:00** — rqt_marine_control device tabs now scroll instead of growing the plugin. Each device tab's `ControlSetWidget` is wrapped in a `QScrollArea` (widgetResizable, NoFrame) so a device advertising many controls scrolls inside the tab rather than forcing the whole rqt window to grow; only a vertical bar appears when rows overflow. Added `TabManager::tabIndexFor()` (the tab page is now the scroll area, not the content widget) and routed the responsive-layout tab reselect through it; added tab_manager tests. Built clean, all 124 pkg tests pass. Operator-confirmed working. Committed `6a6b102`, pushed to gitcloud `rqt_operator_tools` origin/jazzy (5eb91e7..6a6b102).
+
+**2026-07-01 17:48 -04:00** — Bathy store rebuild STARTED but INCOMPLETE — do not rely on `~/data/stores/bathymetry` until resumed. Store model was updated (uma#248: old `chart`/`draft`/`processed` layers collapsed into `survey` (CUBE product, highest priority) + `reference` (prior)); the updated `import_bag` writes `survey` directly, which resolves the old "no `--layer` to processed" blocker. Progress this session:
+  - Archived the old-layout dirs (reversible `mv`): bathy `chart/`+`processed/`+old `registry.json`+ledger and backscatter `processed/`+`registry.json` → each store's `_pre_uma248_backup/`.
+  - Rebuilt the `reference/` layer (47 tiles) from the chart prior `~/data/massabesic_bathy.tif` via `import_geotiff … reference --cell-size 1.0` (level 10, matches survey `-r 1.0`), `--depth-scale -1 --depth-offset 48.88` (full-pool lake-surface WGS84 ellipsoidal height, per `bizzyboat_project11/config/massabesic_datum_polygons.yaml` / unh_echoboats#278), `--uncertainty 1.524` (= old chart, 5 ft GRANIT accuracy). Raster is NAD83/UTM19N → reprojected to WGS84 first (import_geotiff requires geographic WGS84).
+  - CAVEAT: the current `reference/` was reprojected with **bilinear**, which smoothed max depth 16.76 m → 13.72 m (deep-water prior ~3 m too shallow → would over-reject legitimate deep returns). A **nearest-neighbor** redo was prepared but HELD at shutdown — resume with that before trusting the prior.
+  - `survey/` layer NOT built yet (the 35 Jun-12+ bag CUBE pass was held). Scope decided: 35 `bizzyboat_sonar` bags dated ≥2026-06-12 with `m3/detections`+`/tf` (the M3-detection data only exists Jun 10+; April/May bags have no detections). Planned command: `import_bag -o <store> --reference-store <store> --bs-store ~/data/stores/backscatter -d /bizzy/sensors/m3/detections --odom-topic /bizzy/odom -r 1.0 --backscatter-correction empirical --backscatter-curve <m3_angular_response_curve.csv> --base-link-frame bizzy/base_link --level-frame bizzy/base_link_north_up --tide-frame bizzy/map_tide --platform bizzy --sensor m3 --campaign massabesic_jun2026 <35 bags>`.
+
+**2026-07-01 17:47 -04:00** — Converted today's sonar to XTF (post-ops, stack down): both today's `bizzyboat_sonar` bags → `~/share/xtf/2026-07-01/`. `2026-07-01T13-15-13+00-00.xtf` (197342 pings, 1.6G, 0 dropped, 1 unpaired) and `2026-07-01T17-13-59+00-00.xtf` (173877 pings, 1.4G, 0 dropped). Both fully paired+georeferenced; all pings used the latest-TF fallback (within --max-tf-age), same as prior conversions (wrap-up quality item). Note: the 17-13-59 bag's sidescan tapered off after ~16:28 (small chunks to 17:18, likely sonar off at the dock) — earlier survey portion intact. Both bags had `metadata.yaml` and no active rsync at conversion time (complete/stable).
+
+**Carryover for next session / wrap-up:**
+- Bathy store: redo `reference/` with nearest-neighbor reproject (preserve 16.76 m max depth), then build `survey/` from the 35 Jun-12+ bags (command above). Old layout preserved in `_pre_uma248_backup/` (reversible). Store is INCOMPLETE meanwhile.
+- All June-12+ `bizzyboat_sonar` bags with real sidescan through today are now XTF.

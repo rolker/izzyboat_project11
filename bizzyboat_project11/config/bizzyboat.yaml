@@ -1,3 +1,9 @@
+# Legacy style predates the workspace yamllint hook (PR #374): aligned-colon
+# tables, 2-space list indents, and long annotated lines fail rules this
+# field-edited file has never been held to. Restyling ~34 sites would create
+# needless merge risk against field-side hotfixes mid-season, so those rules
+# are disabled file-wide pending the deliberate cleanup tracked in #376.
+# yamllint disable rule:colons rule:indentation rule:line-length
 /**/helm_manager:
   ros__parameters:
     output_type: twist
@@ -54,15 +60,25 @@
 
 /**/mru_transform:
   ros__parameters:
-    # SBG INS primary, FCU fallback (#339). Arbitration is strict
-    # priority-preference (sensor_names order): the highest-priority *fresh*
-    # source owns the output, so the SBG drives nav whenever it is healthy and
-    # the FCU takes over only on a real SBG dropout past sensor_timeout —
-    # regardless of relative sample rates. SBG
-    # topics are the namespaced ros_standard messages (use_enu:true); frame_id
-    # sbg_gnss_primary (identity vs base_link) serves both the fix lever-arm
-    # and the gyro path. SBG attitude verified vehicle-aligned on the boat
-    # 2026-06-27 (yaw matches FCU to 0.01 deg; roll/pitch match the tie-up).
+    # FCU primary, SBG fallback (reverted 2026-06-29, gabby deployment).
+    # Arbitration is strict priority-preference (sensor_names order, #339): the
+    # highest-priority *fresh* source owns the output, so the FCU drives nav
+    # whenever it is healthy and the SBG takes over only on a real FCU dropout
+    # past sensor_timeout — regardless of relative sample rates.
+    #
+    # Why reverted: with SBG primary, the sea_surface_layer projection showed a
+    # constant ~2 deg roll offset (SBG-minus-FCU, measured underway 2026-06-29),
+    # tilting the costmap and producing aft false positives. mru_transform does
+    # NOT apply the IMU->base_link URDF rotation to attitude (it is passed
+    # through raw — mru_transform.cpp:145), so the SBG mounting/alignment offset
+    # reaches the costmap directly. FCU attitude verified stable the same day
+    # (10 Hz, no dropouts/glitches, valid covariance). Root cause (SBG roll
+    # alignment vs the 2026-06-27 vehicle-align check that reported yaw 0.01 deg
+    # / roll-pitch tie-up) deferred to wrap-up.
+    #
+    # SBG topics are the namespaced ros_standard messages (use_enu:true);
+    # frame_id sbg_gnss_primary (identity vs base_link) serves both the fix
+    # lever-arm and the gyro path.
     sensors:
       sbg:
         topics:
@@ -75,8 +91,8 @@
           position: "mavros/global_position/global"
           velocity: "mavros/local_position/velocity_body"
     sensor_names:
-    - sbg
     - fcu
+    - sbg
     sensor_timeout: 0.5
 
 /**/udp_bridge:
@@ -245,6 +261,11 @@
             # other OTH streams that share this budget (#287).
             maximum_bytes_per_second: 1200000
             topics_list:
+            # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
+            # via udp_bridge remote_advertise, confirmed working; persisted here).
+            - coverage_catalog
+            - coverage_tiles
+            - manda_coverage_swath
             - battery
             - command_response
             - diagnostics
@@ -316,6 +337,20 @@
               collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon}
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
+              # CUBE coverage tiles -> CAMP live-tile view. Set up live 2026-06-29
+              # via udp_bridge remote_advertise (queue 2; tiles rate-limited to 2/s
+              # since they're GridMap-class) and confirmed working; persisted here.
+              # coverage_tiles is request-driven (silent until CAMP asks).
+              # NOTE: the inbound half (coverage_requests, CAMP->boat) is NOT here —
+              # udp_bridge config only advertises OUTBOUND topics, so the sender
+              # configures it: operator.yaml advertises coverage_requests -> bizzy
+              # over vpn. These two files are a pair; edit them together.
+              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
+              coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 0.5}
+              # manda coverage-swath viz marker -> CAMP (enabled via display_topic in
+              # nav2_overlay.yaml). Published per survey_area goal; rate-limited (the
+              # LINE_STRIP grows with coverage). Set up live 2026-06-29.
+              manda_coverage_swath: {source: manda_coverage/coverage_swath, queue_size: 2, period: 1.0}
               # Cropped local-costmap window for operator SA over the constrained VPN
               # link — throttled to 1 Hz (unh_marine_navigation#38, #127). The
               # footprint and path-follower viz are low-bandwidth, sent unthrottled.
@@ -613,6 +648,12 @@
       # Logging detections lets soundings + grid be re-derived offline by
       # replaying through the pipeline.
       - /bizzy/sensors/m3/detections
+      # Latched SonarInfo acquisition metadata (ADR-0009, marine_tools#69):
+      # pulse length / bandwidth / signal type per TX sector -- the GeoCoder
+      # ensonified-area inputs -- plus what the detections intensities mean.
+      # Republished on change and on a 10 s heartbeat, well inside this bag's
+      # 300 s splits, so every segment carries at least one (#375).
+      - /bizzy/sensors/m3/sonar_info
       # Garmin GCV-20 sidescan (on by default; absent if core_launch sidescan:=false).
       # Decoded per-channel imagery + latched control/status. debug/raw_status
       # carries the GCV :50050 status stream (incl. the unverified depth field)
