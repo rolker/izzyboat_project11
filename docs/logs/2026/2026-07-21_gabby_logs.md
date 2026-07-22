@@ -194,3 +194,49 @@ commanded-vs-actual yaw rate does:
    setpoint plugin) and why it blocked.
 4. OAK camera connect flakiness feeding CA/perception (failed open, so not causal here, but a
    reliability gap): USB/hardware reliability.
+
+### Correction — RCA confirmed (2026-07-22, second bag pass + operator screen recording)
+
+The synthesis above was the first-pass working hypothesis; a second pass over the same
+bags (command payloads, mission/task feedback, `FollowPath` visualization, numeric
+replication of the controller math) plus the operator screen recording
+(`operator_2026-07-21.mp4`) confirmed a different chain. Tracked in
+[unh_echoboats_project11#381](https://github.com/rolker/unh_echoboats_project11/issues/381)
+(confirmed-chain comment has the full evidence); entries above left as-recorded.
+
+- **The straying was not controller oscillation.** `cmd_vel_nav` inter-arrival median was
+  200 ms (p99 217 ms) — the 5 Hz loop was healthy where it mattered, so the 119 rate-miss
+  warnings were real but not causal. The ±3 rad/s windows were the line18 turn-around and
+  task-restart transients. The boat in fact **acquired line18 by 13:41:30** (PID cross-track
+  0.0–0.3 m median through 13:42:21) after a slow, loopy ~60 s turn-around.
+- **`trackline0000` was a deliberate 8-waypoint return route** around the shallow bar
+  (screen recording shows it drawn vertex-by-vertex 13:41:26–13:42:28 and locked on send;
+  the 8 waypoints in the `replace_task` payload match the follower-viz vertices to ~1 m).
+  It preempted line18 at 13:42:29 (sent 13:42:10 — ~19 s link latency), and the same
+  command was delivered 7×/6×/7× (link retries), each duplicate preempting the running
+  `follow_path` goal (that is what the "Aborting handle" ×10 events are).
+- **Why the boat then left the route** (the operator-observed "not following the return
+  trackline", visible on screen at 13:45): two bag-proven controller defects, filed
+  upstream —
+  [unh_marine_navigation#99](https://github.com/rolker/unh_marine_navigation/issues/99)
+  (`setPlan` preserves the segment cursor **by index** across same-goal re-issues; the
+  avoidance decorator alternates sparse 8-pose nominal / dense 2 m-station reshapes of the
+  same goal, and one dense→sparse flip capped the cursor onto the **final leg** — the
+  follower's own viz shows 7 of 8 vertices "past" at 13:43:25 with the boat still near
+  wp0/wp1) and
+  [unh_marine_navigation#100](https://github.com/rolker/unh_marine_navigation/issues/100)
+  (gain schedule multiplies the crab angle **after** its ±90° clamp → railed crab −108°,
+  past perpendicular → converged heading loop with `angular.z ≈ 0` = a stable straight-line
+  sail-away, plus `linear.x` inflated to 2× target through the `cos(crab)` floor —
+  replicated numerically against the bag to within ~0.05 rad/s).
+- **The two setpoint-to-FCU gaps were not a stalled node** (follow-up 3 above is
+  resolved-invalid): they coincide exactly with operator `piloting_mode manual` switches
+  (received 13:46:50 / 13:47:45) followed by 15 s / 23 s of link-delayed helm; with no
+  setpoints in manual, the ArduPilot "target not received" failsafe stopped the boat as
+  designed. The ≈±1 rad/s yaw clamp noted above is the `velocity_smoother`
+  (`nav2_params.240.yaml` `max_velocity [2.75, 0.0, 1.0]`).
+- **The UDP-link finding stands, elevated**: the degraded link (~20 s command latency,
+  duplicated deliveries, sequence regressions) triggered the operator intervention in the
+  first place (stale picture during the line18 turn), delayed/duplicated every recovery
+  action, caused the failsafe stops via late helm, and survived the restart — nothing
+  boat-side was wedged.
