@@ -30,6 +30,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Test scripts
+        # Self-contained (stubs ros2, synthesizes bag fixtures); runs before
+        # the ROS build so script regressions fail fast.
+        run: bash scripts/test_build_bathy_store.sh
+
       - name: Init rosdep
         run: |
           if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then

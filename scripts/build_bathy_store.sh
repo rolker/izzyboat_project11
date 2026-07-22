@@ -43,11 +43,13 @@
 set -euo pipefail
 
 # --------------------------------------------------------------------------
-# Configuration — edit here if paths, topics, or frames change.
+# Configuration — edit here if topics or frames change. Paths are
+# env-overridable (BAG_ROOT=... build_bathy_store.sh ...) for other hosts
+# and for the test harness.
 # --------------------------------------------------------------------------
-BAG_ROOT="$HOME/data/logs/gabby/logs/bizzyboat_sonar"
-BATHY_STORE="$HOME/data/stores/bathymetry"
-BS_STORE="$HOME/data/stores/backscatter"
+BAG_ROOT="${BAG_ROOT:-$HOME/data/logs/gabby/logs/bizzyboat_sonar}"
+BATHY_STORE="${BATHY_STORE:-$HOME/data/stores/bathymetry}"
+BS_STORE="${BS_STORE:-$HOME/data/stores/backscatter}"
 
 DETECTIONS_TOPIC="/bizzy/sensors/m3/detections"
 ODOM_TOPIC="/bizzy/odom"
@@ -66,7 +68,7 @@ CAMPAIGN=massabesic_jun2026
 
 # Chart prior for --reference: NH GRANIT Massabesic bathymetry,
 # NAD83/UTM19N, positive-down depths below the full-pool lake surface.
-CHART_TIF="$HOME/data/massabesic_bathy.tif"
+CHART_TIF="${CHART_TIF:-$HOME/data/massabesic_bathy.tif}"
 CHART_DEPTH_SCALE=-1     # positive-down depth -> up-positive ellipsoidal height
 CHART_DEPTH_OFFSET=48.88 # full-pool lake-surface WGS84 ellipsoidal height:
                          # chart_datum_z in bizzyboat_project11/config/
@@ -184,7 +186,7 @@ fi
 # Bag selection
 # --------------------------------------------------------------------------
 BAGS=()
-n_window=0 n_nometa=0 n_nodet=0 n_notf=0
+n_window=0 n_nometa=0 n_badmeta=0 n_nodet=0 n_notf=0
 for bag in "$BAG_ROOT"/*/; do
   bag="${bag%/}"
   name=$(basename "$bag")
@@ -197,7 +199,11 @@ for bag in "$BAG_ROOT"/*/; do
     warn "skipping $name: no metadata.yaml (likely still mid-rsync from gabby)"
     ((++n_nometa)); continue
   fi
-  read -r det tf < <(bag_topic_counts "$bag/metadata.yaml")
+  if ! counts=$(bag_topic_counts "$bag/metadata.yaml" 2>/dev/null); then
+    warn "skipping $name: metadata.yaml unreadable (corrupt or unexpected schema — NOT the mid-rsync case)"
+    ((++n_badmeta)); continue
+  fi
+  read -r det tf <<<"$counts"
   if [[ "$det" -eq 0 ]]; then
     ((++n_nodet)); continue
   fi
@@ -210,7 +216,7 @@ done
 
 echo "=== bag selection ($BAG_ROOT) ==="
 printf '  %s\n' "${BAGS[@]##*/}"
-echo "selected ${#BAGS[@]} bags (skipped: $n_window outside window, $n_nometa mid-rsync, $n_nodet no detections, $n_notf no /tf)"
+echo "selected ${#BAGS[@]} bags (skipped: $n_window outside window, $n_nometa mid-rsync, $n_badmeta unreadable metadata, $n_nodet no detections, $n_notf no /tf)"
 [[ ${#BAGS[@]} -gt 0 ]] || die "no bags selected"
 
 # --------------------------------------------------------------------------
