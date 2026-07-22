@@ -57,6 +57,11 @@ REFERENCE_TIF=""
 BAGS_DIR="$HOME/data/logs/gabby/logs/bizzyboat_sonar"
 TOPIC=/bizzy/sensors/m3/detections
 SURVEY_START="2026-06-12"   # floor: pre-survey bags have no M3 detections anyway
+# Bags to skip even though they carry detections + tf. 06-27T23-58: overnight
+# dock recording during the mercat NTP re-slew — per-ping stamps drift −7…−1 s
+# and the sparse (~1 Hz) stream defeats retrofit_m3_bag's ping-count window
+# (unh_echoboats#367), so its 7.3k pings would georeference ~up-to-10 m off.
+SKIP_BAGS="2026-06-27T23-58-21+00-00"
 LAKE_DATUM_M=48.88          # full-pool lake surface, WGS84 ellipsoidal
                             # (massabesic_datum_polygons.yaml, unh_echoboats#278)
 MIN_FREE_GB=5               # refuse to start a ~1 h run that would ENOSPC mid-flush
@@ -216,11 +221,15 @@ fi
 # (anchored: '/tf' alone would also match /tf_static). ISO-8601 names sort
 # lexically, so a string compare on the date prefix is a correct floor.
 BAGS=()
-skipped_pre=0; skipped_notopic=0
+skipped_pre=0; skipped_notopic=0; skipped_listed=0
 for b in "$BAGS_DIR"/*/; do
   b="${b%/}"
   name="$(basename "$b")"
   [[ "$name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]] || continue
+  if [[ " $SKIP_BAGS " == *" $name "* ]]; then
+    echo "  - $name skipped (SKIP_BAGS: unusable timing, see script comment)"
+    skipped_listed=$((skipped_listed+1)); continue
+  fi
   if [[ "${name:0:10}" < "$SURVEY_START" ]]; then skipped_pre=$((skipped_pre+1)); continue; fi
   if [ ! -f "$b/metadata.yaml" ]; then
     # rosbag2 writes metadata.yaml at clean shutdown; data without it is
@@ -240,7 +249,7 @@ for b in "$BAGS_DIR"/*/; do
 done
 n_bags=${#BAGS[@]}
 
-echo "bags  : $n_bags to import (skipped: $skipped_pre pre-$SURVEY_START, $skipped_notopic no metadata/detections/tf)"
+echo "bags  : $n_bags to import (skipped: $skipped_pre pre-$SURVEY_START, $skipped_notopic no metadata/detections/tf, $skipped_listed skip-listed)"
 if [ "$n_bags" -eq 0 ]; then echo "ERROR: no survey bags found under $BAGS_DIR"; exit 1; fi
 printf '  + %s\n' "${BAGS[@]#"$BAGS_DIR"/}"
 
