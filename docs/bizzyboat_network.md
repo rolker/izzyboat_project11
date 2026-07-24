@@ -46,6 +46,24 @@ Operator Router (RUTX11)               BizzyBoat Router (RUTX11)
 | 10.132.146.0/24 | WireGuard VPN tunnel |
 | 192.168.21.0/24 | NETMAP: BizzyBoat onboard via VPN |
 | 192.168.22.0/24 | NETMAP: operator via VPN (BizzyBoat path) |
+| 172.16.0.0/16 | Garmin Marine Network (isolated; mercat only) |
+
+### Garmin Marine Network
+
+The Garmin GCV-20 sidescan module lives on Garmin's own marine network — a
+flat 172.16.0.0/16 where devices self-assign IPs (GCV-20 at 172.16.3.0;
+mercat's Marine-Network NIC 172.16.55.235) — physically reachable **only from
+mercat's second Ethernet port**. It is not routed onto the boat LAN, so the
+/16 overlapping the WiFi-bridge subnet (172.16.20.0/24) is harmless.
+
+`garmin_sidescan`'s `tools/garmin_marine_network_proxy.py` runs on mercat and
+relays, one-way GCV→ROS except for the driver's own control frames: imagery
+multicast (:50220), GCV status (:50050, filtered to the GCV's source),
+chartplotter CDP config (:51000, carries the active range under auto-range),
+and forwards the driver's TCP control (:50227) to the GCV. The unmodified
+driver then runs on gabby pointed at the proxy. Authoritative details: the
+proxy tool's docstring and `garmin_sidescan/docs/gcv_protocol.md` in
+`marine_tools`.
 
 ## Physical Connections
 
@@ -135,6 +153,30 @@ Two independent paths between operator and boat:
 
 Verified 2026-03-25: VPN path operates independently when WiFi bridge is down
 (tested during WiFi password change).
+
+### udp_bridge per-connection bandwidth budgets
+
+| Connection | Budget | Notes |
+|---|---|---|
+| `wifi` | 1.5 MB/s | Full telemetry + cameras |
+| `vpn` | 1.2 MB/s | Carries all four OAK ffmpeg streams |
+| `cell` | 0.3 MB/s | Lean set, no cameras |
+
+Measured pier calibration (2026-05-18) behind these numbers lives in the
+private `ccomjhc_project11` repo. Two conclusions worth repeating here:
+
+- The VPN/Starlink path is **structurally lossy** (~0.4% baseline) — a
+  ~30% udp_bridge resend overhead on that path is expected steady-state,
+  **not** a fault to chase.
+- **WiFi range**: there is no "300 m hard limit" (a retired early figure).
+  Degradation with distance is graceful and interference-limited; telemetry
+  dropouts at range are tolerated — the boat completes lines autonomously.
+
+### Known-cosmetic log noise
+
+The operator router logs recurring `dnsmasq: no address range available for
+DHCP request via eth0.4` — that's the boat OmniTIK left in DHCP-client mode
+on the bridge VLAN. Cosmetic; not a bridge fault.
 
 ## DNS Naming
 

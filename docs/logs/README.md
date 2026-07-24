@@ -76,3 +76,22 @@ content into 3500 lines, mixing per-session detail with umbrella-style
 milestones. Hard to navigate, hard to scope changes against, hard to
 close. The per-deployment / per-host model fixes this by giving each
 unit of work its own bounded artifact.
+
+## Where the recorded data actually lands (gabby)
+
+Deployment recordings are split across **three** locations — analysts
+regularly conclude "no imagery was recorded" because they only looked in the
+first one:
+
+| Data | Location | Naming |
+|---|---|---|
+| Nav / actuator / telemetry bags | `~/data/logs/bizzyboat/<timestamp>/` | UTC |
+| Camera imagery + local costmap | `~/data/logs/bizzy_images/*_ffmpeg_seg/` | **local time** |
+| Sonar | `~/data/logs/bizzyboat_sonar/` | UTC |
+
+Camera index order in the imagery recordings: **0 = port, 1 = forward,
+2 = starboard, 3 = aft**.
+
+Recording is selective by design (e.g. no DeltaT, image streams chosen per
+deployment) — absence of a topic from the nav bag is not evidence it wasn't
+recorded elsewhere, and vice versa.

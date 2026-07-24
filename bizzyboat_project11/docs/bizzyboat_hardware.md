@@ -169,6 +169,7 @@ Driver: `depthai_marine` from the sensors layer
 | Item | Model | Status |
 |---|---|---|
 | Multibeam sonar | Imagenex **DeltaT** | Physically installed on hull; ROS driver **not yet integrated**. Topic `/bizzy/sensors/deltat/soundings` is advertised but publishes zero messages as of 2026-04-16. Driver tracked in [unh_marine_autonomy#111](https://github.com/rolker/unh_marine_autonomy/issues/111). |
+| Sidescan sonar | Garmin **GCV-20** sonar module + **GT34UHD-TM** transducer | 16-bit. SideVü ~1120 kHz (0.44° × 55°); ClearVü ~820 kHz (0.74° × 46°) — full −3 dB beamwidths. Lives on the Garmin Marine Network (reachable from mercat only); imagery reaches gabby via the mercat proxy (see [bizzyboat_network.md](../../docs/bizzyboat_network.md)). ROS driver: `garmin_sidescan` in `marine_tools`. |
 | Sound velocity probe | **AML** (model *TODO: confirm*) | Attached to the factory SmartCast winch |
 
 ### Time Synchronization
