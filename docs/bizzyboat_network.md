@@ -46,20 +46,24 @@ Operator Router (RUTX11)               BizzyBoat Router (RUTX11)
 | 10.132.146.0/24 | WireGuard VPN tunnel |
 | 192.168.21.0/24 | NETMAP: BizzyBoat onboard via VPN |
 | 192.168.22.0/24 | NETMAP: operator via VPN (BizzyBoat path) |
-| 172.16.3.0/24 | Garmin Marine Network (isolated; mercat only) |
+| 172.16.0.0/16 | Garmin Marine Network (isolated; mercat only) |
 
 ### Garmin Marine Network
 
-The Garmin GCV-20 sidescan module lives on Garmin's own marine network
-(172.16.3.0/24), physically reachable **only from mercat's second Ethernet
-port** — it is not routed onto the boat LAN. A proxy on mercat relays the
-sonar **imagery multicast and TCP control** to gabby for the `garmin_sidescan`
-ROS driver. Two limitations to remember:
+The Garmin GCV-20 sidescan module lives on Garmin's own marine network — a
+flat 172.16.0.0/16 where devices self-assign IPs (GCV-20 at 172.16.3.0;
+mercat's Marine-Network NIC 172.16.55.235) — physically reachable **only from
+mercat's second Ethernet port**. It is not routed onto the boat LAN, so the
+/16 overlapping the WiFi-bridge subnet (172.16.20.0/24) is harmless.
 
-- **Status/config traffic is NOT relayed** — the proxy carries imagery and
-  control only.
-- **Range is not present in the imagery stream** — it must be commanded, not
-  read back.
+`garmin_sidescan`'s `tools/garmin_marine_network_proxy.py` runs on mercat and
+relays, one-way GCV→ROS except for the driver's own control frames: imagery
+multicast (:50220), GCV status (:50050, filtered to the GCV's source),
+chartplotter CDP config (:51000, carries the active range under auto-range),
+and forwards the driver's TCP control (:50227) to the GCV. The unmodified
+driver then runs on gabby pointed at the proxy. Authoritative details: the
+proxy tool's docstring and `garmin_sidescan/docs/gcv_protocol.md` in
+`marine_tools`.
 
 ## Physical Connections
 
