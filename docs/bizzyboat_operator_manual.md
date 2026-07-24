@@ -138,6 +138,14 @@ is the primary safety mechanism. Pressing **Standby** (from CAMP or the controll
 hands the boat to **MANUAL** control immediately — see [§5](#5-driving--autonomy).
 When in doubt, take manual control.
 
+> **Mode-switch position matters at range.** The FCU honors the RC
+> transmitter's mode-switch channel even at fringe signal range (this holds
+> with `FS_THR_ENABLE=0`) — a transmitter left on MANUAL can yank an
+> autonomous boat out of its mission when it drifts in and out of RC
+> coverage. During autonomous ops, leave the transmitter's mode switch in
+> the **AUTO/GUIDED** position (or power the transmitter off) until you
+> actually intend to take over.
+
 ---
 
 ## 2. Readiness checks (before you put the boat in autonomy)
