@@ -150,8 +150,8 @@ legacy `sermouse` + `serenum` Plug-and-Play probe reads that binary stream,
 misidentifies the device, and wedges the port — blocking **all SBG nav data**
 (QINSy position/attitude included).
 
-- **Permanent fix (applied 2026-04-29):** `Set-Service sermouse -StartupType
-  Disabled` (elevated PowerShell).
+- **Permanent fix (applied 2026-04-29)**, elevated PowerShell:
+  `Set-Service sermouse -StartupType Disabled`
 - **Recovery if it recurs:** cycle the PnP device — disable / re-enable
   `ACPI\PNP0501\SMODULEC4` in Device Manager (or via `pnputil`), then confirm
   the SBG reappears on COM4.
@@ -178,8 +178,10 @@ Two paths to power mercat up remotely, most reliable first:
    192.168.20.50; VPN 192.168.21.50) is wired to mercat's ATX header and
    also provides console video/keyboard when the OS is hung. Access details
    and credentials live in the private `ccomjhc_project11` repo.
-2. **Wake-on-LAN** — magic packet to mercat's NIC MAC `78:d0:04:30:64:e3`
-   (e.g. `wakeonlan` / `etherwake -i br-lan` from a router or gabby).
+2. **Wake-on-LAN** — magic packet to mercat's NIC MAC (in the private
+   `ccomjhc_project11` DHCP-reservations inventory, per this repo's
+   MAC-addresses-stay-private policy; or read it live via `arp`/`ip neigh`).
+   Send with `wakeonlan` / `etherwake -i br-lan` from a router or gabby.
    Requires all of: BIOS WoL enabled, ErP disabled, "magic packet" enabled
    on the NIC in Windows, and Fast Startup off. If any were reset (BIOS
    update, Windows update), WoL silently stops working.
