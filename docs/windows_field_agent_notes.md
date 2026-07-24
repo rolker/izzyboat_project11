@@ -138,6 +138,55 @@ SID `…-1001`), but `USERPROFILE` and the Git-Bash `HOME` point at
   `HKLM` policy keys**, not per-user `HKCU` tweaks — the latter can't be written
   from the agent context here.
 
+## Field recovery & hardware quirks
+
+Field-earned recovery knowledge for mercat. Everything here has bitten at
+least once.
+
+### COM4 / SBG boot wedge
+
+The SBG Ellipse-D streams binary data on **COM4 @ 115200**. At boot, the
+legacy `sermouse` + `serenum` Plug-and-Play probe reads that binary stream,
+misidentifies the device, and wedges the port — blocking **all SBG nav data**
+(QINSy position/attitude included).
+
+- **Permanent fix (applied 2026-04-29):** `Set-Service sermouse -StartupType
+  Disabled` (elevated PowerShell).
+- **Recovery if it recurs:** cycle the PnP device — disable / re-enable
+  `ACPI\PNP0501\SMODULEC4` in Device Manager (or via `pnputil`), then confirm
+  the SBG reappears on COM4.
+
+### Time-sync service conflicts
+
+mercat's clock discipline is **Meinberg ntpd** (Windows service name `NTP`)
+pointed at the TM2000B (`time.bizzy.p11.lan`); `w32time` is disabled.
+
+Two other services will silently set the clock behind ntpd's back and must
+**stay disabled**:
+
+- `PDSSettimeService` (Teledyne PDS)
+- `lfsvc` (Windows Geolocation)
+
+If timestamps drift despite ntpd reporting sync, check whether either has
+been re-enabled (e.g. by a software update). Convergence check: `ntpq -pn`.
+
+### Remote power-on
+
+Two paths to power mercat up remotely, most reliable first:
+
+1. **MangoPi KVM ATX control** — the network KVM (`kvm.bizzy.p11.lan`,
+   192.168.20.50; VPN 192.168.21.50) is wired to mercat's ATX header and
+   also provides console video/keyboard when the OS is hung. Access details
+   and credentials live in the private `ccomjhc_project11` repo.
+2. **Wake-on-LAN** — magic packet to mercat's NIC MAC `78:d0:04:30:64:e3`
+   (e.g. `wakeonlan` / `etherwake -i br-lan` from a router or gabby).
+   Requires all of: BIOS WoL enabled, ErP disabled, "magic packet" enabled
+   on the NIC in Windows, and Fast Startup off. If any were reset (BIOS
+   update, Windows update), WoL silently stops working.
+
+Before concluding mercat is down, confirm L2 reachability via ARP — a host
+that answers ARP but not ping/RDP is hung, not powered off (use the KVM).
+
 ## Machine-config tweaks applied
 
 ### Disabling desktop weather & news (Widgets)
