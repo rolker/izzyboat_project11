@@ -48,6 +48,12 @@
   ros__parameters:
     map_frame: bizzy/map
     cell_size: 0.5
+    # Persist draft coverage tiles so a stack restart re-primes the GeoMapSheet
+    # instead of starting empty (open item from 2026-06-29 gabby deployment).
+    # Lives under ~/data/stores/ next to the static chart prior, outside the
+    # ~/data/logs/ offload pull. Saves run every save_interval (default 30s)
+    # while ACTIVE; lossless reload on configure (cube ADR-0001).
+    draft_dir: /home/field/data/stores/cube_draft
 
 # M3 -> SonarDetections -> soundings: the CUBE error model's pose comes from TF
 # (roll/pitch from level_frame, heave from tide_frame) + /odom (SOG); odom is
