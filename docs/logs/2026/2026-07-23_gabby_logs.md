@@ -1,6 +1,6 @@
-# 2026-07-23 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-07-23 — gabby log (BizzyBoat deployment #386)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: [#386](https://github.com/rolker/unh_echoboats_project11/issues/386) (backfilled at wrap-up; issue-less field start)
 Host: gabby
 Side: field
 Started: 2026-07-23 13:07 -04:00
@@ -9,11 +9,15 @@ Started: 2026-07-23 13:07 -04:00
 
 **2026-07-23 13:37 -04:00** — command chain SMOOTH: cmd_vel_nav / autonomous/cmd_vel / marine/control/cmd_vel all steady ~1.286-1.291 m/s, <0.5% jitter. No jump at ROS command level. Suspected downstream (actual/GPS speed or GUI display field). Awaiting operator on where the jump is seen.
 
+> **Wrap-up correction**: this thread was never resolved. Operator: the commanded velocity kept jumping when it should have been fixed (at the beginning and possibly later), observed in an rqt panel, and no satisfactory answer was ever given. Carried to RCA backlog — follow-up analysis should look at the gabby bags.
+
 **2026-07-23 14:37 -04:00** — M3 sonar confirmed streaming: /bizzy/sensors/m3/detections @ 28.0 Hz and /bizzy/sensors/m3/soundings @ 28.0 Hz, tight jitter. Sonar is live.
 
 **2026-07-23 14:42 -04:00** — Operator station not seeing live tile updates. Boat side HEALTHY: m3/cube_bathymetry/tiles publishing ~0.2 Hz (new tile every ~5s), cube_bathymetry node alive, M3 raw @28Hz. But coverage_requests has 0 publishers on boat graph + tiles has 0 local subs -> station's requests not discovered on boat. Points to boat<->station zenoh discovery/transport drop, not sonar/bathy pipeline. Suggested station-side sub refresh / zenoh router restart before touching boat. No changes made.
 
 **2026-07-23 14:44 -04:00** — Operator clarified: current tile updating fine, a tile EAST stopped. coverage_catalog (level 11, row 35583): current tile col 27811 version=now (live); east neighbors col 27813 ~73min old, col 27814 ~88min old; col 27812 ~4min; west col 27810 ~16min. Consistent with normal finalize-on-move-away tile lifecycle (tile updates only while ensonified; finalized tiles retain data, stop taking pings). Pipeline healthy. Not a fault unless boat is still meant to be covering that east area (would be coverage gap). No changes made.
+
+> **Wrap-up correction**: the finalize-on-move-away explanation was wrong (or at best incomplete). Operator: the stale tiles were due to tiles getting too big to fit through udp_bridge; the operator raised the max data limit on the fly (not saved to config) and the tile situation improved. Follow-up: persist the increased limit in config or it reverts on next launch.
 
 **2026-07-23 15:08 -04:00** — udp_bridge health check: lifecycle active; forwarding to operator on all 3 connections (cell/vpn/wifi); across all 128 topic-connection stat entries failed_bytes and dropped_bytes are 0.0 (zero send failures/drops). Throughput nominal. Operator link clean -- corroborates east-tile freeze = lifecycle, not transport.
 
@@ -32,6 +36,8 @@ Started: 2026-07-23 13:07 -04:00
 **2026-07-23 18:36 -04:00** — CORRECTION to prior entry: cube_bathymetry IS a lifecycle node (ros2 lifecycle get -> unconfigured [1]; exposes change_state/get_state; source is rclcpp_lifecycle::LifecycleNode). Real cause of dead fresh cube = respawned into UNCONFIGURED state, never re-driven through configure/activate -> only /parameter_events sub, no input, no output. NOT a zenoh discovery race (earlier diagnosis retracted). Respawn restarts process but does not re-run lifecycle transitions; original activation (mgr/bringup/manual) didn't refire. Fix: ros2 lifecycle set cube configure then activate (no full group relaunch needed). Proposed to operator; awaiting go.
 
 **2026-07-23 18:39 -04:00** — RECOVERY (operator-directed): ran ros2 lifecycle set cube configure (unconfigured->inactive, ok) then activate (->active [3], ok). cube now active + subscribed to soundings(28Hz)/sonar_info/coverage_requests/tf. coverage_catalog repopulated 18 tiles. CORRECTION to earlier 'accumulation lost': tile versions in catalog are OLD (pre-kill timestamps ~1784827xxx), so cube RELOADED persisted grid on configure -- prior coverage restored, NOT permanently lost. Live tiles stream ticking again @0.195Hz (actively gridding current pings). Boat now serving full catalog+tiles over bridge; camp panel should repopulate (any remaining staleness = camp-side re-request, separate). Root cause of whole incident: respawn left lifecycle node stranded in unconfigured; configure+activate resolved cleanly. LESSON for wrap-up: cube respawn=True restarts process but does NOT re-drive lifecycle transitions -> respawn alone leaves it dead-unconfigured; needs a lifecycle manager / activation on respawn, or don't rely on kill-to-respawn for lifecycle nodes.
+
+> **Wrap-up correction**: the need to manually advance the lifecycle after a respawn was already known to the operator — the gap was that the agent wasn't aware of it. Reframed as an agent-knowledge/documentation gap, not a new discovery; no issue filed (operator: known).
 
 **2026-07-23 18:44 -04:00** — Operator: removed live layer in camp, can't re-add it. Boat-side check: cube serving coverage_catalog+coverage_tiles, udp_bridge locally subscribed to both (sub count 1 each) = boat ready. But coverage NOT in boat->operator send stats (bridge forwards coverage demand-driven, only when camp has active request/layer). coverage_requests SILENT from boat view = camp's re-add not producing a request that reaches boat. Diagnosis: boat waiting+ready; camp 'add layer' not re-issuing request over bridge -> camp-side, likely stuck coverage session state after layer-remove. Offered: (1) watch coverage_requests live from boat while operator clicks add-layer to pinpoint request-path vs render; (2) fresh camp restart to clear stuck state (earlier restart was before the remove). No boat action needed.
 
