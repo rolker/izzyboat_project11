@@ -8,7 +8,10 @@ from here when relevant).
 
 *Reframed 2026-07-13
 ([#368](https://github.com/rolker/unh_echoboats_project11/issues/368)) after
-the 2026 Lake Massabesic campaign wrapped. The campaign-era roadmap —
+the 2026 Lake Massabesic campaign wrapped; updated 2026-07-23
+([#390](https://github.com/rolker/unh_echoboats_project11/issues/390)) with
+the findings of the 2026-07-23 shakedown deployment
+([#386](https://github.com/rolker/unh_echoboats_project11/issues/386)). The campaign-era roadmap —
 Summer Hydro survey-prep framing, dev freeze, production mode, punch lists —
 is preserved at
 [`roadmap_archive_2026_massabesic.md`](roadmap_archive_2026_massabesic.md).*
@@ -56,7 +59,10 @@ a few weeks in the office, boat available, no field pressure. The method:
 - **Fix and improve what Massabesic surfaced** — the RCAs and data-quality
   items below — and **verify in simulation** wherever the failure reproduces
   there (the Massabesic sim assets and the m3_dryrun bag remain the
-  fast-iterate harness).
+  fast-iterate harness). The 2026-07-23 shakedown deployment
+  ([#386](https://github.com/rolker/unh_echoboats_project11/issues/386))
+  already ran this loop once — its findings are folded into the threads
+  below.
 - **Don't break what worked.** The campaign proved a lot of the stack on the
   water (line-following, the CA helm gate, the live coverage pipeline, the
   operator toolset). Protecting that is a first-class thread, not hygiene:
@@ -78,7 +84,8 @@ a few weeks in the office, boat available, no field pressure. The method:
   Promote it or consciously accept boat-time for comms validation — don't
   let it stay deferred by inertia. (Saturation history:
   [#124](https://github.com/rolker/unh_echoboats_project11/issues/124), a
-  closed data-review issue — the rig itself has **no tracker yet**.)
+  closed data-review issue; the rig is tracked as
+  [`udp_bridge#18`](https://github.com/rolker/udp_bridge/issues/18).)
 
 ## 2026 Massabesic campaign — outcome (brief)
 
@@ -126,6 +133,15 @@ The ROC makes every comms weakness an operations-stopper. Priority order:
   the ROC cannot afford. Related metering mechanism:
   [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
   (per-topic priority/class scheduling).
+- [`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389) —
+  coverage-tile transmission over udp_bridge: at the 2026-07-23 deployment,
+  large level-11 tiles no longer fit through the link (field workaround:
+  max-data raised live, unsaved). At the ROC the live coverage display rides
+  the same constrained link as everything else — the options review
+  (routing, fragmentation, tile-level levers, limits) is survey-relevant.
+  Related: [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
+  above; [`udp_bridge#36`](https://github.com/rolker/udp_bridge/issues/36)
+  (transport rework umbrella).
 - **Low-bandwidth status fallback** — a text/heartbeat/minimal-telemetry path
   that survives when the full topic stream doesn't. At the ROC there is no
   "walk to the shore and look" fallback.
@@ -138,6 +154,8 @@ The ROC makes every comms weakness an operations-stopper. Priority order:
 - **VPN-path indicator** + **"OTH mode" annunciator quiet-list** — operator
   awareness items carried from the campaign roadmap; the quiet-list matters
   more when *everything* is OTH (WiFi WARN noise is permanent otherwise).
+  The operator-declared OTH mode itself is tracked as
+  [`uma#128`](https://github.com/rolker/unh_marine_autonomy/issues/128).
 - [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) —
   the "OTH with a completed survey" validation criterion. The Shoals survey
   *is* this test — which argues for a deliberate pre-survey OTH validation
@@ -172,7 +190,36 @@ campaign items graduates from "nice to have" to survey-relevant:
   (Related: [`camp#52`](https://github.com/rolker/camp/issues/52) GUI-freeze
   capture plan,
   [`#142`](https://github.com/rolker/unh_echoboats_project11/issues/142)
-  host thermals.)
+  host thermals,
+  [`uma#139`](https://github.com/rolker/unh_marine_autonomy/issues/139)
+  boat-core wedge liveness/watchdog.)
+- **Live-coverage display reliability** *(2026-07-23 cluster — all hit in
+  one afternoon)*: layer can't be re-added after remove
+  ([`camp#168`](https://github.com/rolker/camp/issues/168)); requests never
+  resume after restart/re-enable
+  ([`camp#169`](https://github.com/rolker/camp/issues/169)); an oversized
+  tile message is an unbounded allocation — the crash path
+  ([`camp#170`](https://github.com/rolker/camp/issues/170)); and once
+  eviction folds a coarse overview, the render degrades to huge blurry
+  pixels and *survives restarts*
+  ([`camp#103`](https://github.com/rolker/camp/issues/103) /
+  [`camp#163`](https://github.com/rolker/camp/issues/163)). At the ROC the
+  coverage panel is the survey's progress gauge — it has to survive
+  restarts, re-adds, and large tiles.
+- **Device-control plugin reliability** — checked-but-no-tab
+  ([`rqt_operator_tools#109`](https://github.com/rolker/rqt_operator_tools/issues/109))
+  and device discovery that never refreshes after load
+  ([`rqt_operator_tools#110`](https://github.com/rolker/rqt_operator_tools/issues/110)).
+  At the ROC the marine_control panel is the only way to reach device knobs
+  mid-survey.
+- **Operator-side CA tuning levers** —
+  [`uma#168`](https://github.com/rolker/unh_marine_autonomy/issues/168)
+  (CA-pipeline tuning/disable controls umbrella) +
+  [`perception#30`](https://github.com/rolker/unh_marine_perception/issues/30)
+  (radar-style segmentation→costmap controls). When glint false positives
+  stop the boat mid-line (see *Survey execution quality*), the ROC
+  operator's only alternatives today are watching it struggle or taking the
+  helm — and the takeover itself currently costs lines (nav#104).
 - **Design thread (carried — not yet issues): platform-aware speed override
   + on-the-fly trackline editing.** Gentler operator interventions than a
   full manual takeover (from the 2026-05-21 collision debrief): a speed
@@ -200,6 +247,30 @@ survey-appropriate.
   Operators redirect mid-line constantly during real surveys.
 - [`nav#73`](https://github.com/rolker/unh_marine_navigation/issues/73) —
   CA gate chatters STOP during autonomous hover; station-keep can't settle.
+- [`nav#104`](https://github.com/rolker/unh_marine_navigation/issues/104) —
+  mission consumes survey-line tasks during manual override: on 2026-07-23,
+  two lines were silently marked failed-done while the operator drove
+  through CA false positives, and the boat resumed two lines over. At the
+  ROC a manual takeover is the *primary* intervention — the mission must
+  survive one without eating lines. Sits with the
+  [`nav#43`](https://github.com/rolker/unh_marine_navigation/issues/43) /
+  [`nav#77`](https://github.com/rolker/unh_marine_navigation/issues/77) /
+  [`nav#79`](https://github.com/rolker/unh_marine_navigation/issues/79)
+  transition family under the
+  [`nav#50`](https://github.com/rolker/unh_marine_navigation/issues/50)
+  BT-redesign umbrella.
+- **Segmentation glint/reflection false positives** —
+  [`perception#34`](https://github.com/rolker/unh_marine_perception/issues/34)
+  (in-domain fine-tune, the durable fix) /
+  [`perception#42`](https://github.com/rolker/unh_marine_perception/issues/42)
+  (WaSR-T temporal-segmentation evaluation). Escalated 2026-07-23: no longer
+  just hover drift — repeated CA stops at a line end triggered the nav#104
+  two-line skip, so the false-positive cluster now costs survey coverage
+  directly. Sun and swell at the Shoals will not be gentler than a lake.
+- [`#388`](https://github.com/rolker/unh_echoboats_project11/issues/388) —
+  commanded velocity jumping in an rqt panel (unresolved 2026-07-23 thread;
+  gabby bag analysis pending, which also carries the nav#104 mechanism
+  check).
 - [`nav#5`](https://github.com/rolker/unh_marine_navigation/issues/5) —
   regression tests for the crabbing path follower (see *Mode* above).
 - Coverage-planner operator tuning
@@ -241,6 +312,15 @@ ENC coverage exists again, and the boat works close to charted hazards.
 Swell at the Shoals amplifies attitude/timing errors that a flat lake hides
 (the M3 is not roll-stabilized):
 
+- [`cube#110`](https://github.com/rolker/cube_bathymetry/issues/110) —
+  validity-gate M3 no-bottom returns before they grid into draft tiles.
+  2026-07-23: shallow-water bottom-detection dropouts put deep-negative
+  flyers into several draft tiles (some unsalvageable). Nearshore gap-fill
+  at the Shoals is *exactly* the shallow regime that produced them — without
+  the gate, the deliverable inherits the contamination. Complements the
+  prior-based gates
+  ([`cube#98`](https://github.com/rolker/cube_bathymetry/issues/98) /
+  [`cube#91`](https://github.com/rolker/cube_bathymetry/issues/91)).
 - [`#337`](https://github.com/rolker/unh_echoboats_project11/issues/337) —
   FCU 3D-gyro health fault (phantom roll → bathy artifacts via
   `mru_transform`).
@@ -251,7 +331,9 @@ Swell at the Shoals amplifies attitude/timing errors that a flat lake hides
   [`#339`](https://github.com/rolker/unh_echoboats_project11/issues/339)
   (SBG-primary) merged, but the field deployments **reverted to FCU-primary**
   (June 29/30). The configuration that surveys the Shoals needs to be a
-  decision, not an accident of the last field fix.
+  decision, not an accident of the last field fix. Open tracker for the
+  durable-source decision:
+  [`#138`](https://github.com/rolker/unh_echoboats_project11/issues/138).
 - **Sound-speed robustness** —
   [`marine_tools#53`](https://github.com/rolker/marine_tools/issues/53)
   temperature-derived SVS failover. Ocean stratification makes sound speed
@@ -269,7 +351,8 @@ thing, end-to-end:
 
 - The `map → map_tide` chain has been validated at the pier but never
   through a full survey. It gates the costmap (tide-relative clearance) —
-  exercise it in sim + at the pier before August.
+  exercise it in sim + at the pier before August (sim-side datum wiring:
+  [`#288`](https://github.com/rolker/unh_echoboats_project11/issues/288)).
 - The **deliverable vertical datum**: survey data is recorded
   WGS84-ellipsoidal (corrigible downstream — the Massabesic lesson), but
   merging with the larger vessel's coverage forces an explicit datum
@@ -318,8 +401,16 @@ end-goal-gating.
 
 - **Operator-intervention rate is the autonomy metric.** Each survey should
   need fewer takeovers per hour than the last; count them per deployment.
-- Broader BT review of `run_tasks.xml` (carried; promote to an issue if a
-  Nav2-BT-experienced pass surfaces concrete findings).
+- Broader BT review of `run_tasks.xml` — now tracked as
+  [`nav#50`](https://github.com/rolker/unh_marine_navigation/issues/50)
+  (task-switching latch family), with the 2026-07-23 nav#104 finding as
+  fresh input.
+- **Lifecycle nodes vs. respawn** *(carried from 2026-07-23; no tracker
+  yet)*: `respawn=True` restarts a process but does not re-drive lifecycle
+  transitions — a respawned cube_bathymetry sat unconfigured until manually
+  advanced (known behavior, caught the field agent by surprise). The
+  boat-resilience question is a lifecycle-manager / activation-on-respawn
+  policy for every lifecycle node in the launch tree, not a per-node fix.
 - Recovery behaviors: stalled-at-obstacle, station-keep interactions
   (nav#73 above), mission resume semantics (nav#58 above).
 - Planning-path costmap trust (see *Costmap & planning trust*) — the
