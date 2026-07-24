@@ -31,9 +31,11 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       NTP` and observe for a few iburst polls; if still bad, run
       `ntpq -c rv` to find another clock-setter.  Block — QINSy logging
       timestamps depend on this.
-- [ ] Confirm SBG still appears on `COM4 @ 115200` after COM port
-      recovery (memory: `reference_mercat_com4_stuck.md` — disable /
-      enable `ACPI\PNP0501\SMODULEC4` if the port is locked).
+- [ ] Confirm SBG still appears on `COM4 @ 115200`. If the port is
+      wedged, cycle the PnP device (disable / enable
+      `ACPI\PNP0501\SMODULEC4`); root cause and permanent fix
+      (`sermouse` service disabled 2026-04-29) are documented in
+      `docs/windows_field_agent_notes.md` ("COM4 / SBG boot wedge").
 - [ ] Confirm SVS on `COM3 @ 9600` responds.
 - [ ] Ping M3 on its factory IP (point-to-point via the spare mercat
       Ethernet port).  Record IP in "Hardware inventory" above if not
@@ -73,6 +75,12 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       `EKF_EULER` (50 Hz), `SHIP_MOTION` (50 Hz). Heave lives in
       SHIP_MOTION, not EULER — both must be on for vertical-motion
       correction.
+      **Delayed-heave caveat**: this unit (Ellipse-D-G4A2-B1,
+      SN 000034256, FW 3.0.3949-stable) provides only real-time
+      `SHIP_MOTION` (msg ID 32). It has **no delayed-heave /
+      `SHIP_MOTION_HP` (ID 35)** — that's an Apogee/Quanta/Navsight
+      feature. Do not configure QINSy "Misc Delayed Heave" for this
+      boat; there is nothing to feed it.
 - [ ] Enable recommended GPS logs for dual-antenna QC: `GPS1_POS`,
       `GPS1_VEL`, `GPS1_HDT` (GNSS-native rate, 5–10 Hz).
 - [ ] In QINSy, instantiate the `SBG Systems (R-P-H) – 03` serial
@@ -94,6 +102,12 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       mercat), `Export to File` unchecked.
 - [ ] On M3 software: `Setup → System Configuration → Devices → Sonar
       Setup → Override Network Link Speed = 125 Mbps`.
+- [ ] **Enable "Export Data" in the Menu Widget** (small circular
+      icon, top-right of the sonar view) — the UDP export is
+      **silent until this per-session toggle is on**, even with all
+      Preferences/format settings correct. Display Mode must be
+      Profile Only or Image + Profile. This is the most common
+      "QINSy sees nothing" cause after a fresh M3 launch.
 - [ ] Feed the AML SVS into the M3 in parallel with QINSy (M3 uses it
       for its own refraction model; QINSy still consumes the same
       stream for soundings). Most SVS tools support multi-port output.
@@ -101,9 +115,31 @@ add session notes inline under "Session: YYYY-MM-DD" below once done
       the matching UDP port. Verify the **Clock datagram** is in the
       stream via QINSy's port monitor — without it, the driver decodes
       nothing.
-- [ ] Enter the M3 mounting offsets in QINSy (from `#77` measurements:
-      x = -0.23, y = 0, z = -0.145, transducer face Down). Do **not**
-      duplicate offsets in the M3 software's Deployment dialog.
+- [ ] Enter the M3 mounting offsets in QINSy. **Source of truth is
+      the URDF** (`bizzyboat_project11/urdf/bizzyboat.urdf.xacro`),
+      which carries refined bathymetry-derived values superseding
+      the original `#77` tape measurements (x = -0.23, z = -0.145).
+      Convert frames per "QINSy offset entry convention" below. Do
+      **not** duplicate offsets in the M3 software's Deployment
+      dialog.
+
+**QINSy offset entry convention** (applies to every mounting offset
+entered in DbSetup):
+
+QINSy's offset frame is **+X = starboard, +Y = forward, +Z = up** —
+not ROS REP-103 (+X = forward, +Y = port, +Z = up). Only the
+horizontal axes change:
+
+| QINSy field | From ROS (URDF) value |
+|---|---|
+| X (starboard) | **−Y** (ROS) |
+| Y (forward) | **X** (ROS) |
+| Z (up) | Z (ROS, unchanged) |
+
+A sign/axis mix-up here produces a ~0.5 m across-track sounding
+error that is invisible in normal operation and only shows up on
+patch-test / reciprocal-line comparisons — double-check every entry
+against this table.
 - [ ] Verify first pings in QINSy with SBG attitude + heave applied.
 - [ ] Capture a short QINSy log at the dock and save an index entry in
       the photo / data log below.
@@ -171,7 +207,11 @@ Checklist:
       before connecting (SBG high level is 3.2 V light-load / 2.6 V
       at 16 mA — well above TTL Vih but worth verifying).
 - [ ] **Set M3 Time Sync Mode to 1PPS**: `Sonar Setup → Time Sync
-      Mode → 1PPS`.
+      Mode → 1PPS`. **Caution**: the green "SYNC OK" indicator does
+      **not** mean 1PPS lock — it shows even without the dropdown
+      set. The only authoritative check is the Output Messages log
+      (next item). Field-proven SBG side: Sync Out A = 1PPS, rising
+      edge, 500 ms pulse width.
 - [ ] **Configure QINSy NMEA ZDA (Network) output driver** to emit
       ZDA over UDP at 1 Hz to the M3 head IP on port 31100. QINSy
       path: `Settings → Input/Output Ports → Output Select = NMEA →
@@ -277,6 +317,26 @@ Fallback if architecture is rejected: AML stays on mercat COM3,
 QINSy uses serial driver `Sound Velocity - Smart SV (AML, ASCII)
 (Active) - 31`, M3 either gets a Y-cable + custom sensor definition
 or relies on a fixed Sound Speed Preference default.
+
+**Field status (2026-06/07) — interim bridge actually deployed:**
+
+- The M3 **custom-sensor wizard path failed**: the AML emits
+  sentences terminated **CR CR LF (`0D 0D 0A`)**, not CR LF, and
+  the wizard silently fails to parse them. Don't retry that route.
+- Working interim setup: AML stays on mercat **COM3 @ 9600**; a
+  PowerShell bridge script reads it and feeds the M3's **built-in
+  Valeport UDP driver on `127.0.0.1:20003`** (Valeport format is
+  tolerant of the terminator).
+- [ ] **Version-control the bridge script** — it exists only at
+      `C:\Users\admin\aml_bridge.ps1` on mercat and is at risk of
+      silent loss. Commit it under `bizzyboat_project11/` (or the
+      eventual bridge package) with a header noting its COM port,
+      baud, and UDP target.
+- Known AML failure signature (recurring in the field): healthy
+  readings → NaN → silence. Heavy outages logged Jun 17 – Jul 1;
+  some deployment bags carry zero sound-speed messages. Check the
+  stream early in every session (readiness check in the operator
+  manual).
 
 **AML-3 SVP via SmartCast winch** (`#76` follow-up):
 
