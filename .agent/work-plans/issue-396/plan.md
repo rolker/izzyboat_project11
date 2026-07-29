@@ -34,9 +34,13 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 1. **Add the new topic to the main `logger` record list** in
    `bizzyboat_project11/config/bizzyboat.yaml`, immediately after the existing
    `/bizzy/sensors/sound_speed/sound_speed` entry (line 571), with a short
-   comment explaining what it carries and pointing at marine_tools#75/#76 —
-   mirroring the comment style already used for the neighboring sound-speed
-   and Garmin entries (lines 567–576).
+   comment explaining what it carries — mirroring the comment style already
+   used for the neighboring sound-speed and Garmin entries (lines 567–576).
+   The comment must **name the driver-version dependency** (topic exists only
+   with a `sound_speed_bridge` that has the `raw` publisher,
+   marine_tools#75/PR #76), so a field reader who finds the topic absent or
+   empty attributes it to an older driver build, not a probe fault
+   (plan-review suggestion 2).
 2. **Do not touch `sonar_logger`** — leave its record list as-is. The
    exclusion is deliberate (raw bytes are diagnostic-only, not a bathy
    correction input) and will be called out explicitly in the PR body so it
@@ -61,7 +65,7 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 | Only what's needed | Single topic, negligible bandwidth (short ASCII sentences), matches existing scalar-logging precedent (#270). No new tooling or process. |
 | A change includes its consequences | Comment added references marine_tools#75/#76 so future readers can trace the topic's origin; `sonar_logger` exclusion is documented in-PR rather than left as a silent gap. |
 | Workspace vs. project separation | Config-only change to a project repo (`unh_echoboats_project11`); no workspace-repo changes needed. |
-| Test what breaks | Config-only change with no new code path — verification is topic-existence on the driver (post-merge of marine_tools#76) plus a live/bag smoke check, not a unit test. |
+| Test what breaks | Config-only change with no new code path — no unit test. Checkable acceptance criterion (plan-review suggestion 3): after the gabby rebuild, `ros2 bag info` on a newly recorded main bag lists `/bizzy/sensors/sound_speed/raw` (`std_msgs/UInt8MultiArray`) with a nonzero message count while the probe is streaming. Safe to land before marine_tools#76 merges: the recorder uses `all_topics: false` with an explicit list, so a not-yet-existing topic records nothing rather than failing (in-file precedent: commented-out `/bizzy/sensors/deltat/soundings`). |
 
 ## ADR Compliance
 
@@ -75,6 +79,8 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 |---|---|---|
 | Main `logger` record list | `sonar_logger` record list | No — deliberately excluded per operator decision (raw bytes are diagnostic-only, not a bathy sound-speed correction input); stated explicitly in the PR body. |
 | Main `logger` record list | Any docs describing the main bag's contents | No dedicated bag-contents doc found in this repo beyond inline YAML comments; the added comment is the documentation. |
+| Main `logger` record list | Deployment: gabby pull + **rebuild** | Config takes effect only after gabby pulls and rebuilds `bizzyboat_project11` — ament `install(DIRECTORY config/)` copies YAML at build time, so symlink-install does not propagate data-file edits. The topic itself additionally requires marine_tools PR #76 merged and `sound_speed_bridge` rebuilt on gabby. Noted in PR body; joins the outstanding gabby-rebuild queue (plan-review suggestion 1). |
+| Main `logger` record list | izzyboat equivalent config | No-op, verified: izzyboat carries no sound-speed probe, so there is no parity change to make (plan-review suggestion 4). |
 
 ## Open Questions
 
