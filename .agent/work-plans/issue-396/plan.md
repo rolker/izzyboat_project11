@@ -9,14 +9,26 @@ https://github.com/rolker/unh_echoboats_project11/issues/396
 `marine_tools#75` (PR [#76](https://github.com/rolker/marine_tools/pull/76))
 adds a bare-relative `raw` publisher (`std_msgs/UInt8MultiArray`) to
 `sound_speed_bridge`, carrying each framed sentence's raw bytes exactly as the
-AML SVS probe emitted them — including parse failures and garbage, which are
+AML SVS probe emitted them — including sentences the parser rejects, which are
 the key diagnostic cases for field sound-speed RCA. Under BizzyBoat's launch
 namespace this resolves to `/bizzy/sensors/sound_speed/raw`.
 
-PR #76 is approved and heading to merge in a parallel pipeline (confirmed at
-the Issue Review checkpoint), so this issue's implementation does not need to
-block on the merge landing first — but the PR body must state the dependency
-so a reviewer can confirm topic existence before/at merge time.
+**Scope limit of the driver-side publisher** (confirmed against
+`marine_tools` `parsers.py` during the pre-push review): `raw` emits one
+message per `\r\n`-**framed** line. An unframed byte stream — wrong baud, or
+the all-NUL fault of [#163](https://github.com/rolker/unh_echoboats_project11/issues/163)
+— produces **zero** `raw` messages, not garbage payloads. Capturing unframed
+bytes needs a separate byte-stream tap, filed as
+[rolker/marine_tools#77](https://github.com/rolker/marine_tools/issues/77)
+(see also `marine_tools#78`, parser buffer cap). The absence rule documented
+in the YAML comment and the operator manual reflects this.
+
+PR #76 is still **open** as of the pre-push review (2026-07-29); it is not
+yet merged. This issue's implementation does not block on it — `all_topics:
+false` with an explicit list skips a not-yet-existing topic non-fatally and
+subscribes later via the recorder's discovery loop — but the PR body must
+state the ordering gate so a reviewer can confirm topic existence at merge
+time.
 
 The parsed `/bizzy/sensors/sound_speed/sound_speed` topic is already recorded
 in **both** record lists in `bizzyboat_project11/config/bizzyboat.yaml`:
@@ -38,9 +50,12 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
    used for the neighboring sound-speed and Garmin entries (lines 567–576).
    The comment must **name the driver-version dependency** (topic exists only
    with a `sound_speed_bridge` that has the `raw` publisher,
-   marine_tools#75/PR #76), so a field reader who finds the topic absent or
-   empty attributes it to an older driver build, not a probe fault
-   (plan-review suggestion 2).
+   marine_tools#75/PR #76) and give the correct absence rule: topic **absent**
+   → old driver build or bridge not running; topic **present with zero
+   messages** → probe silent or output not framed (this includes the #163
+   all-NUL fault). (Plan-review suggestion 2, corrected by the pre-push
+   review's must-fix — an absent/empty topic is *not* by itself evidence
+   against a probe fault.)
 2. **Do not touch `sonar_logger`** — leave its record list as-is. The
    exclusion is deliberate (raw bytes are diagnostic-only, not a bathy
    correction input) and will be called out explicitly in the PR body so it
@@ -48,15 +63,20 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 3. **No launch, code, or message-type changes** — this is a pure
    config-file addition; `bizzyboat_project11` doesn't need to know the
    topic's type, only its name, for `ros2 bag record`.
-4. **PR body**: state the `marine_tools#75`/PR #76 dependency (driver-side
-   publisher) and explicitly note the `sonar_logger` exclusion and why, per
-   the operator's Issue Review decisions.
+4. **PR body** (still owed at push time): state the `marine_tools#75`/PR #76
+   ordering gate (PR #76 open, not merged — confirm before merging here) and
+   explicitly note the `sonar_logger` exclusion and why, per the operator's
+   Issue Review decisions. Also link the framing-coverage follow-up
+   `rolker/marine_tools#77` so the "RCA from the bag alone" gap is tracked.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
 | `bizzyboat_project11/config/bizzyboat.yaml` | Add `/bizzy/sensors/sound_speed/raw` to the main `logger` topics list (after line 571), with an explanatory comment; no change to `sonar_logger`. |
+| `docs/bizzyboat_2026_field_season_guide.md` | Add `raw` to the sound-speed topic enumeration (added in the pre-push-review fix pass). |
+| `bizzyboat_project11/launch/sound_speed_launch.py` | Add `raw` to the namespace comment's topic enumeration (added in the pre-push-review fix pass). |
+| `docs/bizzyboat_operator_manual.md` | Cross-reference the new bag topic and its absence rule from the #163 all-NUL known-issue bullet (added in the pre-push-review fix pass). |
 
 ## Principles Self-Check
 
@@ -78,7 +98,7 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
 | Main `logger` record list | `sonar_logger` record list | No — deliberately excluded per operator decision (raw bytes are diagnostic-only, not a bathy sound-speed correction input); stated explicitly in the PR body. |
-| Main `logger` record list | Any docs describing the main bag's contents | No dedicated bag-contents doc found in this repo beyond inline YAML comments; the added comment is the documentation. |
+| Main `logger` record list | Any docs describing the main bag's contents | No dedicated bag-contents doc exists beyond inline YAML comments. **But** two places enumerate the sound-speed topic set and would go stale — `docs/bizzyboat_2026_field_season_guide.md` and `launch/sound_speed_launch.py`; both updated in the pre-push-review fix pass, along with an operator-manual cross-reference from the #163 bullet. |
 | Main `logger` record list | Deployment: gabby pull + **rebuild** | Config takes effect only after gabby pulls and rebuilds `bizzyboat_project11` — ament `install(DIRECTORY config/)` copies YAML at build time, so symlink-install does not propagate data-file edits. The topic itself additionally requires marine_tools PR #76 merged and `sound_speed_bridge` rebuilt on gabby. Noted in PR body; joins the outstanding gabby-rebuild queue (plan-review suggestion 1). |
 | Main `logger` record list | izzyboat equivalent config | No-op, verified: izzyboat carries no sound-speed probe, so there is no parity change to make (plan-review suggestion 4). |
 
