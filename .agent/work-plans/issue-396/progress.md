@@ -197,17 +197,109 @@ AML sentences; bandwidth negligible; `raw` correctly absent from all three
 parity a verified no-op.
 
 ### Findings
-- [ ] (must-fix) Unbalanced parenthesis introduced by the enumeration edit: the `(` opening the topic list is never closed — the trailing `)` belongs to the `#396` link. Mechanically counted 5 `(` vs 4 `)` over lines 209-217. Fix by closing the list before the em-dash clause, or split into two sentences (which also discharges suggestion 4) — `docs/bizzyboat_2026_field_season_guide.md:211-216`
-- [ ] (must-fix) The absence/zero-message decision rule is presented as exhaustive but omits a cause in **each** branch, and both omissions point a field diagnostician at the wrong subsystem — the exact failure mode Round 1's must-fix was raised against. (a) **"Topic absent"** omits *the recorder config on gabby being stale* — `bizzyboat_project11` needs its own pull+rebuild (ament `install(DIRECTORY config/)` copies YAML; symlink-install does not propagate it), independent of the driver rebuild. With #76 merged today and gabby carrying neither rebuild, this is now the **most likely** near-term cause, and the reverse deploy order (marine_tools rebuilt, bizzyboat_project11 not) makes the topic live-but-unrecorded and silently invisible. (b) **"Topic present with zero messages"** omits the host-side serial fault — all four publishers are created in `__init__` *before* the serial thread starts, and `_serial_loop` catches `SerialException`/`OSError` and retries forever, so a wrong/missing device or permission failure yields exactly zero messages and reads as "probe silent or unframed". The discriminator is already in the same bag: `/diagnostics` is recorded in this very `logger` list (`bizzyboat.yaml:509`) and the node emits `Serial not connected (<device>)` at ERROR. Add both causes, and cite the `/diagnostics` cross-check so "RCA from the bag alone" is actually true. Cross-pass confirmed (Lens A + Lens B) — `bizzyboat_project11/config/bizzyboat.yaml:577-582`, `docs/bizzyboat_operator_manual.md:233-237`
-- [ ] (suggestion) `\r\n` framing is attributed to "the driver", but it is a per-deployment launch parameter, not a driver property: `RegexParser` defaults `line_terminator='cr'` and the first-class `AMLParser` frames on a bare `\r`. It is `\r\n` here only because `sound_speed_launch.py:63` sets `regex_line_terminator: 'crlf'`. If the probe is retuned or `parser: 'aml'` is selected, the diagnostic rule silently becomes wrong. Qualify once — `bizzyboat_project11/config/bizzyboat.yaml:574`, `docs/bizzyboat_operator_manual.md:235`, `docs/bizzyboat_2026_field_season_guide.md:214`
-- [ ] (suggestion) The reading table omits the single most diagnostically valuable state the topic exists to capture: **`raw` has messages while parsed `/bizzy/sensors/sound_speed/sound_speed` is NaN** → the probe is framing sentences whose content the `regex_pattern` rejects (verified: `_parse` returns NaN with `raw_bytes` intact on both a regex miss and a decode failure). Tell the operator to pair `raw` against the parsed topic rather than treat message presence as a health verdict — `docs/bizzyboat_operator_manual.md:233-234`
-- [ ] (suggestion) The deliberate `sonar_logger` exclusion is documented only in the main-logger comment ~120 lines away. A future agent adding sound-speed diagnostics to the sonar bag will be reading the `sonar_logger` sound-speed entry and will read the omission as an oversight. Add a reciprocal half-line there. Cross-source confirmed (Lens B + Governance) — `bizzyboat_project11/config/bizzyboat.yaml:697`
-- [ ] (suggestion) The refreshed enumeration groups `raw` with `temperature` and `fluid_pressure`, implying comparable behavior. Under BizzyBoat's regex pattern those two have no named groups, so they are advertised and permanently silent, whereas `raw` publishes on every framed sentence. Splitting `raw` into its own clause fixes this and must-fix 1 together — `docs/bizzyboat_2026_field_season_guide.md:211-213`
-- [ ] (suggestion) Add a pre-survey check rather than relying only on an after-the-fact absence rule: `ros2 topic list | grep sound_speed/raw` on gabby before trusting the bag for RCA. The absence rule only helps once the data is already lost — `docs/bizzyboat_operator_manual.md:230-232`
-- [ ] (suggestion) Governance (relayed): add the cross-repo breadcrumb to the operator manual so the `marine_tools` origin of the topic is traceable from the field-facing doc.
-- [ ] (suggestion) Plan internal inconsistency: Approach step 3 still asserts "No launch, code, or message-type changes — this is a pure config-file addition", which its own Files-to-Change table (now four files, including a launch-comment edit and two docs) contradicts. Reword step 3 — `.agent/work-plans/issue-396/plan.md:63-65`
-- [ ] (suggestion) Dependency gate is now satisfied — `marine_tools` PR #76 merged (`780b59f`, 2026-07-29), superseding the plan's "still open" text. Update the plan Context and the owed PR-body gate, and restate the deployment consequence as a **paired** gabby rebuild (`marine_tools` + `bizzyboat_project11` together) rather than two independent queue entries: the marine_tools-only order is the one that fails silently — `.agent/work-plans/issue-396/plan.md:26-31, 102`
+- [x] (must-fix) Unbalanced parenthesis introduced by the enumeration edit: the `(` opening the topic list is never closed — the trailing `)` belongs to the `#396` link. Mechanically counted 5 `(` vs 4 `)` over lines 209-217. Fix by closing the list before the em-dash clause, or split into two sentences (which also discharges suggestion 4) — `docs/bizzyboat_2026_field_season_guide.md:211-216`
+- [x] (must-fix) The absence/zero-message decision rule is presented as exhaustive but omits a cause in **each** branch, and both omissions point a field diagnostician at the wrong subsystem — the exact failure mode Round 1's must-fix was raised against. (a) **"Topic absent"** omits *the recorder config on gabby being stale* — `bizzyboat_project11` needs its own pull+rebuild (ament `install(DIRECTORY config/)` copies YAML; symlink-install does not propagate it), independent of the driver rebuild. With #76 merged today and gabby carrying neither rebuild, this is now the **most likely** near-term cause, and the reverse deploy order (marine_tools rebuilt, bizzyboat_project11 not) makes the topic live-but-unrecorded and silently invisible. (b) **"Topic present with zero messages"** omits the host-side serial fault — all four publishers are created in `__init__` *before* the serial thread starts, and `_serial_loop` catches `SerialException`/`OSError` and retries forever, so a wrong/missing device or permission failure yields exactly zero messages and reads as "probe silent or unframed". The discriminator is already in the same bag: `/diagnostics` is recorded in this very `logger` list (`bizzyboat.yaml:509`) and the node emits `Serial not connected (<device>)` at ERROR. Add both causes, and cite the `/diagnostics` cross-check so "RCA from the bag alone" is actually true. Cross-pass confirmed (Lens A + Lens B) — `bizzyboat_project11/config/bizzyboat.yaml:577-582`, `docs/bizzyboat_operator_manual.md:233-237`
+- [x] (suggestion) `\r\n` framing is attributed to "the driver", but it is a per-deployment launch parameter, not a driver property: `RegexParser` defaults `line_terminator='cr'` and the first-class `AMLParser` frames on a bare `\r`. It is `\r\n` here only because `sound_speed_launch.py:63` sets `regex_line_terminator: 'crlf'`. If the probe is retuned or `parser: 'aml'` is selected, the diagnostic rule silently becomes wrong. Qualify once — `bizzyboat_project11/config/bizzyboat.yaml:574`, `docs/bizzyboat_operator_manual.md:235`, `docs/bizzyboat_2026_field_season_guide.md:214`
+- [x] (suggestion) The reading table omits the single most diagnostically valuable state the topic exists to capture: **`raw` has messages while parsed `/bizzy/sensors/sound_speed/sound_speed` is NaN** → the probe is framing sentences whose content the `regex_pattern` rejects (verified: `_parse` returns NaN with `raw_bytes` intact on both a regex miss and a decode failure). Tell the operator to pair `raw` against the parsed topic rather than treat message presence as a health verdict — `docs/bizzyboat_operator_manual.md:233-234`
+- [x] (suggestion) The deliberate `sonar_logger` exclusion is documented only in the main-logger comment ~120 lines away. A future agent adding sound-speed diagnostics to the sonar bag will be reading the `sonar_logger` sound-speed entry and will read the omission as an oversight. Add a reciprocal half-line there. Cross-source confirmed (Lens B + Governance) — `bizzyboat_project11/config/bizzyboat.yaml:697`
+- [x] (suggestion) The refreshed enumeration groups `raw` with `temperature` and `fluid_pressure`, implying comparable behavior. Under BizzyBoat's regex pattern those two have no named groups, so they are advertised and permanently silent, whereas `raw` publishes on every framed sentence. Splitting `raw` into its own clause fixes this and must-fix 1 together — `docs/bizzyboat_2026_field_season_guide.md:211-213`
+- [x] (suggestion) Add a pre-survey check rather than relying only on an after-the-fact absence rule: `ros2 topic list | grep sound_speed/raw` on gabby before trusting the bag for RCA. The absence rule only helps once the data is already lost — `docs/bizzyboat_operator_manual.md:230-232` (deferred: operator-directed scope hold at the Round-2 disposition — the four cheap suggestions were named explicitly and this was not among them. A pre-survey topic check belongs with the manual's broader pre-survey checklist, not bolted onto the #163 known-issue bullet; leaving it for a dedicated pass.)
+- [x] (suggestion) Governance (relayed): add the cross-repo breadcrumb to the operator manual so the `marine_tools` origin of the topic is traceable from the field-facing doc. (deferred: operator-directed scope hold — not among the four suggestions dispositioned for this pass. Partly served already: the manual's rebuild branch now names the driver build explicitly, and the field season guide carries the `rolker/marine_tools#75` reference.)
+- [x] (suggestion) Plan internal inconsistency: Approach step 3 still asserts "No launch, code, or message-type changes — this is a pure config-file addition", which its own Files-to-Change table (now four files, including a launch-comment edit and two docs) contradicts. Reword step 3 — `.agent/work-plans/issue-396/plan.md:63-65`
+- [x] (suggestion) Dependency gate is now satisfied — `marine_tools` PR #76 merged (`780b59f`, 2026-07-29), superseding the plan's "still open" text. Update the plan Context and the owed PR-body gate, and restate the deployment consequence as a **paired** gabby rebuild (`marine_tools` + `bizzyboat_project11` together) rather than two independent queue entries: the marine_tools-only order is the one that fails silently — `.agent/work-plans/issue-396/plan.md:26-31, 102`
 
 ### Next step
 Address the findings, then re-review or push:
 `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 396 --skill address-findings`
+
+## Implementation
+**Status**: complete
+**When**: 2026-07-29 10:34 -04:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-396 at `5da388f`
+**Addressed**: `## Local Review (Pre-Push)` Round 2 (2026-07-29 10:30 -04:00, branch at `1a7e9d7`) — 2 must-fix, 8 suggestions
+**Commits**: `921be12`, `a5d8f6b`, `0b36c39`, `5da388f`
+
+Host disposition for this pass: fix both must-fixes, apply four named
+suggestions (framing attribution, the missing reading-table state, the
+reciprocal `sonar_logger` note, the plan Approach-step-3 scope claim), restate
+the deployment consequence for the now-**merged** `marine_tools` PR #76
+(`780b59f`, 2026-07-29) as one **paired** gabby rebuild, and defer the rest
+without expanding scope.
+
+### Actions
+- [x] (must-fix) Closed the unbalanced parenthesis by splitting the enumeration
+  into two bullets — `sound_speed` / `temperature` / `fluid_pressure` in one,
+  `raw` in its own, which also discharges the "raw grouped with permanently
+  silent topics" suggestion. Paren count re-verified balanced (6/6) —
+  `docs/bizzyboat_2026_field_season_guide.md:208-218` (`921be12`)
+- [x] (must-fix) Completed both branches of the absence/zero-message decision
+  rule in the YAML comment and the operator manual. **Absent** now leads with
+  the stale recorder config on gabby (`bizzyboat_project11` needs its own
+  pull+rebuild, independent of the driver; ament copies `config/`), then the
+  pre-passthrough driver build, then bridge-not-running — with the explicit
+  warning that a driver-only rebuild leaves the topic live but unrecorded.
+  **Present with zero messages** now includes the host-side serial fault
+  (wrong/missing device, permissions — publishers exist before the serial
+  thread connects and it retries forever), discriminated via `/diagnostics` in
+  the same bag (`Serial not connected (<device>)` at ERROR) —
+  `bizzyboat_project11/config/bizzyboat.yaml:572-593`,
+  `docs/bizzyboat_operator_manual.md:228-252` (`a5d8f6b`)
+- [x] (suggestion) Attributed `\r\n` framing to the launch parameter
+  `regex_line_terminator: 'crlf'` in all three places, noting the parser's own
+  default is a bare `\r` (as is `parser: 'aml'`), so the rule is re-checked if
+  the parser config changes — `bizzyboat.yaml:574-576`,
+  `docs/bizzyboat_operator_manual.md:250-252`,
+  `docs/bizzyboat_2026_field_season_guide.md:216-218`
+  (`921be12`, `a5d8f6b`)
+- [x] (suggestion) Added the highest-value reading state: `raw` present with
+  messages while the parsed `.../sound_speed` is **NaN** → the probe is framing
+  sentences the `regex_pattern` rejects; the manual now tells the operator to
+  pair the two topics rather than read message presence as a health verdict —
+  `docs/bizzyboat_operator_manual.md:233-237`, mirrored in
+  `bizzyboat.yaml:592-593` (`a5d8f6b`)
+- [x] (suggestion) Added the reciprocal exclusion half-line at the
+  `sonar_logger` sound-speed entry so a future agent reads the omission as
+  deliberate — `bizzyboat_project11/config/bizzyboat.yaml:707-709` (`0b36c39`)
+- [x] (suggestion) Reworded Approach step 3 to match the four-file reality: the
+  functional change is config-only, with three accompanying documentation-only
+  edits (launch comment + two docs), none behavioral —
+  `.agent/work-plans/issue-396/plan.md:64-70` (`5da388f`)
+- [x] (suggestion) Dependency gate updated to **satisfied**: `marine_tools`
+  PR #76 merged (`780b59f`, 2026-07-29). Plan Context and the owed PR-body item
+  now say so, and the deployment consequence is restated as one **paired**
+  gabby rebuild (`marine_tools` + `bizzyboat_project11` together), calling out
+  that the driver-only order is the silently-failing one —
+  `.agent/work-plans/issue-396/plan.md:26-32, 71-73, 105` (`5da388f`)
+- [x] (suggestion) Re-grouped `raw` out of the `temperature` / `fluid_pressure`
+  clause in the guide, noting those two are advertised but permanently silent
+  under BizzyBoat's regex — folded into the must-fix 1 split —
+  `docs/bizzyboat_2026_field_season_guide.md:210-213` (`921be12`)
+- [x] (suggestion) Pre-survey `ros2 topic list | grep sound_speed/raw` check
+  (deferred: operator-directed scope hold — not among the four suggestions
+  dispositioned for this pass; belongs with the manual's broader pre-survey
+  checklist rather than the #163 known-issue bullet.)
+- [x] (suggestion) Governance cross-repo breadcrumb in the operator manual
+  (deferred: operator-directed scope hold; partly served already — the manual's
+  rebuild branch names the driver build, and the field season guide carries the
+  `rolker/marine_tools#75` reference.)
+
+### Verification
+- pre-commit hooks (incl. `yamllint`) passed on every commit; no `--no-verify`.
+- PyYAML re-parse of `bizzyboat.yaml`: main `/**/logger` = 76 topics,
+  `all_topics: false`, no duplicates, contains
+  `/bizzy/sensors/sound_speed/raw`; `/**/sonar_logger` = 17 topics and does
+  **not** contain it — the deliberate exclusion still holds.
+- Parenthesis balance re-counted over the edited guide block: 6 open / 6 close.
+- No code or launch-behavior changes in this pass — docs, YAML comments, and
+  plan text only.
+- Not pushed — the host performs pushes.
+
+### Next step
+Round 2 recommended Ship; no Round 3 planned. Host proceeds to the publish
+checkpoint (push + PR). The PR body still owes: dependency gate satisfied
+(`marine_tools` PR #76 merged `780b59f`), the deliberate `sonar_logger`
+exclusion, the paired gabby rebuild, and the
+[`rolker/marine_tools#77`](https://github.com/rolker/marine_tools/issues/77)
+framing-coverage follow-up link.
