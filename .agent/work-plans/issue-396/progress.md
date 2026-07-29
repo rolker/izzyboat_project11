@@ -94,8 +94,62 @@ holds even though its rate assumption was low. No udp_bridge relay, no
 bag-analysis consumer, no sensitive content in the raw sentences.
 
 ### Findings
-- [ ] (must-fix) YAML comment overstates what `raw` captures and gives a misleading absence rule: the driver publishes only on a `\r\n`-framed line (`RegexParser.feed`, marine_tools `parsers.py`), so unframed "wrong-baud garbage" — including the documented all-NUL fault ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)), the flagship sound-speed failure in the operator manual — yields **zero** raw messages. Paired with "if this topic is absent from a bag, suspect an older driver on gabby, not a probe fault", a field diagnostician is actively misled in exactly the RCA scenario the topic was added for. Reword to drop/qualify the garbage claim and state the real discriminator: topic **absent** = old driver or bridge not running; topic **present with zero messages** = probe silent or emitting unframed bytes (#163). Cross-pass confirmed (Lens A + Lens B + lead) — `bizzyboat_project11/config/bizzyboat.yaml:571-577`
-- [ ] (suggestion) Consequence missed: two in-repo places enumerate the sound-speed topic set as `(sound_speed, temperature, fluid_pressure)` and go stale once `raw` lands — `docs/bizzyboat_2026_field_season_guide.md:211-212` and `bizzyboat_project11/launch/sound_speed_launch.py:45-46`. The plan's "no docs to update" holds for bag-contents inventories (none exist) but not for these enumerations.
-- [ ] (suggestion) Cross-reference the new bag topic from the operator manual's #163 all-NUL known-issue bullet (`docs/bizzyboat_operator_manual.md:228-230`) — that fault is the motivating case, and the manual is where a field reader looks first.
-- [ ] (suggestion) File a `marine_tools` follow-up: without an idle-timeout or size-based flush of unframed buffer bytes, `raw` cannot capture the unframed-stream failure mode, so issue #396's "RCA from the bag alone" goal is only partly met. Track the gap rather than lose it.
-- [ ] (suggestion) Plan text is stale on the dependency gate: `plan.md:16-20` says marine_tools PR #76 is "approved and heading to merge", but it is still **open** as of this review. Refresh the plan and make sure the PR body carries the ordering gate plus the deliberate `sonar_logger` exclusion (both still owed at push time).
+- [x] (must-fix) YAML comment overstates what `raw` captures and gives a misleading absence rule: the driver publishes only on a `\r\n`-framed line (`RegexParser.feed`, marine_tools `parsers.py`), so unframed "wrong-baud garbage" — including the documented all-NUL fault ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)), the flagship sound-speed failure in the operator manual — yields **zero** raw messages. Paired with "if this topic is absent from a bag, suspect an older driver on gabby, not a probe fault", a field diagnostician is actively misled in exactly the RCA scenario the topic was added for. Reword to drop/qualify the garbage claim and state the real discriminator: topic **absent** = old driver or bridge not running; topic **present with zero messages** = probe silent or emitting unframed bytes (#163). Cross-pass confirmed (Lens A + Lens B + lead) — `bizzyboat_project11/config/bizzyboat.yaml:571-577`
+- [x] (suggestion) Consequence missed: two in-repo places enumerate the sound-speed topic set as `(sound_speed, temperature, fluid_pressure)` and go stale once `raw` lands — `docs/bizzyboat_2026_field_season_guide.md:211-212` and `bizzyboat_project11/launch/sound_speed_launch.py:45-46`. The plan's "no docs to update" holds for bag-contents inventories (none exist) but not for these enumerations.
+- [x] (suggestion) Cross-reference the new bag topic from the operator manual's #163 all-NUL known-issue bullet (`docs/bizzyboat_operator_manual.md:228-230`) — that fault is the motivating case, and the manual is where a field reader looks first.
+- [x] (suggestion) File a `marine_tools` follow-up: without an idle-timeout or size-based flush of unframed buffer bytes, `raw` cannot capture the unframed-stream failure mode, so issue #396's "RCA from the bag alone" goal is only partly met. Track the gap rather than lose it. (deferred: already filed as [rolker/marine_tools#77](https://github.com/rolker/marine_tools/issues/77) — byte-stream tap; related [#78](https://github.com/rolker/marine_tools/issues/78) parser buffer cap. No `marine_tools` work in this pass; the gap is now recorded in `plan.md` Context and the YAML comment.)
+- [x] (suggestion) Plan text is stale on the dependency gate: `plan.md:16-20` says marine_tools PR #76 is "approved and heading to merge", but it is still **open** as of this review. Refresh the plan and make sure the PR body carries the ordering gate plus the deliberate `sonar_logger` exclusion (both still owed at push time).
+
+## Implementation
+**Status**: complete
+**When**: 2026-07-29 09:57 -04:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-396 at `a942c56`
+**Addressed**: `## Local Review (Pre-Push)` (2026-07-29 09:10 -04:00, branch at `4d63eec`) — 1 must-fix, 4 suggestions
+**Commits**: `82f1a9c`, `c0e69dd`, `74d1d55`, `a942c56`
+
+Ground truth applied per the operator's cross-repo confirmation from the
+`marine_tools` review: the driver's `raw` topic publishes **only** framed
+sentences; an unframed stream (wrong baud, the #163 all-NUL fault) yields
+**zero** messages, not garbage payloads. The rewritten comment therefore drops
+the "wrong-baud garbage" claim and the "not a probe fault" guidance, and states
+the real discriminator instead.
+
+### Actions
+- [x] (must-fix) Rewrote the YAML comment: `raw` carries framed sentences only;
+  unframed streams (wrong baud, #163 all-NUL) publish zero messages; absence
+  rule split into topic-missing (old driver build / bridge not running) vs.
+  topic-present-with-zero-messages (probe silent or output not framing — which
+  includes the #163 fault). Points at `marine_tools#77` for the byte-stream gap
+  — `bizzyboat_project11/config/bizzyboat.yaml:572-582` (`82f1a9c`)
+- [x] (suggestion) Refreshed the two stale sound-speed topic enumerations to
+  include `raw`, with the driver-build caveat in the guide —
+  `docs/bizzyboat_2026_field_season_guide.md:211-215`,
+  `bizzyboat_project11/launch/sound_speed_launch.py:45-46` (`c0e69dd`)
+- [x] (suggestion) Cross-referenced the new bag topic and its absence rule from
+  the operator manual's #163 all-NUL known-issue bullet —
+  `docs/bizzyboat_operator_manual.md:228-237` (`74d1d55`)
+- [x] (suggestion) Follow-up for unframed-byte capture — `plan.md` Context
+  (deferred: already filed as rolker/marine_tools#77, byte-stream tap; related
+  rolker/marine_tools#78, parser buffer cap. No `marine_tools` changes made
+  here per operator instruction; both are now referenced from the plan and the
+  YAML comment.) (`a942c56`)
+- [x] (suggestion) Refreshed the stale dependency-gate text in `plan.md`: PR
+  rolker/marine_tools#76 is still **open** (verified via `gh` this pass), not
+  "approved and heading to merge"; recorded why landing first is safe
+  (`all_topics: false` + explicit list skips a missing topic non-fatally), and
+  restated that the PR body still owes the ordering gate and the deliberate
+  `sonar_logger` exclusion — `plan.md:20-31, 66-70` (`a942c56`)
+
+### Verification
+- pre-commit hooks (incl. `yamllint`) passed on every commit; no `--no-verify`.
+- Parsed `bizzyboat.yaml` with PyYAML: `/**/logger` `record.topics` contains
+  `/bizzy/sensors/sound_speed/raw` (76 topics, `all_topics: false`);
+  `/**/sonar_logger` does **not** (17 topics) — the deliberate exclusion holds.
+- `gh` confirms rolker/marine_tools#76 OPEN, #77 and #78 OPEN.
+- Not pushed — the host performs pushes.
+
+### Next step
+Re-review the fixes:
+`.agent/scripts/dispatch_subagent.sh --mode in-process --issue 396 --skill review-code`
