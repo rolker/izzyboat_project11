@@ -570,10 +570,15 @@
       # See unh_echoboats_project11#104 wrap-up + marine_tools#7.
       - /bizzy/sensors/sound_speed/sound_speed
       # Raw AML sentence passthrough — byte-exact serial frames, including
-      # parse failures and wrong-baud garbage, for field sound-speed RCA from
-      # the bag alone (#396). Published only by sound_speed_bridge builds with
-      # the `raw` publisher (marine_tools#75 / PR#76); if this topic is absent
-      # from a bag, suspect an older driver on gabby, not a probe fault.
+      # sentences the parser rejects, for field sound-speed RCA from the bag
+      # alone (#396). The driver publishes one message per `\r\n`-FRAMED line
+      # only; unframed byte streams (wrong baud, the all-NUL fault of #163)
+      # produce NO messages here (see marine_tools#77 for a byte-stream tap).
+      # Reading the absence: topic MISSING from the bag → old driver build on
+      # gabby, or the bridge was not running. Topic PRESENT with zero messages
+      # → probe silent, or output not framed as expected (this includes the
+      # #163-style fault). Published only by sound_speed_bridge builds with
+      # the `raw` publisher (marine_tools#75 / PR#76).
       # Diagnostic-only: deliberately NOT recorded in sonar_logger.
       - /bizzy/sensors/sound_speed/raw
       # Garmin transducer water temperature + nadir bottom range — small scalars,
