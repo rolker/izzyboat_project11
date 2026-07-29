@@ -23,12 +23,14 @@ bytes needs a separate byte-stream tap, filed as
 (see also `marine_tools#78`, parser buffer cap). The absence rule documented
 in the YAML comment and the operator manual reflects this.
 
-PR #76 is still **open** as of the pre-push review (2026-07-29); it is not
-yet merged. This issue's implementation does not block on it — `all_topics:
-false` with an explicit list skips a not-yet-existing topic non-fatally and
-subscribes later via the recorder's discovery loop — but the PR body must
-state the ordering gate so a reviewer can confirm topic existence at merge
-time.
+PR #76 is **merged** (`780b59f`, 2026-07-29), so the dependency gate is
+satisfied: the `raw` topic exists on the driver side. This issue's
+implementation never blocked on it in any case — `all_topics: false` with an
+explicit list skips a not-yet-existing topic non-fatally and subscribes later
+via the recorder's discovery loop. The PR body should record the gate as
+satisfied (rather than as an open ordering condition) and state the deployment
+consequence: **one paired gabby rebuild** of `marine_tools` and
+`bizzyboat_project11` together.
 
 The parsed `/bizzy/sensors/sound_speed/sound_speed` topic is already recorded
 in **both** record lists in `bizzyboat_project11/config/bizzyboat.yaml`:
@@ -60,11 +62,14 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
    exclusion is deliberate (raw bytes are diagnostic-only, not a bathy
    correction input) and will be called out explicitly in the PR body so it
    reads as an intentional scope limit, not an oversight.
-3. **No launch, code, or message-type changes** — this is a pure
-   config-file addition; `bizzyboat_project11` doesn't need to know the
-   topic's type, only its name, for `ros2 bag record`.
-4. **PR body** (still owed at push time): state the `marine_tools#75`/PR #76
-   ordering gate (PR #76 open, not merged — confirm before merging here) and
+3. **No code or message-type changes** — the functional change is the
+   config-file addition alone; `bizzyboat_project11` doesn't need to know the
+   topic's type, only its name, for `ros2 bag record`. The pre-push review
+   passes added three accompanying **documentation-only** edits (the launch
+   file's namespace comment plus the two operator-facing docs listed in Files
+   to Change), so the final diff spans four files, none of them behavioral.
+4. **PR body** (still owed at push time): record the `marine_tools#75`/PR #76
+   dependency gate as **satisfied** (merged `780b59f`, 2026-07-29) and
    explicitly note the `sonar_logger` exclusion and why, per the operator's
    Issue Review decisions. Also link the framing-coverage follow-up
    `rolker/marine_tools#77` so the "RCA from the bag alone" gap is tracked.
@@ -99,7 +104,7 @@ already applied to the Garmin water-temperature/nadir-depth scalars (#270).
 |---|---|---|
 | Main `logger` record list | `sonar_logger` record list | No — deliberately excluded per operator decision (raw bytes are diagnostic-only, not a bathy sound-speed correction input); stated explicitly in the PR body. |
 | Main `logger` record list | Any docs describing the main bag's contents | No dedicated bag-contents doc exists beyond inline YAML comments. **But** two places enumerate the sound-speed topic set and would go stale — `docs/bizzyboat_2026_field_season_guide.md` and `launch/sound_speed_launch.py`; both updated in the pre-push-review fix pass, along with an operator-manual cross-reference from the #163 bullet. |
-| Main `logger` record list | Deployment: gabby pull + **rebuild** | Config takes effect only after gabby pulls and rebuilds `bizzyboat_project11` — ament `install(DIRECTORY config/)` copies YAML at build time, so symlink-install does not propagate data-file edits. The topic itself additionally requires marine_tools PR #76 merged and `sound_speed_bridge` rebuilt on gabby. Noted in PR body; joins the outstanding gabby-rebuild queue (plan-review suggestion 1). |
+| Main `logger` record list | Deployment: **one paired gabby rebuild** (`marine_tools` + `bizzyboat_project11`) | Config takes effect only after gabby pulls and rebuilds `bizzyboat_project11` — ament `install(DIRECTORY config/)` copies YAML at build time, so symlink-install does not propagate data-file edits. The topic itself needs `sound_speed_bridge` rebuilt from merged marine_tools PR #76 (`780b59f`). Treat these as a **single paired action**, not two queue entries: rebuilding only `marine_tools` makes the topic live but unrecorded (silently invisible in the bag), and rebuilding only `bizzyboat_project11` records nothing. Noted in PR body; joins the outstanding gabby-rebuild queue (plan-review suggestion 1). |
 | Main `logger` record list | izzyboat equivalent config | No-op, verified: izzyboat carries no sound-speed probe, so there is no parity change to make (plan-review suggestion 4). |
 
 ## Open Questions
