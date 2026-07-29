@@ -706,7 +706,9 @@
       - /bizzy/sensors/sidescan/garmin_sidescan/status
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_status
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_config
-      # Sound-speed for bathy correction in post-processing.
+      # Sound-speed for bathy correction in post-processing. The raw sentence
+      # passthrough (.../sound_speed/raw) is deliberately main-bag-only — it is
+      # a diagnostic artifact, not an input to the bathy correction (#396).
       - /bizzy/sensors/sound_speed/sound_speed
       # SBG INS streams dropped (#339): sonar motion-comp / georeferencing
       # comes from TF below (base_link attitude via mru_transform), and the
