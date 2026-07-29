@@ -227,7 +227,14 @@ data.
   until the probe is in the water and producing.
 - **Known issue:** the AML has been seen emitting all-NUL bytes on its serial
   line ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)). If
-  the M3 shows no sound speed, check this first.
+  the M3 shows no sound speed, check this first. The main bag records the
+  driver's raw sentence passthrough at `/bizzy/sensors/sound_speed/raw`
+  ([#396](https://github.com/rolker/unh_echoboats_project11/issues/396)) to
+  support after-the-fact RCA. Read it as: topic **present with messages** →
+  the probe was framing sentences; topic **present with zero messages** → the
+  probe was silent or its output was not `\r\n`-framed (the all-NUL fault
+  lands here); topic **absent** → the driver build on gabby predates the
+  passthrough, or the bridge was not running.
 - Full device specs and mounting offsets:
   [reference geometry](../bizzyboat_project11/docs/bizzyboat_reference_geometry.md)
   and the
