@@ -43,7 +43,7 @@ def generate_launch_description():
         GroupAction(
             actions=[
                 # Topics land at /<namespace>/sensors/sound_speed/<topic>
-                # (sound_speed, temperature, fluid_pressure) — matches the
+                # (sound_speed, temperature, fluid_pressure, raw) — matches the
                 # /<ns>/sensors/<sensor>/<topic> convention used by the
                 # SBG, deltat, ntrip, and oak camera nodes.
                 PushRosNamespace('sensors/sound_speed'),

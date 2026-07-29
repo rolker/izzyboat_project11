@@ -569,6 +569,31 @@
       # the head is dry; the regex matches it). Parse failures → NaN.
       # See unh_echoboats_project11#104 wrap-up + marine_tools#7.
       - /bizzy/sensors/sound_speed/sound_speed
+      # Raw AML sentence passthrough — byte-exact serial frames, including
+      # sentences the parser rejects, for field sound-speed RCA from the bag
+      # alone (#396). One message per FRAMED line only; framing is `\r\n`
+      # here because sound_speed_launch.py sets `regex_line_terminator:
+      # 'crlf'` — the parser's own default (and `parser: 'aml'`) frames on a
+      # bare `\r`. Unframed byte streams (wrong baud, the all-NUL fault of
+      # #163) produce NO messages here (see marine_tools#77, byte-stream tap).
+      # Reading it:
+      #   MISSING from the bag → (a) this recorder config is stale on gabby:
+      #     bizzyboat_project11 needs its own pull+REBUILD, independent of the
+      #     driver (ament copies config/; symlink-install does not propagate
+      #     it), (b) the driver build predates the `raw` publisher
+      #     (marine_tools#75 / PR#76, merged 2026-07-29), or (c) the bridge
+      #     was not running. Rebuild BOTH packages together on gabby — the
+      #     driver-only order makes the topic live but unrecorded.
+      #   PRESENT with zero messages → probe silent, output not framed as
+      #     expected (the #163 fault), or a host-side serial fault (wrong /
+      #     missing device, permissions): publishers are created before the
+      #     serial thread connects, and it retries forever. Discriminate with
+      #     /diagnostics in this same bag — the node logs
+      #     "Serial not connected (<device>)" at ERROR.
+      #   PRESENT with messages but parsed .../sound_speed is NaN → the probe
+      #     is framing sentences the `regex_pattern` rejects.
+      # Diagnostic-only: deliberately NOT recorded in sonar_logger.
+      - /bizzy/sensors/sound_speed/raw
       # Garmin transducer water temperature + nadir bottom range — small scalars,
       # kept in the main bag (alongside sound_speed) so the sound-speed/depth
       # cross-check is self-contained here, not only in the sonar bag (#270;
@@ -681,7 +706,9 @@
       - /bizzy/sensors/sidescan/garmin_sidescan/status
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_status
       - /bizzy/sensors/sidescan/garmin_sidescan/debug/raw_config
-      # Sound-speed for bathy correction in post-processing.
+      # Sound-speed for bathy correction in post-processing. The raw sentence
+      # passthrough (.../sound_speed/raw) is deliberately main-bag-only — it is
+      # a diagnostic artifact, not an input to the bathy correction (#396).
       - /bizzy/sensors/sound_speed/sound_speed
       # SBG INS streams dropped (#339): sonar motion-comp / georeferencing
       # comes from TF below (base_link attitude via mru_transform), and the
