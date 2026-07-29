@@ -209,7 +209,11 @@ things it needs** — sound velocity and time — and to deliver SBG nav to QINS
 - The AML probe on gabby `ttyS0` is read by `sound_speed_bridge` (from
   `rolker/marine_tools`). It parses the AML `$AML,SVM,<value>` sentence and
   publishes ROS topics under `/bizzy/sensors/sound_speed/` (`sound_speed`,
-  `temperature`, `fluid_pressure`).
+  `temperature`, `fluid_pressure`, and — on driver builds that carry the
+  passthrough publisher (`rolker/marine_tools#75`) — `raw`, the byte-exact
+  copy of each `\r\n`-framed sentence, recorded in the main bag for
+  sound-speed RCA
+  ([#396](https://github.com/rolker/unh_echoboats_project11/issues/396)).
 - The same node fans out a **Valeport-format UDP** copy to **`mercat:20003`**,
   where the M3's built-in Valeport listener consumes it. This replaced an
   interim PowerShell stand-in (`aml_bridge.ps1`).
