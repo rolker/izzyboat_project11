@@ -230,11 +230,27 @@ data.
   the M3 shows no sound speed, check this first. The main bag records the
   driver's raw sentence passthrough at `/bizzy/sensors/sound_speed/raw`
   ([#396](https://github.com/rolker/unh_echoboats_project11/issues/396)) to
-  support after-the-fact RCA. Read it as: topic **present with messages** →
-  the probe was framing sentences; topic **present with zero messages** → the
-  probe was silent or its output was not `\r\n`-framed (the all-NUL fault
-  lands here); topic **absent** → the driver build on gabby predates the
-  passthrough, or the bridge was not running.
+  support after-the-fact RCA. Read it as:
+  - topic **present with messages**, and the parsed
+    `/bizzy/sensors/sound_speed/sound_speed` reads sensible values → the probe
+    was framing sentences and they parsed;
+  - topic **present with messages**, but the parsed topic is **NaN** → the
+    probe was framing sentences whose content the driver's regex rejects
+    (compare the two topics; message presence alone is not a health verdict);
+  - topic **present with zero messages** → the probe was silent, its output
+    was not framed as expected (the all-NUL fault lands here), or the serial
+    port on gabby never opened (wrong/missing device, permissions). Check
+    `/diagnostics` in the same bag — the driver logs
+    `Serial not connected (<device>)` at ERROR for the port case;
+  - topic **absent** → the recorder config on gabby is stale
+    (`bizzyboat_project11` needs its own pull **and rebuild**, separate from
+    the driver), the driver build predates the passthrough, or the bridge was
+    not running. Both packages must be rebuilt together on gabby; the
+    driver-only order leaves the topic live but unrecorded.
+
+  Framing is `\r\n` because `sound_speed_launch.py` sets
+  `regex_line_terminator: 'crlf'`; the driver's own default is a bare `\r`, so
+  re-check this rule if the parser configuration changes.
 - Full device specs and mounting offsets:
   [reference geometry](../bizzyboat_project11/docs/bizzyboat_reference_geometry.md)
   and the

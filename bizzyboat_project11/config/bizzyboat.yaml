@@ -571,14 +571,27 @@
       - /bizzy/sensors/sound_speed/sound_speed
       # Raw AML sentence passthrough — byte-exact serial frames, including
       # sentences the parser rejects, for field sound-speed RCA from the bag
-      # alone (#396). The driver publishes one message per `\r\n`-FRAMED line
-      # only; unframed byte streams (wrong baud, the all-NUL fault of #163)
-      # produce NO messages here (see marine_tools#77 for a byte-stream tap).
-      # Reading the absence: topic MISSING from the bag → old driver build on
-      # gabby, or the bridge was not running. Topic PRESENT with zero messages
-      # → probe silent, or output not framed as expected (this includes the
-      # #163-style fault). Published only by sound_speed_bridge builds with
-      # the `raw` publisher (marine_tools#75 / PR#76).
+      # alone (#396). One message per FRAMED line only; framing is `\r\n`
+      # here because sound_speed_launch.py sets `regex_line_terminator:
+      # 'crlf'` — the parser's own default (and `parser: 'aml'`) frames on a
+      # bare `\r`. Unframed byte streams (wrong baud, the all-NUL fault of
+      # #163) produce NO messages here (see marine_tools#77, byte-stream tap).
+      # Reading it:
+      #   MISSING from the bag → (a) this recorder config is stale on gabby:
+      #     bizzyboat_project11 needs its own pull+REBUILD, independent of the
+      #     driver (ament copies config/; symlink-install does not propagate
+      #     it), (b) the driver build predates the `raw` publisher
+      #     (marine_tools#75 / PR#76, merged 2026-07-29), or (c) the bridge
+      #     was not running. Rebuild BOTH packages together on gabby — the
+      #     driver-only order makes the topic live but unrecorded.
+      #   PRESENT with zero messages → probe silent, output not framed as
+      #     expected (the #163 fault), or a host-side serial fault (wrong /
+      #     missing device, permissions): publishers are created before the
+      #     serial thread connects, and it retries forever. Discriminate with
+      #     /diagnostics in this same bag — the node logs
+      #     "Serial not connected (<device>)" at ERROR.
+      #   PRESENT with messages but parsed .../sound_speed is NaN → the probe
+      #     is framing sentences the `regex_pattern` rejects.
       # Diagnostic-only: deliberately NOT recorded in sonar_logger.
       - /bizzy/sensors/sound_speed/raw
       # Garmin transducer water temperature + nadir bottom range — small scalars,
