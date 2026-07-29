@@ -60,3 +60,42 @@ consequence; the sim launch does not run the recorder.
 - [ ] (suggestion) Note in the plan that izzyboat needs no parity change (no sound-speed probe; `izzyboat.yaml` has `logger`/`sonar_logger` blocks but no `sound_speed` entry) so the omission reads as verified rather than unconsidered — `plan.md:74-77`
 - [ ] (note, no action) `std_msgs/UInt8MultiArray` carries no header/stamp, so raw-vs-parsed correlation relies on rosbag2 receive time. Settled driver-side in marine_tools#76; out of scope here.
 - [ ] (note) The skill's author-self-review heuristic compares only the agent-name portion of `## Plan Authored` (`Claude Code Agent`), which every agent in this workspace shares. This review is a fresh-context sub-agent on a different model (Opus vs. the planner's Sonnet), so no self-review annotation was applied.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-07-29 09:10 -04:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-396 at `4d63eec`
+**Mode**: pre-push
+**Depth**: Standard (reason: 162 changed lines across 3 files, plus `.agent/work-plans/issue-396/plan.md` project-repo override trigger)
+**Must-fix**: 1 | **Suggestions**: 4
+**Round**: 1 | **Ship**: continue — one mechanical comment correction plus a doc-consequence gap; expect approval next round
+
+Specialists: Static Analysis (clean — yamllint under the project's own hook
+args finds nothing on changed lines); Governance; Plan Drift; Claude
+Adversarial Lens A + Lens B (both run). Local Adversarial skipped: request
+timed out (900 s limit; the GPU was serving a concurrent local review).
+Copilot Adversarial off (default).
+
+Independently verified against source: the bare-relative `raw` publisher in
+marine_tools PR #76 resolves to `/bizzy/sensors/sound_speed/raw` under
+`sound_speed_launch.py`'s `PushRosNamespace('sensors/sound_speed')` inside
+`core_launch.py`'s boat namespace; the entry sits in the correct `/**/logger`
+block (consumed by the `rosbag2_transport` recorder at
+`perception_launch.py:246-262`) with correct indentation and no duplicate;
+`sonar_logger` is untouched as intended; `all_topics: false` with an explicit
+list skips a not-yet-existing topic non-fatally and subscribes later via the
+discovery loop. Bandwidth checked: the probe runs ~25 Hz (not "a few Hz"),
+~32 B/sentence → roughly 9 MB/h pre-compression under `zstd_fast` — still
+negligible beside the four compressed OAK streams, so the plan's conclusion
+holds even though its rate assumption was low. No udp_bridge relay, no
+bag-analysis consumer, no sensitive content in the raw sentences.
+
+### Findings
+- [ ] (must-fix) YAML comment overstates what `raw` captures and gives a misleading absence rule: the driver publishes only on a `\r\n`-framed line (`RegexParser.feed`, marine_tools `parsers.py`), so unframed "wrong-baud garbage" — including the documented all-NUL fault ([#163](https://github.com/rolker/unh_echoboats_project11/issues/163)), the flagship sound-speed failure in the operator manual — yields **zero** raw messages. Paired with "if this topic is absent from a bag, suspect an older driver on gabby, not a probe fault", a field diagnostician is actively misled in exactly the RCA scenario the topic was added for. Reword to drop/qualify the garbage claim and state the real discriminator: topic **absent** = old driver or bridge not running; topic **present with zero messages** = probe silent or emitting unframed bytes (#163). Cross-pass confirmed (Lens A + Lens B + lead) — `bizzyboat_project11/config/bizzyboat.yaml:571-577`
+- [ ] (suggestion) Consequence missed: two in-repo places enumerate the sound-speed topic set as `(sound_speed, temperature, fluid_pressure)` and go stale once `raw` lands — `docs/bizzyboat_2026_field_season_guide.md:211-212` and `bizzyboat_project11/launch/sound_speed_launch.py:45-46`. The plan's "no docs to update" holds for bag-contents inventories (none exist) but not for these enumerations.
+- [ ] (suggestion) Cross-reference the new bag topic from the operator manual's #163 all-NUL known-issue bullet (`docs/bizzyboat_operator_manual.md:228-230`) — that fault is the motivating case, and the manual is where a field reader looks first.
+- [ ] (suggestion) File a `marine_tools` follow-up: without an idle-timeout or size-based flush of unframed buffer bytes, `raw` cannot capture the unframed-stream failure mode, so issue #396's "RCA from the bag alone" goal is only partly met. Track the gap rather than lose it.
+- [ ] (suggestion) Plan text is stale on the dependency gate: `plan.md:16-20` says marine_tools PR #76 is "approved and heading to merge", but it is still **open** as of this review. Refresh the plan and make sure the PR body carries the ordering gate plus the deliberate `sonar_logger` exclusion (both still owed at push time).
