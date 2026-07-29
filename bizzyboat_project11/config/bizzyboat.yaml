@@ -569,6 +569,13 @@
       # the head is dry; the regex matches it). Parse failures → NaN.
       # See unh_echoboats_project11#104 wrap-up + marine_tools#7.
       - /bizzy/sensors/sound_speed/sound_speed
+      # Raw AML sentence passthrough — byte-exact serial frames, including
+      # parse failures and wrong-baud garbage, for field sound-speed RCA from
+      # the bag alone (#396). Published only by sound_speed_bridge builds with
+      # the `raw` publisher (marine_tools#75 / PR#76); if this topic is absent
+      # from a bag, suspect an older driver on gabby, not a probe fault.
+      # Diagnostic-only: deliberately NOT recorded in sonar_logger.
+      - /bizzy/sensors/sound_speed/raw
       # Garmin transducer water temperature + nadir bottom range — small scalars,
       # kept in the main bag (alongside sound_speed) so the sound-speed/depth
       # cross-check is self-contained here, not only in the sonar bag (#270;
