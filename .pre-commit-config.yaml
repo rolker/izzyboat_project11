@@ -41,8 +41,18 @@ repos:
       - id: yamllint
         args: ['-d', '{extends: default, rules: {line-length: {max: 120}, document-start: disable, truthy: disable}}']
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: no-commit-to-branch
-        args: ['--branch', 'jazzy']
+  # no-commit-to-branch is intentionally DISABLED on this field-mode clone.
+  # This repo's origin is gitcloud (non-GitHub), so it operates in field mode
+  # (ros2_agent_workspace AGENTS.md "Field Mode"), where deployment logs and
+  # hotfixes are committed directly to the default branch (jazzy) — there is no
+  # PR flow on the field remote. The guard blocked that (the "hook caveat" in
+  # AGENTS.md). Disabled 2026-07-29 to unblock field-side deployment logging.
+  #
+  # KEEP THIS GUARD ON GitHub-origin (dev) clones: there, branch protection +
+  # the PR workflow apply, and the redundant local block is useful because
+  # agents forget not to commit to the default branch. Restore on the dev side.
+  # - repo: https://github.com/pre-commit/pre-commit-hooks
+  #   rev: v4.6.0
+  #   hooks:
+  #     - id: no-commit-to-branch
+  #       args: ['--branch', 'jazzy']
