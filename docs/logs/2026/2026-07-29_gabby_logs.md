@@ -5,6 +5,23 @@ Host: gabby
 Side: field
 Started: 2026-07-29 13:01 -04:00
 
+## Summary
+
+Rainy-day survey session at Lake Massabesic, roughly 13:00–14:45. The
+operator-side Starlink was down at the start — the dish subscription turned
+out to be paused, and unpausing fixed it. Rain drops false-triggered the
+collision-avoidance system several times, requiring manual takeovers, and the
+udp_bridge return rate had to be raised again to keep costmap tiles flowing.
+
+## Lessons Learned
+
+- A paused Starlink subscription looks exactly like a backhaul outage from the
+  router side — check subscription status before diagnosing hardware, and
+  before heading out.
+- Rain drops are another environmental false-positive trigger for collision
+  avoidance (alongside whitecaps and glint) — expect manual takeovers in rain
+  until the segmentation is hardened.
+
 ## 2026-07-29
 
 **2026-07-29 13:01 -04:00** — Operator-side Starlink internet down. Diagnosed op router (Teltonika RUTX11, WAN eth1 -> Starlink router 192.168.1.1, dish 192.168.100.1): both reachable but 100% loss past the Starlink router (traceroute dies at hop 1, no 100.64.0.1 CGNAT hop, DNS dead) -> Starlink backhaul down, not an op-router fault. Boat (gabby) Starlink is a separate dish and was fully working throughout. Root cause: operator Starlink dish subscription was PAUSED. Operator unpaused -> resolved.
