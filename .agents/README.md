@@ -27,7 +27,11 @@ the detection script **from the workspace root**:
   workspace `/import-field-changes` skill).
 - CI (`.github/workflows/ci.yml`) and pre-commit (`.pre-commit-config.yaml`)
   run colcon build + test, URDF validation, and YAML/CMake/whitespace lint.
-  The `no-commit-to-branch` hook blocks direct commits to `jazzy` (dev side).
+  The `no-commit-to-branch` hook is disabled repo-wide (2026-07-29): it
+  blocked field-mode commits to `jazzy`. Dev clones rely on GitHub branch
+  protection + the workspace worktree/PR workflow instead; the hook can be
+  re-enabled locally without committing (see the comment block in
+  `.pre-commit-config.yaml`).
 
 **Standalone use** (cloned outside the workspace): only this repo's own
 conventions apply.
