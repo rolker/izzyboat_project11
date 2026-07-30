@@ -1,6 +1,6 @@
-# 2026-07-29 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-07-29 — gabby log (BizzyBoat deployment #398)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: [#398](https://github.com/rolker/unh_echoboats_project11/issues/398) (backfilled at wrap-up from a dev host)
 Host: gabby
 Side: field
 Started: 2026-07-29 13:01 -04:00
@@ -17,4 +17,13 @@ Started: 2026-07-29 13:01 -04:00
 
 **2026-07-29 14:44 -04:00** — Phase: about to recover (operator-reported) — entering recovery.
 
-**2026-07-30 08:53 -04:00** — Recovery complete: boat out of the water, towed back to the lab, ready for shutdown. Wrapping up field side.
+**2026-07-29 (times unrecorded, operator-reported at wrap-up)** — Operator took manual
+control a few times during the session: rain drops caused false positives in the
+collision-avoidance system.
+
+**2026-07-29 ~14:45 -04:00 (operator-reported)** — Recovery complete: boat out of the water, towed back to the lab, ready for shutdown.
+<!-- corrected at wrap-up: entry was originally logged 2026-07-30 08:53 -04:00 when the field agent
+     resumed for shutdown; operator reported recovery actually completed on 07-29 shortly after bag
+     logging stopped (all recording streams end 14:44 EDT = ROS stack shutdown). -->
+
+**2026-07-30 08:53 -04:00** — Field-side wrap-up: gabby shutdown-ready; logs committed and pushed to gitcloud.
