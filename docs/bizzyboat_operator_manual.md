@@ -157,7 +157,11 @@ station's annunciator panel and in CAMP.
 
 - BizzyBoat's batteries are **charged in place — there is no battery swap.** Plan
   around **recharge-to-full time**, not a hot-swap; this is the constraint that
-  paces how often you can run back-to-back.
+  paces how often you can run back-to-back. **Measured: ~15 h from empty on
+  120 VAC** (14–16 h band with systems on; one ~21 h outlier) — an overnight
+  charge works (plug in by ~17:00), a same-day full turnaround does not. Confirm
+  resting voltage before launch after an overnight charge. Detail:
+  [`bizzyboat_power.md` § Recharge characterization](../bizzyboat_project11/docs/bizzyboat_power.md).
 - Watch **battery voltage** (the annunciator's `mavros: Battery` indicator):
   - **Warn below 23.0 V**, **error below 21.5 V** (a healthy pack reads ~28 V).
   - **There is no current or power reading on this boat.** The current field is a

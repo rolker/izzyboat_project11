@@ -30,8 +30,9 @@ Two operating points from a Bluetooth DC clamp on the combined post-parallel out
   Cube + servos + ESCs 1–2 A, comms 1–2 A, cooling/lights 1–2 A.
 - **Full throttle = 67 A** (PWM 2000 both, under load) → ~1715 W at 25.6 V.
 - **Charger idle/maintenance ≈ 6.2 A** — external fast-charger display at/near full charge,
-  all systems on (operator-read 2026-05-28 after a multi-day in-place charge, #186 → #196;
-  re-read 2026-06-04). ≈ 180 W at the ~29 V plateau — consistent with the ~8 A × ~25.6 V
+  all systems on (operator-read 2026-05-28 after a multi-day in-place charge,
+  [#186](https://github.com/rolker/unh_echoboats_project11/issues/186) →
+  [#196](https://github.com/rolker/unh_echoboats_project11/issues/196); re-read 2026-06-04). ≈ 180 W at the ~29 V plateau — consistent with the ~8 A × ~25.6 V
   clamp idle within the measurement band. With no shunt on the hull, charger-side readings
   are the only measured current available dockside.
 - These anchor the V-drop model (`R_int ≈ 12.9 mΩ` from the 0.864 V **steady-state** drop at
@@ -111,24 +112,32 @@ events** including three near-empty starts). Full analysis, event table, and plo
 ([`charge_ramps.png`](../../docs/analysis/2026-07-31/charge_ramps.png)). Fills the
 recharge-time gap tracked in [#196](https://github.com/rolker/unh_echoboats_project11/issues/196).
 - **Full recharge from empty ≈ 14–16 h on 120 VAC** with boat systems on (deepest event
-  06-23 — the BMS-cutoff day — took 14.2 h; 07-20 took 15.5 h; one 21 h outlier on 06-27
-  included an initial dip/pause). **Plan ~15 h: plug in by ~17:00 and it's full by ~08:00.**
+  06-23 — the BMS-cutoff day — took 14.2 h; 07-20 took 15.5 h; one ~21 h outlier on 06-27,
+  mostly a genuinely slower ramp, not just its initial dip/pause). **Plan ~15 h: plug in by
+  ~17:00 and it's full by ~08:00** — 2 of the 3 near-empty events made that window; the
+  outlier shows an overnight charge can run past sunrise, so power down non-essential
+  loads while charging and don't skip the pre-launch resting-voltage go/no-go (≥ 27 V,
+  § *Pre-launch go/no-go*) after an overnight charge.
 - **Same-day turnaround from empty is not possible on 120 VAC** — a ~6 h run-to-empty
   survey costs ~15 h of charge. Recharge-to-full, not range, binds back-to-back cadence
   (now measured, previously a modeled expectation).
-- Mid-pack starts (~24–25 V): ~11–15 h. Near-full starts (~27 V): ~4.5–6 h (one 11.4 h
-  outlier). Spread at equal starting voltage is real — it tracks the hotel load left
-  running during the charge.
+- Mid-pack starts (~24–25 V): ~11–15 h among completed events; the interrupted 06-17
+  event (24.05 V start, unplugged at 28.8 V after 15.6 h) was on pace for ~17 h.
+  Near-full starts (~27 V): ~4.5–6 h (one 11.4 h outlier). Spread at equal starting
+  voltage is real — it tracks the hotel load left running during the charge.
 - **Charge profile:** a continuous voltage ramp (no flat LiFePO4 mid-plateau at this low
   ~0.1 C charge rate); the main ramp ends at ~28.8 V, then a ~1 h taper to the 29.0 V
   standby plateau (max observed 29.06 V ≈ the 29.05 V final-charge spec).
-- **AC draw at 120 VAC ≈ 7 A during bulk, ~2 A at float (inferred, not measured):** the
-  fast charger's two rated points (750 W out @ 100 VAC, 1700 W out @ 240 VAC — EchoBoat 240
-  manual §3.6.1) both correspond to ~7.1–7.5 A of AC input, i.e. it is input-current-limited
-  → ~850 W ceiling at 120 VAC (~28 A DC into the 273 Ah bank ≈ 0.1 C). Energy-balance
-  cross-check from the data: ~7000 Wh ÷ 14.2 h plus the ~180 W hotel load ≈ 730 W AC ≈ 6 A
-  average at 120 V — consistent. A standard 15 A outlet has ample margin. The manual's
-  "~5 h @ 240 VAC" charge time is unverified on this hull.
+- **AC draw at 120 VAC ≈ 7–8 A during bulk, ~2 A at float (inferred, not measured):** the
+  fast charger's two rated points (750 W **out** @ 100 VAC, 1700 W **out** @ 240 VAC —
+  EchoBoat 240 manual §3.6.1) scale linearly with input voltage: an input-current-limited
+  design drawing ~8 A from the wall (~7.1–7.5 A output-equivalent; ~7.9–8.3 A actual at
+  ~90 % conversion efficiency). At 120 VAC that means a **~850 W output ceiling (~950 W
+  from the wall)** — ~29 A gross DC at the ~29 V plateau, ~23 A net into the 273 Ah bank
+  after the ~6 A hotel load ≈ 0.08 C. Energy-balance cross-check from the data: ~7000 Wh ÷
+  14.2 h + ~180 W hotel ≈ 670 W DC ≈ 730 W from the wall at 90 % ≈ 6 A average at 120 V —
+  consistent with ~8 A bulk plus taper. A standard 15 A outlet has ample margin. The
+  manual's "~5 h @ 240 VAC" charge time is unverified on this hull.
 
 ## Speed → power, endurance, range (empirical)
 Pooled from **four Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24 / 06-25, ~19 h of steady
@@ -296,6 +305,7 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
 - **#171 / #162** — annunciator never warns at LVD → manual voltage watch required (class-blocking).
 - **Recharge curve — characterized 2026-07-31** from the dockside voltage log
   (§ *Recharge characterization*, [`docs/analysis/2026-07-31/`](../../docs/analysis/2026-07-31/)).
-  Still open on #196: log charger current (today's readings are operator-eyeball only),
-  bare-battery (systems-off) charge time, and verifying the manual's ~5 h @ 240 VAC claim.
+  Still open on [#196](https://github.com/rolker/unh_echoboats_project11/issues/196):
+  log charger current (today's readings are operator-eyeball only), bare-battery
+  (systems-off) charge time, and verifying the manual's ~5 h @ 240 VAC claim.
 - Cross-deployment power analysis detail: see #167.

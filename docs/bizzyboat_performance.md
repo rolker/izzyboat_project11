@@ -100,7 +100,9 @@ never as power).
 > throttle (linear), **optimistic** = ∝ throttle² (quadratic). Speeds are **STW** from the
 > current-corrected fits above (≈ SOG in calm, no-current water such as a lake). Endurance is
 > **to a fully empty pack** — plan with a reserve (budget the return leg + ~20–30 %).
-> Recharge-to-full, not range, is the binding back-to-back cadence constraint.
+> Recharge-to-full, not range, is the binding back-to-back cadence constraint — measured
+> **~15 h from empty on 120 VAC**
+> ([`bizzyboat_power.md` § Recharge characterization](../bizzyboat_project11/docs/bizzyboat_power.md)).
 
 | Mode | PWM | Speed | Endurance (to empty) | Range |
 |---|---|---|---|---|

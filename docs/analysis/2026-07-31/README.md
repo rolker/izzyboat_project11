@@ -12,13 +12,17 @@ covering **15 charge events** including three near-empty starts.
 
 - **Full recharge from empty takes ~14–16 h on 120 VAC** (boat systems on during
   charge, as is standard practice — the logger itself needs gabby up). Deepest
-  event: 06-23, day-min 20.94 V (BMS cutoff), ramp 22.5 → 28.95 V in **14.2 h**.
-  07-20: 15.5 h. One 21.1 h outlier (06-27) included an initial dip/pause.
+  event: 06-23, the BMS-cutoff day — the last telemetry row before the cutoff
+  outage reads 20.94 V (a `source=mavros` row; the `fcu` log gaps 85 min and
+  resumes at 22.24 V rested) — ramp 22.5 → 28.95 V in **14.2 h**. 07-20: 15.5 h.
+  One 21.1 h outlier (06-27): an initial dip/pause accounts for ~1.5 h of the
+  excess, the rest was a genuinely slower ramp (presumably heavier hotel load) —
+  don't skip the pre-launch resting-voltage check after an overnight charge.
 - **Same-day turnaround from empty is not possible on 120 VAC** — a ~6 h
   run-to-empty survey needs ~15 h of charge. Overnight works: plug in by ~17:00,
   full by ~08:00. This is the binding cohort-cadence number the power doc
   previously flagged as unmeasured.
-- **AC draw at 120 VAC ≈ 7 A peak (bulk), ~2 A at float** — inferred, see method.
+- **AC draw at 120 VAC ≈ 7–8 A peak (bulk), ~2 A at float** — inferred, see method.
   A standard 15 A outlet has ample margin.
 - Charge terminates at a **29.0 V plateau** (max observed 29.06 V; matches the
   29.05 V final-charge spec). The main ramp ends at ~28.8 V; the last 0.15 V is
@@ -66,12 +70,14 @@ plus post-run voltage recovery.
   at a > 3 h data gap, or when a > 0.6 V drop shows discharge resumed. Events
   reaching at least 28.8 V are kept.
 - **AC-side inference (no measurement on this hull):** the Torqeedo fast charger
-  is rated 750 W out @ 100 VAC / 1700 W out @ 240 VAC (EchoBoat 240 manual §3.6.1)
-  — both points ≈ 7.1–7.5 A of AC input, i.e. the charger is input-current-limited,
-  giving ~850 W at 120 VAC. Cross-check from the data: replacing ~7000 Wh in
-  ~14.2 h *plus* the ~180 W hotel load (6.2 A × ~29 V, the measured charger
-  idle/maintenance reading) ≈ 670 W DC ≈ 730 W AC ≈ **6 A average at 120 V** —
-  consistent with a ~7 A bulk-phase draw and taper.
+  is rated 750 W **out** @ 100 VAC / 1700 W **out** @ 240 VAC (EchoBoat 240 manual
+  §3.6.1) — output scales linearly with input voltage, i.e. the charger is
+  input-current-limited at ~8 A from the wall (7.1–7.5 A output-equivalent,
+  ~7.9–8.3 A actual at ~90 % conversion efficiency), giving ~850 W out (~950 W in)
+  at 120 VAC. Cross-check from the data: replacing ~7000 Wh in ~14.2 h *plus* the
+  ~180 W hotel load (6.2 A × ~29 V, the measured charger idle/maintenance reading)
+  ≈ 670 W DC ≈ 730 W from the wall at 90 % ≈ **6 A average at 120 V** — consistent
+  with a ~8 A bulk-phase draw and taper.
 
 ## Caveats
 
