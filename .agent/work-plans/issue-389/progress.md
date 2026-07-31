@@ -1,0 +1,72 @@
+---
+issue: 389
+---
+
+# Issue #389 — Coverage tile transmission: revisit end-to-end
+
+## Issue Review
+**Status**: complete
+**When**: 2026-07-31 18:40 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Issue**: #389
+**Comment**: (best-effort post follows this entry; not recorded inline)
+**Scope verdict**: well-scoped
+
+### Summary
+
+Issue asks to revisit the coverage-tile transmission process end-to-end and evaluate options after the 2026-07-23 BizzyBoat deployment where level-11 tiles were too large to pass through udp_bridge (operator raised `maximum_bytes_per_second` on the VPN connection in the field as a workaround; not saved to config). The problem recurred on 2026-07-29 (#398), confirming this is a systematic failure, not a one-off.
+
+**Current state confirmed from source** (`bizzyboat.yaml`, `operator.yaml`):
+- `maximum_packet_size: 1000` (both boat and operator nodes) → heavy fragmentation of large GridMap tiles
+- `coverage_tiles` routed **VPN only** (cap 1.2 MB/s, line 268), not on wifi (cap 1.5 MB/s)
+- `coverage_tiles: {queue_size: 2, period: 0.5}` → rate-limited to 2/s
+- Operator workaround raised VPN `maximum_bytes_per_second` to 1500000 (from 1200000) — not saved
+
+### Scope Assessment
+
+**Well-scoped?** Yes. The issue correctly frames this as a bounded end-to-end investigation of a concrete transport failure with a root cause already narrowed (fragmented large tiles + VPN-only routing + tight cap). The candidate options are listed; plan-task's job is to evaluate/profile and select. A single PR should be able to hold the resulting config changes.
+
+**Right repo?** Yes — all of the relevant configuration lives in `unh_echoboats_project11` (`bizzyboat_project11/config/bizzyboat.yaml` and `operator.yaml`).
+
+**Dependencies**: Related to #350 (live coverage pipeline wiring, already closed). Also related to #398 (2026-07-29 recurrence, separate deployment issue). No blocking upstream issues.
+
+### Principle Alignment
+
+| Principle | Status | Notes |
+|---|---|---|
+| Human control and transparency | OK | Issue explicitly avoids pre-selecting the fix; asks for principled evaluation — operator remains in the loop |
+| Enforcement over documentation | Watch | If a design decision is made (e.g., "always add wifi route for tile topics"), document the reasoning in config comments so future agents don't revert it silently |
+| Capture decisions, not just implementations | Action needed | Multiple valid solution paths exist (rate cap, routing, fragmentation, tile detail). The chosen approach and rationale should be recorded — either a brief ADR or substantive config comment block — so the tradeoff survives to the next operator/agent |
+| A change includes its consequences | Action needed | `bizzyboat.yaml` and `operator.yaml` are documented as a "pair" (see comment at line 351 of bizzyboat.yaml): any coverage-tile routing or rate change must be applied consistently to both. If wifi route is added, link budget impact on shared video streams must be assessed |
+| Only what's needed | Watch | Five candidate solutions are listed; avoid implementing all of them — profile actual tile sizes first, then pick the minimum set of changes that resolves the failure |
+| Improve incrementally | OK | Scope is bounded; config changes are reviewable |
+| Test what breaks | Watch | Coverage tile transport is hard to unit-test; implementation should include profiling steps and a field-verification plan (next deployment). At minimum, document what to check after deploy |
+| Workspace vs. project separation | OK | Config work entirely within the project repo |
+
+### ADR Applicability
+
+| ADR | Triggered | Notes |
+|---|---|---|
+| ADR-0001 (Adopt ADRs) | Watch | If the chosen fix involves a non-obvious tradeoff (e.g., raising `maximum_packet_size` changes fragmentation behavior across all topics, not just coverage tiles), record the decision. A config comment is acceptable for simple parameter changes. |
+| ADR-0008 (ROS 2 conventions) | OK | Parameter changes use existing udp_bridge param names (`maximum_bytes_per_second`, `maximum_packet_size`, `period`) — no new conventions introduced |
+
+### Consequences
+
+- If `maximum_packet_size` changes: must update **all** udp_bridge configs across the repo (currently set in `bizzyboat.yaml` AND `operator.yaml` AND `remote.yaml` — all at 1000). Change to `maximum_packet_size` applies globally per node, not per topic/connection.
+- If wifi route added for `coverage_tiles`: operator.yaml also needs the inbound `coverage_requests` mirrored on wifi (these two configs are a stated pair). Also assess: wifi already carries ffmpeg video streams (1.5 MB/s cap shared); adding tile delivery there needs a budget check.
+- If VPN cap raised: assess what else shares the 1.2 MB/s budget (sidescan images, video streams, costmap window, etc.) to ensure no starvation.
+- If `period` tuning or queue changes: confirm interaction with CAMP's request-driven pattern (tiles are silent until CAMP requests them, per the config comment).
+
+### Recommendations
+
+- **Profile before fixing**: before choosing a solution, measure actual level-11 tile sizes from a recent deployment bag (or reconstruct from the 2026-07-23 session). The 2026-07-23 log notes tiles were not arriving; a tile-size estimate drives the choice between raising the rate cap vs. changing packet size vs. reducing tile detail.
+- **Persist the workaround as an interim step**: raising VPN `maximum_bytes_per_second` from 1200000 to 1500000 (matching the wifi cap) is low-risk and immediately prevents the recurrence. Commit this as a separate, clearly-labelled interim change while the deeper investigation runs.
+- **Evaluate wifi routing for coverage_tiles explicitly**: the log notes tiles are VPN-only; adding the wifi route (which has the same 1.5 MB/s cap but a different physical path) gives redundancy and avoids single-route failure. Needs `operator.yaml` + `bizzyboat.yaml` changes in sync.
+- **Do not raise `maximum_packet_size` without measuring the impact on other topics**: at 1000 bytes, all topics fragment. Raising this globally changes fragmentation behavior for safety-critical topics (command, heartbeat) too. Isolate the tile-specific problem first.
+
+### Actions
+- [ ] Capture the decision rationale for whichever fix approach is chosen (config comment or ADR)
+- [ ] Update both `bizzyboat.yaml` and `operator.yaml` together for any coverage-tile routing or rate changes
+- [ ] Profile actual tile sizes from deployment data before selecting the final fix
+- [ ] Document the field-verification plan (what to check at next deployment to confirm the fix held)
