@@ -70,3 +70,16 @@ Issue asks to revisit the coverage-tile transmission process end-to-end and eval
 - [ ] Update both `bizzyboat.yaml` and `operator.yaml` together for any coverage-tile routing or rate changes
 - [ ] Profile actual tile sizes from deployment data before selecting the final fix
 - [ ] Document the field-verification plan (what to check at next deployment to confirm the fix held)
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-07-31 19:10 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-389/plan.md` at `a39c86b`
+**Branch**: feature/issue-389 at `a39c86b`
+**Phases**: single
+
+### Open questions
+- [ ] Should `period: 0.5` (2 tiles/s) stay or tighten to `period: 1.0` for safety margin — tradeoff vs. live operator responsiveness?
+- [ ] Should WiFi coverage tile delivery be conditional on link quality (site-specific), or unconditional (default-on when WiFi up)?
