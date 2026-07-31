@@ -160,9 +160,9 @@ The residual list is what was actually observed **while operating OTH**:
   pinning live, assess whether a repeat is contained before ranking it.
 - [`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389) —
   coverage-tile transmission over udp_bridge: large level-11 tiles don't
-  fit through the link. **Recurred on two deployments (07-23, 07-29); the
-  live max-data raise is a field workaround, unsaved — not a permanent
-  fix.** The options review (routing, fragmentation, tile-level levers,
+  fit through the link. **Recurred on two deployments; the live rate-limit
+  raises (07-23 max-data; 07-29 return-rate to 1.5 MB/s) were field
+  workarounds, unsaved — not a permanent fix.** The options review (routing, fragmentation, tile-level levers,
   limits) is survey-relevant. Related:
   [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
   (per-topic priority/class scheduling);
