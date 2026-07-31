@@ -15,7 +15,7 @@ issue: 401
 **CI**: all-pass (build-and-test + copilot-review green)
 
 ### Findings
-- [ ] (suggestion, Copilot, verified against operator.yaml) roadmap says the
+- [x] (suggestion, Copilot, verified against operator.yaml) roadmap says the
   safety-critical uplink is "pinned to the cell path" — the config carries
   `command`/`joystick_helm` redundantly on wifi+vpn+cell; only the cell
   *tunnel* is WAN-pinned (router-level). Reword the #145 bullet to say

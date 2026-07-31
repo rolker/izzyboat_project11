@@ -133,11 +133,12 @@ deployments.** The foundations are delivered and closed:
 
 - **Concurrent Starlink + cell**
   ([`#145`](https://github.com/rolker/unh_echoboats_project11/issues/145),
-  closed as-built): dual WireGuard tunnels carried concurrently, the
-  safety-critical uplink (`command`, `joystick_helm`) pinned to the cell
-  path in `operator.yaml`, cell-path DNS via
+  closed as-built): dual WireGuard tunnels carried concurrently — the cell
+  tunnel WAN-pinned to cellular at the boat router — with the
+  safety-critical uplink (`command`, `joystick_helm`) carried redundantly
+  on all three paths (wifi, vpn, cell) in `operator.yaml`; cell-path DNS via
   [CCOMJHC/ccomjhc_project11#74](https://github.com/CCOMJHC/ccomjhc_project11/pull/74).
-  No failover blind gap: critical traffic rides both links at once. This
+  No failover blind gap: critical traffic rides every live link at once. This
   also substantially covers the old "low-bandwidth status fallback" idea —
   the residual there is *verifying the critical-topic set*, not building a
   mechanism.
