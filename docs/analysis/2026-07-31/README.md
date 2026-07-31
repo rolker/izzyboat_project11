@@ -61,10 +61,12 @@ plus post-run voltage recovery.
 
 ## Method
 
-- **Input:** gabby's `bizzy_battery` cron logger — 1-minute `timestamp,voltage_v`
-  samples from the FCU (`source=fcu` rows), synced to the dev machine at
-  `~/data/logs/gabby/logs/bizzy_battery/battery_YYYY-MM-DD.csv`. ~29 k samples
-  over 52 days.
+- **Input:** gabby's battery cron logger
+  ([`bizzyboat_project11/scripts/battery_logger.sh`](../../../bizzyboat_project11/scripts/battery_logger.sh))
+  — 1-minute `timestamp,voltage_v` samples from the FCU (`source=fcu` rows),
+  written on gabby to `~/data/logs/bizzy_battery/battery_YYYY-MM-DD.csv` and
+  synced to the dev machine at `~/data/logs/gabby/logs/bizzy_battery/`.
+  ~29 k samples over 52 days.
 - **Detection:** 5-sample median smoothing; a charge ramp starts when voltage is
   below 28.3 V and rises at > 0.10 V/h sustained over 30 min; it ends at 28.95 V,
   at a > 3 h data gap, or when a > 0.6 V drop shows discharge resumed. Events

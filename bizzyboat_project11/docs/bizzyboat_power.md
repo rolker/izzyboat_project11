@@ -30,7 +30,9 @@ Two operating points from a Bluetooth DC clamp on the combined post-parallel out
   Cube + servos + ESCs 1–2 A, comms 1–2 A, cooling/lights 1–2 A.
 - **Full throttle = 67 A** (PWM 2000 both, under load) → ~1715 W at 25.6 V.
 - **Charger idle/maintenance ≈ 6.2 A** — external fast-charger display at/near full charge,
-  all systems on (operator-read 2026-05-28 after a multi-day in-place charge,
+  all systems on; taken as the charger-reported **DC output current** (the display units
+  are assumed — not 120 VAC input current, which would be ~740 W, far above any idle load)
+  (operator-read 2026-05-28 after a multi-day in-place charge,
   [#186](https://github.com/rolker/unh_echoboats_project11/issues/186) →
   [#196](https://github.com/rolker/unh_echoboats_project11/issues/196); re-read 2026-06-04). ≈ 180 W at the ~29 V plateau — consistent with the ~8 A × ~25.6 V
   clamp idle within the measurement band. With no shunt on the hull, charger-side readings

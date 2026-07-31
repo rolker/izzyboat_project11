@@ -35,8 +35,8 @@ issue: 196
 **CI**: all-pass (build-and-test ✓, copilot-pull-request-reviewer ✓)
 
 ### Findings
-- [ ] (suggestion, Copilot) 6.2 A charger reading could be misread as 120 VAC input current — label it as charger-reported DC output current (assumed) — `bizzyboat_project11/docs/bizzyboat_power.md`
-- [ ] (suggestion, Copilot) README cites only the dev-machine synced CSV path; the producing script `bizzyboat_project11/scripts/battery_logger.sh` writes `~/data/logs/bizzy_battery/` on gabby — cite both + the logger script — `docs/analysis/2026-07-31/README.md`
+- [x] (suggestion, Copilot) 6.2 A charger reading could be misread as 120 VAC input current — label it as charger-reported DC output current (assumed) — `bizzyboat_project11/docs/bizzyboat_power.md`
+- [x] (suggestion, Copilot) README cites only the dev-machine synced CSV path; the producing script `bizzyboat_project11/scripts/battery_logger.sh` writes `~/data/logs/bizzy_battery/` on gabby — cite both + the logger script — `docs/analysis/2026-07-31/README.md`
 
 ### False positives
 - none
