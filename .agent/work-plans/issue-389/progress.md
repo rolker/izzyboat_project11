@@ -155,3 +155,32 @@ in commit `7fc81af`:
 
 ### False positives
 - (none)
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-31 16:35 -04:00
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #403 at `95b77ab`
+**Sources**: 2 (Copilot re-review @ `95b77ab` — suppressed comments only, CI rollup)
+**Cross-source confirmations**: 0
+**CI**: all-pass (build-and-test green 3m33s)
+
+No visible comments; three suppressed. One valid (fixed), two won't-fix.
+
+### Findings
+- [x] (suggestion, Copilot suppressed) plan.md "Estimated Scope" still said
+  "two config files" — stale after the WiFi cut; corrected to one —
+  `.agent/work-plans/issue-389/plan.md`
+
+### False positives
+- (Copilot suppressed) asks to rephrase the Issue Review entry's
+  "Current state" snapshot (GridMap wording, pinned line number) — that
+  entry is a point-in-time record of what the review phase found; the
+  timeline is append-only and the corrected facts live in plan.md and the
+  config comments. Rewriting history would falsify the record.
+- (Copilot suppressed) Issue Review consequences note lists bizzyboat
+  configs but not izzyboat's for a hypothetical `maximum_packet_size`
+  change — same append-only rationale; this PR deliberately does not touch
+  `maximum_packet_size`, and the caution about its global effect is
+  carried in plan.md ("affects all topics globally").
