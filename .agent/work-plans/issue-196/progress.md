@@ -23,3 +23,20 @@ issue: 196
 - [x] (suggestion) overnight-charge rule failed 1-of-3 observed events (06-27, ~21 h) — hedged with resting-voltage go/no-go backstop in both files
 - [x] (suggestion) operator manual + performance doc still stated recharge time as unknown/unnumbered — measured ~15 h + pointer added
 - [x] (suggestion) bare `#186`/`#196` refs don't autolink in repo markdown — converted to full links
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-31 (see commit timestamp)
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #404 at `9947539`
+**Sources**: 3 (Copilot R1 @ `9947539`, Local Review (Pre-Push) @ `52b1f6e`, CI rollup)
+**Cross-source confirmations**: 0 (all 6 pre-push findings were closed at `52b1f6e`; Copilot's two comments are new)
+**CI**: all-pass (build-and-test ✓, copilot-pull-request-reviewer ✓)
+
+### Findings
+- [ ] (suggestion, Copilot) 6.2 A charger reading could be misread as 120 VAC input current — label it as charger-reported DC output current (assumed) — `bizzyboat_project11/docs/bizzyboat_power.md`
+- [ ] (suggestion, Copilot) README cites only the dev-machine synced CSV path; the producing script `bizzyboat_project11/scripts/battery_logger.sh` writes `~/data/logs/bizzy_battery/` on gabby — cite both + the logger script — `docs/analysis/2026-07-31/README.md`
+
+### False positives
+- none
