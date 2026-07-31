@@ -111,3 +111,20 @@ approve-with-suggestions; the two suggestions are non-blocking (finding 1 is a
 plan-doc consistency cleanup the implementer can fold in while editing; finding 2
 is a field-verification note). Implementation may proceed against
 `bizzyboat_project11/config/bizzyboat.yaml`.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-07-31 19:23 +0000
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-389 at `17ce3e7`
+**Mode**: pre-push
+**Depth**: Standard (reason: config touching a shared VPN link budget + a documented file-pair consequence)
+**Must-fix**: 0 | **Suggestions**: 1
+**Round**: 1 | **Ship**: recommended — no must-fix; change is twice-field-proven, arithmetic sound, plan-adherent, operator.yaml correctly unchanged by design
+
+Config-only change (`bizzyboat.yaml`): VPN `maximum_bytes_per_second` 1200000→1500000, `coverage_tiles period` 0.5→1.0, plus link-budget/rationale/field-check comments. Verified: YAML parses (yamllint absent, python yaml.safe_load OK); link-budget arithmetic sound (960×960×2 = 1,843,200 B ≈ 1.75 MiB > 1,500,000 B cap); issue refs consistent (#389/#287/cube_bathymetry#112) and match plan; `coverage_tiles` present in both `topics_list` and `topics`; operator.yaml advertises `coverage_requests` (inbound request path) and is unaffected by this outbound-only tile-rate/cap change. Two fresh-context Claude adversarial lenses (A logic, B systemic) corroborated; their comment-enrichment "must-fix" items and speculative CAMP-ingest/burst concerns dropped by the silence filter (already covered in-config / answered by field evidence). Local specialist skipped (--no-local, workspace#590); Copilot off (default).
+
+### Findings
+- [ ] (suggestion) Optional: add explicit "don't lower `period` below 1.0 without raising cap / merging cube#112" guard line — `bizzyboat_project11/config/bizzyboat.yaml:356`
