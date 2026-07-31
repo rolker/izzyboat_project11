@@ -1,7 +1,7 @@
 # BizzyBoat Power & Battery
 
 Consolidated reference for BizzyBoat's electrical/energy behaviour: the battery system,
-measured current anchors, discharge characterization, the (sensor-free) power model, and
+measured current anchors, discharge and recharge characterization, the (sensor-free) power model, and
 **operational deployment-planning rules**. Companion to
 [`bizzyboat_hardware.md`](bizzyboat_hardware.md) (electrical hardware) and
 `bizzyboat_performance.md` (speed/dynamics; added in [PR #172](https://github.com/rolker/unh_echoboats_project11/pull/172)).
@@ -23,12 +23,20 @@ measured current anchors, discharge characterization, the (sensor-free) power mo
   no autopilot action** at either threshold.
 - `BatteryState.current` (~0.01 A) and `.percentage` (−0.01) are **placeholders** — do not use.
 
-## Measured current anchors (2026-04-27 external clamp meter)
-Two operating points, from a Bluetooth DC clamp on the combined post-parallel output, in-water
-(`docs/logs/2026/2026-04-27_dev_logs.md`):
+## Measured current anchors
+Two operating points from a Bluetooth DC clamp on the combined post-parallel output, in-water
+(2026-04-27, `docs/logs/2026/2026-04-27_dev_logs.md`), plus one charger-side reading:
 - **Idle ≈ 8 A** (PWM 1500 both, all systems on). Composition: gabby + USB + sensors 2–4 A,
   Cube + servos + ESCs 1–2 A, comms 1–2 A, cooling/lights 1–2 A.
 - **Full throttle = 67 A** (PWM 2000 both, under load) → ~1715 W at 25.6 V.
+- **Charger idle/maintenance ≈ 6.2 A** — external fast-charger display at/near full charge,
+  all systems on; taken as the charger-reported **DC output current** (the display units
+  are assumed — not 120 VAC input current, which would be ~740 W, far above any idle load)
+  (operator-read 2026-05-28 after a multi-day in-place charge,
+  [#186](https://github.com/rolker/unh_echoboats_project11/issues/186) →
+  [#196](https://github.com/rolker/unh_echoboats_project11/issues/196); re-read 2026-06-04). ≈ 180 W at the ~29 V plateau — consistent with the ~8 A × ~25.6 V
+  clamp idle within the measurement band. With no shunt on the hull, charger-side readings
+  are the only measured current available dockside.
 - These anchor the V-drop model (`R_int ≈ 12.9 mΩ` from the 0.864 V **steady-state** drop at
   67 A; note the 2026-04-27 log's ~25 mΩ is from the 1.7 V **peak transient** sag — a different
   measure, not a conflict).
@@ -98,6 +106,40 @@ plateau — load sag is small until near empty. This is the OCV lookup the live 
 - **The 23.0 V FCU WARN sits at only ~15 % SOC** — by the time it fires you are near the bottom of
   the tank (see the turn-back-reserve finding, [#315](https://github.com/rolker/unh_echoboats_project11/issues/315)).
 - Endpoints (100 % / 0 %) are the measured full-charge plateau and BMS cutoff, not interpolated.
+
+## Recharge characterization (dockside voltage log, 2026-06-09 → 07-30)
+Measured from gabby's dockside battery logger (1-minute voltage samples, `source=fcu` rows;
+**15 charge events** including three near-empty starts). Full analysis, event table, and plot:
+[`docs/analysis/2026-07-31/`](../../docs/analysis/2026-07-31/)
+([`charge_ramps.png`](../../docs/analysis/2026-07-31/charge_ramps.png)). Fills the
+recharge-time gap tracked in [#196](https://github.com/rolker/unh_echoboats_project11/issues/196).
+- **Full recharge from empty ≈ 14–16 h on 120 VAC** with boat systems on (deepest event
+  06-23 — the BMS-cutoff day — took 14.2 h; 07-20 took 15.5 h; one ~21 h outlier on 06-27,
+  mostly a genuinely slower ramp, not just its initial dip/pause). **Plan ~15 h: plug in by
+  ~17:00 and it's full by ~08:00** — 2 of the 3 near-empty events made that window; the
+  outlier shows an overnight charge can run past sunrise, so power down non-essential
+  loads while charging and don't skip the pre-launch resting-voltage go/no-go (≥ 27 V,
+  § *Pre-launch go/no-go*) after an overnight charge.
+- **Same-day turnaround from empty is not possible on 120 VAC** — a ~6 h run-to-empty
+  survey costs ~15 h of charge. Recharge-to-full, not range, binds back-to-back cadence
+  (now measured, previously a modeled expectation).
+- Mid-pack starts (~24–25 V): ~11–15 h among completed events; the interrupted 06-17
+  event (24.05 V start, unplugged at 28.8 V after 15.6 h) was on pace for ~17 h.
+  Near-full starts (~27 V): ~4.5–6 h (one 11.4 h outlier). Spread at equal starting
+  voltage is real — it tracks the hotel load left running during the charge.
+- **Charge profile:** a continuous voltage ramp (no flat LiFePO4 mid-plateau at this low
+  ~0.1 C charge rate); the main ramp ends at ~28.8 V, then a ~1 h taper to the 29.0 V
+  standby plateau (max observed 29.06 V ≈ the 29.05 V final-charge spec).
+- **AC draw at 120 VAC ≈ 7–8 A during bulk, ~2 A at float (inferred, not measured):** the
+  fast charger's two rated points (750 W **out** @ 100 VAC, 1700 W **out** @ 240 VAC —
+  EchoBoat 240 manual §3.6.1) scale linearly with input voltage: an input-current-limited
+  design drawing ~8 A from the wall (rated output ÷ input voltage implies 7.1–7.5 A at a
+  hypothetical 100 % efficiency; ~7.9–8.3 A at the realistic ~90 %). At 120 VAC that
+  means a **~850 W output ceiling (~950 W from the wall)** — ~29 A gross DC at the ~29 V plateau, ~23 A net into the 273 Ah bank
+  after the ~6 A hotel load ≈ 0.08 C. Energy-balance cross-check from the data: ~7000 Wh ÷
+  14.2 h + ~180 W hotel ≈ 670 W DC ≈ 730 W from the wall at 90 % ≈ 6 A average at 120 V —
+  consistent with ~8 A bulk plus taper. A standard 15 A outlet has ample margin. The
+  manual's "~5 h @ 240 VAC" charge time is unverified on this hull.
 
 ## Speed → power, endurance, range (empirical)
 Pooled from **four Massabesic lake surveys** (2026-06-22 / 06-23 / 06-24 / 06-25, ~19 h of steady
@@ -236,9 +278,10 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
   deployment day** and **power gabby down between groups** when not surveying.
 - Don't rely on "yesterday's charge" — one full charge ≈ a handful of in-water hours, but idle
   dominates the budget.
-- **Recharge time between cohorts is not yet characterized** (only the charge-curve start was
-  captured) — **measure full charge time** at the next opportunity. BizzyBoat charges **in place**
-  (batteries are not field-swappable), so recharge-to-full time bounds the day/cohort cadence.
+- **Recharge time is now measured** (§ *Recharge characterization*): **~15 h from empty on
+  120 VAC** (14–16 h band) — overnight covers it; a same-day full turnaround does not.
+  BizzyBoat charges **in place** (batteries are not field-swappable), so recharge-to-full
+  time bounds the day/cohort cadence.
 
 ### Drive efficiently (extends every mission)
 - **Plan for ~6 h of survey per full charge** (measured 2026-06-23 + 06-22, ~44 A average). Full
@@ -262,5 +305,9 @@ at 15:52 ≈ 47 min (~1 h ✓); 22 V at ~15:38 → dark 15:52 ≈ 14 min (~15 mi
   [`docs/analysis/2026-06-25/`](../../docs/analysis/2026-06-25/)); what #88 still owes is the
   current side (clamp-meter anchors across the PWM range) to retire the ±30 % band.
 - **#171 / #162** — annunciator never warns at LVD → manual voltage watch required (class-blocking).
-- **Recharge curve** — uncharacterized; measure a full charge for cohort-cadence planning (charge-in-place; no battery swap).
+- **Recharge curve — characterized 2026-07-31** from the dockside voltage log
+  (§ *Recharge characterization*, [`docs/analysis/2026-07-31/`](../../docs/analysis/2026-07-31/)).
+  Still open on [#196](https://github.com/rolker/unh_echoboats_project11/issues/196):
+  log charger current (today's readings are operator-eyeball only), bare-battery
+  (systems-off) charge time, and verifying the manual's ~5 h @ 240 VAC claim.
 - Cross-deployment power analysis detail: see #167.
