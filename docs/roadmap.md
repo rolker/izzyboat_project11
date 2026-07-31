@@ -158,13 +158,17 @@ The residual list is what was actually observed **while operating OTH**:
   Izzlink/Starlink telemetry instability RCA (buffered commands + choppy
   video at Massabesic). Still the headline diagnosis item; with the cell
   pinning live, assess whether a repeat is contained before ranking it.
-- [`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389) —
-  coverage-tile transmission over udp_bridge: large level-11 tiles don't
-  fit through the link. **Recurred on two deployments; the live rate-limit
-  raises (07-23 max-data; 07-29 return-rate to 1.5 MB/s) were field
-  workarounds, unsaved — not a permanent fix.** The options review (routing, fragmentation, tile-level levers,
-  limits) is survey-relevant. Related:
-  [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
+- Coverage-tile transmission
+  ([`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389),
+  **closed 2026-07-31**): large level-11 tiles rate-starved the link on two
+  deployments (07-23 max-data raise; 07-29 return-rate override — both
+  unsaved field workarounds). Resolved by persisting the field-proven VPN
+  cap (1.5 MB/s) + slowing tiles to 1/s
+  ([PR#403](https://github.com/rolker/unh_echoboats_project11/pull/403);
+  field check rides the next deployment). The **structural residual** —
+  bounding the message size itself at the publisher — is
+  [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112).
+  Related: [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
   (per-topic priority/class scheduling);
   [`udp_bridge#36`](https://github.com/rolker/udp_bridge/issues/36)
   (transport rework umbrella).
@@ -195,9 +199,9 @@ campaign items graduates from "nice to have" to survey-relevant:
 - ~~operator-side costmap display~~ — **delivered**
   ([`uma#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)
   closed 2026-07-31): the windowed costmap (`costmap_windowed`) reaches the
-  operator over the bridge and is in routine use. Residual link-capacity
-  concerns live in
-  [`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389).
+  operator over the bridge and is in routine use. The link-capacity fix for
+  coverage tiles landed via #389/PR#403; the structural message-size bound
+  is [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112).
 - [`#183`](https://github.com/rolker/unh_echoboats_project11/issues/183) —
   CAMP overlay of the CA reflex state (obstacles, slowdown/stop polygons,
   gating). The operator must see *what the boat is reacting to* from shore.
