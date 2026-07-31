@@ -359,6 +359,8 @@
               # cube_bathymetry#112. Field check, next deployment: tiles arrive
               # WITHOUT a manual rate raise (ros2 topic bw .../coverage_tiles)
               # and 1 tile/s feels responsive enough at the operator station.
+              # Do NOT lower period below 1.0 without raising the cap above or
+              # landing the cube_bathymetry#112 message-size bound first.
               # NOTE: the inbound half (coverage_requests, CAMP->boat) is NOT here —
               # udp_bridge config only advertises OUTBOUND topics, so the sender
               # configures it: operator.yaml advertises coverage_requests -> bizzy
