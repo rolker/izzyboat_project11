@@ -265,7 +265,11 @@
             # Raised 20% (1.0 -> 1.2 MB/s) to absorb the port/stbd ffmpeg streams
             # re-enabled on VPN below (period: -1.0 removed) without starving the
             # other OTH streams that share this budget (#287).
-            maximum_bytes_per_second: 1200000
+            # Raised again 1.2 -> 1.5 MB/s (#389): level-11 coverage tiles were
+            # rate-starved at the 2026-07-23 and 2026-07-29 deployments; the
+            # operator raised this live both times and tile delivery recovered
+            # with no observed side effects. Persisting the field-proven value.
+            maximum_bytes_per_second: 1500000
             topics_list:
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
             # via udp_bridge remote_advertise, confirmed working; persisted here).
@@ -344,15 +348,25 @@
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
               # CUBE coverage tiles -> CAMP live-tile view. Set up live 2026-06-29
-              # via udp_bridge remote_advertise (queue 2; tiles rate-limited to 2/s
-              # since they're GridMap-class) and confirmed working; persisted here.
-              # coverage_tiles is request-driven (silent until CAMP asks).
+              # via udp_bridge remote_advertise and confirmed working; persisted
+              # here. coverage_tiles is request-driven (silent until CAMP asks).
+              # Link budget (#389): one SonarVisualizationTile carries a dirty
+              # sub-window of up to 960x960 INT16 cells = 1,843,200 B (~1.84 MB)
+              # worst case, so a single busy tile exceeds the entire shared
+              # 1,500,000 B/s VPN budget for over a second. period: 1.0 (was 0.5) trades panel latency
+              # for uplink margin at the ROC (operator decision 2026-07-31); the
+              # structural fix — bounding message size at the publisher — is
+              # cube_bathymetry#112. Field check, next deployment: tiles arrive
+              # WITHOUT a manual rate raise (ros2 topic bw .../coverage_tiles)
+              # and 1 tile/s feels responsive enough at the operator station.
+              # Do NOT lower period below 1.0 without raising the cap above or
+              # landing the cube_bathymetry#112 message-size bound first.
               # NOTE: the inbound half (coverage_requests, CAMP->boat) is NOT here —
               # udp_bridge config only advertises OUTBOUND topics, so the sender
               # configures it: operator.yaml advertises coverage_requests -> bizzy
               # over vpn. These two files are a pair; edit them together.
               coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
-              coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 0.5}
+              coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 1.0}
               # manda coverage-swath viz marker -> CAMP (enabled via display_topic in
               # nav2_overlay.yaml). Published per survey_area goal; rate-limited (the
               # LINE_STRIP grows with coverage). Set up live 2026-06-29.
