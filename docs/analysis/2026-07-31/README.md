@@ -5,8 +5,9 @@ Companion to [`bizzyboat_project11/docs/bizzyboat_power.md`](../../../bizzyboat_
 [#196](https://github.com/rolker/unh_echoboats_project11/issues/196)
 (charger idle-current capture + power-model review). Closes the long-standing
 "recharge time is not yet characterized" gap using data already on hand: gabby's
-dockside battery logger (1-minute FCU voltage samples), 2026-06-09 → 07-30,
-covering **15 charge events** including three near-empty starts.
+dockside battery logger (1-minute voltage samples; the analysis uses the
+`source=fcu` rows), 2026-06-09 → 07-30, covering **15 charge events** including
+three near-empty starts.
 
 ## Headline
 
@@ -63,10 +64,13 @@ plus post-run voltage recovery.
 
 - **Input:** gabby's battery cron logger
   ([`bizzyboat_project11/scripts/battery_logger.sh`](../../../bizzyboat_project11/scripts/battery_logger.sh))
-  — 1-minute `timestamp,voltage_v` samples from the FCU (`source=fcu` rows),
-  written on gabby to `~/data/logs/bizzy_battery/battery_YYYY-MM-DD.csv` and
-  synced to the dev machine at `~/data/logs/gabby/logs/bizzy_battery/`.
-  ~29 k samples over 52 days.
+  — 1-minute samples in `timestamp,voltage_v,current_a,remaining_pct,source`
+  format (`source` is `fcu` or `mavros` depending on FCU-port availability;
+  voltage is real on both, `current_a`/`remaining_pct` are placeholders — the
+  analysis uses the `fcu` rows, which cover the full period), written on gabby
+  to `~/data/logs/bizzy_battery/battery_YYYY-MM-DD.csv` and synced to the dev
+  machine at `~/data/logs/gabby/logs/bizzy_battery/`. ~29 k fcu samples over
+  52 days.
 - **Detection:** 5-sample median smoothing; a charge ramp starts when voltage is
   below 28.3 V and rises at > 0.10 V/h sustained over 30 min; it ends at 28.95 V,
   at a > 3 h data gap, or when a > 0.6 V drop shows discharge resumed. Events
@@ -74,9 +78,9 @@ plus post-run voltage recovery.
 - **AC-side inference (no measurement on this hull):** the Torqeedo fast charger
   is rated 750 W **out** @ 100 VAC / 1700 W **out** @ 240 VAC (EchoBoat 240 manual
   §3.6.1) — output scales linearly with input voltage, i.e. the charger is
-  input-current-limited at ~8 A from the wall (7.1–7.5 A output-equivalent,
-  ~7.9–8.3 A actual at ~90 % conversion efficiency), giving ~850 W out (~950 W in)
-  at 120 VAC. Cross-check from the data: replacing ~7000 Wh in ~14.2 h *plus* the
+  input-current-limited at ~8 A from the wall (rated output ÷ input voltage
+  implies 7.1–7.5 A at a hypothetical 100 % efficiency; ~7.9–8.3 A at the
+  realistic ~90 %), giving ~850 W out (~950 W in) at 120 VAC. Cross-check from the data: replacing ~7000 Wh in ~14.2 h *plus* the
   ~180 W hotel load (6.2 A × ~29 V, the measured charger idle/maintenance reading)
   ≈ 670 W DC ≈ 730 W from the wall at 90 % ≈ **6 A average at 120 V** — consistent
   with a ~8 A bulk-phase draw and taper.

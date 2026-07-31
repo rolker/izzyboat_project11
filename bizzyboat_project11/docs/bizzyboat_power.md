@@ -108,8 +108,8 @@ plateau — load sag is small until near empty. This is the OCV lookup the live 
 - Endpoints (100 % / 0 %) are the measured full-charge plateau and BMS cutoff, not interpolated.
 
 ## Recharge characterization (dockside voltage log, 2026-06-09 → 07-30)
-Measured from gabby's dockside battery logger (1-minute FCU voltage samples; **15 charge
-events** including three near-empty starts). Full analysis, event table, and plot:
+Measured from gabby's dockside battery logger (1-minute voltage samples, `source=fcu` rows;
+**15 charge events** including three near-empty starts). Full analysis, event table, and plot:
 [`docs/analysis/2026-07-31/`](../../docs/analysis/2026-07-31/)
 ([`charge_ramps.png`](../../docs/analysis/2026-07-31/charge_ramps.png)). Fills the
 recharge-time gap tracked in [#196](https://github.com/rolker/unh_echoboats_project11/issues/196).
@@ -133,9 +133,9 @@ recharge-time gap tracked in [#196](https://github.com/rolker/unh_echoboats_proj
 - **AC draw at 120 VAC ≈ 7–8 A during bulk, ~2 A at float (inferred, not measured):** the
   fast charger's two rated points (750 W **out** @ 100 VAC, 1700 W **out** @ 240 VAC —
   EchoBoat 240 manual §3.6.1) scale linearly with input voltage: an input-current-limited
-  design drawing ~8 A from the wall (~7.1–7.5 A output-equivalent; ~7.9–8.3 A actual at
-  ~90 % conversion efficiency). At 120 VAC that means a **~850 W output ceiling (~950 W
-  from the wall)** — ~29 A gross DC at the ~29 V plateau, ~23 A net into the 273 Ah bank
+  design drawing ~8 A from the wall (rated output ÷ input voltage implies 7.1–7.5 A at a
+  hypothetical 100 % efficiency; ~7.9–8.3 A at the realistic ~90 %). At 120 VAC that
+  means a **~850 W output ceiling (~950 W from the wall)** — ~29 A gross DC at the ~29 V plateau, ~23 A net into the 273 Ah bank
   after the ~6 A hotel load ≈ 0.08 C. Energy-balance cross-check from the data: ~7000 Wh ÷
   14.2 h + ~180 W hotel ≈ 670 W DC ≈ 730 W from the wall at 90 % ≈ 6 A average at 120 V —
   consistent with ~8 A bulk plus taper. A standard 15 A outlet has ample margin. The
