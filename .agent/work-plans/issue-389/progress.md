@@ -83,3 +83,31 @@ Issue asks to revisit the coverage-tile transmission process end-to-end and eval
 ### Open questions
 - [ ] Should `period: 0.5` (2 tiles/s) stay or tighten to `period: 1.0` for safety margin — tradeoff vs. live operator responsiveness?
 - [ ] Should WiFi coverage tile delivery be conditional on link quality (site-specific), or unconditional (default-on when WiFi up)?
+
+## Plan Review
+**Status**: complete
+**When**: 2026-07-31 19:07 +00:00
+**By**: Claude Code Agent (Claude Opus)
+<!-- Independence: the ## Plan Authored entry shares the name "Claude Code Agent"
+     (all workspace agents do), but this is a fresh-context, independently-dispatched
+     review by a different model (Opus vs the Sonnet planner). Treated as independent;
+     no author-self-review annotation. -->
+
+**Plan**: `.agent/work-plans/issue-389/plan.md` at `ea2cbc7`
+**PR**: PR-less (`--issue` mode)
+**Verdict**: approve-with-suggestions
+
+### Findings
+- [ ] (suggestion) Principles Self-Check cells contradict the revised approach — still cite "both config files updated together", "WiFi budget impact", "0.5 period / ≤2 tiles/s", and "WiFi route is additive redundancy" (all cut/changed) — `plan.md:87`, `plan.md:89`
+- [ ] (suggestion) review-issue's "profile actual tile sizes" action is deferred to field verification rather than done pre-implementation; the `period: 1.0` choice stays unvalidated until the next deployment, so step 4 is load-bearing — `plan.md:63`, `plan.md:50`
+
+### Verified against source (no finding — recorded so downstream needn't re-check)
+- `coverage_tiles` publishes `marine_interfaces::msg::SonarVisualizationTile` (cube_bathymetry_node.cpp:396), **not** a GridMap — the plan's comment correction (`plan.md:45`) is accurate.
+- GGGS tile is a fixed 960×960 cells (`cellColumnCount()` "always 960"), depth = int16 → 960×960×2 B ≈ 1.75 MB worst case — the plan's link-budget upper bound (`plan.md:13`) is validated, not merely asserted.
+
+### Next step
+Lifecycle: **Plan Review** → **implement** → **review-code**. Verdict is
+approve-with-suggestions; the two suggestions are non-blocking (finding 1 is a
+plan-doc consistency cleanup the implementer can fold in while editing; finding 2
+is a field-verification note). Implementation may proceed against
+`bizzyboat_project11/config/bizzyboat.yaml`.
