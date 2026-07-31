@@ -24,41 +24,59 @@ Current config snapshot:
 
 ## Approach
 
+*(Revised 2026-07-31 after operator discussion — decisions recorded below.)*
+
 1. **Persist the VPN rate raise** — raise `maximum_bytes_per_second` on the VPN
-   connection in `bizzyboat.yaml` from 1200000 to 1500000 (matching the WiFi
-   cap). This is the field-proven fix. Add a config comment documenting the
-   reason and the two deployment incidents that motivated it.
+   connection in `bizzyboat.yaml` from 1200000 to 1500000. **Operator decision
+   (2026-07-31): confirmed** — field-proven at two deployments with no observed
+   negative side effects. Add a config comment documenting the reason and the
+   two deployment incidents that motivated it.
 
-2. **Add WiFi route for coverage_tiles** — coverage tiles are currently VPN-only.
-   Add `coverage_catalog` and `coverage_tiles` to the WiFi `topics_list` and
-   `topics` block in `bizzyboat.yaml`, mirroring the VPN config (same
-   `queue_size: 2`, `period: 0.5` for tiles). WiFi at 1500000 bytes/s gives an
-   independent path when in range; reduces VPN budget pressure and removes the
-   single-path failure mode.
+2. **Slow coverage tiles to 1/s** — change `coverage_tiles` `period: 0.5` →
+   `period: 1.0` on the VPN route. **Operator decision (2026-07-31): try 1
+   tile/s** for uplink margin (boat→shore rides the historically
+   saturation-prone Starlink uplink at the ROC). Field verification (step 4)
+   includes watching panel responsiveness — revisit if too sluggish.
 
-3. **Mirror coverage_requests on WiFi in operator.yaml** — `bizzyboat.yaml` and
-   `operator.yaml` are documented as a pair for coverage routing. The inbound
-   tile-request path (`coverage_requests`) is currently VPN-only in
-   `operator.yaml`; add it to WiFi there so request/tile paths stay symmetric
-   when both links are up.
-
-4. **Add a link-budget comment block** — document the tile size upper bound
+3. **Add a link-budget comment block** — document the tile size upper bound
    (worst-case ~1.75 MB/tile for a full 960×960 INT16-depth update) and how
-   `period: 0.5` at 2 tiles/s relates to the per-link cap, so the next operator
-   or agent understands what the numbers mean. This replaces the vague
-   "GridMap-class" comment (these are `SonarVisualizationTile`, not GridMap).
+   the tile period relates to the per-link cap, so the next operator or agent
+   understands what the numbers mean. This replaces the vague "GridMap-class"
+   comment (these are `SonarVisualizationTile`, not GridMap).
 
-5. **Add a field-verification note to the config** — record what to check at the
+4. **Add a field-verification note to the config** — record what to check at the
    next deployment: `ros2 topic bw sensors/m3/cube_bathymetry/coverage_tiles`
-   on the boat side and confirm CAMP receives live tile updates without manual
-   rate raise.
+   on the boat side, confirm CAMP receives live tile updates without a manual
+   rate raise, and confirm 1 tile/s feels responsive enough at the operator
+   station.
+
+**Cut from the original plan (operator discussion 2026-07-31): the WiFi
+routing additions** (coverage tiles + catalog on WiFi in `bizzyboat.yaml`,
+request mirror in `operator.yaml`). Rationale: the Isles of Shoals ROC has no
+WiFi at any point — Starlink/cell is the only link — so the WiFi route
+contributes nothing to the survey this work is preparing for, while adding
+tile bursts to a link already carrying four video streams for pier ops. Can be
+revisited as pier-ops convenience later if wanted.
+
+**Paired follow-up (structural fix, separate issue in cube_bathymetry):
+bounded tile-message chunking.** The cap raise makes the workaround durable
+but the worst-case message (~1.75 MB) still exceeds what the link comfortably
+carries, and dirty windows grow with survey coverage. The permanent fix is
+bounding the per-message patch size at the publisher
+(`cube_bathymetry_node.cpp` publishes one message per dirty tile; CAMP already
+applies messages as patches, so chunking large dirty windows into bounded
+sub-patches extends existing semantics). Also neuters the receive-side
+unbounded-allocation crash path (camp#170). Tracked in its own issue —
+sim/bench-verifiable, pre-August candidate.
 
 ## Files to Change
 
 | File | Change |
 |------|--------|
-| `bizzyboat_project11/config/bizzyboat.yaml` | Raise VPN `maximum_bytes_per_second` to 1500000; add `coverage_catalog` + `coverage_tiles` to WiFi `topics_list` and `topics`; update config comments |
-| `bizzyboat_project11/config/operator.yaml` | Add `coverage_requests` to WiFi `topics_list` and `topics` (mirrors the VPN entry already there) |
+| `bizzyboat_project11/config/bizzyboat.yaml` | Raise VPN `maximum_bytes_per_second` to 1500000; `coverage_tiles` `period: 0.5` → `1.0`; link-budget + rationale + field-verification comments |
+
+(`operator.yaml` unchanged — the WiFi mirror step was cut with the WiFi
+routing additions; the VPN request path already in place is untouched.)
 
 ## Principles Self-Check
 
@@ -82,13 +100,17 @@ Current config snapshot:
 | If we change... | Also update... | Included in plan? |
 |---|---|---|
 | VPN `maximum_bytes_per_second` in `bizzyboat.yaml` | Verify other VPN topics still fit in budget (sidescan, video, costmap); 1.5 MB/s is still a hard cap shared by all VPN topics | Comment only — no other config changes needed since 1.5 MB/s is an increase, not a cut |
-| WiFi topics list in `bizzyboat.yaml` | `operator.yaml` WiFi block must mirror the inbound request path | Yes — step 3 |
-| `coverage_tiles` added to WiFi | WiFi already carries 4× ffmpeg + segmentation streams; tile burst must fit within 1.5 MB/s alongside those | Bounded by `period: 0.5` + `queue_size: 2`; comment documents this |
+| `coverage_tiles` `period` 0.5 → 1.0 | CAMP-side expectations (no config change needed — CAMP is event-driven on tile arrival); operator responsiveness check in field verification | Yes — steps 2 and 4 |
+| Worst-case message size unchanged (~1.75 MB) | Structural bound belongs at the publisher — paired cube_bathymetry follow-up issue (chunked patches), cross-ref camp#170 | Follow-up issue, filed with this plan |
 
 ## Open Questions
 
-- Should `period: 0.5` (2 tiles/s) be tightened to `period: 1.0` (1 tile/s) as an additional safety margin, or is 2/s worth keeping for live operator responsiveness? The operator's field experience (tiles felt slow at the workaround rate) suggests keeping 2/s; but this is a tradeoff the operator should confirm.
-- The WiFi link at Massabesic (2026-07-29) was reportedly more limited than BizzyBoat deployments. Should WiFi coverage tile delivery be conditional on link quality, or is adding the route unconditionally the right default?
+*(All resolved by operator discussion, 2026-07-31.)*
+
+- ~~Tile period 0.5 vs 1.0~~ — **resolved: try `period: 1.0`** (1 tile/s) for
+  uplink margin; field verification watches responsiveness.
+- ~~WiFi route conditional or unconditional~~ — **resolved: cut entirely**
+  (Shoals-irrelevant; see Approach).
 
 ## Estimated Scope
 
