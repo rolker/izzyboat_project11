@@ -114,4 +114,4 @@ routing additions; the VPN request path already in place is untouched.)
 
 ## Estimated Scope
 
-Single PR — two config files, no code changes.
+Single PR — one config file (`bizzyboat.yaml`), no code changes.
