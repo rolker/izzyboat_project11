@@ -351,9 +351,9 @@
               # via udp_bridge remote_advertise and confirmed working; persisted
               # here. coverage_tiles is request-driven (silent until CAMP asks).
               # Link budget (#389): one SonarVisualizationTile carries a dirty
-              # sub-window of up to 960x960 INT16 cells ~= 1.75 MB worst case, so
-              # a single busy tile can exceed the entire shared 1.5 MB/s VPN
-              # budget for a second. period: 1.0 (was 0.5) trades panel latency
+              # sub-window of up to 960x960 INT16 cells = 1,843,200 B (~1.84 MB)
+              # worst case, so a single busy tile exceeds the entire shared
+              # 1,500,000 B/s VPN budget for over a second. period: 1.0 (was 0.5) trades panel latency
               # for uplink margin at the ROC (operator decision 2026-07-31); the
               # structural fix — bounding message size at the publisher — is
               # cube_bathymetry#112. Field check, next deployment: tiles arrive
