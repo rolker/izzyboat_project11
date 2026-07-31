@@ -128,3 +128,30 @@ Config-only change (`bizzyboat.yaml`): VPN `maximum_bytes_per_second` 1200000→
 
 ### Findings
 - [x] (suggestion) Optional: add explicit "don't lower `period` below 1.0 without raising cap / merging cube#112" guard line — `bizzyboat_project11/config/bizzyboat.yaml:356` (implemented pre-publish, commit `5c0a082`)
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-07-31 16:05 -04:00
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #403 at `5c0a082`
+**Sources**: 2 (Copilot R1 @ `5c0a082`, CI rollup)
+**Cross-source confirmations**: 0
+**CI**: all-pass (build-and-test green 2m58s)
+
+All three Copilot comments valid, all documentation-precision class, fixed
+in commit `7fc81af`:
+
+### Findings
+- [x] (suggestion, Copilot) link-budget comment conflated MiB/MB and
+  understated worst case — now 1,843,200 B (~1.84 MB) in bytes against the
+  1,500,000 B/s cap — `bizzyboat_project11/config/bizzyboat.yaml`, plan.md
+- [x] (suggestion, Copilot) `queue_size` incorrectly framed as part of the
+  offered-load arithmetic — reworded (buffers only, rate unchanged) —
+  `.agent/work-plans/issue-389/plan.md`
+- [x] (suggestion, Copilot) implemented guard-line suggestion still unticked
+  in the pre-push entry — ticked with the implementing commit noted —
+  `.agent/work-plans/issue-389/progress.md`
+
+### False positives
+- (none)
