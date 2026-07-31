@@ -82,11 +82,11 @@ routing additions; the VPN request path already in place is untouched.)
 
 | Principle | Consideration |
 |---|---|
-| Human control and transparency | Rate and routing changes are visible in config; comments explain why each number was chosen |
+| Human control and transparency | Rate changes are visible in config; comments explain why each number was chosen; WiFi-route cut and 1/s trial are recorded operator decisions (2026-07-31) |
 | Capture decisions, not just implementations | Config comment block records the failure mode, measured workaround, and the link-budget arithmetic that justifies the new cap |
-| A change includes its consequences | Both config files updated together (they are a documented pair); WiFi budget impact assessed (tiles at 1.75 MB max / 0.5 period = up to 3.5 MB/s burst, but `period` and `queue_size` bound the real rate to ≤2 tiles/s; VPN and WiFi caps both set to 1.5 MB/s) |
-| Only what's needed | `maximum_packet_size` deliberately left at 1000 — raising it affects all topics globally and is not needed to resolve this failure; tile routing + rate is the bounded fix |
-| Improve incrementally | Single PR; rate raise is the minimal change that prevents the failure, WiFi route is additive redundancy |
+| A change includes its consequences | Single file (`bizzyboat.yaml`); `operator.yaml` pair untouched by design (no routing change); at `period: 1.0` + `queue_size: 2` the worst-case offered load is ~1.75 MB/s against the 1.5 MB/s shared VPN cap — still clip-able on a worst-case tile, which is why the structural bound (cube#112) is paired |
+| Only what's needed | `maximum_packet_size` deliberately left at 1000 — raising it affects all topics globally and the cell tunnel's MTU 1280 constrains it anyway; cap + period is the bounded fix |
+| Improve incrementally | Single PR; rate raise persists the field-proven fix; message-size bounding proceeds separately (cube#112). Tile-size profiling deferred to field verification (accepted at plan checkpoint): the cap value is twice field-proven, and 1/s is an explicit trial with a recorded field check |
 
 ## ADR Compliance
 
