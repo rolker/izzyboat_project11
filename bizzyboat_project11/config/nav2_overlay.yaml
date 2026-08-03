@@ -97,7 +97,14 @@ local_costmap:
         # clearance ~1.5-7.6 m at full pool) and the depth prior now reports current
         # promptly (#226 robot-first core-readiness fix). Land / no-data stays LETHAL
         # via unsurveyed_is_lethal (intended closed-basin shore keepout).
-        enabled: True
+        #
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site. The reference store
+        # holds 47 tiles at L10 r17785-17787 / c13901-13905 (the NH site); this
+        # position is L10 r17252 / c13419, outside that coverage, so every cell
+        # here reads unsurveyed. Measured contribution at Lewes was small
+        # (local_costmap lethal 60.50% -> 59.78% when disabled at runtime) — it
+        # is not the source of the lethal blanket seen here.
+        enabled: False
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
@@ -139,7 +146,9 @@ global_costmap:
         plugin: "bathymetry_layer::BathymetryLayer"
         # Re-enabled 2026-06-27 (#276): see local_costmap block — corrected store
         # (unh_marine_autonomy#221) + readiness fix (#226).
-        enabled: True
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site — see the
+        # local_costmap block for the out-of-coverage rationale.
+        enabled: False
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
         store_path: "~/data/stores/bathymetry"
