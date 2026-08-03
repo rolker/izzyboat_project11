@@ -154,3 +154,24 @@ Host-inline implementation after the Plan Review checkpoint (operator approved
   in overlay inline comments meanwhile).
 - Open questions retained in plan: `allow_unknown` override, global
   `rolling_window` — explicitly deferred, base unchanged.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-03 23:37 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-276 at `b5b2b27`
+**Mode**: pre-push
+**Depth**: Deep (reason: safety-critical costmap keepout config + cross-layer plugin-ordering semantics)
+**Must-fix**: 0 | **Suggestions**: 3
+**Round**: 1 | **Ship**: recommended — no must-fix; diff is correct and pushable. The one outstanding item is an operator-run pre-field sim acceptance gate, not a code blocker.
+
+Specialists: Static Analysis (YAML parses; no line >120; yamllint absent on host), Claude Adversarial x2 (Lens A logic + Lens B systemic — both zero code defects), Governance, Plan Drift. Local Adversarial off (config-only diff, already double-read; workspace#590). Copilot off (default). Only production file changed: `bizzyboat_project11/config/nav2_overlay.yaml` (+26 -15).
+
+Verified against source: chart-before-bathy ordering is load-bearing and correct — `s57_layer::updateCosts` overwrites the master grid where chart data exists (`s57_layer.cpp:476`), bathymetry_layer is raise-only, so chart must precede bathy (reverse order would clobber the bathy prior). `confidence_gate: 0.5` yields the claimed trust behavior (`trusted = σ ≤ gate`, `bathymetry_layer.cpp:953`; untrusted capped at MAX_NON_OBSTACLE `:843`) — σ=5.0 chart prior caution-only, σ<0.5 survey keepout-capable. Both restated plugin lists complete against deep-merged base (chart_layer block present base local `:98/:117`, global `:163/:168`). `max_uncertainty` removed outright (deprecation sentinel won't fire). Wrong-store-at-new-site under `unsurveyed_is_lethal` stalls the planner (`bathymetry_layer.cpp:752/775/1052`), not a lethal flood. No ripple into collision_monitor/ca_safety/sea_surface/controller.
+
+### Findings
+- [ ] (suggestion) Sim acceptance runs (plan step 4) not yet executed — Massabesic route-across-lake + ENC-site no-regression pending; ENC path unexercised on this rig since the #263 disable. Operator pre-field gate, explicitly deferred to publish checkpoint. — `.agent/work-plans/issue-276/plan.md:63`
+- [ ] (suggestion) `store_path` is a generic path; with `unsurveyed_is_lethal: True` a wrong/missing store at a new site → global costmap not-current → planner stall (safe-by-design, not a lethal flood). Deployment-checklist item. — `bizzyboat_project11/config/nav2_overlay.yaml:107,153`
+- [ ] (suggestion) `.agents/README.md` absent → the plan-flagged `max_uncertainty`→`confidence_gate` trust-direction pitfall lives only in overlay inline comments; create the doc as a follow-on. — `.agent/work-plans/issue-276/plan.md:104`
