@@ -105,3 +105,52 @@ despite the shared framework name.
 - [ ] (suggestion) "chart before bathy so surveyed depth overrides charted (ADR-0010 D5)" likely doesn't hold: bathymetry_layer is raise-only max-combine (`bathymetry_layer.cpp:976`), so if s57_layer is too (standard Nav2; not checked out here to confirm), final cost = max(chart, bathy) regardless of order — ordering yields no override. The real surveyed-over-charted resolution is inside bathymetry_layer's max-over-reliable-samples (L926-934); charted shallow depth from s57 at ENC sites still raises cost where surveyed depth is deep — the deferred D10 obstacle-only split. Verify s57_layer's combination_method and soften the ordering rationale. — `plan.md:38-43`
 - [ ] (suggestion) Ensure the deprecated `max_uncertainty` key is REMOVED from both costmap blocks (not left beside `confidence_gate`) — the plugin logs an error and ignores it (L118-133). — `plan.md:59`
 - [ ] (note) Verified OK: base `chart_layer` block present for both costmaps (`nav2_params.base.yaml:117,168`); `allow_unknown: true` in base (L223), correctly held as an open question with the base unchanged; Documentation & Instruction Impact section present and non-silent (the `.agents/README.md` pitfall candidate must document the gate *direction* per the must-fix).
+
+## Implementation
+
+- **Status**: complete
+- **By**: Claude Code Agent (Claude Fable 5)
+- **Correlation**: issue-276
+
+### What was done
+
+Host-inline implementation after the Plan Review checkpoint (operator approved
+"fix plan + implement", 2026-08-03).
+
+1. **Plan amended per Plan Review must-fix + both suggestions** (`24c4f00`):
+   confidence_gate resolved to the low gate (0.5, plugin default, explicit);
+   Context/Approach/ADR-table prose corrected (trust direction was described
+   backwards); ordering rationale rewritten after host verification.
+2. **Gate migration** (`6254ba8`): `max_uncertainty: 5.0` removed outright from
+   both costmap `bathymetry_layer` blocks, replaced with `confidence_gate: 0.5`
+   plus inline comments documenting the trust direction and the
+   copy-5.0-across-the-rename trap.
+3. **chart_layer re-enable** (`d6c10b3`): restored to both plugin lists,
+   ordered before `bathymetry_layer`, superseding the #263 interim disable.
+   Comment trail updated (date + issue refs + ordering rationale).
+
+### Verified against source (host)
+
+- `s57_layer::updateCosts` OVERWRITES the master grid where chart data exists
+  (`s57_tools/s57_layer/src/s57_layer.cpp:474-476`) and stomps NO_INFORMATION on
+  unloaded/uncharted-incomplete tiles (`:480-489`) → chart-before-bathy ordering
+  is REQUIRED, not stylistic (plan-review suggestion investigated; conclusion
+  inverted from "soften" to "strengthen").
+- `allow_uncharted_` defaults `true` (`s57_layer.h:119`), base config does not
+  override → Massabesic uncharted-complete tiles leave the grid untouched.
+- `bathymetry_layer` combine is raise-only max, skips NO_INFORMATION
+  (`bathymetry_layer.cpp` updateCosts); trusted = σ ≤ confidence_gate, untrusted
+  capped at caution (computeCost) — gate 0.5 keeps σ=5.0 chart prior
+  caution-only, matching the cb3d90a-validated no-lethal-flood behavior.
+- Overlay YAML parses (`yaml.safe_load`) after each commit.
+
+### Not done / open
+
+- **Sim validation (plan step 4) NOT run**: both acceptance scenarios
+  (Massabesic route-across-lake; ENC-site no-regression) still pending — to be
+  raised at the publish checkpoint; operator may prefer to run/observe these.
+- `.agents/README.md` does not exist in this repo (gap noted; creating it is a
+  dedicated task per workspace rules — the confidence_gate pitfall is documented
+  in overlay inline comments meanwhile).
+- Open questions retained in plan: `allow_unknown` override, global
+  `rolling_window` — explicitly deferred, base unchanged.
