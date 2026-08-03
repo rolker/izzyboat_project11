@@ -23,12 +23,17 @@ local_costmap:
       # buffer (see rolker/unh_marine_perception#19), so an obstacle in the FOV overlap
       # accumulates evidence from every camera that sees it and survives the handoff
       # between camera views.
-      # chart_layer (base's s57_layer::S57Layer) commented out for bizzyboat 2026-06-12
-      # per operator; the base's chart_layer config block stays defined but unreferenced.
+      # chart_layer re-enabled 2026-08-03 (#276), superseding the 2026-06-12
+      # interim disable (#263): at no-ENC sites (Massabesic) s57 tiles resolve
+      # uncharted-complete and allow_uncharted (default true) leaves the grid
+      # untouched — harmless; at ENC sites it carries charted obstacles/depth.
+      # ORDERING REQUIRED: s57_layer::updateCosts OVERWRITES the master grid
+      # where chart data exists, so chart_layer must run BEFORE bathymetry_layer,
+      # which max-combines on top (raise-only). Final cost = max(chart, bathy).
       # bathymetry_layer (#319) provides the store-backed depth prior (NH GRANIT
-      # contour chart + M3 survey draft) in place of the disabled s57 chart_layer.
+      # contour chart + M3 survey draft).
       plugins:
-        # - "chart_layer"
+        - "chart_layer"
         - "sea_surface_layer"
         - "bathymetry_layer"
         - "inflation_layer"
@@ -126,13 +131,14 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      # chart_layer commented out for bizzyboat 2026-06-12 per operator. The base
+      # chart_layer re-enabled 2026-08-03 (#276), superseding the 2026-06-12
+      # interim disable (#263) — see the local_costmap plugins comment for the
+      # rationale and the s57-overwrites-first ordering requirement. The base
       # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
       # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
-      # lists wholesale, so this restates that list minus chart_layer. The base's
-      # chart_layer config block stays defined but unreferenced (harmless).
+      # lists wholesale, so this restates that list plus bathymetry_layer after it.
       plugins:
-        # - "chart_layer"
+        - "chart_layer"
         - "sea_surface_relay"
         - "bathymetry_layer"
         - "inflation_layer"
