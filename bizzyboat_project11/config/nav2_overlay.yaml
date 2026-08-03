@@ -23,12 +23,15 @@ local_costmap:
       # buffer (see rolker/unh_marine_perception#19), so an obstacle in the FOV overlap
       # accumulates evidence from every camera that sees it and survives the handoff
       # between camera views.
-      # chart_layer (base's s57_layer::S57Layer) commented out for bizzyboat 2026-06-12
-      # per operator; the base's chart_layer config block stays defined but unreferenced.
+      # chart_layer (base's s57_layer::S57Layer) was commented out for bizzyboat
+      # 2026-06-12 per operator: the Massabesic site had no ENC coverage, so the
+      # layer marked everything land. Re-enabled 2026-08-03 (gabby) for the Lewes,
+      # DE site, which has full NOAA ENC coverage — 160 DE cells under
+      # /home/field/data/ENC_ROOT including harbour-scale US5DE*.
       # bathymetry_layer (#319) provides the store-backed depth prior (NH GRANIT
-      # contour chart + M3 survey draft) in place of the disabled s57 chart_layer.
+      # contour chart + M3 survey draft) alongside it.
       plugins:
-        # - "chart_layer"
+        - "chart_layer"
         - "sea_surface_layer"
         - "bathymetry_layer"
         - "inflation_layer"
@@ -122,13 +125,13 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      # chart_layer commented out for bizzyboat 2026-06-12 per operator. The base
+      # chart_layer re-enabled 2026-08-03 (gabby) for the Lewes, DE site — see the
+      # local_costmap block for the ENC-coverage rationale. The base
       # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
       # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
-      # lists wholesale, so this restates that list minus chart_layer. The base's
-      # chart_layer config block stays defined but unreferenced (harmless).
+      # lists wholesale, so this restates that list with bathymetry_layer added.
       plugins:
-        # - "chart_layer"
+        - "chart_layer"
         - "sea_surface_relay"
         - "bathymetry_layer"
         - "inflation_layer"
