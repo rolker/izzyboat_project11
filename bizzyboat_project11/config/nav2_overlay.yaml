@@ -102,11 +102,15 @@ local_costmap:
         store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
-        # COUPLED to the chart prior's import uncertainty (5.0 m). shallowestReliable
-        # rejects cells with uncertainty > max_uncertainty and a present-but-rejected
-        # cell is written LETHAL — so a tighter gate (e.g. the 0.5 m default) would
-        # make the whole chart-covered lake lethal. Keep >= the chart's 5.0 m.
-        max_uncertainty: 5.0
+        # Trust gate (uma#276 / ADR-0010 D7, replaces max_uncertainty 2026-08-03):
+        # a sample is TRUSTED (keepout-eligible) only when sigma <= confidence_gate;
+        # untrusted samples cost at most caution, never LETHAL. 0.5 (the plugin
+        # default, explicit here) keeps the sigma=5.0 chart prior caution-only while
+        # M3 survey cells (sigma < 0.5) can keep real shoals out. Do NOT copy the
+        # old max_uncertainty 5.0 across the rename: a gate >= 5.0 would TRUST the
+        # chart prior, and with worst-case clearance = depth - sigma that turns the
+        # whole 1.5-7.6 m lake LETHAL wherever depth < 6 m.
+        confidence_gate: 0.5
         max_age: 0.0
         # Closed lake basin: the chart prior is masked to the lake outline, so
         # no-data cells are land. Mark them lethal (unh_marine_autonomy#216).
@@ -138,11 +142,12 @@ global_costmap:
         # (unh_marine_autonomy#221) + readiness fix (#226).
         enabled: True
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
-        # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
+        # to $HOME), confidence_gate (trust direction — do not raise to the chart
+        # sigma) and unsurveyed_is_lethal.
         store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
-        max_uncertainty: 5.0
+        confidence_gate: 0.5
         max_age: 0.0
         unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide
