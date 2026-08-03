@@ -175,3 +175,34 @@ Verified against source: chart-before-bathy ordering is load-bearing and correct
 - [ ] (suggestion) Sim acceptance runs (plan step 4) not yet executed — Massabesic route-across-lake + ENC-site no-regression pending; ENC path unexercised on this rig since the #263 disable. Operator pre-field gate, explicitly deferred to publish checkpoint. — `.agent/work-plans/issue-276/plan.md:63`
 - [ ] (suggestion) `store_path` is a generic path; with `unsurveyed_is_lethal: True` a wrong/missing store at a new site → global costmap not-current → planner stall (safe-by-design, not a lethal flood). Deployment-checklist item. — `bizzyboat_project11/config/nav2_overlay.yaml:107,153`
 - [ ] (suggestion) `.agents/README.md` absent → the plan-flagged `max_uncertainty`→`confidence_gate` trust-direction pitfall lives only in overlay inline comments; create the doc as a follow-on. — `.agent/work-plans/issue-276/plan.md:104`
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-08-03 19:54 -04:00
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #405 at `3850db8`
+**Sources**: 3 (Copilot R1 @ `3850db8`, Local Review (Pre-Push) @ `b5b2b27`, CI rollup)
+**Cross-source confirmations**: 0
+**CI**: all-pass (build-and-test: success; copilot-pull-request-reviewer: success)
+
+Copilot R1 (COMMENTED, 2 inline comments, no suppressed-comment block) is against the
+current head. Both comments verified against the worktree and classified false
+positive. The Local Review (Pre-Push) approved R1 (0 must-fix, 3 suggestions) at
+`b5b2b27`; head `3850db8` adds only that progress entry — reviewed code identical.
+No finding was raised by more than one source.
+
+### Findings
+- [ ] (suggestion, Local Review @ `b5b2b27`, carried) Sim acceptance runs (plan step 4) still pending — Massabesic route-across-lake + ENC-site no-regression; operator pre-field gate at the publish checkpoint, not a code blocker. — `.agent/work-plans/issue-276/plan.md:63`
+- [ ] (suggestion, Local Review, carried) `store_path` generic + `unsurveyed_is_lethal: True`: wrong/missing store at a new site stalls the planner (safe-by-design, not lethal flood) — deployment-checklist item. — `bizzyboat_project11/config/nav2_overlay.yaml:107,153`
+- [ ] (suggestion, Local Review, carried) `.agents/README.md` absent — the confidence_gate trust-direction pitfall lives only in overlay inline comments; create the doc as a dedicated follow-on task. — `.agent/work-plans/issue-276/plan.md:104`
+
+### False positives
+- (Copilot R1) `progress.md:86` — "Open questions says confidence_gate 5.0 chosen for Delaware safety, but later sections resolve 0.5; internally inconsistent, could mislead" — progress.md is the append-only phase timeline (ADR-0013): the 5.0 lean is the recorded pre-review state that the Plan Review must-fix explicitly caught and reversed. The resolution is recorded downstream in the same file (Plan Review, Implementation, Local Review entries) and in the live decision docs (plan.md Open Questions marked "RESOLVED (plan review must-fix)" at 0.5; overlay inline comments). Rewriting the historical entry would falsify the timeline and orphan the must-fix's reference; a skimmer seeking the current decision reads the latest entry or plan.md, both of which state 0.5.
+- (Copilot R1) `bizzyboat_project11/config/nav2_overlay.yaml:137` — "references echoboat_project11/config/nav2_params.base.yaml, but that path does not exist in this repository" — the reference is a package-relative path that exists exactly as written under the seafloor_echoboat_project11 repo (verified: layers/main/platforms_ws/src/seafloor_echoboat_project11/echoboat_project11/config/nav2_params.base.yaml); it follows this file's established convention (same form at lines 2, 90, 166, 230, 257, several explicitly naming "seafloor"), the cross-repo location is stated at the file header, and the flagged line is pre-existing unchanged context — not introduced by this PR. Optional polish (append "in seafloor's repo") available but not an action item.
+
+### Next step
+No must-fix or cross-confirmed findings; the two bot comments are dismissed with
+justification. The three carried suggestions are operator/process items (sim gate,
+deployment checklist, follow-on doc), not code changes — PR #405 is ready for the
+publish/merge checkpoint pending the operator's sim-acceptance decision.
