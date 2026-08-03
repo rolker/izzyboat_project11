@@ -133,19 +133,21 @@
             - collision_slowdown_polygon
             - collision_stop_polygon
             - collision_monitor_state
-            - oak_forward_ffmpeg
+            # OAK ffmpeg video removed from the WiFi path (2026-08-03 field
+            # tune, gabby) to free link budget. Segmentation overlays stay.
+            # - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
             - oak_segmentation_forward_raw
-            - oak_starboard_ffmpeg
+            # - oak_starboard_ffmpeg
             - oak_segmentation_starboard
             - oak_segmentation_starboard_info
             - oak_segmentation_starboard_raw
-            - oak_aft_ffmpeg
+            # - oak_aft_ffmpeg
             - oak_segmentation_aft
             - oak_segmentation_aft_info
             - oak_segmentation_aft_raw
-            - oak_port_ffmpeg
+            # - oak_port_ffmpeg
             - oak_segmentation_port
             - oak_segmentation_port_info
             - oak_segmentation_port_raw
@@ -205,19 +207,19 @@
               # ffmpeg video=5 (retains a keyframe across a brief stall); compressed
               # segmentation overlays=2 (independent frames); sidescan/watercolumn=25.
               # Reliable control/telemetry left at the bridge default (10).
-              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
+              # oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, queue_size: 2}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
               oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 2}
-              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
+              # oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, queue_size: 2}
               oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
               oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 2}
-              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
+              # oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, queue_size: 2}
               oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
               oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0, queue_size: 2}
-              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
+              # oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, queue_size: 2}
               oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
               oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 2}
