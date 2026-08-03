@@ -72,3 +72,17 @@ Per the consequences map:
 - [ ] Re-evaluate `allow_unknown` and global rolling-window config once bathy provides full global coverage — document the decision.
 - [ ] Check and update `bizzyboat_project11` `.agents/review-context.yaml` if it maps costmap plugins.
 - [ ] Consider capturing the layer-ordering rationale (bathy after s57 = surveyed depth overrides charted depth) in a short ADR or inline doc comment.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-08-03 22:54 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-276/plan.md` at `a33ae9e`
+**Branch**: feature/issue-276 at `a33ae9e`
+**Phases**: single
+
+### Open questions
+- [ ] confidence_gate value: `5.0` preserves cb3d90a-validated behavior (chart-prior cells trusted at keepout level); default `0.5` would use worst-case clearance for chart data — which is intended for production? 5.0 chosen for Delaware trip safety; revisit post-trip.
+- [ ] allow_unknown override: should the bizzy overlay set `allow_unknown: false` in `planner_server`? With `unsurveyed_is_lethal: True` + chart prior, Massabesic should have no unknown cells — needs sim confirmation.
+- [ ] rolling_window on global costmap: deferred — not needed for Delaware trip, non-trivial memory/perf tradeoff.
