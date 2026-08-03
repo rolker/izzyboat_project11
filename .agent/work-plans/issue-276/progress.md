@@ -86,3 +86,22 @@ Per the consequences map:
 - [ ] confidence_gate value: `5.0` preserves cb3d90a-validated behavior (chart-prior cells trusted at keepout level); default `0.5` would use worst-case clearance for chart data — which is intended for production? 5.0 chosen for Delaware trip safety; revisit post-trip.
 - [ ] allow_unknown override: should the bizzy overlay set `allow_unknown: false` in `planner_server`? With `unsurveyed_is_lethal: True` + chart prior, Massabesic should have no unknown cells — needs sim confirmation.
 - [ ] rolling_window on global costmap: deferred — not needed for Delaware trip, non-trivial memory/perf tradeoff.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-08-03 23:00 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Plan**: `.agent/work-plans/issue-276/plan.md` at `a33ae9e`
+**PR**: PR-less (`--issue 276`)
+**Verdict**: changes-requested
+
+Independent review: plan authored by Claude Sonnet; this review is a fresh-context
+Claude Opus pass (different model, no shared reasoning) — treated as independent
+despite the shared framework name.
+
+### Findings
+- [ ] (must-fix) `confidence_gate: 5.0` INVERTS the post-#276 trust-gate — it floods the lake LETHAL, the opposite of the plan's stated goal. In `bathymetry_layer.cpp` σ is *always* subtracted (`worst_case_clearance = clearance − σ`, L952) and `trusted = σ ≤ confidence_gate` (L953) only decides whether a below-`minimum_depth` cell is LETHAL (trusted) vs caution-capped (untrusted). With chart σ=5.0: gate 5.0 → trusted → LETHAL wherever depth<6 m (lake is ~1.5–7.6 m → mostly LETHAL, fails the "route across the lake" acceptance test). The cb3d90a "0% lethal" behavior is preserved by a gate BELOW σ (the 0.5 default → chart data untrusted → caution, never LETHAL). Plan copied the old `max_uncertainty: 5.0` straight across the rename — the exact trap the code's deprecation warning (L118-133) flags. Fix the value AND the prose: Context, Approach step 1 ("keepout governed by minimum_depth, not worst-case clearance" is false — L951-954), the ADR-0010 D7 row, and the inline-comment guidance all describe the model backwards. Resolve Open-Question #1 in favor of a low gate before implementing; do not defer. — `plan.md:31-36`, `plan.md:98-102`
+- [ ] (suggestion) "chart before bathy so surveyed depth overrides charted (ADR-0010 D5)" likely doesn't hold: bathymetry_layer is raise-only max-combine (`bathymetry_layer.cpp:976`), so if s57_layer is too (standard Nav2; not checked out here to confirm), final cost = max(chart, bathy) regardless of order — ordering yields no override. The real surveyed-over-charted resolution is inside bathymetry_layer's max-over-reliable-samples (L926-934); charted shallow depth from s57 at ENC sites still raises cost where surveyed depth is deep — the deferred D10 obstacle-only split. Verify s57_layer's combination_method and soften the ordering rationale. — `plan.md:38-43`
+- [ ] (suggestion) Ensure the deprecated `max_uncertainty` key is REMOVED from both costmap blocks (not left beside `confidence_gate`) — the plugin logs an error and ignores it (L118-133). — `plan.md:59`
+- [ ] (note) Verified OK: base `chart_layer` block present for both costmaps (`nav2_params.base.yaml:117,168`); `allow_unknown: true` in base (L223), correctly held as an open question with the base unchanged; Documentation & Instruction Impact section present and non-silent (the `.agents/README.md` pitfall candidate must document the gate *direction* per the must-fix).
