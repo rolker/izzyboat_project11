@@ -11,9 +11,12 @@ Started: 2026-08-03 13:10 -04:00
   h_acc ~1.6 m, dgps_age = never) — ntrip_client on gabby was still pointed
   at MassDOT MaCORS, which only serves MA. Switched
   `ccomjhc_project11/configuration/bizzyboat_ntrip.yaml` (gabby) to the
-  UDEL Delaware TopNET-V caster: host 70.88.225.204, port 8005, mountpoint
-  NET_MSM (network MSM, GGA echoback required), user UDEL3. Operator-recalled
-  password needed a case fix (all-lowercase). Verified: caster streams RTCM3
+  UDEL Delaware TopNET-V caster (network-MSM mountpoint, GGA echoback
+  required; endpoint and credentials in the private `ccomjhc_project11`
+  repo, `configuration/bizzyboat_ntrip_udel.yaml`).
+  <!-- redacted at wrap-up: caster endpoint/user details moved to the
+  private repo per docs/bizzyboat_network.md -->
+  Verified: caster streams RTCM3
   after GGA; `/bizzy/mavros/gps_rtk/send_rtcm` ~4.5 Hz; SBG relay
   `/bizzy/sensors/rtcm` ~5.5 Hz; GPS now **fix_type 6 (RTK fixed), h_acc
   14 mm**. Config edited on gabby main tree (field mode), not yet committed;
