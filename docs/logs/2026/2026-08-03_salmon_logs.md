@@ -1,6 +1,6 @@
-# 2026-08-03 — salmon log (bizzyboat deployment, Broadkill River DE)
+# 2026-08-03 — salmon log (BizzyBoat deployment #406, Broadkill River DE)
 
-Deployment issue: pending
+Deployment issue: [#406](https://github.com/rolker/unh_echoboats_project11/issues/406) (backfilled at wrap-up from a dev host)
 Host: salmon
 Side: field
 Started: 2026-08-03 13:10 -04:00
