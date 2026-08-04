@@ -27,6 +27,8 @@ local_costmap:
       # interim disable (#263): at no-ENC sites (Massabesic) s57 tiles resolve
       # uncharted-complete and allow_uncharted (default true) leaves the grid
       # untouched — harmless; at ENC sites it carries charted obstacles/depth.
+      # (Independently re-enabled the same day in the field at Lewes, DE, which
+      # has full NOAA ENC coverage — 160 DE cells including harbour-scale US5DE*.)
       # ORDERING REQUIRED: s57_layer::updateCosts OVERWRITES the master grid
       # where chart data exists, so chart_layer must run BEFORE bathymetry_layer,
       # which max-combines on top (raise-only). Final cost = max(chart, bathy).
@@ -99,7 +101,14 @@ local_costmap:
         # clearance ~1.5-7.6 m at full pool) and the depth prior now reports current
         # promptly (#226 robot-first core-readiness fix). Land / no-data stays LETHAL
         # via unsurveyed_is_lethal (intended closed-basin shore keepout).
-        enabled: True
+        #
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site. The reference store
+        # holds 47 tiles at L10 r17785-17787 / c13901-13905 (the NH site); this
+        # position is L10 r17252 / c13419, outside that coverage, so every cell
+        # here reads unsurveyed. Measured contribution at Lewes was small
+        # (local_costmap lethal 60.50% -> 59.78% when disabled at runtime) — it
+        # is not the source of the lethal blanket seen here.
+        enabled: False
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
@@ -131,9 +140,10 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      # chart_layer re-enabled 2026-08-03 (#276), superseding the 2026-06-12
-      # interim disable (#263) — see the local_costmap plugins comment for the
-      # rationale and the s57-overwrites-first ordering requirement. The base
+      # chart_layer re-enabled 2026-08-03 (#276, and independently in the field
+      # at Lewes, DE the same day), superseding the 2026-06-12 interim disable
+      # (#263) — see the local_costmap plugins comment for the rationale and the
+      # s57-overwrites-first ordering requirement. The base
       # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
       # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
       # lists wholesale, so this restates that list plus bathymetry_layer after it.
@@ -146,7 +156,9 @@ global_costmap:
         plugin: "bathymetry_layer::BathymetryLayer"
         # Re-enabled 2026-06-27 (#276): see local_costmap block — corrected store
         # (unh_marine_autonomy#221) + readiness fix (#226).
-        enabled: True
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site — see the
+        # local_costmap block for the out-of-coverage rationale.
+        enabled: False
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), confidence_gate (trust direction — do not raise to the chart
         # sigma) and unsurveyed_is_lethal.
