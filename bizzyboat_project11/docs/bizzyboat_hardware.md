@@ -33,7 +33,7 @@ before assuming shared parameter values are correct.
 | Length × width × draft | 2.4 m × 0.9 m × 0.3 m | smaller |
 | Weight (base) | 158.75 kg (350 lb) | lighter |
 | Payload | 90.7 kg (200 lb) | |
-| Thrusters | 2× electric outdrives, directed-thrust (vectored) steering | 2× skid-steer |
+| Thrusters | 2× electric outdrives — normally directed-thrust (vectored) steering, but **temporarily fixed aft / skid-steer since 2026-08-04** (see Propulsion) | 2× skid-steer |
 | Batteries | 2× Torqeedo Power 24-3500 in parallel | 4× smaller packs (model not yet characterized) |
 | Current sensor | None wired | None wired |
 
@@ -60,6 +60,15 @@ manual.
 
 - 2× electric outdrive thrusters (Fig 1, 2)
 - Directed-thrust (vectored) steering via 2× servos (5 A fused, Fig 54)
+  — ⚠️ **TEMPORARILY REMOVED.** Both steering servos failed during the
+  2026-08-03 Broadkill River deployment (operator reported difficulty
+  steering plus a strange noise on the return leg) and were removed on
+  2026-08-04; both outdrives are now **fixed pointing aft** and the boat
+  steers **differentially (skid-steer)**. The 5 A servo circuit is
+  currently unused. Servos are to be replaced — this is a temporary
+  state. Measured differential turning envelope and the reversion
+  procedure: `docs/bizzyboat_performance.md` §Turning,
+  `config/fcu/bizzyboat_fcu_custom.param`, `config/nav2_overlay.yaml`.
 - 2× ESCs (Electronic Speed Controllers, Fig 7)
 - Capacitor Box, Fuse Box (Fig 7)
 

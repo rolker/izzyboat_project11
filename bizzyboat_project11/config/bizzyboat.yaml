@@ -8,7 +8,14 @@
   ros__parameters:
     output_type: twist
     max_speed: 2.0
-    max_yaw_speed: 1.0  # vehicle-capability backstop (was 0.5); survey-turn limit belongs in Nav2 smoother — see #124 §2
+    # TEMPORARY (2026-08-04) — REVERT TO 1.0 WHEN THE STEERING SERVOS ARE REPLACED.
+    # 1.0 was the vectored-thrust figure (#124 §2 raised it 0.5 -> 1.0 on a measured
+    # 0.91 rad/s pivot at full throttle). The servos failed 2026-08-03 and were removed;
+    # both outdrives are now fixed aft, and measured peak yaw over 218133 samples on
+    # 2026-08-04 is 0.620 rad/s. 0.6 is the vehicle-capability backstop for the
+    # differential drivetrain. The survey-turn limit still belongs in the Nav2 smoother
+    # (see nav2_overlay.yaml, which carries the matching temporary envelope).
+    max_yaw_speed: 0.6
 
 /**/platform_sender:
   ros__parameters:
