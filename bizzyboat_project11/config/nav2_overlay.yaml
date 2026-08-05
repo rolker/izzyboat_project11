@@ -146,8 +146,13 @@ local_costmap:
         # whole 1.5-7.6 m lake LETHAL wherever depth < 6 m.
         confidence_gate: 0.5
         max_age: 0.0
-        # Closed lake basin: the chart prior is masked to the lake outline, so
-        # no-data cells are land. Mark them lethal (unh_marine_autonomy#216).
+        # Closed-lake-basin rationale (Massabesic): the chart prior is masked to
+        # the lake outline, so no-data cells are land — mark them lethal
+        # (unh_marine_autonomy#216). NB at an open-coast site whose store holds
+        # only survey-track coverage (Lewes chart-prior import owed, uma#289),
+        # out-of-coverage cells also read LETHAL — the same blanket behind the
+        # 2026-08-03 field disable. Whether this stays right for open coastal
+        # sites is the #408 RCA's call; unchanged by the #415 depth split.
         unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide
         # Ellipsoid-referenced world frame (REP-105 'map'): the layer reads the
