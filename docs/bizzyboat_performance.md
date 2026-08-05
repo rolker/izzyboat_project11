@@ -20,8 +20,8 @@ deployments accumulate.
 | **Survey throttle ramp** | ~0.1 m/s², τ ≈ 8 s | Good |
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
-| **Yaw-rate cap (autonomy)** | **1.0 rad/s** (raised from 0.5; = helm default) | vehicle-capability backstop; ~0.9 rad/s pivot at full throttle (vectored thrust) |
-| **Min turn radius @ cruise** | ~1.5 m (was ~3 m) | governed by planner `minimum_turning_radius` 3.0→1.5 m; helm 1.0 cap now aligns |
+| **Yaw-rate cap (autonomy)** | ~~1.0 rad/s~~ → **0.6 rad/s** (see ⚠️ below) | superseded 2026-08-04: measured peak 0.620 rad/s on differential thrust |
+| **Min turn radius @ cruise** | ~~≈1.5 m~~ → **~10.8 m @ 3.5 kt** (see ⚠️ below) | superseded 2026-08-04; strongly speed-dependent — 1.4 m at 1 kt |
 | **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | decimeter-scale; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
@@ -160,10 +160,66 @@ spec and braking distance — folded into
 
 ## Turning
 
+> ## ⚠️ SUPERSEDED 2026-08-04 — this section describes VECTORED THRUST
+>
+> BizzyBoat's two steering servos **failed** on the 2026-08-03 Broadkill
+> River deployment and were **removed**; both outdrives are now fixed
+> pointing aft. The boat is **differential (skid-steer)**. Everything in
+> this section was measured on the vectored drivetrain and **does not
+> describe the current boat**. It is kept as the historical record and as
+> the reference for what to expect once the servos are refitted.
+>
+> **This is a temporary state** — the servos are to be replaced. When they
+> are, this section becomes valid again.
+>
+> ### Differential-drive envelope, measured 2026-08-04
+>
+> 218 133 paired `velocity_body` / `rc/out` samples over 21 921 s (both
+> 2026-08-04 bags), including 18 435 GUIDED samples. Yaw rate p95 (max)
+> with a real turn commanded, and the implied radius *v/ω*:
+>
+> | Speed (m/s) | Yaw p95 (max) rad/s | Turn radius |
+> |---|---|---|
+> | 0.0–0.3 | 0.263 (0.578) | 0.6 m |
+> | 0.3–0.8 | 0.382 (0.618) | 1.4 m |
+> | 0.8–1.3 | 0.401 (0.612) | 2.6 m |
+> | 1.3–1.8 | 0.203 (0.465) | 7.6 m |
+> | 1.8–2.5 | 0.199 (0.355) | 10.8 m |
+>
+> Peak yaw rate anywhere in the dataset: **0.620 rad/s at 0.53 m/s**.
+> Pivot at near-zero speed: p95 0.280, max 0.578 rad/s, with only
+> +0.058 m/s mean forward creep (so `MOT_THST_ASYM 1.0` holds).
+>
+> Two distinct effects reduce turn authority as speed rises, roughly
+> equally:
+>
+> 1. **Mixer clipping.** The maximum differential the FCU delivers is
+>    exactly `diff_max = 1000 − 2 × throttle` (µs) — ArduPilot clips
+>    steering at high throttle rather than backing throttle off to
+>    preserve it. `MOT_STR_THR_MIX` (0.5) governs this and is **untested**;
+>    raising it toward 0.9–1.0 should recover some authority.
+> 2. **Hull response.** Yaw rate per unit differential also falls with
+>    speed: 0.221 rad/s per full differential at 0.8–1.3 m/s vs 0.109 at
+>    1.8–2.5 m/s.
+>
+> Contrast with the vectored figures below: ~0.9 rad/s pivot and ~1.5 m
+> radius at cruise. The loss at survey speed is large and real.
+>
+> Config carrying this envelope (all marked temporary, all revert by
+> deleting): `config/fcu/bizzyboat_fcu_custom.param`,
+> `config/nav2_overlay.yaml`, `config/bizzyboat.yaml` (`max_yaw_speed`).
+> Full working: `docs/logs/2026/2026-08-04_gabby_logs.md`.
+
 Analysis in [`analysis/dynamics/turning.py`](analysis/dynamics/turning.py),
 using the EKF yaw rate (`velocity_body.omega_z`), steering servo PWM
 (`rc/out.ch_2`; `ch_3` is bit-identical — a single slaved steering DOF),
 and flight mode (`mavros/state`).
+
+> **Note**: on the differential drivetrain the steering signal is no longer
+> `ch_2`/`ch_3` (those outputs are disabled). Steering now appears as the
+> *difference* between `ch_0` (port) and `ch_1` (starboard). `turning.py`
+> must be repointed before it will produce meaningful output on
+> post-2026-08-04 bags.
 
 Steering is **vectored thrust** — the thrusters themselves rotate (servos
 `ch_2`/`ch_3`, bit-identical = one slaved steering DOF), there is no rudder.
