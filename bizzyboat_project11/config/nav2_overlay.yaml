@@ -377,3 +377,100 @@ manda_coverage:
     # default — gentler line joins than 60 without the tightest-turn cost of 25.
     # deg; the coverage planner splits/reshapes turns sharper than this.
     max_bend_angle: 45.0
+
+# =====================================================================
+# Differential (skid-steer) turning envelope — measured 2026-08-04
+#
+# *** TEMPORARY — DELETE THIS WHOLE BLOCK WHEN THE SERVOS ARE REPLACED ***
+#
+# Reversion is simply deleting everything from this banner to the end of
+# the file. Every key below is an override of a value that still exists in
+# echoboat_project11's nav2_params.240.yaml, and the merge is a deep merge
+# (param_compose.py), so removing these lines restores the factory-240
+# vectored-thrust envelope automatically — minimum_turning_radius 1.5,
+# max_rotational_vel 1.0, min_rotational_vel 0.4, hover
+# maximum_rotation_speed 0.75, smoother yaw ±1.0. Nothing else to undo.
+# The matching FCU reversion is documented in config/fcu/
+# bizzyboat_fcu_custom.param; the helm cap in config/bizzyboat.yaml.
+# =====================================================================
+# BizzyBoat's steering servos failed on 2026-08-03 and were removed; both
+# outdrives are now fixed pointing aft, making the boat differential
+# (skid-steer). FCU side is in config/fcu/bizzyboat_fcu_custom.param.
+#
+# These keys all exist in echoboat_project11's nav2_params.240.yaml, which
+# describes a FACTORY EchoBoat 240 (vectored thrust). BizzyBoat is now a
+# MODIFIED 240, so the override belongs here in the instance overlay, NOT
+# in the shared 240 hull file — editing that would mis-describe every other
+# EchoBoat 240. Merge order: nav2_params.base.yaml -> nav2_params.240.yaml
+# -> this file (deep merge, param_compose.py).
+#
+# MEASURED from the 2026-08-04 bags (2026-08-04T17-32-07 and T22-14-18):
+# 218133 paired velocity_body / rc-out samples over 21921 s, including
+# 18435 GUIDED samples. Yaw rate p95 (max) with a real turn commanded,
+# and the implied radius v/w:
+#
+#   speed m/s    yaw p95 (max) rad/s    turn radius
+#   0.0-0.3      0.263 (0.578)          0.6 m
+#   0.3-0.8      0.382 (0.618)          1.4 m
+#   0.8-1.3      0.401 (0.612)          2.6 m
+#   1.3-1.8      0.203 (0.465)          7.6 m
+#   1.8-2.5      0.199 (0.355)         10.8 m
+#
+# Peak yaw rate anywhere in the dataset: 0.620 rad/s at 0.53 m/s.
+# Analysis script: .../scratchpad/turn_analysis.py (see the deployment log
+# docs/logs/2026/2026-08-04_gabby_logs.md for the full numbers).
+planner_server:
+  ros__parameters:
+    GridBased:
+      # The 240 file says 1.5 m — that was the VECTORED figure (#124) and is
+      # now unreachable above about 0.8 m/s.
+      #
+      # ⚠️ JUDGEMENT CALL, flagged for review. The planner takes ONE radius
+      # but the boat's is strongly speed-dependent (1.4 m at 1 kt, 10.8 m at
+      # 3.5 kt). 11.0 m is chosen to be achievable across the full historical
+      # BizzyBoat survey range (3.0-3.75 kt per docs/bizzyboat_performance.md),
+      # so the planner never asks for a turn the boat cannot make. The cost is
+      # needlessly wide planned turns at low speed — the 2026-08-04 survey ran
+      # at 1 kt, where ~3.0 m would have been achievable.
+      #
+      # If BizzyBoat is committed to low-speed (<=1.3 m/s) survey work, drop
+      # this to 3.0 and gain much tighter line joins. Do NOT drop it without
+      # also capping survey speed, or the planner will plan turns the boat
+      # overshoots.
+      minimum_turning_radius: 11.0
+
+behavior_server:
+  ros__parameters:
+    # 240 file says 1.0 rad/s, sized to the old vectored 0.91 rad/s pivot.
+    # Measured peak anywhere in the 2026-08-04 dataset is 0.620 rad/s.
+    max_rotational_vel: 0.6
+    # The 240 file's 0.4 floor was comfortable under a 1.0 max but sits close
+    # to the new 0.6. Lowered so Spin has a usable band and does not command
+    # near-maximum rotation on every recovery.
+    min_rotational_vel: 0.2
+    # rotational_acc_lim left at the 240 file's 3.2: with a 0.6 rad/s ceiling
+    # that is ~0.2 s to full rate, so it is not the binding constraint.
+    hover:
+      # Measured pivot performance (near-zero speed, large differential):
+      # p95 0.280, max 0.578 rad/s. The 240 file's 0.75 is unreachable.
+      maximum_rotation_speed: 0.4
+      # minimum_radius left at the 240 file's 2.5 — at hover speeds the boat
+      # turns inside 1.4 m, so 2.5 m is comfortably achievable.
+
+velocity_smoother:
+  ros__parameters:
+    # Yaw ceiling 1.0 -> 0.6 rad/s to match the measured peak. Surge limits
+    # UNCHANGED — removing the steering servos did not change forward thrust,
+    # hull drag or braking, and the 2026-08-04 survey ran fine on them.
+    # Yaw ACCEL also unchanged at the 240 file's ±3.0: that value is the
+    # 2026-06-02 field tune that fixed the "drunk" line-following (XTE 0.94 m
+    # -> 0.45 m), it is not speed-limiting, and the 2026-08-04 GUIDED survey
+    # tracked well with it. Do not reduce it without a tracking-quality reason.
+    max_velocity: [2.75, 0.0, 0.6]
+    min_velocity: [-0.5, 0.0, -0.6]
+
+# Costmap footprints deliberately NOT touched — removing the steering servos
+# did not change the hull. collision_monitor reverse behaviour also left alone:
+# cancel_yaw_during_reverse: true was arguably required for a vectored boat and
+# a differential boat backs-and-turns cleanly, so it could be relaxed later, but
+# that is a separate change needing its own on-water validation.
