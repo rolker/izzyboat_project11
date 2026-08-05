@@ -1,9 +1,36 @@
-# 2026-08-04 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-08-04 — gabby log (BizzyBoat deployment #411)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: [#411](https://github.com/rolker/unh_echoboats_project11/issues/411) (backfilled 2026-08-05 from a dev host)
 Host: gabby
 Side: field
 Started: 2026-08-04 13:06 -04:00
+
+## Summary
+
+<!-- agent-drafted at import; operator wording governs -->
+Converted BizzyBoat to differential (skid-steer) drive after the 2026-08-03
+steering-servo failure — servos removed, both thrusters fixed aft — and still
+got a full mapping day out of her at 1 kt. Measured the new turning envelope
+from the day's bags: healthy below ~1.3 m/s (~1.4–2.6 m radius), authority
+collapses at speed (~11 m at 3.5 kt). The conversion is temporary until
+replacement servos arrive; every config change carries explicit revert values.
+
+## Lessons Learned
+
+<!-- agent-drafted at import; operator wording governs -->
+- Snapshot FCU params before touching anything: with dataflash logging off the
+  Cube keeps no independent history — the dated mavproxy `.parm` dump is the
+  only authoritative revert state.
+- Differential turning has a sweet spot (0.3–1.3 m/s); plan survey speeds
+  there. Above it the loss is both mixer headroom (diff = 1000 − 2·throttle)
+  and hull response — tuning alone won't recover it.
+- `PILOT_STEER_TYPE 3` keeps RC steering direction sane when backing down
+  (matches IzzyBoat) — worth setting on any skid-steer conversion.
+- `/parameter_events` is not in the logger topic list, so runtime param
+  changes cannot be reconstructed from bags after the fact — add it.
+- After a reassembly, cross-check with data, not hope: the SBG dual-antenna
+  baseline vs the URDF separation (2.0585 m vs 2.046 m) confirmed the antenna
+  ports in one measurement.
 
 ## 2026-08-04
 

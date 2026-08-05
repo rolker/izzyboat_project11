@@ -21,7 +21,7 @@ deployments accumulate.
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
 | **Yaw-rate cap (autonomy)** | ~~1.0 rad/s~~ → **0.6 rad/s** (see ⚠️ below) | superseded 2026-08-04: measured peak 0.620 rad/s on differential thrust |
-| **Min turn radius @ cruise** | ~~~1.5 m~~ → **~10.8 m @ 3.5 kt** (see ⚠️ below) | superseded 2026-08-04; strongly speed-dependent — 1.4 m at 1 kt |
+| **Min turn radius @ cruise** | ~~≈1.5 m~~ → **~10.8 m @ 3.5 kt** (see ⚠️ below) | superseded 2026-08-04; strongly speed-dependent — 1.4 m at 1 kt |
 | **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | decimeter-scale; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is

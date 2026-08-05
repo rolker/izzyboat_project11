@@ -16,6 +16,22 @@
     # differential drivetrain. The survey-turn limit still belongs in the Nav2 smoother
     # (see nav2_overlay.yaml, which carries the matching temporary envelope).
     max_yaw_speed: 0.6
+    # Curvature-preserving speed regulation (unh_marine_autonomy ADR-0012, #417):
+    # when commanded (v, w) exceeds the envelope below, the helm scales BOTH by
+    # the same factor so the commanded turn radius is preserved at reduced speed
+    # (instead of the yaw clip silently widening the turn). Lets the planner
+    # promise 3 m turns (nav2_overlay.yaml minimum_turning_radius).
+    #
+    # PROVISIONAL envelope, measured 2026-08-04 on the TEMPORARY differential
+    # drivetrain (full-day analysis, 218133 samples, docs/logs/2026/
+    # 2026-08-04_gabby_logs.md): p95 achievable |yaw| (rad/s) at band-center
+    # speeds (m/s); v=0 entry is the measured pivot p95 (rest capability must
+    # be explicit — the helm rejects curves that don't start at v=0).
+    # RE-MEASURE after the MOT_STR_THR_MIX test (#411 follow-up) and again
+    # when the steering servos return (vectored envelope differs entirely).
+    capability_curve_enabled: true
+    capability_curve_v_omega_max: [0.0, 0.28, 0.15, 0.26, 0.55, 0.38, 1.05, 0.40, 1.55, 0.20, 2.15, 0.20]
+    capability_curve_margin: 0.8
 
 /**/platform_sender:
   ros__parameters:
@@ -679,6 +695,13 @@
       - /bizzy/marine/mission_plan
       - /bizzy/marine/mission_manager/command
       - /marine/platforms
+      # Runtime parameter changes (#419): without these, live param edits
+      # (e.g. the 2026-08-04 aft-camera image_mask_rects adjustment) are
+      # unrecoverable from bags — "was it ever set?" was unanswerable at
+      # that wrap-up. Namespaced nodes publish under /bizzy; record both.
+      # Event-driven and tiny.
+      - /parameter_events
+      - /bizzy/parameter_events
       - /rosout
       - /tf
       - /tf_static
