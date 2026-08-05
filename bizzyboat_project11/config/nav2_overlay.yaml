@@ -431,9 +431,12 @@ manda_coverage:
 # (param_compose.py), so removing these lines restores the factory-240
 # vectored-thrust envelope automatically — minimum_turning_radius 1.5,
 # max_rotational_vel 1.0, min_rotational_vel 0.4, hover
-# maximum_rotation_speed 0.75, smoother yaw ±1.0. Nothing else to undo.
-# The matching FCU reversion is documented in config/fcu/
-# bizzyboat_fcu_custom.param; the helm cap in config/bizzyboat.yaml.
+# maximum_rotation_speed 0.75, smoother yaw ±1.0.
+# Also revert in config/bizzyboat.yaml: the max_yaw_speed helm cap AND the
+# capability_curve_* block (#417) — the differential envelope is wrong for
+# vectored thrust; either disable the curve or re-measure it before
+# re-enabling. FCU reversion is documented in config/fcu/
+# bizzyboat_fcu_custom.param.
 # =====================================================================
 # BizzyBoat's steering servos failed on 2026-08-03 and were removed; both
 # outdrives are now fixed pointing aft, making the boat differential
