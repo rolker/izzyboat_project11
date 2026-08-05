@@ -1,0 +1,208 @@
+---
+issue: 276
+---
+
+# Issue #276 — Nav-config forward fix: re-enable s57_layer + add bathymetry_layer (gated on #164)
+
+## Issue Review
+**Status**: complete
+**When**: 2026-08-03 00:00 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Issue**: #276
+**Comment**: (best-effort post follows this entry; not recorded inline)
+**Scope verdict**: well-scoped
+
+### Summary
+
+Issue #276 is the **nav-config forward fix** for global planning at no-ENC inland sites (Lake Massabesic). It undoes the field-interim chart-layer disable (#263) by: (1) adding `bathymetry_layer` to both costmaps ordered after `s57_layer`, (2) re-enabling `s57_layer`, and (3) re-evaluating `allow_unknown` + global rolling window. Gated on the bathymetry layer plugin (#164) and store importer (#148). The #263 interim stays in force until those deps land.
+
+### Scope Assessment
+
+**Well-scoped?** Yes — config-only change in `bizzyboat_project11/config/nav2_overlay.yaml`, with a clear entry condition (after #164 + #148 land) and acceptance criteria (sim route across lake, no regression at ENC sites).
+
+**Right repo?** Yes — config lives in `bizzyboat_project11` package inside `unh_echoboats_project11`.
+
+**Dependencies**:
+- #164 (bathymetry_layer plugin registration in nav2_params) — **hard block** on re-enabling s57 + adding bathy ordered after it
+- #148 (store importer) — **hard block** on bathy prior being available
+- #86 Phase-4 enablement parent — context tracking
+- #96 (bizzy nav2 override structure) — coordinate on deep-merge layout
+- Simulation harness: rolker/unh_marine_simulation#67 and #74 — needed for acceptance-criteria validation
+
+**Note:** One commit already exists on this branch (`cb3d90a`) that re-enabled `bathymetry_layer` on both costmaps while keeping `chart_layer` (s57) commented out. This was a partial step (the bathymetry re-enable was unblocked independently); re-enabling s57 and ordering bathy after it are still pending #164/#148.
+
+### Principle Alignment
+
+| Principle | Status | Notes |
+|---|---|---|
+| Safety First | OK | Issue explicitly calls out footgun mitigation: GeoTIFF lake-outline masking prevents bathy from clearing charted non-bathy obstacles (docks/wrecks). The durable fix (#14) is also noted. |
+| Simulation-First Validation | Watch | Acceptance criteria name two sim scenarios (Massabesic route across lake; no regression at ENC site). Confirm sim harness PRs (#67/#74 in unh_marine_simulation) are merged and stable before closing this issue. |
+| Iterative, Validated Evolution | OK | The interim (#263) stays in force until deps (#164, #148) land — correct incremental posture. Partial commit on branch is appropriate. |
+| Hardware Agnosticism | OK | N/A — pure config, no new hardware interface. |
+| Modularity and Decoupling | OK | Layer ordering in the overlay (bathy after s57) is the right Nav2 deep-merge approach; no monolithic rework. |
+| Standards Compliance | OK | Uses standard Nav2 costmap plugin list override patterns (deep-merge wholesale list replacement). |
+
+### ADR Applicability
+
+| ADR | Triggered | Notes |
+|---|---|---|
+| ADR-0001 (Adopt ADRs) | Watch | The ordering decision (bathy after s57) and the footgun-mitigation strategy (GeoTIFF masking interim, #14 as durable fix) are design decisions worth capturing — either in an ADR or a `docs/decisions/` note in the project repo. Not blocking, but the "why bathy ordered after s57" reasoning should survive this issue's close. |
+| ADR-0002 (Worktree isolation) | OK | Worktree `issue-unh_echoboats_project11-276` exists. |
+| ADR-0008 (ROS 2 conventions) | OK | Nav2 plugin ordering follows Nav2 deep-merge conventions. |
+| ADR-0017 (Extend AGENTS.md to project repos) | Watch | If the project repo has an AGENTS.md, confirm it's up to date with the nav2 overlay pattern (especially the deep-merge wholesale-list behavior that's a gotcha for future maintainers). |
+
+### Consequences
+
+Per the consequences map:
+- **Package parameters change** (nav2 costmap plugin list) → check if `bizzyboat_project11`'s `.agents/review-context.yaml` maps plugins; if so, update it in the same PR.
+- **Config live at field sites** → the comment trail in `nav2_overlay.yaml` already documents each change with field dates and rationale (good practice); maintain this for the s57 re-enable commit too.
+- The durable obstacle-split fix (#14) is flagged as follow-up in the issue — ensure that's tracked and not silently assumed done.
+
+### Recommendations
+
+- Before implementing the s57 re-enable, confirm #164 is merged into the base `nav2_params` and `bathymetry_layer` is a registered plugin — otherwise Nav2 will refuse to start.
+- When writing the s57 re-enable commit, add a comment in `nav2_overlay.yaml` similar to the existing ones (date, issue reference, rationale) to maintain the file's documentation density.
+- Validate `allow_unknown: false` on the global costmap in sim before field deployment — with bathy providing full coverage, unknown-space planning should no longer be needed, but confirm the sim run completes without the planner falling back to unknown traversal.
+- Track the sim harness PRs (#67/#74) explicitly as a checklist item in this issue or a sub-task so they don't block the final acceptance check silently.
+
+### Actions
+- [ ] Confirm simulation harness PRs (unh_marine_simulation#67, #74) are merged before running acceptance validation.
+- [ ] After #164 lands: re-enable `chart_layer` (s57_layer) in both costmap plugin lists in `nav2_overlay.yaml`, ordered before `bathymetry_layer`.
+- [ ] Re-evaluate `allow_unknown` and global rolling-window config once bathy provides full global coverage — document the decision.
+- [ ] Check and update `bizzyboat_project11` `.agents/review-context.yaml` if it maps costmap plugins.
+- [ ] Consider capturing the layer-ordering rationale (bathy after s57 = surveyed depth overrides charted depth) in a short ADR or inline doc comment.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-08-03 22:54 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-276/plan.md` at `a33ae9e`
+**Branch**: feature/issue-276 at `a33ae9e`
+**Phases**: single
+
+### Open questions
+- [ ] confidence_gate value: `5.0` preserves cb3d90a-validated behavior (chart-prior cells trusted at keepout level); default `0.5` would use worst-case clearance for chart data — which is intended for production? 5.0 chosen for Delaware trip safety; revisit post-trip.
+- [ ] allow_unknown override: should the bizzy overlay set `allow_unknown: false` in `planner_server`? With `unsurveyed_is_lethal: True` + chart prior, Massabesic should have no unknown cells — needs sim confirmation.
+- [ ] rolling_window on global costmap: deferred — not needed for Delaware trip, non-trivial memory/perf tradeoff.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-08-03 23:00 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Plan**: `.agent/work-plans/issue-276/plan.md` at `a33ae9e`
+**PR**: PR-less (`--issue 276`)
+**Verdict**: changes-requested
+
+Independent review: plan authored by Claude Sonnet; this review is a fresh-context
+Claude Opus pass (different model, no shared reasoning) — treated as independent
+despite the shared framework name.
+
+### Findings
+- [ ] (must-fix) `confidence_gate: 5.0` INVERTS the post-#276 trust-gate — it floods the lake LETHAL, the opposite of the plan's stated goal. In `bathymetry_layer.cpp` σ is *always* subtracted (`worst_case_clearance = clearance − σ`, L952) and `trusted = σ ≤ confidence_gate` (L953) only decides whether a below-`minimum_depth` cell is LETHAL (trusted) vs caution-capped (untrusted). With chart σ=5.0: gate 5.0 → trusted → LETHAL wherever depth<6 m (lake is ~1.5–7.6 m → mostly LETHAL, fails the "route across the lake" acceptance test). The cb3d90a "0% lethal" behavior is preserved by a gate BELOW σ (the 0.5 default → chart data untrusted → caution, never LETHAL). Plan copied the old `max_uncertainty: 5.0` straight across the rename — the exact trap the code's deprecation warning (L118-133) flags. Fix the value AND the prose: Context, Approach step 1 ("keepout governed by minimum_depth, not worst-case clearance" is false — L951-954), the ADR-0010 D7 row, and the inline-comment guidance all describe the model backwards. Resolve Open-Question #1 in favor of a low gate before implementing; do not defer. — `plan.md:31-36`, `plan.md:98-102`
+- [ ] (suggestion) "chart before bathy so surveyed depth overrides charted (ADR-0010 D5)" likely doesn't hold: bathymetry_layer is raise-only max-combine (`bathymetry_layer.cpp:976`), so if s57_layer is too (standard Nav2; not checked out here to confirm), final cost = max(chart, bathy) regardless of order — ordering yields no override. The real surveyed-over-charted resolution is inside bathymetry_layer's max-over-reliable-samples (L926-934); charted shallow depth from s57 at ENC sites still raises cost where surveyed depth is deep — the deferred D10 obstacle-only split. Verify s57_layer's combination_method and soften the ordering rationale. — `plan.md:38-43`
+- [ ] (suggestion) Ensure the deprecated `max_uncertainty` key is REMOVED from both costmap blocks (not left beside `confidence_gate`) — the plugin logs an error and ignores it (L118-133). — `plan.md:59`
+- [ ] (note) Verified OK: base `chart_layer` block present for both costmaps (`nav2_params.base.yaml:117,168`); `allow_unknown: true` in base (L223), correctly held as an open question with the base unchanged; Documentation & Instruction Impact section present and non-silent (the `.agents/README.md` pitfall candidate must document the gate *direction* per the must-fix).
+
+## Implementation
+
+- **Status**: complete
+- **By**: Claude Code Agent (Claude Fable 5)
+- **Correlation**: issue-276
+
+### What was done
+
+Host-inline implementation after the Plan Review checkpoint (operator approved
+"fix plan + implement", 2026-08-03).
+
+1. **Plan amended per Plan Review must-fix + both suggestions** (`24c4f00`):
+   confidence_gate resolved to the low gate (0.5, plugin default, explicit);
+   Context/Approach/ADR-table prose corrected (trust direction was described
+   backwards); ordering rationale rewritten after host verification.
+2. **Gate migration** (`6254ba8`): `max_uncertainty: 5.0` removed outright from
+   both costmap `bathymetry_layer` blocks, replaced with `confidence_gate: 0.5`
+   plus inline comments documenting the trust direction and the
+   copy-5.0-across-the-rename trap.
+3. **chart_layer re-enable** (`d6c10b3`): restored to both plugin lists,
+   ordered before `bathymetry_layer`, superseding the #263 interim disable.
+   Comment trail updated (date + issue refs + ordering rationale).
+
+### Verified against source (host)
+
+- `s57_layer::updateCosts` OVERWRITES the master grid where chart data exists
+  (`s57_tools/s57_layer/src/s57_layer.cpp:474-476`) and stomps NO_INFORMATION on
+  unloaded/uncharted-incomplete tiles (`:480-489`) → chart-before-bathy ordering
+  is REQUIRED, not stylistic (plan-review suggestion investigated; conclusion
+  inverted from "soften" to "strengthen").
+- `allow_uncharted_` defaults `true` (`s57_layer.h:119`), base config does not
+  override → Massabesic uncharted-complete tiles leave the grid untouched.
+- `bathymetry_layer` combine is raise-only max, skips NO_INFORMATION
+  (`bathymetry_layer.cpp` updateCosts); trusted = σ ≤ confidence_gate, untrusted
+  capped at caution (computeCost) — gate 0.5 keeps σ=5.0 chart prior
+  caution-only, matching the cb3d90a-validated no-lethal-flood behavior.
+- Overlay YAML parses (`yaml.safe_load`) after each commit.
+
+### Not done / open
+
+- **Sim validation (plan step 4) NOT run**: both acceptance scenarios
+  (Massabesic route-across-lake; ENC-site no-regression) still pending — to be
+  raised at the publish checkpoint; operator may prefer to run/observe these.
+- `.agents/README.md` does not exist in this repo (gap noted; creating it is a
+  dedicated task per workspace rules — the confidence_gate pitfall is documented
+  in overlay inline comments meanwhile).
+- Open questions retained in plan: `allow_unknown` override, global
+  `rolling_window` — explicitly deferred, base unchanged.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-03 23:37 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-276 at `b5b2b27`
+**Mode**: pre-push
+**Depth**: Deep (reason: safety-critical costmap keepout config + cross-layer plugin-ordering semantics)
+**Must-fix**: 0 | **Suggestions**: 3
+**Round**: 1 | **Ship**: recommended — no must-fix; diff is correct and pushable. The one outstanding item is an operator-run pre-field sim acceptance gate, not a code blocker.
+
+Specialists: Static Analysis (YAML parses; no line >120; yamllint absent on host), Claude Adversarial x2 (Lens A logic + Lens B systemic — both zero code defects), Governance, Plan Drift. Local Adversarial off (config-only diff, already double-read; workspace#590). Copilot off (default). Only production file changed: `bizzyboat_project11/config/nav2_overlay.yaml` (+26 -15).
+
+Verified against source: chart-before-bathy ordering is load-bearing and correct — `s57_layer::updateCosts` overwrites the master grid where chart data exists (`s57_layer.cpp:476`), bathymetry_layer is raise-only, so chart must precede bathy (reverse order would clobber the bathy prior). `confidence_gate: 0.5` yields the claimed trust behavior (`trusted = σ ≤ gate`, `bathymetry_layer.cpp:953`; untrusted capped at MAX_NON_OBSTACLE `:843`) — σ=5.0 chart prior caution-only, σ<0.5 survey keepout-capable. Both restated plugin lists complete against deep-merged base (chart_layer block present base local `:98/:117`, global `:163/:168`). `max_uncertainty` removed outright (deprecation sentinel won't fire). Wrong-store-at-new-site under `unsurveyed_is_lethal` stalls the planner (`bathymetry_layer.cpp:752/775/1052`), not a lethal flood. No ripple into collision_monitor/ca_safety/sea_surface/controller.
+
+### Findings
+- [ ] (suggestion) Sim acceptance runs (plan step 4) not yet executed — Massabesic route-across-lake + ENC-site no-regression pending; ENC path unexercised on this rig since the #263 disable. Operator pre-field gate, explicitly deferred to publish checkpoint. — `.agent/work-plans/issue-276/plan.md:63`
+- [ ] (suggestion) `store_path` is a generic path; with `unsurveyed_is_lethal: True` a wrong/missing store at a new site → global costmap not-current → planner stall (safe-by-design, not a lethal flood). Deployment-checklist item. — `bizzyboat_project11/config/nav2_overlay.yaml:107,153`
+- [ ] (suggestion) `.agents/README.md` absent → the plan-flagged `max_uncertainty`→`confidence_gate` trust-direction pitfall lives only in overlay inline comments; create the doc as a follow-on. — `.agent/work-plans/issue-276/plan.md:104`
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-08-03 19:54 -04:00
+**By**: Claude Code Agent (Claude Fable 5)
+
+**PR**: #405 at `3850db8`
+**Sources**: 3 (Copilot R1 @ `3850db8`, Local Review (Pre-Push) @ `b5b2b27`, CI rollup)
+**Cross-source confirmations**: 0
+**CI**: all-pass (build-and-test: success; copilot-pull-request-reviewer: success)
+
+Copilot R1 (COMMENTED, 2 inline comments, no suppressed-comment block) is against the
+current head. Both comments verified against the worktree and classified false
+positive. The Local Review (Pre-Push) approved R1 (0 must-fix, 3 suggestions) at
+`b5b2b27`; head `3850db8` adds only that progress entry — reviewed code identical.
+No finding was raised by more than one source.
+
+### Findings
+- [ ] (suggestion, Local Review @ `b5b2b27`, carried) Sim acceptance runs (plan step 4) still pending — Massabesic route-across-lake + ENC-site no-regression; operator pre-field gate at the publish checkpoint, not a code blocker. — `.agent/work-plans/issue-276/plan.md:63`
+- [ ] (suggestion, Local Review, carried) `store_path` generic + `unsurveyed_is_lethal: True`: wrong/missing store at a new site stalls the planner (safe-by-design, not lethal flood) — deployment-checklist item. — `bizzyboat_project11/config/nav2_overlay.yaml:107,153`
+- [ ] (suggestion, Local Review, carried) `.agents/README.md` absent — the confidence_gate trust-direction pitfall lives only in overlay inline comments; create the doc as a dedicated follow-on task. — `.agent/work-plans/issue-276/plan.md:104`
+
+### False positives
+- (Copilot R1) `progress.md:86` — "Open questions says confidence_gate 5.0 chosen for Delaware safety, but later sections resolve 0.5; internally inconsistent, could mislead" — progress.md is the append-only phase timeline (ADR-0013): the 5.0 lean is the recorded pre-review state that the Plan Review must-fix explicitly caught and reversed. The resolution is recorded downstream in the same file (Plan Review, Implementation, Local Review entries) and in the live decision docs (plan.md Open Questions marked "RESOLVED (plan review must-fix)" at 0.5; overlay inline comments). Rewriting the historical entry would falsify the timeline and orphan the must-fix's reference; a skimmer seeking the current decision reads the latest entry or plan.md, both of which state 0.5.
+- (Copilot R1) `bizzyboat_project11/config/nav2_overlay.yaml:137` — "references echoboat_project11/config/nav2_params.base.yaml, but that path does not exist in this repository" — the reference is a package-relative path that exists exactly as written under the seafloor_echoboat_project11 repo (verified: layers/main/platforms_ws/src/seafloor_echoboat_project11/echoboat_project11/config/nav2_params.base.yaml); it follows this file's established convention (same form at lines 2, 90, 166, 230, 257, several explicitly naming "seafloor"), the cross-repo location is stated at the file header, and the flagged line is pre-existing unchanged context — not introduced by this PR. Optional polish (append "in seafloor's repo") available but not an action item.
+
+### Next step
+No must-fix or cross-confirmed findings; the two bot comments are dismissed with
+justification. The three carried suggestions are operator/process items (sim gate,
+deployment checklist, follow-on doc), not code changes — PR #405 is ready for the
+publish/merge checkpoint pending the operator's sim-acceptance decision.

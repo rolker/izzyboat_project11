@@ -23,13 +23,17 @@ local_costmap:
       # buffer (see rolker/unh_marine_perception#19), so an obstacle in the FOV overlap
       # accumulates evidence from every camera that sees it and survives the handoff
       # between camera views.
-      # chart_layer (base's s57_layer::S57Layer) was commented out for bizzyboat
-      # 2026-06-12 per operator: the Massabesic site had no ENC coverage, so the
-      # layer marked everything land. Re-enabled 2026-08-03 (gabby) for the Lewes,
-      # DE site, which has full NOAA ENC coverage — 160 DE cells under
-      # /home/field/data/ENC_ROOT including harbour-scale US5DE*.
+      # chart_layer re-enabled 2026-08-03 (#276), superseding the 2026-06-12
+      # interim disable (#263): at no-ENC sites (Massabesic) s57 tiles resolve
+      # uncharted-complete and allow_uncharted (default true) leaves the grid
+      # untouched — harmless; at ENC sites it carries charted obstacles/depth.
+      # (Independently re-enabled the same day in the field at Lewes, DE, which
+      # has full NOAA ENC coverage — 160 DE cells including harbour-scale US5DE*.)
+      # ORDERING REQUIRED: s57_layer::updateCosts OVERWRITES the master grid
+      # where chart data exists, so chart_layer must run BEFORE bathymetry_layer,
+      # which max-combines on top (raise-only). Final cost = max(chart, bathy).
       # bathymetry_layer (#319) provides the store-backed depth prior (NH GRANIT
-      # contour chart + M3 survey draft) alongside it.
+      # contour chart + M3 survey draft).
       plugins:
         - "chart_layer"
         - "sea_surface_layer"
@@ -112,11 +116,15 @@ local_costmap:
         store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
-        # COUPLED to the chart prior's import uncertainty (5.0 m). shallowestReliable
-        # rejects cells with uncertainty > max_uncertainty and a present-but-rejected
-        # cell is written LETHAL — so a tighter gate (e.g. the 0.5 m default) would
-        # make the whole chart-covered lake lethal. Keep >= the chart's 5.0 m.
-        max_uncertainty: 5.0
+        # Trust gate (uma#276 / ADR-0010 D7, replaces max_uncertainty 2026-08-03):
+        # a sample is TRUSTED (keepout-eligible) only when sigma <= confidence_gate;
+        # untrusted samples cost at most caution, never LETHAL. 0.5 (the plugin
+        # default, explicit here) keeps the sigma=5.0 chart prior caution-only while
+        # M3 survey cells (sigma < 0.5) can keep real shoals out. Do NOT copy the
+        # old max_uncertainty 5.0 across the rename: a gate >= 5.0 would TRUST the
+        # chart prior, and with worst-case clearance = depth - sigma that turns the
+        # whole 1.5-7.6 m lake LETHAL wherever depth < 6 m.
+        confidence_gate: 0.5
         max_age: 0.0
         # Closed lake basin: the chart prior is masked to the lake outline, so
         # no-data cells are land. Mark them lethal (unh_marine_autonomy#216).
@@ -132,11 +140,13 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
-      # chart_layer re-enabled 2026-08-03 (gabby) for the Lewes, DE site — see the
-      # local_costmap block for the ENC-coverage rationale. The base
+      # chart_layer re-enabled 2026-08-03 (#276, and independently in the field
+      # at Lewes, DE the same day), superseding the 2026-06-12 interim disable
+      # (#263) — see the local_costmap plugins comment for the rationale and the
+      # s57-overwrites-first ordering requirement. The base
       # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
       # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
-      # lists wholesale, so this restates that list with bathymetry_layer added.
+      # lists wholesale, so this restates that list plus bathymetry_layer after it.
       plugins:
         - "chart_layer"
         - "sea_surface_relay"
@@ -150,11 +160,12 @@ global_costmap:
         # local_costmap block for the out-of-coverage rationale.
         enabled: False
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
-        # to $HOME), max_uncertainty (chart-prior coupling) and unsurveyed_is_lethal.
+        # to $HOME), confidence_gate (trust direction — do not raise to the chart
+        # sigma) and unsurveyed_is_lethal.
         store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
-        max_uncertainty: 5.0
+        confidence_gate: 0.5
         max_age: 0.0
         unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide

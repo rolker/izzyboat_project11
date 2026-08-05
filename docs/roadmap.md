@@ -11,7 +11,9 @@ from here when relevant).
 the 2026 Lake Massabesic campaign wrapped; updated 2026-07-23
 ([#390](https://github.com/rolker/unh_echoboats_project11/issues/390)) with
 the findings of the 2026-07-23 shakedown deployment
-([#386](https://github.com/rolker/unh_echoboats_project11/issues/386)). The campaign-era roadmap —
+([#386](https://github.com/rolker/unh_echoboats_project11/issues/386));
+OTH sections reconciled against delivered work 2026-07-31
+([#401](https://github.com/rolker/unh_echoboats_project11/issues/401)). The campaign-era roadmap —
 Summer Hydro survey-prep framing, dev freeze, production mode, punch lists —
 is preserved at
 [`roadmap_archive_2026_massabesic.md`](roadmap_archive_2026_massabesic.md).*
@@ -77,12 +79,14 @@ a few weeks in the office, boat available, no field pressure. The method:
     ([nav#5](https://github.com/rolker/unh_marine_navigation/issues/5)) —
     the 0.19 m-median cross-track performance is now a survey asset worth
     fencing.
-- **Honest gap**: the OTH/comms items are the hardest to verify in
-  simulation — sim exercises autonomy, not link saturation. The deferred
-  **bench stress-test rig** (synth topics + mininet + CAMP-stub) is the only
-  desk-side way to answer saturation questions before the ROC goes live.
-  Promote it or consciously accept boat-time for comms validation — don't
-  let it stay deferred by inertia. (Saturation history:
+- **Honest gap, revised (2026-07-31)**: the OTH/comms items are the
+  hardest to verify in simulation — sim exercises autonomy, not link
+  saturation. The past month of routine OTH operation has been doing that
+  validation continuously on the water, which demotes the **bench
+  stress-test rig** from prerequisite to regression protection: it remains
+  the only *desk-side* way to reproduce saturation/wedge failure modes
+  before code changes ship, rather than the gate for going OTH at all.
+  (Saturation history:
   [#124](https://github.com/rolker/unh_echoboats_project11/issues/124), a
   closed data-review issue; the rig is tracked as
   [`udp_bridge#18`](https://github.com/rolker/udp_bridge/issues/18).)
@@ -123,31 +127,55 @@ task; the linked issue is.
 
 ### OTH operations — the operating baseline *(survey-priority)*
 
-The ROC makes every comms weakness an operations-stopper. Priority order:
+**Status change (2026-07-31 reconcile): OTH is no longer an aspiration —
+it has been the routine operating mode across the past month of
+deployments.** The foundations are delivered and closed:
+
+- **Concurrent Starlink + cell**
+  ([`#145`](https://github.com/rolker/unh_echoboats_project11/issues/145),
+  closed as-built): dual WireGuard tunnels carried concurrently — the cell
+  tunnel WAN-pinned to cellular at the boat router — with the
+  safety-critical uplink (`command`, `joystick_helm`) carried redundantly
+  on all three paths (wifi, vpn, cell) in `operator.yaml`; cell-path DNS via
+  [CCOMJHC/ccomjhc_project11#74](https://github.com/CCOMJHC/ccomjhc_project11/pull/74).
+  No failover blind gap: critical traffic rides every live link at once. This
+  also substantially covers the old "low-bandwidth status fallback" idea —
+  the residual there is *verifying the critical-topic set*, not building a
+  mechanism.
+- **Operator-side costmap display**
+  ([`uma#127`](https://github.com/rolker/unh_marine_autonomy/issues/127),
+  closed as-delivered): `costmap_window` → `costmap_windowed` over
+  udp_bridge, in routine use.
+- **OTH validation**
+  ([`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130),
+  closed): passed by the operating record rather than a staged run. The
+  Shoals will be the first *customer survey* fully OTH — that's its
+  deliverable, not an open gate.
+
+The residual list is what was actually observed **while operating OTH**:
 
 - [`#365`](https://github.com/rolker/unh_echoboats_project11/issues/365) —
   Izzlink/Starlink telemetry instability RCA (buffered commands + choppy
-  video at Massabesic). The headline comms item.
+  video at Massabesic). Still the headline diagnosis item; with the cell
+  pinning live, assess whether a repeat is contained before ranking it.
+- Coverage-tile transmission
+  ([`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389),
+  **closed 2026-07-31**): large level-11 tiles rate-starved the link on two
+  deployments (07-23 max-data raise; 07-29 return-rate override — both
+  unsaved field workarounds). Resolved by persisting the field-proven VPN
+  cap (1.5 MB/s) + slowing tiles to 1/s
+  ([PR#403](https://github.com/rolker/unh_echoboats_project11/pull/403);
+  field check rides the next deployment). The **structural residual** —
+  bounding the message size itself at the publisher — is
+  [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112).
+  Related: [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
+  (per-topic priority/class scheduling);
+  [`udp_bridge#36`](https://github.com/rolker/udp_bridge/issues/36)
+  (transport rework umbrella).
 - **Topic-budget cull** — identify which topics dominate the link and cull /
   rate-limit. The 2026-05-01 saturation episodes (30–60 s latency) are what
-  the ROC cannot afford. Related metering mechanism:
-  [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
-  (per-topic priority/class scheduling).
-- [`#389`](https://github.com/rolker/unh_echoboats_project11/issues/389) —
-  coverage-tile transmission over udp_bridge: at the 2026-07-23 deployment,
-  large level-11 tiles no longer fit through the link (field workaround:
-  max-data raised live, unsaved). At the ROC the live coverage display rides
-  the same constrained link as everything else — the options review
-  (routing, fragmentation, tile-level levers, limits) is survey-relevant.
-  Related: [`udp_bridge#19`](https://github.com/rolker/udp_bridge/issues/19)
-  above; [`udp_bridge#36`](https://github.com/rolker/udp_bridge/issues/36)
-  (transport rework umbrella).
-- **Low-bandwidth status fallback** — a text/heartbeat/minimal-telemetry path
-  that survives when the full topic stream doesn't. At the ROC there is no
-  "walk to the shore and look" fallback.
-- [`#145`](https://github.com/rolker/unh_echoboats_project11/issues/145) —
-  concurrent Starlink + cell with safety-critical traffic pinned to cell
-  (removes the failover blind gap).
+  the ROC cannot afford. The cell path's curated topic list covers the
+  critical uplink; this is about headroom on the main stream.
 - [`udp_bridge#34`](https://github.com/rolker/udp_bridge/issues/34) —
   stale-packet gate opt-in redesign (over-broad default flagged during the
   June 29 import).
@@ -156,10 +184,6 @@ The ROC makes every comms weakness an operations-stopper. Priority order:
   more when *everything* is OTH (WiFi WARN noise is permanent otherwise).
   The operator-declared OTH mode itself is tracked as
   [`uma#128`](https://github.com/rolker/unh_marine_autonomy/issues/128).
-- [`#130`](https://github.com/rolker/unh_echoboats_project11/issues/130) —
-  the "OTH with a completed survey" validation criterion. The Shoals survey
-  *is* this test — which argues for a deliberate pre-survey OTH validation
-  run rather than making the customer survey the first attempt.
 - Maintenance-tier bridge items:
   [`udp_bridge#20`](https://github.com/rolker/udp_bridge/issues/20)
   (stats-timer stall — observability, not data path),
@@ -172,10 +196,12 @@ walk-to-the-boat fallback. Silent failures and invisible state are
 qualitatively worse at a ROC than at a pier — this cluster of carried
 campaign items graduates from "nice to have" to survey-relevant:
 
-- [`unh_marine_autonomy#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)
-  — operator-side perception/costmap display over the bridge. The
-  campaign-era "genuinely hard" item (bandwidth-aware costmap delivery);
-  sits exactly at the OTH × costmap-trust intersection.
+- ~~operator-side costmap display~~ — **delivered**
+  ([`uma#127`](https://github.com/rolker/unh_marine_autonomy/issues/127)
+  closed 2026-07-31): the windowed costmap (`costmap_windowed`) reaches the
+  operator over the bridge and is in routine use. The link-capacity fix for
+  coverage tiles landed via #389/PR#403; the structural message-size bound
+  is [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112).
 - [`#183`](https://github.com/rolker/unh_echoboats_project11/issues/183) —
   CAMP overlay of the CA reflex state (obstacles, slowdown/stop polygons,
   gating). The operator must see *what the boat is reacting to* from shore.
