@@ -129,7 +129,10 @@ local_costmap:
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
-        # contributes; until then it logs once and no-ops (safe).
+        # contributes; until then it logs once and no-ops. NB with depth_costs:
+        # false that no-op leaves NO depth authority at all (chart depth is
+        # suppressed, not a fallback) — store presence on the boat is a hard
+        # pre-launch check, not a soft degradation.
         store_path: "~/data/stores/bathymetry"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
