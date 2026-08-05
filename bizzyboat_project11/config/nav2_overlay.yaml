@@ -472,11 +472,12 @@ planner_server:
       #
       # 3.0 m relies on the helm's curvature-preserving speed regulation
       # (unh_marine_autonomy ADR-0012; capability_curve_* in bizzyboat.yaml,
-      # #417): the boat's radius is strongly speed-dependent (1.4 m at 1 kt,
-      # ~11 m at 3.5 kt), and the helm now makes a 3 m turn true at any
-      # commanded speed by slowing through it while preserving the arc. At
-      # the 1 kt survey speed the boat does 3 m natively; at transit speed
-      # the helm regulates down into the turn. This replaced the interim
+      # #417): the boat's minimum radius is strongly speed-dependent (1.4 m
+      # at 1 kt, ~11 m at 3.5 kt), and the helm now makes a 3 m turn true at
+      # any commanded speed by slowing through it while preserving the arc.
+      # At the 1 kt survey speed 3 m is comfortably achievable without
+      # regulation (the boat can turn tighter still); from transit speed the
+      # helm regulates down into the turn. This replaced the interim
       # worst-case 11.0 (#412), which planned needlessly wide line joins at
       # actual survey speed.
       #
