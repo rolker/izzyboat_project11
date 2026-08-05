@@ -312,12 +312,31 @@
             # ~90-fragment keyframe, destroying the whole message AND generating
             # resend traffic. Offering less than the link truly carries keeps the
             # admission controller at cap instead of pinned at 10%.
-            # Do NOT raise this back toward 1.5 without re-measuring the knee —
-            # the #389 rationale above predates the admission controller, which
-            # turns an over-cap into a self-sustaining collapse rather than
-            # simple queueing. Paired with h265_bitrate_kbps 800 -> 500 on the
-            # four OAKs (oak_cameras_launch.py), same session.
-            maximum_bytes_per_second: 1000000
+            #
+            # RESTORED 1.0 -> 1.5 MB/s later the same day (2026-08-05, Lewes),
+            # operator decision, once the OFFERED load had been cut at source and
+            # the cap was no longer the binding constraint. What actually fixed
+            # the spiral was reducing demand, not capping it: h265_bitrate_kbps
+            # 800 -> 100 on the four OAKs (~404 -> ~126 KB/s) plus the
+            # collision_pointcloud 1 Hz throttle on this connection. After those,
+            # vpn measured 392645 B/s offered with a 0.0000% drop rate and
+            # admission held at cap in every sample — roughly a quarter of even
+            # the 1.0 MB/s cap, so the cap value stopped mattering for shaping.
+            # A HIGHER cap is actively BETTER for coverage_tiles: connection.cpp
+            # can_send() requires a WHOLE message to fit the instantaneous
+            # budget, and tiles measure ~183 KB compressed (every one a full
+            # 960x960 window — see cube_bathymetry#112), so the 1.0 MB/s cap left
+            # only ~95 KB/s of headroom and blocked them outright while every
+            # other topic recovered. The lower cap helped everything EXCEPT the
+            # payload this link exists to carry.
+            # GUARD: this only holds while offered load stays well under the
+            # ~1.2 MB/s knee measured 2026-08-03. If the OAK bitrate is raised
+            # back toward 800, or the pointcloud throttle is removed, or new bulk
+            # topics are added to this connection, 1.5 MB/s again authorises more
+            # than the wire carries and the admission collapse returns — it cost
+            # 82% of ALL vpn traffic including ~45% of /tf and mavros telemetry.
+            # Re-measure before adding load, not after.
+            maximum_bytes_per_second: 1500000
             topics_list:
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
             # via udp_bridge remote_advertise, confirmed working; persisted here).
