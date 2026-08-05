@@ -431,9 +431,12 @@ manda_coverage:
 # (param_compose.py), so removing these lines restores the factory-240
 # vectored-thrust envelope automatically — minimum_turning_radius 1.5,
 # max_rotational_vel 1.0, min_rotational_vel 0.4, hover
-# maximum_rotation_speed 0.75, smoother yaw ±1.0. Nothing else to undo.
-# The matching FCU reversion is documented in config/fcu/
-# bizzyboat_fcu_custom.param; the helm cap in config/bizzyboat.yaml.
+# maximum_rotation_speed 0.75, smoother yaw ±1.0.
+# Also revert in config/bizzyboat.yaml: the max_yaw_speed helm cap AND the
+# capability_curve_* block (#417) — the differential envelope is wrong for
+# vectored thrust; either disable the curve or re-measure it before
+# re-enabling. FCU reversion is documented in config/fcu/
+# bizzyboat_fcu_custom.param.
 # =====================================================================
 # BizzyBoat's steering servos failed on 2026-08-03 and were removed; both
 # outdrives are now fixed pointing aft, making the boat differential
@@ -467,19 +470,22 @@ planner_server:
       # The 240 file says 1.5 m — that was the VECTORED figure (#124) and is
       # now unreachable above about 0.8 m/s.
       #
-      # ⚠️ JUDGEMENT CALL, flagged for review. The planner takes ONE radius
-      # but the boat's is strongly speed-dependent (1.4 m at 1 kt, 10.8 m at
-      # 3.5 kt). 11.0 m is chosen to be achievable across the full historical
-      # BizzyBoat survey range (3.0-3.75 kt per docs/bizzyboat_performance.md),
-      # so the planner never asks for a turn the boat cannot make. The cost is
-      # needlessly wide planned turns at low speed — the 2026-08-04 survey ran
-      # at 1 kt, where ~3.0 m would have been achievable.
+      # 3.0 m relies on the helm's curvature-preserving speed regulation
+      # (unh_marine_autonomy ADR-0012; capability_curve_* in bizzyboat.yaml,
+      # #417): the boat's minimum radius is strongly speed-dependent (1.4 m
+      # at 1 kt, ~11 m at 3.5 kt), and the helm now makes a 3 m turn true at
+      # any commanded speed by slowing through it while preserving the arc.
+      # At the 1 kt survey speed 3 m is comfortably achievable without
+      # regulation (the boat can turn tighter still); from transit speed the
+      # helm regulates down into the turn. This replaced the interim
+      # worst-case 11.0 (#412), which planned needlessly wide line joins at
+      # actual survey speed.
       #
-      # If BizzyBoat is committed to low-speed (<=1.3 m/s) survey work, drop
-      # this to 3.0 and gain much tighter line joins. Do NOT drop it without
-      # also capping survey speed, or the planner will plan turns the boat
-      # overshoots.
-      minimum_turning_radius: 11.0
+      # ⚠️ Requires the post-ADR-0012 helm_manager build on the boat — with
+      # an OLD helm (plain yaw clip) this radius reverts transit-speed turns
+      # to the wide-turn path deviation. Deploy this config and the
+      # unh_marine_autonomy rebuild together.
+      minimum_turning_radius: 3.0
 
 behavior_server:
   ros__parameters:
