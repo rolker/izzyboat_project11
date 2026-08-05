@@ -146,14 +146,33 @@ local_costmap:
         # whole 1.5-7.6 m lake LETHAL wherever depth < 6 m.
         confidence_gate: 0.5
         max_age: 0.0
-        # Closed-lake-basin rationale (Massabesic): the chart prior is masked to
-        # the lake outline, so no-data cells are land — mark them lethal
-        # (unh_marine_autonomy#216). NB at an open-coast site whose store holds
-        # only survey-track coverage (Lewes chart-prior import owed, uma#289),
-        # out-of-coverage cells also read LETHAL — the same blanket behind the
-        # 2026-08-03 field disable. Whether this stays right for open coastal
-        # sites is the #408 RCA's call; unchanged by the #415 depth split.
-        unsurveyed_is_lethal: True
+        # Closed-lake-basin rationale (Massabesic) for True: the chart prior is
+        # masked to the lake outline, so no-data cells are land — mark them
+        # lethal (unh_marine_autonomy#216).
+        #
+        # *** FALSE at Lewes, DE (open coast) — set in the field 2026-08-05. ***
+        # MEASURED on gabby with the Lewes ENC chart layer committed: the costmap
+        # came up lethal everywhere except the one square of dense charted
+        # coverage around the boat basin. Root cause is NOT depth. Chart samples
+        # import at sigma ~1.054, ABOVE confidence_gate 0.5, so they are
+        # untrusted and cost at most caution — never lethal. Every lethal cell
+        # was therefore a NO-DATA cell. Charted DEPARE polygons do not tile the
+        # world, so on an open coast everything outside them went lethal. This is
+        # the blanket behind the 2026-08-03 field disable and the case the #408
+        # RCA owns; the closed-basin assumption simply does not hold here.
+        #
+        # With False, no-data stays NO_INFORMATION for another prior to fill.
+        # Land safety is NOT weakened: chart_layer runs FIRST and paints
+        # elevation > 0 (LNDARE/COALNE/etc), restricted, overhead and discrete
+        # hazards LETHAL independently of this flag — verified in
+        # s57_layer::get_cost_from_grid, which returns those before any depth
+        # branch and regardless of depth_costs. Planner is unaffected by the
+        # extra unknown: nav2_params.base.yaml sets allow_unknown: true for the
+        # SmacPlannerHybrid and this overlay does not override it.
+        #
+        # REVERT to True for a closed-basin site (Massabesic) — there no-data
+        # really is land and the lethal shore keepout is the intended behavior.
+        unsurveyed_is_lethal: False
         map_tide_frame: <tf_prefix>/map_tide
         # Ellipsoid-referenced world frame (REP-105 'map'): the layer reads the
         # water-surface ellipsoidal height as map_tide's z in this frame. MUST be
@@ -198,7 +217,11 @@ global_costmap:
         maximum_caution_depth: 2.5
         confidence_gate: 0.5
         max_age: 0.0
-        unsurveyed_is_lethal: True
+        # FALSE at Lewes (open coast), set in the field 2026-08-05 — see the
+        # local_costmap block for the measured rationale and the revert
+        # condition. Must track the local value: a split would give the planner
+        # and the controller different navigable extents.
+        unsurveyed_is_lethal: False
         map_tide_frame: <tf_prefix>/map_tide
         # Ellipsoid-referenced world frame (REP-105 'map'): the layer reads the
         # water-surface ellipsoidal height as map_tide's z in this frame. MUST be
