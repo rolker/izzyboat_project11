@@ -695,6 +695,13 @@
       - /bizzy/marine/mission_plan
       - /bizzy/marine/mission_manager/command
       - /marine/platforms
+      # Runtime parameter changes (#419): without these, live param edits
+      # (e.g. the 2026-08-04 aft-camera image_mask_rects adjustment) are
+      # unrecoverable from bags — "was it ever set?" was unanswerable at
+      # that wrap-up. Namespaced nodes publish under /bizzy; record both.
+      # Event-driven and tiny.
+      - /parameter_events
+      - /bizzy/parameter_events
       - /rosout
       - /tf
       - /tf_static
