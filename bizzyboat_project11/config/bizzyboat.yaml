@@ -294,7 +294,30 @@
             # rate-starved at the 2026-07-23 and 2026-07-29 deployments; the
             # operator raised this live both times and tile delivery recovered
             # with no observed side effects. Persisting the field-proven value.
-            maximum_bytes_per_second: 1500000
+            #
+            # LOWERED 1.5 -> 1.0 MB/s in the field 2026-08-05 (Lewes, DE).
+            # 1.5 MB/s is ABOVE the link's real capacity: the vpn knee measured
+            # ~1.2 MB/s on 2026-08-03. Authorising more than the pipe carries is
+            # what starts the congestion spiral — the wire loses packets, the
+            # receiver requests resends (salmon measured 67% of vpn arrivals as
+            # DUPLICATES, only ~370 KB/s useful out of 1107 KB/s), resends crowd
+            # out fresh data, delivery falls under the udp_bridge#43 admission
+            # threshold of 90%, and the AIMD halves repeatedly to its 10% floor.
+            # Measured at the floor on 2026-08-05: 1272643 B/s offered on vpn,
+            # 82.4% DROPPED — coverage_tiles 100%, coverage_catalog 66.7%, oak
+            # ffmpeg 89-94%, and even /tf 44.6% and mavros position/battery ~47%.
+            # Sender-side dropping is strictly better than wire loss here: a
+            # message the bridge declines costs nothing, while a message the WIRE
+            # loses costs one fragment out of a 180-fragment tile or a
+            # ~90-fragment keyframe, destroying the whole message AND generating
+            # resend traffic. Offering less than the link truly carries keeps the
+            # admission controller at cap instead of pinned at 10%.
+            # Do NOT raise this back toward 1.5 without re-measuring the knee —
+            # the #389 rationale above predates the admission controller, which
+            # turns an over-cap into a self-sustaining collapse rather than
+            # simple queueing. Paired with h265_bitrate_kbps 800 -> 500 on the
+            # four OAKs (oak_cameras_launch.py), same session.
+            maximum_bytes_per_second: 1000000
             topics_list:
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
             # via udp_bridge remote_advertise, confirmed working; persisted here).

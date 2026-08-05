@@ -24,18 +24,33 @@ from launch_ros.substitutions import FindPackageShare
 # the device, so only the mx_id values rotated:
 #   forward <- was starboard, starboard <- was aft,
 #   aft     <- was port,      port      <- was forward.
+#
+# `h265_bitrate_kbps` 800 -> 500 (all four), field change 2026-08-05 at Lewes,
+# DE, paired with the vpn cap 1.5 -> 1.0 MB/s in config/bizzyboat.yaml.
+# The four ffmpeg streams were offering ~404 KB/s of the ~1.27 MB/s total on a
+# vpn link whose measured knee is ~1.2 MB/s, which pushed the udp_bridge#43
+# admission controller to its 10% floor and dropped 89-94% of the video (salmon
+# received 1 keyframe out of ~19 expected across the four streams; keyframes are
+# ~90 bridge fragments and one lost fragment kills the whole message, so they die
+# first while smaller P-frames survive). 500 kbps cuts the video contribution to
+# roughly 250 KB/s so the total fits under the knee with margin for resends.
+# NB the encoder applies this by RESTARTING the pipeline (camera_base.cpp), so
+# each camera drops its stream for a few seconds when the value changes.
+# The GOP values below are deliberately NOT shortened at the same time: changing
+# two variables at once would make the next measurement uninterpretable. If
+# keyframe loss persists at 500 kbps, shortening the GOPs is the next lever.
 CAMERAS = {
     'oak_forward':   {'mx_id': '19443010E11A872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_enable': True, 'h265_bitrate_kbps': 500,
                       'h265_keyframe_frequency_frames': 23},
     'oak_starboard': {'mx_id': '14442C10917D8DD700', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_enable': True, 'h265_bitrate_kbps': 500,
                       'h265_keyframe_frequency_frames': 31},
     'oak_aft':       {'mx_id': '194430106121872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_enable': True, 'h265_bitrate_kbps': 500,
                       'h265_keyframe_frequency_frames': 37},
     'oak_port':      {'mx_id': '19443010D117872D00', 'enable_video': False,
-                      'h265_enable': True, 'h265_bitrate_kbps': 800,
+                      'h265_enable': True, 'h265_bitrate_kbps': 500,
                       'h265_keyframe_frequency_frames': 29},
 }
 
