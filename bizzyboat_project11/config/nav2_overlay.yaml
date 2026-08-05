@@ -26,19 +26,34 @@ local_costmap:
       # chart_layer re-enabled 2026-08-03 (#276), superseding the 2026-06-12
       # interim disable (#263): at no-ENC sites (Massabesic) s57 tiles resolve
       # uncharted-complete and allow_uncharted (default true) leaves the grid
-      # untouched — harmless; at ENC sites it carries charted obstacles/depth.
+      # untouched — harmless; at ENC sites it carries charted obstacles.
       # (Independently re-enabled the same day in the field at Lewes, DE, which
       # has full NOAA ENC coverage — 160 DE cells including harbour-scale US5DE*.)
+      # DEPTH SPLIT 2026-08-05 (#415, ADR-0010 D10 via rolker/s57_tools#30):
+      # chart_layer runs with depth_costs: false — it paints only land /
+      # restricted / overhead / point-hazard / caution semantics and leaves all
+      # other submerged cells NO_INFORMATION; bathymetry_layer (#319, store-backed)
+      # is the single depth authority, arbitrating charted vs surveyed depth by
+      # per-cell sigma. This replaces the old raise-only max(chart depth, bathy)
+      # combine that let a ZOC-B chart band (Broadkill, #408) cost a
+      # measured-navigable channel at caution forever.
       # ORDERING REQUIRED: s57_layer::updateCosts OVERWRITES the master grid
-      # where chart data exists, so chart_layer must run BEFORE bathymetry_layer,
-      # which max-combines on top (raise-only). Final cost = max(chart, bathy).
-      # bathymetry_layer (#319) provides the store-backed depth prior (NH GRANIT
-      # contour chart + M3 survey draft).
+      # where it writes, so chart_layer must run BEFORE bathymetry_layer — chart
+      # lays down its lethal non-depth semantics first; bathy max-combines depth
+      # on top and can never un-write a charted hazard.
       plugins:
         - "chart_layer"
         - "sea_surface_layer"
         - "bathymetry_layer"
         - "inflation_layer"
+      chart_layer:
+        # ADR-0010 D10 flip (#415): suppress the depth ramp. The seafloor base's
+        # chart_layer block (plugin type, s57_grids_namespace, depth/tide params —
+        # all inert in this mode) deep-merges under this. Requires the
+        # rolker/s57_tools#30 build; older binaries don't declare the key and
+        # ignore it (behavior then reverts to chart depth + raise-only bathy —
+        # degraded, not unsafe).
+        depth_costs: false
       sea_surface_layer:
         plugin: "sea_surface_layer::SeaSurfaceLayer"
         enabled: true
@@ -102,13 +117,15 @@ local_costmap:
         # promptly (#226 robot-first core-readiness fix). Land / no-data stays LETHAL
         # via unsurveyed_is_lethal (intended closed-basin shore keepout).
         #
-        # Disabled 2026-08-03 (gabby) for the Lewes, DE site. The reference store
-        # holds 47 tiles at L10 r17785-17787 / c13901-13905 (the NH site); this
-        # position is L10 r17252 / c13419, outside that coverage, so every cell
-        # here reads unsurveyed. Measured contribution at Lewes was small
-        # (local_costmap lethal 60.50% -> 59.78% when disabled at runtime) — it
-        # is not the source of the lethal blanket seen here.
-        enabled: False
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site: the store then held
+        # only the NH-site tiles (L10 r17785-17787 / c13901-13905), so every cell
+        # there read unsurveyed (measured contribution was small: local lethal
+        # 60.50% -> 59.78% when disabled at runtime). Re-enabled 2026-08-05
+        # (#415): the Lewes/Broadkill survey is imported into the store, and with
+        # chart_layer's depth ramp suppressed (depth_costs: false above) this
+        # layer is the single depth authority — suppressing chart depth without
+        # it would leave no depth costs at all.
+        enabled: True
         # Leading ~ expands to $HOME (bathymetry_layer #218), so this resolves on
         # both the boat (/home/field/...) and dev/sim (/home/roland/...). The store
         # (NH GRANIT chart prior + M3 draft) must exist there before the layer
@@ -152,13 +169,19 @@ global_costmap:
         - "sea_surface_relay"
         - "bathymetry_layer"
         - "inflation_layer"
+      chart_layer:
+        # ADR-0010 D10 flip (#415): suppress the depth ramp — see the
+        # local_costmap chart_layer block for the full rationale and the
+        # old-binary rollout note.
+        depth_costs: false
       bathymetry_layer:
         plugin: "bathymetry_layer::BathymetryLayer"
         # Re-enabled 2026-06-27 (#276): see local_costmap block — corrected store
         # (unh_marine_autonomy#221) + readiness fix (#226).
-        # Disabled 2026-08-03 (gabby) for the Lewes, DE site — see the
-        # local_costmap block for the out-of-coverage rationale.
-        enabled: False
+        # Disabled 2026-08-03 (gabby) for the Lewes, DE site; re-enabled
+        # 2026-08-05 (#415) with the D10 depth split — see the local_costmap
+        # block for both rationales.
+        enabled: True
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), confidence_gate (trust direction — do not raise to the chart
         # sigma) and unsurveyed_is_lethal.
