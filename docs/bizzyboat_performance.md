@@ -20,8 +20,8 @@ deployments accumulate.
 | **Survey throttle ramp** | ~0.1 m/s², τ ≈ 8 s | Good |
 | **Coast-down deceleration** | ~0.15 m/s² (up to ~0.25), τ ≈ 9–10 s (~10–15 m to stop from cruise) | Moderate |
 | **Max reverse speed** | ~1.4 m/s (2.7 kt) peak, briefly | Low — sustained reverse under-sampled |
-| **Yaw-rate cap (autonomy)** | ~~1.0 rad/s~~ → **0.6 rad/s** (see ⚠️ below) | superseded 2026-08-04: measured peak 0.620 rad/s on differential thrust |
-| **Min turn radius @ cruise** | ~~≈1.5 m~~ → **~10.8 m @ 3.5 kt** (see ⚠️ below) | superseded 2026-08-04; strongly speed-dependent — 1.4 m at 1 kt |
+| **Yaw-rate cap (autonomy)** | **1.0 rad/s** | vectored thrust; measured ~0.91 rad/s pivot at full throttle (#124 §2) |
+| **Min turn radius @ cruise** | **≈1.5 m** | vectored thrust; not strongly speed-dependent (yaw ∝ thrust × steering angle) |
 | **Course-keeping (track-holding)** | **~0.13 m RMS** on straight legs | decimeter-scale; not a survey-limiting factor (XTE vs commanded line ~0.5 m) |
 
 All speeds are **speed-through-water (STW)**, current-removed. Throttle is
@@ -160,19 +160,22 @@ spec and braking distance — folded into
 
 ## Turning
 
-> ## ⚠️ SUPERSEDED 2026-08-04 — this section describes VECTORED THRUST
+> ## ℹ️ This section is CURRENT again as of 2026-08-06
 >
 > BizzyBoat's two steering servos **failed** on the 2026-08-03 Broadkill
-> River deployment and were **removed**; both outdrives are now fixed
-> pointing aft. The boat is **differential (skid-steer)**. Everything in
-> this section was measured on the vectored drivetrain and **does not
-> describe the current boat**. It is kept as the historical record and as
-> the reference for what to expect once the servos are refitted.
+> River deployment and were removed on 2026-08-04; both outdrives were
+> fixed pointing aft and the boat ran **differential (skid-steer)** on a
+> temporary envelope. The servos were **replaced on 2026-08-06** and the
+> FCU, Nav2 and helm config are all back to vectored thrust, so the
+> vectored figures in this section describe the boat again.
 >
-> **This is a temporary state** — the servos are to be replaced. When they
-> are, this section becomes valid again.
+> The differential envelope below is retained as the historical record for
+> that 2026-08-04 → 2026-08-06 interval, and as the reference if the boat
+> is ever run fixed-aft again. **It does not describe the current boat.**
+> Bags from that interval must be read against it, not against the
+> vectored figures.
 >
-> ### Differential-drive envelope, measured 2026-08-04
+> ### Differential-drive envelope, measured 2026-08-04 (HISTORICAL)
 >
 > 218 133 paired `velocity_body` / `rc/out` samples over 21 921 s (both
 > 2026-08-04 bags), including 18 435 GUIDED samples. Yaw rate p95 (max)
@@ -203,11 +206,15 @@ spec and braking distance — folded into
 >    1.8–2.5 m/s.
 >
 > Contrast with the vectored figures below: ~0.9 rad/s pivot and ~1.5 m
-> radius at cruise. The loss at survey speed is large and real.
+> radius at cruise. The loss at survey speed was large and real.
 >
-> Config carrying this envelope (all marked temporary, all revert by
-> deleting): `config/fcu/bizzyboat_fcu_custom.param`,
-> `config/nav2_overlay.yaml`, `config/bizzyboat.yaml` (`max_yaw_speed`).
+> `MOT_STR_THR_MIX` was never tested before the servos returned, so that
+> lever remains unmeasured if the boat is ever run fixed-aft again.
+>
+> The config that carried this envelope has all been reverted on
+> 2026-08-06 (`config/fcu/bizzyboat_fcu_custom.param`,
+> `config/nav2_overlay.yaml`, `config/bizzyboat.yaml`) — recover it from
+> git history at commits `d240936` / `8e1d8c2` rather than rewriting it.
 > Full working: `docs/logs/2026/2026-08-04_gabby_logs.md`.
 
 Analysis in [`analysis/dynamics/turning.py`](analysis/dynamics/turning.py),
@@ -215,11 +222,12 @@ using the EKF yaw rate (`velocity_body.omega_z`), steering servo PWM
 (`rc/out.ch_2`; `ch_3` is bit-identical — a single slaved steering DOF),
 and flight mode (`mavros/state`).
 
-> **Note**: on the differential drivetrain the steering signal is no longer
-> `ch_2`/`ch_3` (those outputs are disabled). Steering now appears as the
-> *difference* between `ch_0` (port) and `ch_1` (starboard). `turning.py`
-> must be repointed before it will produce meaningful output on
-> post-2026-08-04 bags.
+> **Note**: `turning.py` reads steering from `ch_2`/`ch_3`, which is correct
+> for vectored thrust and therefore correct again for bags recorded from
+> 2026-08-06 onward. It does **not** work on bags from the differential
+> interval (2026-08-04 → 2026-08-06), where those outputs were disabled and
+> steering appeared as the *difference* between `ch_0` (port) and `ch_1`
+> (starboard). Repoint it before analysing bags from that window.
 
 Steering is **vectored thrust** — the thrusters themselves rotate (servos
 `ch_2`/`ch_3`, bit-identical = one slaved steering DOF), there is no rudder.

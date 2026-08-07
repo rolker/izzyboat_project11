@@ -8,28 +8,37 @@
   ros__parameters:
     output_type: twist
     max_speed: 2.0
-    # TEMPORARY (2026-08-04) — REVERT TO 1.0 WHEN THE STEERING SERVOS ARE REPLACED.
-    # 1.0 was the vectored-thrust figure (#124 §2 raised it 0.5 -> 1.0 on a measured
-    # 0.91 rad/s pivot at full throttle). The servos failed 2026-08-03 and were removed;
-    # both outdrives are now fixed aft, and measured peak yaw over 218133 samples on
-    # 2026-08-04 is 0.620 rad/s. 0.6 is the vehicle-capability backstop for the
-    # differential drivetrain. The survey-turn limit still belongs in the Nav2 smoother
-    # (see nav2_overlay.yaml, which carries the matching temporary envelope).
-    max_yaw_speed: 0.6
+    max_yaw_speed: 1.0  # vehicle-capability backstop (was 0.5); survey-turn limit belongs in Nav2 smoother — see #124 §2
     # Curvature-preserving speed regulation (unh_marine_autonomy ADR-0012, #417):
     # when commanded (v, w) exceeds the envelope below, the helm scales BOTH by
     # the same factor so the commanded turn radius is preserved at reduced speed
-    # (instead of the yaw clip silently widening the turn). Lets the planner
-    # promise 3 m turns (nav2_overlay.yaml minimum_turning_radius).
+    # (instead of the yaw clip silently widening the turn).
     #
-    # PROVISIONAL envelope, measured 2026-08-04 on the TEMPORARY differential
+    # DISABLED 2026-08-06 — the steering servos were reinstalled and the boat is
+    # VECTORED THRUST again, so the envelope below (measured on the temporary
+    # differential drivetrain) no longer describes this vehicle. Disabling is the
+    # documented way to stand the feature down without reverting it: the gate is
+    # the node's own default (helm_manager.cpp:69 declares it false), and with it
+    # false the independent max_speed / max_yaw_speed clamps above are the sole
+    # limiter — i.e. exactly the pre-2026-08-04 vectored behaviour that ran the
+    # #124 surveys. The feature, ADR-0012 and this table all stay in place.
+    #
+    # TO RE-ENABLE ON VECTORED THRUST: re-measure the envelope on the water and
+    # replace the table, THEN flip the gate. Do not simply flip the gate — the
+    # numbers below would throttle a vectored boat to roughly a third of its real
+    # yaw capability (differential p95 0.28-0.40 rad/s vs the vectored 0.91 rad/s
+    # pivot measured in #124). Note the planner's minimum_turning_radius has also
+    # returned to the factory-240 vectored 1.5 m, which needs no regulation to be
+    # achievable — the 3.0 m value that DEPENDED on this feature is gone with the
+    # nav2_overlay.yaml differential block.
+    #
+    # Envelope below: measured 2026-08-04 on the TEMPORARY differential
     # drivetrain (full-day analysis, 218133 samples, docs/logs/2026/
     # 2026-08-04_gabby_logs.md): p95 achievable |yaw| (rad/s) at band-center
     # speeds (m/s); v=0 entry is the measured pivot p95 (rest capability must
-    # be explicit — the helm rejects curves that don't start at v=0).
-    # RE-MEASURE after the MOT_STR_THR_MIX test (#411 follow-up) and again
-    # when the steering servos return (vectored envelope differs entirely).
-    capability_curve_enabled: true
+    # be explicit — the helm rejects curves that don't start at v=0). Retained
+    # only as the reference measurement for a future differential refit.
+    capability_curve_enabled: false
     capability_curve_v_omega_max: [0.0, 0.28, 0.15, 0.26, 0.55, 0.38, 1.05, 0.40, 1.55, 0.20, 2.15, 0.20]
     capability_curve_margin: 0.8
 
