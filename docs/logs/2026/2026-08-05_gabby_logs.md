@@ -1,6 +1,6 @@
 # 2026-08-05 — gabby log (BizzyBoat deployment 4f74fc0)
 
-Deployment issue: 4f74fc0 — Deployment 2026-08-05: BizzyBoat dockside rebuild + ENC-costmap / live-coverage verification (git-bug; no GitHub URL from field side)
+Deployment issue: 4f74fc0 — Deployment 2026-08-05: BizzyBoat dockside rebuild + ENC-costmap / live-coverage verification (git-bug; GitHub: https://github.com/rolker/unh_echoboats_project11/issues/414 — stamped at wrap-up)
 Host: gabby
 Side: field
 Started: 2026-08-05 13:21 -04:00

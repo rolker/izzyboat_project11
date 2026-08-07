@@ -1,6 +1,6 @@
 # 2026-08-05 — salmon log (BizzyBoat deployment, git-bug 4f74fc0)
 
-Deployment issue: git-bug `4f74fc0` — Deployment 2026-08-05: BizzyBoat dockside rebuild + ENC-costmap / live-coverage verification (GitHub number/URL to be stamped from a dev host)
+Deployment issue: git-bug `4f74fc0` — Deployment 2026-08-05: BizzyBoat dockside rebuild + ENC-costmap / live-coverage verification (GitHub: https://github.com/rolker/unh_echoboats_project11/issues/414 — stamped at wrap-up)
 Host: salmon
 Side: field
 Started: 2026-08-05 13:49 -04:00
