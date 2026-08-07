@@ -158,19 +158,26 @@
             - collision_monitor_state
             # OAK ffmpeg video removed from the WiFi path (2026-08-03 field
             # tune, gabby) to free link budget. Segmentation overlays stay.
-            # - oak_forward_ffmpeg
+            # RESTORED 2026-08-05 (Lewes, operator decision): the 08-03 removal
+            # was made when each stream cost ~100 KB/s at 800 kbps; at the
+            # 100 kbps now persisted in oak_cameras_launch.py all four together
+            # are ~126 KB/s, and wifi measured this session at cap with ZERO
+            # drops and zero duplicates while carrying 546-856 KB/s, i.e. ample
+            # headroom. WiFi is line-of-sight only (no over-the-horizon), so
+            # this restores in-range video without touching the OTH budget.
+            - oak_forward_ffmpeg
             - oak_segmentation_forward
             - oak_segmentation_forward_info
             - oak_segmentation_forward_raw
-            # - oak_starboard_ffmpeg
+            - oak_starboard_ffmpeg
             - oak_segmentation_starboard
             - oak_segmentation_starboard_info
             - oak_segmentation_starboard_raw
-            # - oak_aft_ffmpeg
+            - oak_aft_ffmpeg
             - oak_segmentation_aft
             - oak_segmentation_aft_info
             - oak_segmentation_aft_raw
-            # - oak_port_ffmpeg
+            - oak_port_ffmpeg
             - oak_segmentation_port
             - oak_segmentation_port_info
             - oak_segmentation_port_raw
@@ -230,19 +237,19 @@
               # ffmpeg video=5 (retains a keyframe across a brief stall); compressed
               # segmentation overlays=2 (independent frames); sidescan/watercolumn=25.
               # Reliable control/telemetry left at the bridge default (10).
-              # oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
+              oak_forward_ffmpeg: {source: sensors/cameras/oak_forward/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_forward:      {source: sensors/cameras/oak_forward/segmentation/compressed, queue_size: 2}
               oak_segmentation_forward_info: {source: sensors/cameras/oak_forward/segmentation/camera_info}
               oak_segmentation_forward_raw:    {source: sensors/cameras/oak_forward/segmentation, period: -1.0, queue_size: 2}
-              # oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
+              oak_starboard_ffmpeg: {source: sensors/cameras/oak_starboard/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_starboard:      {source: sensors/cameras/oak_starboard/segmentation/compressed, queue_size: 2}
               oak_segmentation_starboard_info: {source: sensors/cameras/oak_starboard/segmentation/camera_info}
               oak_segmentation_starboard_raw:    {source: sensors/cameras/oak_starboard/segmentation, period: -1.0, queue_size: 2}
-              # oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
+              oak_aft_ffmpeg: {source: sensors/cameras/oak_aft/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_aft:      {source: sensors/cameras/oak_aft/segmentation/compressed, queue_size: 2}
               oak_segmentation_aft_info: {source: sensors/cameras/oak_aft/segmentation/camera_info}
               oak_segmentation_aft_raw:    {source: sensors/cameras/oak_aft/segmentation, period: -1.0, queue_size: 2}
-              # oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
+              oak_port_ffmpeg: {source: sensors/cameras/oak_port/image_raw/ffmpeg, queue_size: 5}
               oak_segmentation_port:      {source: sensors/cameras/oak_port/segmentation/compressed, queue_size: 2}
               oak_segmentation_port_info: {source: sensors/cameras/oak_port/segmentation/camera_info}
               oak_segmentation_port_raw:    {source: sensors/cameras/oak_port/segmentation, period: -1.0, queue_size: 2}
@@ -294,6 +301,48 @@
             # rate-starved at the 2026-07-23 and 2026-07-29 deployments; the
             # operator raised this live both times and tile delivery recovered
             # with no observed side effects. Persisting the field-proven value.
+            #
+            # LOWERED 1.5 -> 1.0 MB/s in the field 2026-08-05 (Lewes, DE).
+            # 1.5 MB/s is ABOVE the link's real capacity: the vpn knee measured
+            # ~1.2 MB/s on 2026-08-03. Authorising more than the pipe carries is
+            # what starts the congestion spiral — the wire loses packets, the
+            # receiver requests resends (salmon measured 67% of vpn arrivals as
+            # DUPLICATES, only ~370 KB/s useful out of 1107 KB/s), resends crowd
+            # out fresh data, delivery falls under the udp_bridge#43 admission
+            # threshold of 90%, and the AIMD halves repeatedly to its 10% floor.
+            # Measured at the floor on 2026-08-05: 1272643 B/s offered on vpn,
+            # 82.4% DROPPED — coverage_tiles 100%, coverage_catalog 66.7%, oak
+            # ffmpeg 89-94%, and even /tf 44.6% and mavros position/battery ~47%.
+            # Sender-side dropping is strictly better than wire loss here: a
+            # message the bridge declines costs nothing, while a message the WIRE
+            # loses costs one fragment out of a 180-fragment tile or a
+            # ~90-fragment keyframe, destroying the whole message AND generating
+            # resend traffic. Offering less than the link truly carries keeps the
+            # admission controller at cap instead of pinned at 10%.
+            #
+            # RESTORED 1.0 -> 1.5 MB/s later the same day (2026-08-05, Lewes),
+            # operator decision, once the OFFERED load had been cut at source and
+            # the cap was no longer the binding constraint. What actually fixed
+            # the spiral was reducing demand, not capping it: h265_bitrate_kbps
+            # 800 -> 100 on the four OAKs (~404 -> ~126 KB/s) plus the
+            # collision_pointcloud 1 Hz throttle on this connection. After those,
+            # vpn measured 392645 B/s offered with a 0.0000% drop rate and
+            # admission held at cap in every sample — roughly a quarter of even
+            # the 1.0 MB/s cap, so the cap value stopped mattering for shaping.
+            # A HIGHER cap is actively BETTER for coverage_tiles: connection.cpp
+            # can_send() requires a WHOLE message to fit the instantaneous
+            # budget, and tiles measure ~183 KB compressed (every one a full
+            # 960x960 window — see cube_bathymetry#112), so the 1.0 MB/s cap left
+            # only ~95 KB/s of headroom and blocked them outright while every
+            # other topic recovered. The lower cap helped everything EXCEPT the
+            # payload this link exists to carry.
+            # GUARD: this only holds while offered load stays well under the
+            # ~1.2 MB/s knee measured 2026-08-03. If the OAK bitrate is raised
+            # back toward 800, or the pointcloud throttle is removed, or new bulk
+            # topics are added to this connection, 1.5 MB/s again authorises more
+            # than the wire carries and the admission collapse returns — it cost
+            # 82% of ALL vpn traffic including ~45% of /tf and mavros telemetry.
+            # Re-measure before adding load, not after.
             maximum_bytes_per_second: 1500000
             topics_list:
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
@@ -368,7 +417,29 @@
               # 1 Hz throttle these previously carried was removed deliberately to
               # prioritise SA overlays on the link; the heavy costmap window below
               # keeps its throttle as the budget's one big consumer.
-              collision_pointcloud: {source: collision_monitor/pointcloud}
+              #
+              # THROTTLE RESTORED ON VPN ONLY, 2026-08-05 (Lewes). The "cloud
+              # <2 KB/msg" premise above is NO LONGER TRUE and is the reason the
+              # un-throttling decision needs revisiting: measured on gabby this
+              # session the cloud is ~57.6 KB/msg compressed (288 KB/s at 5 Hz,
+              # ~180 KB/msg pre-compression) — roughly 29x the size that
+              # justified removing the throttle. It is now the LARGEST single
+              # consumer on vpn at 34% of all traffic, not the costmap window.
+              # At 5 Hz it was 84.3% DROPPED, so the operator was actually
+              # receiving ~0.8 Hz of randomly-surviving frames. A deterministic
+              # 1 Hz is strictly BETTER situational awareness than that: regular
+              # cadence, no random gaps, and ~230 KB/s returned to the link for
+              # coverage_tiles and telemetry that were being starved.
+              # period is the CORRECT mechanism here (unlike coverage_tiles):
+              # each cloud is a full snapshot of what reflex CA currently sees,
+              # so a skipped message is superseded by the next and no unique
+              # data is lost.
+              # WiFi deliberately left UNTHROTTLED below — it has headroom and
+              # measures zero drops, so in-range SA keeps the full 5 Hz and only
+              # the over-the-horizon path degrades to 1 Hz.
+              # Revisit if the reflex-CA cloud is ever size-bounded at the
+              # publisher; the throttle is a workaround for message size.
+              collision_pointcloud: {source: collision_monitor/pointcloud, period: 1.0}
               collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon}
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
