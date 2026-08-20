@@ -1,0 +1,23 @@
+# ROC / no-WiFi-bridge delta on top of operator.yaml.
+#
+# Loaded by operator_core_launch.py under `wifi:=false`, for operator stations
+# with no line-of-sight RF path to the boat (e.g. the CCOM Telepresence Room,
+# where the bridge radio is out of range). Over-the-horizon operation from
+# anywhere is the same case.
+#
+# Shortening connections_list is the whole mechanism: udp_bridge iterates only
+# the listed connections (udp_bridge.cpp:376-383), so the `wifi` block in
+# operator.yaml is simply never read. Nothing is duplicated here — the topic
+# lists, byte budgets and per-path tuning all stay in operator.yaml, so a topic
+# added to the vpn or cell path is inherited automatically.
+#
+# The boat needs no matching change: its own `wifi` connection in
+# bizzyboat.yaml carries no host and only learns one from an inbound packet,
+# so it stays idle when nothing arrives over that path.
+/**/udp_bridge:
+  ros__parameters:
+    remotes:
+      bizzy:
+        connections_list:
+          - vpn
+          - cell

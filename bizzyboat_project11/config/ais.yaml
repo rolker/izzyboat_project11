@@ -1,0 +1,46 @@
+# BizzyBoat AIS ingest.
+#
+# The AIS receiver is ashore, not on the boat: raw !AIVDM sentences arrive as
+# UDP datagrams over the ZeroTier link (observed source 10.242.80.203 on
+# 2026-08-20, ~1.2 datagrams/s of live Piscataqua traffic). marine_ais_tools'
+# own config/parameters.yaml defaults to a serial receiver on /dev/ttyACM0,
+# which is the wrong transport for this boat -- hence this override rather than
+# a change to the shared default.
+#
+# nmea_relay already implements the UDP reader; input_type selects it.
+#
+# NOTE the receiver being ashore is load-bearing for how the costmap layer is
+# tuned: a contact fading out of range looks exactly like a contact departing,
+# so ais_layer expires generously and grows uncertainty rather than deleting
+# tracks crisply. See the ais_layer blocks in nav2_overlay.yaml.
+/**/nmea_relay:
+  ros__parameters:
+    frame_id: ais
+    input_type: udp
+    # Bind address/port for the incoming feed. input_address is unused by the
+    # UDP reader (it binds INADDR_ANY) but nmea_relay declares it regardless.
+    input_address: 0.0.0.0
+    input_port: 2125
+    input_speed: 38400
+    output_address: 127.0.0.1
+    output_port: 0
+    # Non-empty enables nmea_relay's own sentence logging. Left off: the raw
+    # feed is recoverable from the bags and a second copy on the boat's disk is
+    # not worth the write traffic.
+    log_directory: ''
+
+# Uncertainty model for the contacts the tracker publishes. These turn AIS's
+# single position-accuracy bit into the covariances ais_layer consumes.
+# Defaults shown explicitly so the boat's assumptions are visible in one place
+# rather than living only in the node's declare_parameter calls.
+/**/ais_contact_tracker:
+  ros__parameters:
+    # ITU-R M.1371: accuracy bit high => better than 10 m (a differentially
+    # corrected fix), low => worse than 10 m with no upper bound stated. The
+    # low value is a judgement call and is the first thing to revise if the
+    # painted envelopes look wrong against observed traffic.
+    position_sigma_high: 5.0
+    position_sigma_low: 25.0
+    speed_sigma: 0.5
+    rate_of_turn_sigma: 0.02
+    unknown_variance: 1.0e6

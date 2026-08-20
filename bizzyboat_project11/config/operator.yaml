@@ -1,5 +1,16 @@
 /**/udp_bridge:
   ros__parameters:
+    # NOTE: return_host is deliberately absent from this file. It is derived
+    # from the operator station's hostname by operator_core_launch.py
+    # (<host>.op / <host>.vpn.bizzy / <host>.cell.bizzy, per dns_naming.md
+    # rule 8) so one config serves every operator station. Override with the
+    # return_host_prefix launch argument.
+    #
+    # It must never be left empty: udp_bridge only re-points an *existing*
+    # boat-side connection when return_host is non-empty (remote_node.cpp:74-80).
+    # The learned-source-address fallback applies at connection creation only,
+    # so an empty value lets a boat that has been up since the previous
+    # station's session keep transmitting there, silently.
     name: operator
     maximum_packet_size: 1000
     remotes_list:
@@ -14,7 +25,6 @@
           wifi:
             host: gabby.bizzy.p11.lan
             port: 4200
-            return_host: salmon.op.p11.lan
             return_port: 4200
             topics_list:
             - command
@@ -26,7 +36,6 @@
           vpn:
             host: gabby.vpn.bizzy.p11.lan
             port: 4200
-            return_host: salmon.vpn.bizzy.p11.lan
             return_port: 4200
             topics_list:
             - command
@@ -48,7 +57,6 @@
           cell:
             host: gabby.cell.bizzy.p11.lan
             port: 4200
-            return_host: salmon.cell.bizzy.p11.lan
             return_port: 4200
             topics_list:
             - command

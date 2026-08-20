@@ -11,6 +11,32 @@ echo "Logs:"
 source /opt/ros/jazzy/setup.bash
 source /home/field/project11/layers/main/site_ws/install/setup.bash
 
+# Per-station settings, optional and deliberately not in the repo: what a
+# station has is a fact about the machine and where it is sitting, not about
+# BizzyBoat. A station with no WiFi-bridge path or no Starlink dish sets
+# OPERATOR_LAUNCH_ARGS here; a fully equipped one has no file and gets the
+# defaults, so this script is identical on every station.
+#
+#     mkdir -p ~/.config/project11
+#     cat > ~/.config/project11/station.env <<'EOF'
+#     OPERATOR_LAUNCH_ARGS="wifi:=false op_starlink:=false"
+#     EOF
+#
+# See config/station.env.example. Extra arguments passed to this script are
+# appended, for one-off overrides without editing the file.
+STATION_ENV="${STATION_ENV:-$HOME/.config/project11/station.env}"
+if [ -f "$STATION_ENV" ]; then
+    # shellcheck source=/dev/null
+    source "$STATION_ENV"
+    echo "Station settings: $STATION_ENV"
+else
+    echo "Station settings: none ($STATION_ENV absent) - full-equipment defaults"
+fi
+CORE_ARGS="${OPERATOR_LAUNCH_ARGS:-} $*"
+UI_ARGS="${OPERATOR_UI_LAUNCH_ARGS:-}"
+echo "operator_core_launch.py args: ${CORE_ARGS:-<none>}"
+echo "operator_ui_launch.py args:   ${UI_ARGS:-<none>}"
+
 set -v
 
 export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT
@@ -39,14 +65,14 @@ fi
 # Core: UDP bridge, diagnostic aggregator, network monitor, operator core, state publisher
 /usr/bin/tmux new-window -t project11 -n core
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_fastrtps_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
-/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_core_launch.py" C-m
+/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_core_launch.py $CORE_ARGS" C-m
 
 # UI: camp + three rqt instances (bizzyboat, bizzyboat-diagnostics, logger
 # perspectives) + joystick, etc. The diagnostics and operator-log rqt windows
 # are launched from operator_ui_launch.py rather than a separate tmux window.
 /usr/bin/tmux new-window -t project11 -n ui
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_fastrtps_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
-/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_ui_launch.py" C-m
+/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 operator_ui_launch.py $UI_ARGS" C-m
 
 # Johnny5 PTZ camera (axis) from molab_hardware
 # DISABLED 2026-06-15 (Lake Massabesic): Johnny5/mobile-lab not deployed at this

@@ -12,7 +12,9 @@
   <license>BSD</license>
 
   <buildtool_depend>ament_cmake_ros</buildtool_depend>
+  <exec_depend>ais_layer</exec_depend>
   <exec_depend>depthai_ros_driver</exec_depend>
+  <exec_depend>marine_ais_tools</exec_depend>
   <depend>joint_state_publisher</depend>
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>marine_nav_utilities</exec_depend>

@@ -1,0 +1,232 @@
+# ROC Operator Station Setup — Shoals Survey Prep
+
+Started 2026-08-19. Running log of the operator-side setup for the Shoals
+survey, plus the task handoff to the agent working on pandy.
+
+## Context
+
+BizzyBoat will operate at the Shoals; the operator station moves to CCOM's
+Telepresence Room ("ROC"), behind the operator RUTX11 router (WAN on the CCOM
+network — the same network used for earlier lab testing, so the WireGuard
+tunnels to BenCloud are already proven from there). The WiFi bridge is out of
+range for this survey, so the only operator↔boat paths are the WireGuard VPN
+(`vpn`, Starlink) and cell (`cell`) NETMAP paths.
+
+Stations:
+
+- **pandy** — primary operator station (Linux desktop, 4 monitors, full
+  operator stack). New machine, identity set up below.
+- **salmon** — warm standby (laptop), keeps its existing identity and
+  configs untouched. Only ONE operator udp_bridge runs at a time (the boat
+  learns its return path from whichever bridge advertises); failover = stop
+  bridge on pandy, start salmon's.
+- **Windows machine** — sonar operator, RDP client to
+  `mercat.vpn.bizzy.p11.lan` (192.168.21.8). Outbound-only: plain DHCP, no
+  static lease or DNS name needed. RDP screen data shares the boat's
+  Starlink uplink with telemetry and sits outside the udp_bridge byte
+  budgets — use conservative RDP settings (color depth, resolution) and
+  watch bridge resend rates when the session is active.
+
+## Done 2026-08-19 — pandy network identity (ccomjhc_project11 `db3103b`, `ec4a2d8`)
+
+Static lease and fleet DNS names for pandy, deployed to both routers and
+verified end-to-end (details and lease material in the private
+`ccomjhc_project11` repo, `configuration/dnsmasq/`):
+
+| Name | Address |
+|------|---------|
+| `pandy.op.p11.lan` / `pandy.p11.lan` | 192.168.13.144 |
+| `pandy.vpn.bizzy.p11.lan` | 192.168.22.144 |
+| `pandy.cell.bizzy.p11.lan` | 192.168.24.144 |
+| `pandy.zt.p11.lan` | 10.242.75.122 |
+
+Verified: resolution on both routers, pandy holding the lease, and the
+gabby→pandy VPN NETMAP return path (ping, 0% loss, ~78 ms) — the path
+udp_bridge return traffic uses.
+
+Also added boat-relative `.vpn`/`.cell` shorthands for operator hosts on the
+BizzyBoat router (`salmon.vpn`, `pandy.vpn`, `deadpool.vpn` + `.cell`), for
+interactive use from on board. Configs must keep the canonical
+`.vpn.bizzy` forms — see `dns_naming.md` rule 8 in the private repo:
+operator hosts have one NETMAP address per boat, so the short names are only
+unambiguous relative to the router serving them.
+
+## Handoff — ROC config variants (agent on pandy)
+
+Work in `bizzyboat_project11` (field-mode repo — direct commits, agent
+identity, atomic; never `--no-verify`). salmon's configs are the working
+standby set: **create variants, don't modify them.**
+
+1. **`config/operator_roc.yaml`** — variant of `config/operator.yaml`: drop
+   the `wifi` connection entirely; keep `vpn` and `cell` with `host:`
+   unchanged (`gabby.vpn.bizzy.p11.lan` / `gabby.cell.bizzy.p11.lan`) and
+   `return_host:` changed to `pandy.vpn.bizzy.p11.lan` /
+   `pandy.cell.bizzy.p11.lan`. Connection ids must stay `vpn`/`cell`
+   exactly — they pair with the boat's `bizzyboat.yaml`, which needs **no
+   changes**.
+2. **`config/ping_targets_operator_roc.yaml`** — drop the direct/wifi-path
+   targets (`gabby_direct`, `router_bizzy_direct`), keep the vpn targets,
+   consider adding cell targets (`gabby.cell.bizzy.p11.lan`,
+   `router.cell.bizzy.p11.lan`).
+3. **`config/bizzyboat_operator_annunciator.yaml`** — ROC variant removing
+   WiFi-path indicators (precedent: 2026-04-29 removal of the bencloud
+   indicator; see `bizzyboat_project11/docs/operator_annunciator_design.md`).
+4. Check `config/network_monitor_operator.yaml` and
+   `config/teltonika_monitor_operator.yaml` for wifi-path assumptions; make
+   variants only if needed.
+5. **Launch selection**: config paths are hard-coded in
+   `launch/operator_core_launch.py` and
+   `launch/network_monitor_operator_launch.py` — add a launch argument
+   (e.g. `site:=roc`) or parallel launch files; pick whichever fits the
+   repo's existing style.
+6. Verify against source before documenting; test what's testable with the
+   boat reachable over VPN (bridge up from pandy, topics flowing, resend
+   rates sane). Do not run the bridge while salmon's bridge is running.
+
+Note: ssh to the boat works as `gabby.vpn` only with key auth set up (salmon
+has an ssh alias for it; pandy may need `ssh-copy-id`).
+
+## Handoff status (updated 2026-08-20, agent on pandy)
+
+1. **Superseded — done as a station-agnostic change, not an ROC variant**
+   (`eaf8976`). `wifi:=false` layers `config/operator_no_wifi.yaml` (shortens
+   `connections_list` to `[vpn, cell]`; udp_bridge iterates only the listed
+   connections, so the `wifi` block is simply never read and nothing is
+   duplicated), and `return_host` is derived from the station's short hostname
+   per `dns_naming.md` rule 8, overridable via `return_host_prefix`. Named for
+   the condition rather than the site because salmon has operated without wifi
+   too. On salmon the derivation reproduces the previous literals exactly.
+   Not yet exercised against the boat.
+2. **Done** (`12142f3`) — `ping_targets_operator_no_wifi.yaml` drops
+   `gabby_direct` and `router_bizzy_direct`, selected by `wifi:=false`. Both
+   lists gained the cell targets (`gabby_cell`, `router_bizzy_cell`), verified
+   reachable from the ROC. A test pins the no-wifi list to "the wifi list minus
+   exactly those two" so they cannot drift.
+3. **Effectively already done, for a reason worth recording**: the annunciator's
+   indicator list lives *inside the rqt perspective* as an embedded
+   `config_yaml`, not in `config/bizzyboat_operator_annunciator.yaml`. Salmon's
+   two live instances are already VPN-only — there are no WiFi indicators to
+   remove. The repo YAML (with `Op WiFi Bridge`, `Ping Gabby (WiFi)`,
+   `UDP WiFi`) is dead config; `docs/logs/2026/2026-05-22_salmon_logs.md:526`
+   recorded the suspicion and line 791 has the cleanup on a backlog. The real
+   ROC gaps were the stale `Op Starlink` row (no dish at the ROC) and the total
+   absence of cell-path indicators — both now addressed in pandy's perspective:
+   cell rows added to both instances, `Op Starlink` replaced with `Op Router`
+   (`Teltonika: router.op: connection`). Still not under version control.
+4. **Done** (`12142f3`) — the mikrotik monitor and the Starlink node are now
+   gated by `wifi` and `op_starlink` rather than given variant configs: the
+   bridge radio and the dish are absent at the ROC, not unreachable, and a node
+   that cannot succeed should not run. Two arguments, not one, because a
+   station's radio and its dish are independent facts.
+   `teltonika_monitor_operator.yaml` is unchanged — `router.op` resolves and
+   answers.
+5. **Done** — `wifi` and `op_starlink` are declared in
+   `operator_core_launch.py` and forwarded into
+   `network_monitor_operator_launch.py`.
+6. Untested against the boat — the bridge has not been run from pandy.
+
+## Task: wire AIS into the operator stack
+
+Live AIS is arriving on pandy's udp/2125 (verified 2026-08-20: ~1 sentence/s
+from `10.242.80.203` over ZeroTier, 10 distinct MMSIs in 20 s, message types
+1/3/18/21/24) and is being discarded — nothing is bound to the port.
+
+CAMP will not pick it up as-is: `camp/ais/ais_manager.cpp:36` subscribes to ROS
+topics of type `marine_ais_msgs/AISContact`, not UDP. The chain is three nodes
+deep:
+
+```
+udp/2125 -> nmea_relay -> /ais/raw -> ais_parser -> /ais/messages
+         -> ais_contact_tracker -> contacts (AISContact) -> CAMP
+```
+
+Gaps to close:
+
+- `marine_ais_tools/launch/ais_parser_with_nmea_relay.launch.py` covers only the
+  middle two nodes — it does not start `ais_contact_tracker`, so it stops one hop
+  short of the topic CAMP subscribes to.
+- Its shipped `config/parameters.yaml` defaults to `input_type: serial`,
+  `/dev/ttyACM0`, `input_port: 0` — nothing about UDP or 2125, so parameters must
+  be overridden.
+- No operator launch file in the workspace includes it, and neither the tmux
+  operator scripts nor salmon's crontab reference AIS. The only in-repo note on
+  the UDP path, `ccomjhc_project11/documentation/notes/ais.md`, is still in ROS 1
+  form.
+
+Also reconcile the sender: `ccomjhc_project11/scripts/ais_sender.py:34-36`
+hardcodes its ZeroTier destinations (`snowpetrelz`, `penguinz`, `pandora`) and
+lists neither pandy nor salmon, yet pandy receives — so the deployed sender has
+drifted from the committed copy.
+
+## Remaining before the survey
+
+- **Verify against the boat.** The 2026-08-20 bring-up on pandy was a dry run
+  with gabby's stack down: station-side paths all check out (see the pandy log),
+  but topic flow and resend rates against the vpn/cell budgets are still
+  untested.
+- **Add rviz to the operator UI launch** (operator request, 2026-08-20).
+  `marine_autonomy/launch/operator_ui_launch.py` already has `rviz` and
+  `rviz_configuration` arguments, defaulting off and to an empty config;
+  `bizzyboat_project11`'s wrapper does not pass either. Needs a BizzyBoat rviz
+  config committed alongside, then plumbing through the wrapper.
+- **Follow-up: udp_bridge connection rows are green with no peer.** They report
+  OK on transmit health alone, so `UDP VPN` / `UDP Cell` stayed green through a
+  bring-up with no boat at all. Consider a WARN on sustained `rx 0 B/s` while tx
+  flows, or an annunciator row keyed on bidirectional traffic. Touches shared
+  udp_bridge behaviour that salmon and the boat rely on.
+- Tweak the rqt perspectives on pandy (window placement across four monitors),
+  then put them under version control — they hold the only copy of the live
+  annunciator config, which has silently diverged from the repo YAML.
+- Wire AIS into the operator stack (task above).
+- Install `git-bug` (field-side `/start-deployment`) and `python3.12-venv`
+  (so `pre-commit` can run — commits from pandy have gone in unhooked so far).
+- Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy
+  plus a concurrent RDP session to mercat, watching udp_bridge resend rates
+  against the vpn/cell budgets.
+
+## Bringing the stack up from the ROC
+
+```bash
+~/start_tmux_operator_project11.bash     # then: tmux attach -t project11
+~/stop_tmux_project11.bash               # to shut it down
+```
+
+Same symlinks as salmon (`start_tmux_operator_project11.bash`,
+`stop_tmux_project11.bash`, `screenshooter.bash`, all pointing into the source
+tree so edits take effect without a rebuild). The ROC arguments come from
+`~/.config/project11/station.env`, which the launcher sources and echoes:
+
+```
+OPERATOR_LAUNCH_ARGS="wifi:=false op_starlink:=false"
+```
+
+That file is per-machine and not in the repo — a station's equipment is a fact
+about the machine, not about BizzyBoat. See `config/station.env.example`.
+Stations with a bridge radio and a dish have no file and get the defaults, so
+salmon is unaffected.
+
+Equivalent by hand:
+
+```bash
+ros2 launch bizzyboat_project11 operator_core_launch.py wifi:=false op_starlink:=false
+ros2 launch bizzyboat_project11 operator_ui_launch.py
+```
+
+**Before the bridge starts, salmon's bridge must be down.** The boat transmits
+to whichever station last advertised a return host, so bringing pandy up while
+salmon is running moves BizzyBoat's downlink off salmon mid-session.
+
+Check on the first launch:
+
+- The startup line `operator station return hosts: pandy.vpn.bizzy.p11.lan
+  (vpn), pandy.cell.bizzy.p11.lan (cell)`. A wrong value here is otherwise
+  invisible from this end.
+- `ros2 node list` shows `teltonika_monitor` and `ping_monitor` but **not**
+  `mikrotik_monitor` or `starlink_diagnostics`.
+- `ros2 topic echo /diagnostics` carries `Ping: ping.op: gabby_cell` and
+  `udp_bridge operator: bizzy: cell` — the new annunciator rows depend on those
+  exact names.
+- `Op Router` goes green, which is the first live test that teltonika_monitor
+  can authenticate to the ROC's RUTX11.
+- Boat topics arrive under `/bizzy/...`, and udp_bridge resend rates stay
+  within the vpn and cell byte budgets.

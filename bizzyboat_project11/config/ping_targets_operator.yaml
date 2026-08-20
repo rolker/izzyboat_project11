@@ -1,11 +1,26 @@
+# Operator-station ping targets (full set: WiFi bridge + VPN + cell).
+#
+# Paired with config/ping_targets_operator_no_wifi.yaml, which is this list
+# minus the two direct/WiFi-path targets. A test asserts that relationship, so
+# adding a target here without adding it there is a test failure rather than a
+# gap discovered mid-survey.
+#
+# Sweep timing: pings are sequential and an unreachable target costs
+# ping_count * ping_timeout (~15 s here), while the auto stale timeout is
+# 3 * poll_interval = 30 s. Two unreachable targets are enough to push the
+# sweep past that and flip healthy targets to STALE — which is why a station
+# with no WiFi path uses the no_wifi variant rather than just watching these
+# two sit red.
 ping_monitor:
   ros__parameters:
     hardware_id: 'ping.op'
     targets:
       - "gabby_direct:gabby.bizzy.p11.lan"
       - "gabby_vpn:gabby.vpn.bizzy.p11.lan"
+      - "gabby_cell:gabby.cell.bizzy.p11.lan"
       - "router_bizzy_direct:router.bizzy.p11.lan"
       - "router_bizzy_vpn:router.vpn.bizzy.p11.lan"
+      - "router_bizzy_cell:router.cell.bizzy.p11.lan"
       - "dns_google:8.8.8.8"
       - "dns_cloudflare:1.1.1.1"
     poll_interval: 10.0
