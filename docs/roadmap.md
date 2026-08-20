@@ -310,8 +310,8 @@ campaign items graduates from "nice to have" to survey-relevant:
   ([`camp#103`](https://github.com/rolker/camp/issues/103)) closed via the
   GGGS LOD/overview arc
   ([camp PR#182](https://github.com/rolker/camp/pull/182) /
-  [PR#183](https://github.com/rolker/camp/pull/183) /
-  [PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31); and the
+  [camp PR#183](https://github.com/rolker/camp/pull/183) /
+  [camp PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31); and the
   **eviction/reload lifecycle closed 2026-08-20**
   ([`camp#171`](https://github.com/rolker/camp/issues/171) eviction budget +
   [`camp#172`](https://github.com/rolker/camp/issues/172) in-session fine-tile
@@ -555,7 +555,9 @@ returns.
   [`uma#310`](https://github.com/rolker/unh_marine_autonomy/issues/310)
   `~/data/stores` → `~/data/world` root migration,
   [`uma#311`](https://github.com/rolker/unh_marine_autonomy/issues/311)
-  housekeeping, and the uma#288 umbrella items 4–6 (including the
+  housekeeping, and the
+  [`uma#288`](https://github.com/rolker/unh_marine_autonomy/issues/288)
+  umbrella items 4–6 (including the
   updater-run acceptance gate on the operator/boat hosts). The D8
   re-split *completes* the old "draft→processed promotion is thin"
   line — promotion is now the offline re-run into `processed/`. The
