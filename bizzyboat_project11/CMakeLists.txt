@@ -29,6 +29,9 @@ if(BUILD_TESTING)
   # Unit tests for the one-off bag-retrofit utility (#342). The script itself is
   # not installed (manual offline tool, like retrofit_sidescan_bag.py).
   ament_add_pytest_test(test_retrofit_m3_bag test/test_retrofit_m3_bag.py)
+  # Station-agnostic wiring in operator_core_launch.py (return_host derivation
+  # + the wifi:=false overlay). Both fail silently in the field if broken.
+  ament_add_pytest_test(test_operator_core_launch test/test_operator_core_launch.py)
 endif()
 
 ament_package()

@@ -11,7 +11,6 @@ from launch_ros.substitutions import FindPackageShare
 def generate_launch_description():
   robot_namespace = LaunchConfiguration('robot_namespace')
   operator_namespace = LaunchConfiguration('operator_namespace')
-  background_chart = LaunchConfiguration('background_chart')
 
   robot_namespace_arg = DeclareLaunchArgument(
     "robot_namespace", default_value=TextSubstitution(text="izzy")
@@ -19,12 +18,6 @@ def generate_launch_description():
   operator_namespace_arg = DeclareLaunchArgument(
     "operator_namespace", default_value=TextSubstitution(text="operator")
   )
-  background_chart_arg = DeclareLaunchArgument(
-    "background_chart", default_value=PathJoinSubstitution(
-      [FindPackageShare('camp'), 'workspace', '13283', '13283_2.KAP']
-    )
-  )
-
   launch_operator_ui_include = IncludeLaunchDescription(
     PythonLaunchDescriptionSource(
       PathJoinSubstitution([
@@ -36,7 +29,6 @@ def generate_launch_description():
     launch_arguments={
       'robot_namespace': robot_namespace,
       'operator_namespace': operator_namespace,
-      'background_chart': background_chart,
       'rviz': 'true',
       'rviz_configuration': PathJoinSubstitution([
         FindPackageShare('izzyboat_project11'),
@@ -51,7 +43,6 @@ def generate_launch_description():
   return LaunchDescription([
     robot_namespace_arg,
     operator_namespace_arg,
-    background_chart_arg,
     launch_operator_ui_include
   ])
 

@@ -86,8 +86,147 @@ standby set: **create variants, don't modify them.**
 Note: ssh to the boat works as `gabby.vpn` only with key auth set up (salmon
 has an ssh alias for it; pandy may need `ssh-copy-id`).
 
+## Handoff status (updated 2026-08-20, agent on pandy)
+
+1. **Superseded — done as a station-agnostic change, not an ROC variant**
+   (`eaf8976`). `wifi:=false` layers `config/operator_no_wifi.yaml` (shortens
+   `connections_list` to `[vpn, cell]`; udp_bridge iterates only the listed
+   connections, so the `wifi` block is simply never read and nothing is
+   duplicated), and `return_host` is derived from the station's short hostname
+   per `dns_naming.md` rule 8, overridable via `return_host_prefix`. Named for
+   the condition rather than the site because salmon has operated without wifi
+   too. On salmon the derivation reproduces the previous literals exactly.
+   Not yet exercised against the boat.
+2. **Done** (`12142f3`) — `ping_targets_operator_no_wifi.yaml` drops
+   `gabby_direct` and `router_bizzy_direct`, selected by `wifi:=false`. Both
+   lists gained the cell targets (`gabby_cell`, `router_bizzy_cell`), verified
+   reachable from the ROC. A test pins the no-wifi list to "the wifi list minus
+   exactly those two" so they cannot drift.
+3. **Effectively already done, for a reason worth recording**: the annunciator's
+   indicator list lives *inside the rqt perspective* as an embedded
+   `config_yaml`, not in `config/bizzyboat_operator_annunciator.yaml`. Salmon's
+   two live instances are already VPN-only — there are no WiFi indicators to
+   remove. The repo YAML (with `Op WiFi Bridge`, `Ping Gabby (WiFi)`,
+   `UDP WiFi`) is dead config; `docs/logs/2026/2026-05-22_salmon_logs.md:526`
+   recorded the suspicion and line 791 has the cleanup on a backlog. The real
+   ROC gaps were the stale `Op Starlink` row (no dish at the ROC) and the total
+   absence of cell-path indicators — both now addressed in pandy's perspective:
+   cell rows added to both instances, `Op Starlink` replaced with `Op Router`
+   (`Teltonika: router.op: connection`). Still not under version control.
+4. **Done** (`12142f3`) — the mikrotik monitor and the Starlink node are now
+   gated by `wifi` and `op_starlink` rather than given variant configs: the
+   bridge radio and the dish are absent at the ROC, not unreachable, and a node
+   that cannot succeed should not run. Two arguments, not one, because a
+   station's radio and its dish are independent facts.
+   `teltonika_monitor_operator.yaml` is unchanged — `router.op` resolves and
+   answers.
+5. **Done** — `wifi` and `op_starlink` are declared in
+   `operator_core_launch.py` and forwarded into
+   `network_monitor_operator_launch.py`.
+6. Untested against the boat — the bridge has not been run from pandy.
+
+## Task: wire AIS into the operator stack
+
+Live AIS is arriving on pandy's udp/2125 (verified 2026-08-20: ~1 sentence/s
+from `10.242.80.203` over ZeroTier, 10 distinct MMSIs in 20 s, message types
+1/3/18/21/24) and is being discarded — nothing is bound to the port.
+
+CAMP will not pick it up as-is: `camp/ais/ais_manager.cpp:36` subscribes to ROS
+topics of type `marine_ais_msgs/AISContact`, not UDP. The chain is three nodes
+deep:
+
+```
+udp/2125 -> nmea_relay -> /ais/raw -> ais_parser -> /ais/messages
+         -> ais_contact_tracker -> contacts (AISContact) -> CAMP
+```
+
+Gaps to close:
+
+- `marine_ais_tools/launch/ais_parser_with_nmea_relay.launch.py` covers only the
+  middle two nodes — it does not start `ais_contact_tracker`, so it stops one hop
+  short of the topic CAMP subscribes to.
+- Its shipped `config/parameters.yaml` defaults to `input_type: serial`,
+  `/dev/ttyACM0`, `input_port: 0` — nothing about UDP or 2125, so parameters must
+  be overridden.
+- No operator launch file in the workspace includes it, and neither the tmux
+  operator scripts nor salmon's crontab reference AIS. The only in-repo note on
+  the UDP path, `ccomjhc_project11/documentation/notes/ais.md`, is still in ROS 1
+  form.
+
+Also reconcile the sender: `ccomjhc_project11/scripts/ais_sender.py:34-36`
+hardcodes its ZeroTier destinations (`snowpetrelz`, `penguinz`, `pandora`) and
+lists neither pandy nor salmon, yet pandy receives — so the deployed sender has
+drifted from the committed copy.
+
 ## Remaining before the survey
 
+- **Verify against the boat.** The 2026-08-20 bring-up on pandy was a dry run
+  with gabby's stack down: station-side paths all check out (see the pandy log),
+  but topic flow and resend rates against the vpn/cell budgets are still
+  untested.
+- **Add rviz to the operator UI launch** (operator request, 2026-08-20).
+  `marine_autonomy/launch/operator_ui_launch.py` already has `rviz` and
+  `rviz_configuration` arguments, defaulting off and to an empty config;
+  `bizzyboat_project11`'s wrapper does not pass either. Needs a BizzyBoat rviz
+  config committed alongside, then plumbing through the wrapper.
+- **Follow-up: udp_bridge connection rows are green with no peer.** They report
+  OK on transmit health alone, so `UDP VPN` / `UDP Cell` stayed green through a
+  bring-up with no boat at all. Consider a WARN on sustained `rx 0 B/s` while tx
+  flows, or an annunciator row keyed on bidirectional traffic. Touches shared
+  udp_bridge behaviour that salmon and the boat rely on.
+- Tweak the rqt perspectives on pandy (window placement across four monitors),
+  then put them under version control — they hold the only copy of the live
+  annunciator config, which has silently diverged from the repo YAML.
+- Wire AIS into the operator stack (task above).
+- Install `git-bug` (field-side `/start-deployment`) and `python3.12-venv`
+  (so `pre-commit` can run — commits from pandy have gone in unhooked so far).
 - Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy
   plus a concurrent RDP session to mercat, watching udp_bridge resend rates
   against the vpn/cell budgets.
+
+## Bringing the stack up from the ROC
+
+```bash
+~/start_tmux_operator_project11.bash     # then: tmux attach -t project11
+~/stop_tmux_project11.bash               # to shut it down
+```
+
+Same symlinks as salmon (`start_tmux_operator_project11.bash`,
+`stop_tmux_project11.bash`, `screenshooter.bash`, all pointing into the source
+tree so edits take effect without a rebuild). The ROC arguments come from
+`~/.config/project11/station.env`, which the launcher sources and echoes:
+
+```
+OPERATOR_LAUNCH_ARGS="wifi:=false op_starlink:=false"
+```
+
+That file is per-machine and not in the repo — a station's equipment is a fact
+about the machine, not about BizzyBoat. See `config/station.env.example`.
+Stations with a bridge radio and a dish have no file and get the defaults, so
+salmon is unaffected.
+
+Equivalent by hand:
+
+```bash
+ros2 launch bizzyboat_project11 operator_core_launch.py wifi:=false op_starlink:=false
+ros2 launch bizzyboat_project11 operator_ui_launch.py
+```
+
+**Before the bridge starts, salmon's bridge must be down.** The boat transmits
+to whichever station last advertised a return host, so bringing pandy up while
+salmon is running moves BizzyBoat's downlink off salmon mid-session.
+
+Check on the first launch:
+
+- The startup line `operator station return hosts: pandy.vpn.bizzy.p11.lan
+  (vpn), pandy.cell.bizzy.p11.lan (cell)`. A wrong value here is otherwise
+  invisible from this end.
+- `ros2 node list` shows `teltonika_monitor` and `ping_monitor` but **not**
+  `mikrotik_monitor` or `starlink_diagnostics`.
+- `ros2 topic echo /diagnostics` carries `Ping: ping.op: gabby_cell` and
+  `udp_bridge operator: bizzy: cell` — the new annunciator rows depend on those
+  exact names.
+- `Op Router` goes green, which is the first live test that teltonika_monitor
+  can authenticate to the ROC's RUTX11.
+- Boat topics arrive under `/bizzy/...`, and udp_bridge resend rates stay
+  within the vpn and cell byte budgets.

@@ -1,0 +1,26 @@
+# Operator-station ping targets for a station with no WiFi-bridge path to the
+# boat (ROC, or any over-the-horizon operation). Selected by wifi:=false in
+# network_monitor_operator_launch.py.
+#
+# This is config/ping_targets_operator.yaml minus gabby_direct and
+# router_bizzy_direct — the two targets that route over the bridge radio and
+# can never succeed without it. Everything else is identical, and a test
+# enforces that so the two files cannot drift.
+#
+# The list is duplicated rather than layered because ping_monitor takes
+# `targets` as a flat string array (ping_monitor_node.py:40) — there is no
+# per-target enable and no list indirection to override, so a second file
+# replaces the whole list.
+ping_monitor:
+  ros__parameters:
+    hardware_id: 'ping.op'
+    targets:
+      - "gabby_vpn:gabby.vpn.bizzy.p11.lan"
+      - "gabby_cell:gabby.cell.bizzy.p11.lan"
+      - "router_bizzy_vpn:router.vpn.bizzy.p11.lan"
+      - "router_bizzy_cell:router.cell.bizzy.p11.lan"
+      - "dns_google:8.8.8.8"
+      - "dns_cloudflare:1.1.1.1"
+    poll_interval: 10.0
+    ping_count: 3
+    ping_timeout: 5.0
