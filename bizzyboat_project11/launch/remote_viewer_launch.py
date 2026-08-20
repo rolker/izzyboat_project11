@@ -44,14 +44,6 @@ def generate_launch_description():
         'camp', default_value='true'
     )
 
-    background_chart = LaunchConfiguration('background_chart')
-    background_chart_arg = DeclareLaunchArgument(
-        'background_chart',
-        default_value=PathJoinSubstitution([
-            FindPackageShare('camp'), 'workspace', '13283', '13283_2.KAP'
-        ])
-    )
-
     # udp_bridge endpoint (name: remote) under the remote namespace. The /**/
     # wildcard in remote.yaml matches the node regardless of the pushed namespace.
     bridge_group = GroupAction(
@@ -84,9 +76,10 @@ def generate_launch_description():
         executable='CCOMAutonomousMissionPlanner',
         name='camp',
         namespace=namespace,
+        # Workspace directory only -- CAMP supplies its own OSM backdrop and
+        # restores whatever charts the operator has loaded.
         arguments=[
-            PathJoinSubstitution([FindPackageShare('camp'), 'workspace/']),
-            background_chart
+            PathJoinSubstitution([FindPackageShare('camp'), 'workspace/'])
         ],
         parameters=[{'robot_namespace': robot_namespace}],
         condition=IfCondition(camp),
@@ -100,7 +93,6 @@ def generate_launch_description():
         robot_namespace_arg,
         enable_bridge_arg,
         camp_arg,
-        background_chart_arg,
         bridge_group,
         camp_node,
     ])
