@@ -391,6 +391,28 @@ the boat sends the same topics down both paths and the second copy to arrive is
 counted as a duplicate. Expected behaviour for the redundant-path design, worth
 recording so it is not re-diagnosed as loss.
 
+**2026-08-20 19:31 -04:00** — **ONGOING: recurring 5-16 s stalls of all
+boat-originated data.** Operator reported video delayed and the sonar displays
+frozen; the freeze they saw was 13.7 s at 19:17:33. Eight such stalls between
+19:02 and 19:30, durations trending upward.
+
+Ruled out from this end: not the operator station (pandy's own udp_bridge
+published 2602 statistics messages with zero gaps over 3 s in the same window),
+not the Starlink link (`0.0% drop, 18-22 ms, 0.01% obstructed` throughout), and
+not a boat-side restart (no `Assuming remote udp_bridge restart`, unlike the
+14:09 event).
+
+The finding that matters: ICMP loss to gabby appears on a **different path each
+time** — vpn 50% loss at 19:17 with cell clean, cell 25% loss at 19:23 with vpn
+clean — and **both** bridge connections stop regardless. vpn and cell are
+independent bearers, so a fault in one cannot explain the other going silent.
+Working hypothesis is head-of-line blocking in the boat's udp_bridge sender,
+stated as a hypothesis because it cannot be confirmed from pandy.
+
+Full evidence, method and the gabby-side checks in the deep-dive:
+[`2026-08-20_pandy_link-stalls_logs.md`](2026-08-20_pandy_link-stalls_logs.md).
+Needs someone on the boat.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
@@ -407,6 +429,8 @@ Updated 2026-08-20. Done items struck from the handoff list in
 - **Follow-up**: udp_bridge connection diagnostics report OK with `rx 0 B/s`
   (see the 11:33 entry) — the annunciator's UDP rows are green with no peer.
 - **Follow-up (operator request)**: add rviz to the operator UI launch.
+- **OPEN, needs gabby**: recurring 5-16 s stalls of all boat data, escalating —
+  see `2026-08-20_pandy_link-stalls_logs.md`.
 - **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the
   AIS task in `roc_operator_setup_2026-08-19.md`.
 - `git-bug` install (see 2026-08-19 entry) — `/start-deployment` stops at
