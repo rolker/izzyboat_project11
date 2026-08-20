@@ -12,22 +12,67 @@ import socket
 from pathlib import Path
 
 import pytest
+import yaml
 
 from launch import LaunchContext
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.utilities import perform_substitutions
+from launch_ros.actions import Node
 from launch_ros.actions import SetParameter
 from launch_ros.actions import SetParametersFromFile
 
-LAUNCH_FILE = Path(__file__).resolve().parent.parent / 'launch' / 'operator_core_launch.py'
+PACKAGE_DIR = Path(__file__).resolve().parent.parent
+LAUNCH_FILE = PACKAGE_DIR / 'launch' / 'operator_core_launch.py'
+MONITOR_LAUNCH_FILE = PACKAGE_DIR / 'launch' / 'network_monitor_operator_launch.py'
+CONFIG_DIR = PACKAGE_DIR / 'config'
 
 
-def _load_launch_module():
-    spec = importlib.util.spec_from_file_location('operator_core_launch', LAUNCH_FILE)
+def _load_launch_module(path=LAUNCH_FILE):
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _text(context, value):
+    """Resolve a launch value that may be a plain string or substitutions."""
+    if isinstance(value, str):
+        return value
+    return perform_substitutions(context, value)
+
+
+def _monitor_nodes(**overrides):
+    """Return {node name: config basename or None} for the monitor launch."""
+    module = _load_launch_module(MONITOR_LAUNCH_FILE)
+    context = LaunchContext()
+    context.launch_configurations.update(overrides)
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+
+    running = {}
+    for entity in description.entities:
+        if not isinstance(entity, Node):
+            continue
+        if entity.condition is not None and not entity.condition.evaluate(context):
+            continue
+        name = _text(context, entity._Node__node_name)
+        config = None
+        for parameter in entity._Node__parameters or []:
+            # Inline dicts (the Starlink node) have no config file; file
+            # parameters are normalised into ParameterFile by Node.
+            param_file = getattr(parameter, 'param_file', None)
+            if param_file is not None:
+                config = Path(_text(context, param_file)).name
+        running[name] = config
+    return running
+
+
+def _targets(basename):
+    data = yaml.safe_load((CONFIG_DIR / basename).read_text())
+    return data['ping_monitor']['ros__parameters']['targets']
 
 
 def _resolve(**overrides):
@@ -104,3 +149,76 @@ def test_return_host_is_never_left_empty():
             value = params[f'remotes.bizzy.connections.{connection}.return_host']
             assert value and not value.startswith('.'), \
                 f'{connection} return_host resolved to {value!r}'
+
+
+# --- network_monitor_operator_launch.py ------------------------------------
+#
+# Every node here polls a specific piece of hardware. At a station that does
+# not have that hardware the node cannot succeed, and a permanently failed
+# diagnostic is worse than an absent one — it trains the operator to ignore
+# the annunciator.
+
+def test_all_monitors_run_at_a_fully_equipped_station():
+    running = _monitor_nodes()
+    assert set(running) == {
+        'mikrotik_monitor', 'teltonika_monitor', 'starlink_diagnostics', 'ping_monitor'}
+    assert running['ping_monitor'] == 'ping_targets_operator.yaml'
+
+
+def test_no_wifi_drops_the_bridge_radio_monitor_and_swaps_ping_targets():
+    running = _monitor_nodes(wifi='false')
+    assert 'mikrotik_monitor' not in running, \
+        'bizzy.wifi.op is absent at such a station, not merely unreachable'
+    assert running['ping_monitor'] == 'ping_targets_operator_no_wifi.yaml'
+    assert 'teltonika_monitor' in running, 'router.op is reachable without the bridge'
+
+
+def test_exactly_one_ping_monitor_runs_in_either_mode():
+    """Both ping_monitor Nodes carry the same node name; if the conditions ever
+    stopped being mutually exclusive, two would race on it."""
+    for overrides in ({}, {'wifi': 'false'}):
+        module = _load_launch_module(MONITOR_LAUNCH_FILE)
+        context = LaunchContext()
+        context.launch_configurations.update(overrides)
+        description = module.generate_launch_description()
+        for entity in description.entities:
+            if isinstance(entity, DeclareLaunchArgument):
+                entity.visit(context)
+        running = [
+            entity for entity in description.entities
+            if isinstance(entity, Node)
+            and _text(context, entity._Node__node_name) == 'ping_monitor'
+            and (entity.condition is None or entity.condition.evaluate(context))
+        ]
+        assert len(running) == 1, f'{len(running)} ping monitors with {overrides or "defaults"}'
+
+
+def test_starlink_is_gated_independently_of_wifi():
+    """A station's dish and its bridge radio are separate facts; the ROC lacks
+    both, but the arguments must not be entangled."""
+    assert 'starlink_diagnostics' in _monitor_nodes(wifi='false')
+    assert 'starlink_diagnostics' not in _monitor_nodes(op_starlink='false')
+    assert 'mikrotik_monitor' in _monitor_nodes(op_starlink='false')
+
+
+def test_ping_target_lists_differ_only_by_the_wifi_path_targets():
+    """The two lists are duplicated (ping_monitor takes a flat string array, so
+    a second file replaces rather than shortens it). This is what stops them
+    drifting: a target added to one and not the other fails here."""
+    wifi_targets = _targets('ping_targets_operator.yaml')
+    no_wifi_targets = _targets('ping_targets_operator_no_wifi.yaml')
+    dropped = [t for t in wifi_targets if t not in no_wifi_targets]
+    assert dropped == [
+        'gabby_direct:gabby.bizzy.p11.lan',
+        'router_bizzy_direct:router.bizzy.p11.lan',
+    ]
+    assert [t for t in no_wifi_targets if t not in wifi_targets] == []
+
+
+def test_both_ping_lists_cover_the_cell_path():
+    """Cell is one of two redundant links to the boat; it had no health signal
+    at all before this."""
+    for basename in ('ping_targets_operator.yaml', 'ping_targets_operator_no_wifi.yaml'):
+        names = [t.split(':', 1)[0] for t in _targets(basename)]
+        assert 'gabby_cell' in names, basename
+        assert 'router_bizzy_cell' in names, basename

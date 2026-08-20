@@ -86,7 +86,19 @@ def generate_launch_description():
         'wifi', default_value='true',
         description='This station has a line-of-sight WiFi-bridge path to the '
                     'boat. Set false for over-the-horizon operation (e.g. the '
-                    'ROC) to drop the wifi connection from udp_bridge.'
+                    'ROC) to drop the wifi connection from udp_bridge, the '
+                    'mikrotik monitor, and the direct-path ping targets.'
+    )
+
+    # Declared here only to forward it: network_monitor_operator_launch.py owns
+    # the behaviour, but an argument declared in an included description is not
+    # settable from this launch's command line unless the parent passes it on.
+    op_starlink = LaunchConfiguration('op_starlink')
+    op_starlink_arg = DeclareLaunchArgument(
+        'op_starlink', default_value='true',
+        description='This station has its own Starlink dish. Set false at a '
+                    'station without one (e.g. the ROC) to drop the Starlink '
+                    'diagnostics node.'
     )
 
     # Short hostname, lowercased and stripped of any domain part, so a host
@@ -128,6 +140,7 @@ def generate_launch_description():
         enable_bridge_arg,
         record_diagnostics_arg,
         wifi_arg,
+        op_starlink_arg,
         return_host_prefix_arg,
         return_host_announcement,
         GroupAction(
@@ -171,6 +184,10 @@ def generate_launch_description():
                     'network_monitor_operator_launch.py'
                 ])
             ),
+            launch_arguments={
+                'wifi': wifi,
+                'op_starlink': op_starlink,
+            }.items()
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
