@@ -264,6 +264,54 @@ Verified by dry run against a tmux shim: with the file the core launch receives
 both arguments; with `STATION_ENV` pointed at a nonexistent path it falls back
 to the bare command salmon runs today.
 
+**2026-08-20 11:33 -04:00** — **First operator-stack bring-up on pandy**, via
+`~/start_tmux_operator_project11.bash`. Deliberately a dry run: salmon is powered
+up but not running the stack, and gabby's stack is not running either, so
+nothing could perturb the boat's return path while every station-side path was
+still exercised for real.
+
+Everything under test verified:
+
+- `[INFO] [launch.user]: operator station return hosts: pandy.vpn.bizzy.p11.lan
+  (vpn), pandy.cell.bizzy.p11.lan (cell)` — the derivation resolves to this
+  station.
+- udp_bridge reports **only** `bizzy: vpn` and `bizzy: cell` connections. No
+  wifi connection exists, so the `wifi:=false` overlay is doing what it should.
+- All six ping targets OK, including the two new cell ones — `gabby_cell`
+  43.3 ms, `router_bizzy_cell` 46.3 ms. `gabby_direct` and `router_bizzy_direct`
+  are absent, confirming `ping_targets_operator_no_wifi.yaml` is the list in use.
+- `mikrotik_monitor` and `starlink_diagnostics` are **not** in `ros2 node list` —
+  the equipment gating works.
+- `Teltonika: router.op: connection` = OK "reachable", `system` = RUTX11. The
+  `Op Router` row that replaced `Op Starlink` works, which was the least-proven
+  thing in the annunciator change.
+- All four rqt perspectives loaded (`-p bizzyboat`, `-p bizzyboat-diagnostics`,
+  `-p logger`, `-p bizzy_sonar`) plus CAMP. (`ros2 node list` shows only
+  `rqt_diagnostics` by name — the perspectives hosting C++ plugins register as
+  `rqt_gui_cpp_node_*`; all four processes are running with the right `-p`.)
+- Bag recorder writing to
+  `~/data/logs/operator/2026-08-20/bags/operator_2026-08-20T11.33.06/`.
+
+Incidental: teltonika reports `interface/bizzy_wifi_bridge Up` on router.op while
+the radio itself (`bizzy.wifi.op.p11.lan`, 172.16.20.4) stays unreachable — the
+router-side interface is up, the far end is out of range. Consistent with the ROC
+situation and a reminder that the router interface is not evidence of a link.
+
+**Finding — the UDP connection rows are green with no peer.**
+`udp_bridge operator: bizzy: vpn` and `: cell` both report **OK**, "tx 858 B/s,
+rx 0 B/s", with gabby's stack down. The connection diagnostic reflects transmit
+health, not whether anything is answering, so `UDP VPN` / `UDP Cell` on the
+annunciator are green while no boat data exists at all. I had predicted these
+would go red; they do not.
+
+This matters for annunciator trust in the other direction from the WiFi rows: a
+row that is green when the link is dead is worse than one that is red when it is
+alive. An operator glancing at the panel cannot distinguish "link healthy" from
+"boat stack down". Candidate fixes: WARN on sustained `rx 0 B/s` while tx is
+flowing, or an annunciator row keyed on something that requires bidirectional
+traffic (heartbeat age). Filed as a follow-up rather than changed mid-session —
+it touches shared udp_bridge behaviour that salmon and the boat also rely on.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
@@ -275,10 +323,11 @@ Updated 2026-08-20. Done items struck from the handoff list in
   version-control still to come.
 - **Annunciator** — already VPN-only in the live perspective; the ROC gaps are
   the stale `Op Starlink` row and the absent cell-path indicators.
-- **Network monitors** — done (`12142f3`) via `wifi` and `op_starlink`.
-  Untested against live diagnostics; the `Op Router` row in particular assumes
-  teltonika_monitor can authenticate to the ROC's RUTX11, which has not been
-  exercised from pandy.
+- **Network monitors** — done (`12142f3`) and verified live 2026-08-20,
+  `Op Router` included.
+- **Follow-up**: udp_bridge connection diagnostics report OK with `rx 0 B/s`
+  (see the 11:33 entry) — the annunciator's UDP rows are green with no peer.
+- **Follow-up (operator request)**: add rviz to the operator UI launch.
 - **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the
   AIS task in `roc_operator_setup_2026-08-19.md`.
 - `git-bug` install (see 2026-08-19 entry) — `/start-deployment` stops at
@@ -292,7 +341,9 @@ Updated 2026-08-20. Done items struck from the handoff list in
   concurrent RDP session to mercat, watching udp_bridge resend rates against the
   vpn/cell budgets.
 
-**Not verified**: nothing has been confirmed to actually exchange ROS traffic with
-the boat from pandy. The operator udp_bridge has not been run here — and must not
-be run while salmon's bridge is up (only one operator bridge at a time; the boat
-transmits to whichever station last advertised a return host).
+**Still not verified**: pandy has never exchanged ROS traffic with the boat. The
+2026-08-20 bring-up ran with gabby's stack down, so the uplink was transmitting
+into silence by design. Topic flow, resend rates against the vpn and cell byte
+budgets, and the boat-side annunciator rows all remain untested. The bridge must
+not run here while salmon's is up — the boat transmits to whichever station last
+advertised a return host.

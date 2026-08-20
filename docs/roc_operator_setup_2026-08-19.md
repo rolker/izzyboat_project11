@@ -160,9 +160,20 @@ drifted from the committed copy.
 
 ## Remaining before the survey
 
-- **Bring the stack up from pandy and verify it against the boat** — the whole
-  config set above is tested only in isolation. See "Bringing the stack up"
-  below.
+- **Verify against the boat.** The 2026-08-20 bring-up on pandy was a dry run
+  with gabby's stack down: station-side paths all check out (see the pandy log),
+  but topic flow and resend rates against the vpn/cell budgets are still
+  untested.
+- **Add rviz to the operator UI launch** (operator request, 2026-08-20).
+  `marine_autonomy/launch/operator_ui_launch.py` already has `rviz` and
+  `rviz_configuration` arguments, defaulting off and to an empty config;
+  `bizzyboat_project11`'s wrapper does not pass either. Needs a BizzyBoat rviz
+  config committed alongside, then plumbing through the wrapper.
+- **Follow-up: udp_bridge connection rows are green with no peer.** They report
+  OK on transmit health alone, so `UDP VPN` / `UDP Cell` stayed green through a
+  bring-up with no boat at all. Consider a WARN on sustained `rx 0 B/s` while tx
+  flows, or an annunciator row keyed on bidirectional traffic. Touches shared
+  udp_bridge behaviour that salmon and the boat rely on.
 - Tweak the rqt perspectives on pandy (window placement across four monitors),
   then put them under version control — they hold the only copy of the live
   annunciator config, which has silently diverged from the repo YAML.
