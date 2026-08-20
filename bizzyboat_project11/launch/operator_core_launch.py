@@ -104,6 +104,16 @@ def generate_launch_description():
     # Short hostname, lowercased and stripped of any domain part, so a host
     # configured as "pandy.p11.lan" still derives "pandy".
     station = socket.gethostname().split('.')[0].lower()
+    # AIS ingest. Default on: the shore receiver's feed is useful at any
+    # operator station, and at a station that does not receive it the nodes
+    # idle on an empty socket. Set ais:=false (or in station.env) to skip them.
+    ais = LaunchConfiguration('ais')
+    ais_arg = DeclareLaunchArgument(
+        'ais', default_value='true',
+        description='Ingest the shore AIS feed (udp/2125) and publish contacts '
+                    'for CAMP.'
+    )
+
     return_host_prefix = LaunchConfiguration('return_host_prefix')
     return_host_prefix_arg = DeclareLaunchArgument(
         'return_host_prefix', default_value=station,
@@ -141,6 +151,7 @@ def generate_launch_description():
         record_diagnostics_arg,
         wifi_arg,
         op_starlink_arg,
+        ais_arg,
         return_host_prefix_arg,
         return_host_announcement,
         GroupAction(
@@ -188,6 +199,16 @@ def generate_launch_description():
                 'wifi': wifi,
                 'op_starlink': op_starlink,
             }.items()
+        ),
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                PathJoinSubstitution([
+                    FindPackageShare('bizzyboat_project11'),
+                    'launch',
+                    'ais_launch.py'
+                ])
+            ),
+            condition=IfCondition(ais)
         ),
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(

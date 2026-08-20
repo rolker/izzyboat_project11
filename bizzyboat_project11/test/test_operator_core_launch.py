@@ -17,6 +17,7 @@ import yaml
 from launch import LaunchContext
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
+from launch.actions import IncludeLaunchDescription
 from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
 from launch_ros.actions import SetParameter
@@ -222,3 +223,86 @@ def test_both_ping_lists_cover_the_cell_path():
         names = [t.split(':', 1)[0] for t in _targets(basename)]
         assert 'gabby_cell' in names, basename
         assert 'router_bizzy_cell' in names, basename
+
+
+# --- AIS ingest -------------------------------------------------------------
+
+def _included_launch_files(**overrides):
+    """Basenames of the launch files operator_core_launch.py includes."""
+    module = _load_launch_module()
+    context = LaunchContext()
+    context.launch_configurations.update(overrides)
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+    included = []
+    for entity in description.entities:
+        if not isinstance(entity, IncludeLaunchDescription):
+            continue
+        if entity.condition is not None and not entity.condition.evaluate(context):
+            continue
+        # location is the unresolved PathJoinSubstitution repr, which
+        # carries the filename literal.
+        included.append(str(entity.launch_description_source.location))
+    return included
+
+
+def test_ais_ingest_is_included_by_default_and_can_be_disabled():
+    assert any('ais_launch.py' in i for i in _included_launch_files())
+    assert not any('ais_launch.py' in i for i in _included_launch_files(ais='false'))
+
+
+def test_ais_relay_listens_on_udp_not_the_serial_default():
+    """marine_ais_tools' own parameters.yaml defaults to serial /dev/ttyACM0.
+    Inheriting that would leave the socket unbound and CAMP empty, with no
+    error anywhere."""
+    module = _load_launch_module(PACKAGE_DIR / 'launch' / 'ais_launch.py')
+    context = LaunchContext()
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+    relay = next(e for e in description.entities
+                 if isinstance(e, Node) and _text(context, e._Node__node_name) == 'nmea_relay')
+    # Node normalises an inline dict's keys into substitution tuples.
+    params = {}
+    for parameter in relay._Node__parameters or []:
+        if isinstance(parameter, dict):
+            for key, value in parameter.items():
+                params[perform_substitutions(context, list(key))] = value
+
+    # launch_ros normalises an inline string value into a YAML document
+    # ('udp\n...\n'), so take the scalar off the first line.
+    input_type = perform_substitutions(context, list(params['input_type']))
+    assert input_type.splitlines()[0] == 'udp'
+    # Declared int on the node; a bare substitution would arrive as a string
+    # and rclpy rejects the type before the node's own int() cast can run.
+    assert params['input_port'].value_type is int
+    assert params['input_port'].evaluate(context) == 2125
+
+
+def test_ais_chain_is_complete_through_to_a_contact_topic():
+    """CAMP subscribes by message type to AISContact (ais_manager.cpp:18-43),
+    which only ais_contact_tracker publishes. marine_ais_tools' launch file
+    stops at ais_parser, one hop short."""
+    module = _load_launch_module(PACKAGE_DIR / 'launch' / 'ais_launch.py')
+    context = LaunchContext()
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+    nodes = {_text(context, e._Node__node_name): e
+             for e in description.entities if isinstance(e, Node)}
+    assert set(nodes) == {'nmea_relay', 'ais_parser', 'ais_contact_tracker'}
+
+    def remaps(node):
+        return {_text(context, a): _text(context, b)
+                for a, b in (node._Node__remappings or [])}
+
+    # The chain must join up end to end: each stage's output is the next
+    # stage's input.
+    assert remaps(nodes['nmea_relay'])['nmea'] == remaps(nodes['ais_parser'])['nmea']
+    assert (remaps(nodes['ais_parser'])['messages']
+            == remaps(nodes['ais_contact_tracker'])['messages'])
+    assert remaps(nodes['ais_contact_tracker'])['contacts'] == 'ais/contacts'
