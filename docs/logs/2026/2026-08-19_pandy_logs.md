@@ -85,25 +85,147 @@ would stop at issue lookup here. The workspace bootstrap step that installs git-
 was skipped on this machine. Needs installing before pandy runs a live deployment
 session.
 
+## 2026-08-20
+
+**2026-08-20 09:20 -04:00** — Operator-stack readiness review on pandy before
+running anything. Build/env side is sound: every package the operator tree pulls
+in resolves (`bizzyboat_project11`, `marine_autonomy`, `udp_bridge`, `camp`,
+`rqt_operator_log`, `mikrotik_monitor`, `teltonika_monitor`, `starlink_stats`,
+`network_tools`), and `ros2 launch bizzyboat_project11 operator_core_launch.py
+--show-args` composes the whole include tree without error. Both boat paths are
+up from here: `gabby.vpn.bizzy.p11.lan` 39 ms, `gabby.cell.bizzy.p11.lan` 44 ms,
+0% loss. Joysticks present (`js0`, `js1`); CAMP's background chart
+(`camp/workspace/13283/13283_2.KAP`) is installed. ENC absence blocks nothing —
+neither operator launch starts an s57 node.
+
+**2026-08-20 09:35 -04:00** — Blocker found and fixed: `config/operator.yaml` was
+salmon's file — `return_host: salmon.*` on all three connections, plus a `wifi`
+connection to `gabby.bizzy.p11.lan` (192.168.20.5), confirmed unreachable from the
+ROC. `return_host` is not a local setting: udp_bridge ships it to the boat, which
+then transmits there (`remote_node.cpp:79`). Launching as-is from pandy would have
+sent the downlink to salmon.
+
+Deleting `return_host` and relying on the boat learning our source address does
+**not** work, and the reason matters for any future station changeover: the
+learned-address fallback applies only when the boat-side connection is *created*
+(`remote_node.cpp:66-80`). An existing connection is re-pointed only when
+`return_host` is non-empty. A boat whose bridge has been up since the previous
+station's session would keep transmitting there, with no error at either end.
+
+Fixed station-agnostically rather than with a pandy variant (commit `eaf8976`):
+
+- `wifi:=false` (default `true`) layers a new `config/operator_no_wifi.yaml`,
+  which shortens `connections_list` to `[vpn, cell]`. udp_bridge iterates only
+  the listed connections (`udp_bridge.cpp:376-383`), so the `wifi` block is never
+  read and nothing is duplicated — topic lists and byte budgets stay in
+  `operator.yaml` and are inherited. The boat needs no change: its own `wifi`
+  connection carries no host and only learns one from an inbound packet.
+  Named for the condition, not the site, per operator decision — salmon has
+  operated without wifi too, and the same argument governs the ping targets,
+  the mikrotik monitor and the annunciator's wifi indicators.
+- `return_host` derived from the station's short hostname per `dns_naming.md`
+  rule 8 (`<host>.op` / `<host>.vpn.bizzy` / `<host>.cell.bizzy`), overridable
+  via `return_host_prefix`, and logged at startup — a wrong return host is
+  otherwise invisible from the operator end. On salmon the derivation reproduces
+  the removed literals exactly, so behaviour there is unchanged.
+
+Four regression tests cover the derivation, the salmon-literal equivalence, the
+conditional overlay ordering, and the never-empty invariant. Package tests green
+(43 tests, 0 failures).
+
+**2026-08-20 09:50 -04:00** — rqt perspectives were missing on pandy entirely
+(`~/.config/ros.org/` did not exist). `operator_ui_launch.py` starts four rqt
+processes by perspective *name*; an unknown name does not error — qt_gui creates
+an empty perspective (`perspective_manager.py:159-161`) — so all four windows
+would have come up blank with no warning.
+
+They are not files on salmon: all 39 of salmon's perspectives live inside
+`~/.config/ros.org/rqt_gui.ini` (3.4 MB of QSettings, accumulated over years).
+Extracted the four that matter (`bizzyboat`, `bizzyboat-diagnostics`, `logger`,
+`bizzy_sonar`) using qt_gui's own export serialisation, and imported them into
+pandy under their real names — deliberately *not* via `--perspective-file`, which
+recreates the perspective from disk on every launch (`main.py:625-629` +
+`perspective_manager.py:350-355`) and would discard in-session layout changes.
+Verified by re-exporting from pandy's settings: all four byte-identical to
+salmon's. `rqt_gui --list-perspectives` shows all four; all eight referenced
+plugin packages are installed here. Window geometry came across as salmon had it,
+so placement across pandy's four monitors is a manual first-run adjustment.
+
+Versioning them in the repo is deferred by operator decision until the layouts
+have been tweaked here.
+
+**2026-08-20 09:55 -04:00** — Finding that supersedes part of the ROC handoff:
+**the annunciator's configuration lives inside the rqt perspective, not in
+`config/bizzyboat_operator_annunciator.yaml`.** Each plugin instance carries the
+full indicator list as an embedded `config_yaml` string. Salmon's
+`bizzyboat-diagnostics` runs two instances, and both are **already VPN-only** —
+boat-side (Bizzy Starlink, Ping Gabby VPN, Ping Boat Router VPN, Internet DNS,
+UDP VPN, Battery, FCU System, Sound Speed) and op-side (Op Starlink + the four
+network rows). There are no WiFi indicators to remove, so handoff item 3 is
+effectively already done.
+
+The repo's `bizzyboat_operator_annunciator.yaml` — which still carries
+`Op WiFi Bridge`, `Ping Gabby (WiFi)`, `Ping Boat Router (WiFi)` and `UDP WiFi` —
+is dead config. `2026-05-22_salmon_logs.md:526` already recorded the suspicion
+that it is not loaded; this confirms it, and line 791 of that log has "Annunciator
+YAML cleanup" sitting in a backlog. What the ROC actually needs is different from
+what the handoff predicted: `Op Starlink` (`Starlink: starlink.op`) has no dish at
+the ROC (192.168.100.1 unreachable) so that row goes permanently stale, and there
+are no cell-path indicators at all despite cell being one of the two live paths.
+
+**2026-08-20 10:00 -04:00** — AIS check at operator request: **live AIS is
+arriving on pandy's udp/2125 and is being dropped on the floor.** 15 sentences in
+15 s from `10.242.80.203` (ZeroTier, no reverse DNS); decoded over 20 s: 10
+distinct MMSIs, message types 1/3 (Class A position), 18 (Class B), 21 (AtoN), 24
+(static) — mostly US MIDs plus one Cayman-flagged vessel and two aids to
+navigation. Real current traffic, not a replay.
+
+Nothing is bound to 2125 (`ss -ulnp` empty before the test socket), and the
+operator stack would not pick it up if it were running: CAMP subscribes to ROS
+`marine_ais_msgs/AISContact` topics (`camp/ais/ais_manager.cpp:36`), not UDP. See
+the new task in `roc_operator_setup_2026-08-19.md` for the gap and what closing
+it needs.
+
+Loose thread: `ccomjhc_project11/scripts/ais_sender.py:34-36` hardcodes its
+ZeroTier destinations (`snowpetrelz`, `penguinz`, `pandora`) and lists neither
+pandy nor salmon — yet pandy is receiving. The deployed sender has drifted from
+the committed copy. Worth reconciling; the repo copy is currently misleading
+about who gets the feed.
+
 ### Outstanding for pandy before the survey
 
-Not started in this session — carried from the handoff in
-`roc_operator_setup_2026-08-19.md`:
+Updated 2026-08-20. Done items struck from the handoff list in
+`roc_operator_setup_2026-08-19.md`; see that doc for the current task list.
 
-- ROC config variants in `bizzyboat_project11` (create, don't modify salmon's
-  working set): `operator_roc.yaml` (drop `wifi`, `return_host:` → pandy),
-  `ping_targets_operator_roc.yaml`, ROC annunciator variant, review of
-  `network_monitor_operator.yaml` / `teltonika_monitor_operator.yaml`, plus a
-  launch-selection mechanism (config paths are hard-coded in
-  `operator_core_launch.py` and `network_monitor_operator_launch.py`).
-- `git-bug` install (above).
+- **udp_bridge config** — done (`eaf8976`), station-agnostic rather than as a
+  pandy variant. Not yet exercised against the boat.
+- **rqt perspectives** — imported on pandy from salmon; layout tweaks and
+  version-control still to come.
+- **Annunciator** — already VPN-only in the live perspective; the ROC gaps are
+  the stale `Op Starlink` row and the absent cell-path indicators.
+- `ping_targets_operator.yaml` still carries `gabby_direct` and
+  `router_bizzy_direct` (both unreachable from the ROC) and no cell targets;
+  `network_monitor_operator.yaml` still points the mikrotik monitor at
+  `bizzy.wifi.op.p11.lan` (unreachable), and `network_monitor_operator_launch.py`
+  hard-codes a Starlink dish at 192.168.100.1 that the ROC does not have. All
+  three want the `wifi` launch argument plumbed through.
+- **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the
+  AIS task in `roc_operator_setup_2026-08-19.md`.
+- `~/data` does not exist on pandy — the operator bag recorder writes
+  `~/data/logs/operator/<date>/bags/`, and the `logger` perspective's
+  rqt_operator_log is configured for `/home/field/data/logs/operator`.
+- `git-bug` install (see 2026-08-19 entry) — `/start-deployment` stops at
+  field-side issue lookup without it.
+- `pre-commit` cannot run here: `python3.12-venv` is not installed, so `make lint`
+  fails at `ensurepip`. Both commits made from pandy so far went in unhooked, with
+  the markdown/YAML hooks hand-checked instead.
 - ssh key auth to the boat from pandy (`ssh-copy-id`) — salmon has the alias set
-  up, pandy may not.
+  up, pandy may not. (ssh pandy→salmon with key auth is confirmed working.)
 - Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy plus a
   concurrent RDP session to mercat, watching udp_bridge resend rates against the
   vpn/cell budgets.
 
-**Not verified in this session**: nothing has been confirmed to actually exchange
-ROS traffic with the boat from pandy. The operator udp_bridge has not been run
-here — and must not be run while salmon's bridge is up (only one operator bridge
-at a time; the boat learns its return path from whichever bridge advertises).
+**Not verified**: nothing has been confirmed to actually exchange ROS traffic with
+the boat from pandy. The operator udp_bridge has not been run here — and must not
+be run while salmon's bridge is up (only one operator bridge at a time; the boat
+transmits to whichever station last advertised a return host).

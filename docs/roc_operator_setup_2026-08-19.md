@@ -86,8 +86,85 @@ standby set: **create variants, don't modify them.**
 Note: ssh to the boat works as `gabby.vpn` only with key auth set up (salmon
 has an ssh alias for it; pandy may need `ssh-copy-id`).
 
+## Handoff status (updated 2026-08-20, agent on pandy)
+
+1. **Superseded — done as a station-agnostic change, not an ROC variant**
+   (`eaf8976`). `wifi:=false` layers `config/operator_no_wifi.yaml` (shortens
+   `connections_list` to `[vpn, cell]`; udp_bridge iterates only the listed
+   connections, so the `wifi` block is simply never read and nothing is
+   duplicated), and `return_host` is derived from the station's short hostname
+   per `dns_naming.md` rule 8, overridable via `return_host_prefix`. Named for
+   the condition rather than the site because salmon has operated without wifi
+   too. On salmon the derivation reproduces the previous literals exactly.
+   Not yet exercised against the boat.
+2. **Still open** — `ping_targets_operator.yaml` keeps `gabby_direct` and
+   `router_bizzy_direct`, both unreachable from the ROC, and has no cell
+   targets. Should follow the same `wifi` argument rather than becoming an
+   `_roc` variant.
+3. **Effectively already done, for a reason worth recording**: the annunciator's
+   indicator list lives *inside the rqt perspective* as an embedded
+   `config_yaml`, not in `config/bizzyboat_operator_annunciator.yaml`. Salmon's
+   two live instances are already VPN-only — there are no WiFi indicators to
+   remove. The repo YAML (with `Op WiFi Bridge`, `Ping Gabby (WiFi)`,
+   `UDP WiFi`) is dead config; `docs/logs/2026/2026-05-22_salmon_logs.md:526`
+   recorded the suspicion and line 791 has the cleanup on a backlog. The real
+   ROC gaps are the stale `Op Starlink` row (no dish at the ROC) and the total
+   absence of cell-path indicators.
+4. **Still open** — `network_monitor_operator.yaml` points the mikrotik monitor
+   at `bizzy.wifi.op.p11.lan` (unreachable from the ROC) and
+   `network_monitor_operator_launch.py` hard-codes a Starlink dish at
+   192.168.100.1 that the ROC does not have. `teltonika_monitor_operator.yaml`
+   is fine — `router.op` resolves and answers.
+5. **Done for `operator_core_launch.py`** via the `wifi` argument;
+   `network_monitor_operator_launch.py` still hard-codes its config paths.
+6. Untested against the boat — the bridge has not been run from pandy.
+
+## Task: wire AIS into the operator stack
+
+Live AIS is arriving on pandy's udp/2125 (verified 2026-08-20: ~1 sentence/s
+from `10.242.80.203` over ZeroTier, 10 distinct MMSIs in 20 s, message types
+1/3/18/21/24) and is being discarded — nothing is bound to the port.
+
+CAMP will not pick it up as-is: `camp/ais/ais_manager.cpp:36` subscribes to ROS
+topics of type `marine_ais_msgs/AISContact`, not UDP. The chain is three nodes
+deep:
+
+```
+udp/2125 -> nmea_relay -> /ais/raw -> ais_parser -> /ais/messages
+         -> ais_contact_tracker -> contacts (AISContact) -> CAMP
+```
+
+Gaps to close:
+
+- `marine_ais_tools/launch/ais_parser_with_nmea_relay.launch.py` covers only the
+  middle two nodes — it does not start `ais_contact_tracker`, so it stops one hop
+  short of the topic CAMP subscribes to.
+- Its shipped `config/parameters.yaml` defaults to `input_type: serial`,
+  `/dev/ttyACM0`, `input_port: 0` — nothing about UDP or 2125, so parameters must
+  be overridden.
+- No operator launch file in the workspace includes it, and neither the tmux
+  operator scripts nor salmon's crontab reference AIS. The only in-repo note on
+  the UDP path, `ccomjhc_project11/documentation/notes/ais.md`, is still in ROS 1
+  form.
+
+Also reconcile the sender: `ccomjhc_project11/scripts/ais_sender.py:34-36`
+hardcodes its ZeroTier destinations (`snowpetrelz`, `penguinz`, `pandora`) and
+lists neither pandy nor salmon, yet pandy receives — so the deployed sender has
+drifted from the committed copy.
+
 ## Remaining before the survey
 
+- Plumb the `wifi` argument through `network_monitor_operator_launch.py` and the
+  ping-target / mikrotik / Starlink configs (handoff items 2, 4, 5).
+- Tweak the rqt perspectives on pandy (window placement across four monitors),
+  then put them under version control — they hold the only copy of the live
+  annunciator config, which has silently diverged from the repo YAML.
+- Wire AIS into the operator stack (task above).
+- Create `~/data` on pandy: the operator bag recorder writes
+  `~/data/logs/operator/<date>/bags/` and rqt_operator_log is configured for
+  `/home/field/data/logs/operator`.
+- Install `git-bug` (field-side `/start-deployment`) and `python3.12-venv`
+  (so `pre-commit` can run — commits from pandy have gone in unhooked so far).
 - Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy
   plus a concurrent RDP session to mercat, watching udp_bridge resend rates
   against the vpn/cell budgets.
