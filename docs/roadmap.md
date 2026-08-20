@@ -13,7 +13,16 @@ the 2026 Lake Massabesic campaign wrapped; updated 2026-07-23
 the findings of the 2026-07-23 shakedown deployment
 ([#386](https://github.com/rolker/unh_echoboats_project11/issues/386));
 OTH sections reconciled against delivered work 2026-07-31
-([#401](https://github.com/rolker/unh_echoboats_project11/issues/401)). The campaign-era roadmap —
+([#401](https://github.com/rolker/unh_echoboats_project11/issues/401));
+reconciled 2026-08-20
+([#413](https://github.com/rolker/unh_echoboats_project11/issues/413),
+same-day status sweep
+[#439](https://github.com/rolker/unh_echoboats_project11/issues/439))
+against the chart-bathy delivery arc, the 2026-08 Lewes/Broadkill week
+(deployments [#406](https://github.com/rolker/unh_echoboats_project11/issues/406)
+→ [#428](https://github.com/rolker/unh_echoboats_project11/issues/428)), and
+the stores→world work, with the operator's stated priorities recorded under
+*Active threads*. The campaign-era roadmap —
 Summer Hydro survey-prep framing, dev freeze, production mode, punch lists —
 is preserved at
 [`roadmap_archive_2026_massabesic.md`](roadmap_archive_2026_massabesic.md).*
@@ -120,10 +129,67 @@ pair [#337](https://github.com/rolker/unh_echoboats_project11/issues/337) /
 Full campaign-era detail: the
 [archive](roadmap_archive_2026_massabesic.md) and the per-deployment issues.
 
+## 2026 Lewes / Broadkill week — outcome (brief)
+
+The 2026 Autonomous Systems Bootcamp week (UDel CEOE, Lewes DE, Aug 3–7)
+became the salt-water shakedown the Shoals prep needed: four survey days on
+the Broadkill River / Lewes sites, all three stores (bathy, backscatter,
+sidescan) populated, deployments
+[#406](https://github.com/rolker/unh_echoboats_project11/issues/406) →
+[#428](https://github.com/rolker/unh_echoboats_project11/issues/428) all
+wrapped.
+
+What it proved: the **real tide/chart-datum chain and ENC costmap ran live
+in salt water** (chart+bathy re-enable
+[#405](https://github.com/rolker/unh_echoboats_project11/pull/405), D10
+`depth_costs` flip
+[#416](https://github.com/rolker/unh_echoboats_project11/pull/416)); the
+2026-08-04 link-saturation RCA turned into shipped transport fixes
+([`udp_bridge#44`](https://github.com/rolker/udp_bridge/issues/44) resend
+budget cap + [`udp_bridge#43`](https://github.com/rolker/udp_bridge/issues/43)
+AIMD admission control, both merged 08-05); and the live-coverage robustness
+cluster (camp#168–170) was fixed mid-week and field-checked.
+
+What it surfaced (now open threads below):
+[#408](https://github.com/rolker/unh_echoboats_project11/issues/408) ~60 %
+lethal costmap RCA,
+[#422](https://github.com/rolker/unh_echoboats_project11/issues/422)
+unknown-space renders FREE,
+[#430](https://github.com/rolker/unh_echoboats_project11/issues/430) /
+[#431](https://github.com/rolker/unh_echoboats_project11/issues/431)
+buoy-strike bag analysis + entanglement/drag detection,
+[#407](https://github.com/rolker/unh_echoboats_project11/issues/407) WiFi
+bridge path carries no coverage tiles, and
+[#432](https://github.com/rolker/unh_echoboats_project11/issues/432) the
+capability-envelope re-measure (the differential-drive experiment of 08-04
+was reverted to vectored thrust on 08-06, leaving the new helm capability
+curve disabled with stale numbers). Field-import stopgaps: both
+[`s57_tools#36`](https://github.com/rolker/s57_tools/pull/36) (D10
+suppressed-mode cell claim) and
+[`nav#106`](https://github.com/rolker/unh_marine_navigation/pull/106)
+(RobotOnPath lead-in threshold) merged 2026-08-20 with the full
+GitHub⇄gitcloud field-import reconciliation.
+
 ## Active threads
 
 Cross-references — the roadmap is not the source of truth for any specific
 task; the linked issue is.
+
+**Operator priorities (stated 2026-08-20).** Ahead of the Shoals and as the
+post-Lewes focus, the operator named four outcomes to drive toward, in
+order:
+
+1. **Complete the stores→world arc** — finish the `world/` data-home
+   consolidation and the draft/processed re-split (see *Data products &
+   exploration*).
+2. **Live bathy coverage view working reliably** — the remaining
+   eviction/reload tail of the live-coverage cluster (see *ROC operator
+   awareness*).
+3. **Datum-aware depth display in CAMP** — depths presented against chart
+   datum, not raw ellipsoid (see *Tide / vertical-datum chain*).
+4. *(stretch)* **Public web view of position + live coverage** for project
+   participants off the boat's network (see *Shore & stakeholder
+   visibility*).
 
 ### OTH operations — the operating baseline *(survey-priority)*
 
@@ -176,9 +242,24 @@ The residual list is what was actually observed **while operating OTH**:
   rate-limit. The 2026-05-01 saturation episodes (30–60 s latency) are what
   the ROC cannot afford. The cell path's curated topic list covers the
   critical uplink; this is about headroom on the main stream.
+- **Link-saturation defenses — delivered (2026-08).** The 2026-08-04
+  saturation episode at Lewes produced the shipped pair
+  [`udp_bridge#44`](https://github.com/rolker/udp_bridge/issues/44)
+  (per-connection resend bandwidth cap with ack-starvation backoff) +
+  [`udp_bridge#43`](https://github.com/rolker/udp_bridge/issues/43)
+  (adaptive AIMD admission control), and
+  [`udp_bridge#35`](https://github.com/rolker/udp_bridge/issues/35)
+  (reorder/jitter buffer, merged 2026-08-20; ships disabled —
+  `reorder_hold_window_ms: 0`) rounds out the out-of-order handling.
+  Residuals: the [`udp_bridge#45`](https://github.com/rolker/udp_bridge/issues/45)
+  saturation RCA write-up is unstarted, and
+  [`#427`](https://github.com/rolker/unh_echoboats_project11/issues/427)
+  (bridge the boat's `bridge_info`/`topic_statistics` to the operator) is
+  what would have made the congestion triage visible from salmon.
 - [`udp_bridge#34`](https://github.com/rolker/udp_bridge/issues/34) —
   stale-packet gate opt-in redesign (over-broad default flagged during the
-  June 29 import).
+  June 29 import); also where per-topic tuning of the #35 hold window
+  lands.
 - **VPN-path indicator** + **"OTH mode" annunciator quiet-list** — operator
   awareness items carried from the campaign roadmap; the quiet-list matters
   more when *everything* is OTH (WiFi WARN noise is permanent otherwise).
@@ -219,19 +300,32 @@ campaign items graduates from "nice to have" to survey-relevant:
   host thermals,
   [`uma#139`](https://github.com/rolker/unh_marine_autonomy/issues/139)
   boat-core wedge liveness/watchdog.)
-- **Live-coverage display reliability** *(2026-07-23 cluster — all hit in
-  one afternoon)*: layer can't be re-added after remove
-  ([`camp#168`](https://github.com/rolker/camp/issues/168)); requests never
-  resume after restart/re-enable
-  ([`camp#169`](https://github.com/rolker/camp/issues/169)); an oversized
-  tile message is an unbounded allocation — the crash path
-  ([`camp#170`](https://github.com/rolker/camp/issues/170)); and once
-  eviction folds a coarse overview, the render degrades to huge blurry
-  pixels and *survives restarts*
-  ([`camp#103`](https://github.com/rolker/camp/issues/103) /
-  [`camp#163`](https://github.com/rolker/camp/issues/163)). At the ROC the
+- **Live-coverage display reliability** *(operator priority #2)*. The
+  2026-07-23 crash/restart cluster is **fixed and field-checked at Lewes**:
+  re-add after remove ([`camp#168`](https://github.com/rolker/camp/issues/168)),
+  request resume on enable ([`camp#169`](https://github.com/rolker/camp/issues/169)),
+  and the oversized-tile unbounded allocation
+  ([`camp#170`](https://github.com/rolker/camp/issues/170)) all closed
+  2026-08-05 ([camp PR#185](https://github.com/rolker/camp/pull/185)); the
+  blurry-overview render
+  ([`camp#103`](https://github.com/rolker/camp/issues/103)) closed via the
+  GGGS LOD/overview arc
+  ([camp PR#182](https://github.com/rolker/camp/pull/182) /
+  [camp PR#183](https://github.com/rolker/camp/pull/183) /
+  [camp PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31); and the
+  **eviction/reload lifecycle closed 2026-08-20**
+  ([`camp#171`](https://github.com/rolker/camp/issues/171) eviction budget +
+  [`camp#172`](https://github.com/rolker/camp/issues/172) in-session fine-tile
+  reload, via [camp PR#190](https://github.com/rolker/camp/pull/190) — the
+  world-store-LOD step-4 live cache). The remaining tail:
+  [`camp#163`](https://github.com/rolker/camp/issues/163) (overview
+  lifecycle on catalog retraction), plus the boat-side structural bound
+  [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112)
+  (chunk large dirty windows at the publisher) and the config gap
+  [`#407`](https://github.com/rolker/unh_echoboats_project11/issues/407)
+  (WiFi bridge path carries no coverage topics at all). At the ROC the
   coverage panel is the survey's progress gauge — it has to survive
-  restarts, re-adds, and large tiles.
+  restarts, re-adds, large tiles, *and eviction*.
 - **Device-control plugin reliability** — checked-but-no-tab
   ([`rqt_operator_tools#109`](https://github.com/rolker/rqt_operator_tools/issues/109))
   and device discovery that never refreshes after load
@@ -265,9 +359,16 @@ survey-appropriate.
   guidance (slew-limiter re-seed hypothesis). Directly visible in survey
   data quality.
 - [`#361`](https://github.com/rolker/unh_echoboats_project11/issues/361) —
-  controller doesn't slow for turns (excess power draw; turn speed exceeded
-  `default_speed` at Massabesic). Endurance is mission-shaping for the
-  Shoals transits.
+  controller doesn't slow for turns. The mechanism **shipped 2026-08-05**:
+  curvature-preserving speed regulation from a per-platform capability
+  envelope ([`uma#292`](https://github.com/rolker/unh_marine_autonomy/issues/292),
+  enabled on BizzyBoat via
+  [PR#418](https://github.com/rolker/unh_echoboats_project11/pull/418)) —
+  but it is currently **disabled**, because its envelope was measured on the
+  short-lived differential-drive configuration and the boat reverted to
+  vectored thrust on 08-06. Re-measuring the vectored envelope and
+  re-enabling is
+  [`#432`](https://github.com/rolker/unh_echoboats_project11/issues/432).
 - [`nav#58`](https://github.com/rolker/unh_marine_navigation/issues/58) —
   mid-line resume after a goto override re-runs the line from the start.
   Operators redirect mid-line constantly during real surveys.
@@ -305,29 +406,55 @@ survey-appropriate.
 
 ### Costmap & planning trust
 
-Front of the line because the Shoals reverses Massabesic's simplification:
-ENC coverage exists again, and the boat works close to charted hazards.
+*(Reconciled 2026-08-20 per
+[#413](https://github.com/rolker/unh_echoboats_project11/issues/413) — the
+chart-bathy arc of 2026-07-24 → 08-03 delivered most of what this section
+used to ask for, and Lewes ran it in salt water.)*
 
-- [`#364`](https://github.com/rolker/unh_echoboats_project11/issues/364) —
-  costmap paints caution areas LETHAL: bathy store `chart` layer unrecognized
-  by `bathymetry_layer` + the reference-bathy pipeline needs validation.
-  Must be understood before trusting any costmap at the Shoals.
-- **Chart + bathy layering at a charted site** — the
-  [`nav#63`](https://github.com/rolker/unh_marine_navigation/issues/63)
-  class of problem (charted-feature inflation steering the boat) returns
-  from "moot at the lake". The S57-split direction (chart-bathy vs
-  obstacles) and the layer ordering need to be exercised against real ENC
-  data *in sim* before August. Concrete open ticket:
-  [`#276`](https://github.com/rolker/unh_echoboats_project11/issues/276)
-  (re-enable s57 + bathymetry override layer, superseding the #263 interim
-  disable).
-- **Cost-model rework** (midpoint depth + per-band uncertainty, worst-case
-  clearance) — the designed enhancement for shore-keepoff; nearshore
-  gap-fill is its motivating use case. Enhancement, not a blocker — the
-  layer is usable today.
+**Delivered (the ENC→store→costmap chain, ADR-0010)**: vdatum library
+([`uma#274`](https://github.com/rolker/unh_marine_autonomy/issues/274)),
+store chart layer + atomic regeneration
+([`uma#275`](https://github.com/rolker/unh_marine_autonomy/issues/275)),
+`s57_to_geotiff` exporter with CATZOC→σ
+([`s57_tools#27`](https://github.com/rolker/s57_tools/issues/27)),
+chart-layer stage/commit CLI
+([`uma#289`](https://github.com/rolker/unh_marine_autonomy/issues/289)),
+worst-case-clearance cost model + confidence gate
+([`uma#276`](https://github.com/rolker/unh_marine_autonomy/issues/276) —
+the old "cost-model rework" line, now real), the D10 chart-vs-bathy split
+([`s57_tools#30`](https://github.com/rolker/s57_tools/issues/30) +
+the `depth_costs: false` config flip
+[PR#416](https://github.com/rolker/unh_echoboats_project11/pull/416)),
+the s57+bathy-override re-enable (#276 closed via
+[PR#405](https://github.com/rolker/unh_echoboats_project11/pull/405)), and
+the cron-friendly ENC updater
+([`s57_tools#28`](https://github.com/rolker/s57_tools/issues/28)).
+
+**Remaining — validation, not construction**:
+
+- [`#408`](https://github.com/rolker/unh_echoboats_project11/issues/408) —
+  the Lewes observation: ~60 % of the local area painted lethal. Isolate
+  which layer; review ENC cell selection + costmap resolution vs chart
+  scale. This is the concrete successor to the old
+  [`#364`](https://github.com/rolker/unh_echoboats_project11/issues/364)
+  framing — the new chain exists; what remains is validating it on real
+  data.
+- [`#422`](https://github.com/rolker/unh_echoboats_project11/issues/422) —
+  `track_unknown_space` unset: uncharted water renders FREE, so unknown
+  looks navigable (paired with the near-dock takeover analysis
+  [`#423`](https://github.com/rolker/unh_echoboats_project11/issues/423)).
+- **Dockside trial** *(operator decision 2026-08-05, replacing the
+  sim-first wording)*: boat at the dock, costmap look-see, then a live
+  on-water check — the acceptance path for the chain at a charted site.
+- Chart-content tail: Lewes ENC import acceptance into the store `chart/`
+  layer + migrating the 16 interim tiles out of `reference/` (owed from
+  [`uma#289`](https://github.com/rolker/unh_marine_autonomy/issues/289));
+  [`s57_tools#32`](https://github.com/rolker/s57_tools/issues/32);
+  [`s57_tools#26`](https://github.com/rolker/s57_tools/issues/26)
+  (stale cached tide_offset when chart_datum disappears).
 - [`nav#19`](https://github.com/rolker/unh_marine_navigation/issues/19) —
-  costmap update timeout (confirmed real during the campaign; reliability
-  factor for any costmap-consuming autonomy).
+  costmap update timeout (reliability factor for any costmap-consuming
+  autonomy).
 - **Planning in clutter** — the deferred planning-path items (costmap
   delivery, ahead-replanning). Long pole toward the end goal; not
   Shoals-gating (tracklines remain CA-free by design, obstacle avoidance
@@ -370,15 +497,36 @@ Swell at the Shoals amplifies attitude/timing errors that a flat lake hides
   Carried from the campaign era; the Shoals' depth range makes the
   suspected correlation directly testable.
 
-### Tide / vertical-datum chain *(returns with salt water)*
+### Tide / vertical-datum chain *(live in salt water since Lewes)*
 
-Massabesic substituted a lake-datum polygon; the Shoals needs the real
-thing, end-to-end:
+Lewes ran the real `map → map_tide` chain through four survey days — the
+"never through a full survey" caveat is retired. The datum *infrastructure*
+also firmed up: the `world/datum/` support-data home is delivered
+([`uma#288`](https://github.com/rolker/unh_marine_autonomy/issues/288)
+items 1–3 + the
+[`s57_tools#37`](https://github.com/rolker/s57_tools/issues/37) provisioner —
+geoid grid with SHA-256 pin + VDatum bundles, updater-managed) — and as of
+2026-08-20 the importer consumes those grids too:
+[`uma#315`](https://github.com/rolker/unh_marine_autonomy/issues/315)
+(merged) gives `import_geotiff` per-cell MLLW→ellipsoid conversion
+(`--source-datum mllw`), so a tidal-datum-referenced reference grid — the
+pending 1 m Appledore grid,
+[`uma#314`](https://github.com/rolker/unh_marine_autonomy/issues/314)
+step 2 — imports without hand-computed offsets. What remains:
 
-- The `map → map_tide` chain has been validated at the pier but never
-  through a full survey. It gates the costmap (tide-relative clearance) —
-  exercise it in sim + at the pier before August (sim-side datum wiring:
-  [`#288`](https://github.com/rolker/unh_echoboats_project11/issues/288)).
+- **Datum-aware depth display in CAMP** *(operator priority #3)*: depths
+  shown to the operator should be referenced to chart datum, not raw
+  ellipsoid. The cursor depth readout exists
+  ([`camp#180`](https://github.com/rolker/camp/issues/180), closed
+  2026-07-31 via the depth-provider walk); the open piece is the
+  datum-referenced presentation —
+  [`camp#181`](https://github.com/rolker/camp/issues/181) (topo-bathy
+  colormap pivoted at chart datum) is the concrete ticket, and the readout
+  itself needs the same datum treatment (scoping to confirm whether that is
+  in #181 or its own issue).
+- Sim-side datum wiring
+  ([`#288`](https://github.com/rolker/unh_echoboats_project11/issues/288))
+  so the sim exercises the same chain the boat runs.
 - The **deliverable vertical datum**: survey data is recorded
   WGS84-ellipsoidal (corrigible downstream — the Massabesic lesson), but
   merging with the larger vessel's coverage forces an explicit datum
@@ -389,36 +537,100 @@ thing, end-to-end:
 The other half of the end goal: data that's ready for review when the boat
 returns.
 
+- **Stores→world arc completion** *(operator priority #1)*. The `world/`
+  consolidation ([`uma#288`](https://github.com/rolker/unh_marine_autonomy/issues/288)
+  umbrella, ADR-0010 D3 amendment) is well underway — delivered: datum
+  grids + user polygons + ENC/S-102 product homes (items 1–3), the
+  [`s57_tools#37`](https://github.com/rolker/s57_tools/issues/37) datum
+  provisioner, and the S-102 area importer
+  ([`uma#278`](https://github.com/rolker/unh_marine_autonomy/issues/278)).
+  The **closeout set (filed 2026-08-20)** is the named finish line, and
+  most of it landed the same day:
+  [`uma#308`](https://github.com/rolker/unh_marine_autonomy/issues/308)
+  D8 re-split restoring the quality axis (survey/ → draft/ live +
+  processed/ offline re-run; store-writer co-land
+  [`cube#133`](https://github.com/rolker/cube_bathymetry/issues/133)) —
+  **both merged 2026-08-20**, as did
+  [`uma#309`](https://github.com/rolker/unh_marine_autonomy/issues/309)
+  (shallowest-preserving depths pyramid). Remaining:
+  [`uma#310`](https://github.com/rolker/unh_marine_autonomy/issues/310)
+  `~/data/stores` → `~/data/world` root migration,
+  [`uma#311`](https://github.com/rolker/unh_marine_autonomy/issues/311)
+  housekeeping, and the
+  [`uma#288`](https://github.com/rolker/unh_marine_autonomy/issues/288)
+  umbrella items 4–6 (including the
+  updater-run acceptance gate on the operator/boat hosts). The D8
+  re-split *completes* the old "draft→processed promotion is thin"
+  line — promotion is now the offline re-run into `processed/`. The
+  ENC side got rescheme-proofed the same day:
+  [`s57_tools#40`](https://github.com/rolker/s57_tools/issues/40)
+  region-driven cell selection derives the updater's cell set from the
+  live catalog's coverage polygons (the Shoals bbox selects 13 cells
+  where a hand-pinned list had 3), and the first world-root store at
+  `~/data/world/store` carries that chart layer
+  ([`uma#314`](https://github.com/rolker/unh_marine_autonomy/issues/314)
+  step 1).
+- **CUBE quality chain — delivered, activation owed.** The slope+gate
+  chain completed 2026-08-18:
+  [`cube#59`](https://github.com/rolker/cube_bathymetry/issues/59)
+  touchdown interpolation activates slope correction,
+  [`cube#91`](https://github.com/rolker/cube_bathymetry/issues/91) /
+  [`cube#119`](https://github.com/rolker/cube_bathymetry/issues/119)
+  live prior-layer seeding + Chart-layer import gate,
+  [`cube#118`](https://github.com/rolker/cube_bathymetry/issues/118)
+  gate re-prime on evict/revisit, and
+  [`cube#115`](https://github.com/rolker/cube_bathymetry/issues/115)
+  level-walk fallback. Activation on the boat is
+  [`#434`](https://github.com/rolker/unh_echoboats_project11/issues/434)
+  (`prior_store_dir` in the bizzyboat config). Still open in this family:
+  [`cube#110`](https://github.com/rolker/cube_bathymetry/issues/110)
+  (M3 no-bottom validity gate — see *Acquisition data quality*) and
+  [`cube#98`](https://github.com/rolker/cube_bathymetry/issues/98)
+  (no gate coverage where the prior is NoData).
 - **Survey data exploration umbrella** —
   [`unh_marine_autonomy#258`](https://github.com/rolker/unh_marine_autonomy/issues/258):
-  tile-indexed explorer over the stores (overview) down to raw un-averaged
-  soundings and single-pass sidescan; per-tile CUBE re-runs with custom
-  parameters; surface texturing / sidescan drape. Stage 1 (survey index +
-  "which bags saw this spot" query CLI) is
-  [`uma#259`](https://github.com/rolker/unh_marine_autonomy/issues/259) —
-  the immediate unlock for Massabesic target review (re-survey / ROV-dive
-  candidates).
-- **Draft→processed promotion** — the workflow between "collected" and
-  "deliverable" is thin; the Shoals deliverable (merge with the larger
-  vessel's coverage) makes it real. Builds on the simplified store formats
-  ([`uma#248`](https://github.com/rolker/unh_marine_autonomy/issues/248) +
-  [`cube#96`](https://github.com/rolker/cube_bathymetry/issues/96), both
-  merged — stores are regenerable caches over the bags of record).
-- [`cube#98`](https://github.com/rolker/cube_bathymetry/issues/98) —
-  reference blunder gate has no coverage where the prior is NoData; the
-  extreme false-deep outliers survive at edges. The explorer's per-tile CUBE
-  lab is the natural tuning harness for this gate.
+  stages 1–3 (survey index, integrated explorer shell, time bar) merged;
+  stages 4–5 (box CUBE lab + sidescan drape) built and in PR
+  ([`mpt#31`](https://github.com/rolker/marine_perception_tools/pull/31));
+  the sidescan DEM-drape orthorectification
+  ([`uma#297`](https://github.com/rolker/unh_marine_autonomy/issues/297))
+  merged 2026-08-18 (perf follow-up
+  [`uma#306`](https://github.com/rolker/unh_marine_autonomy/issues/306)).
+  The per-tile CUBE lab is the natural tuning harness for the cube#98
+  gate.
 - Sidescan track: live mosaic + offline pipeline validation
   ([`uma#171`](https://github.com/rolker/unh_marine_autonomy/issues/171) /
   [`uma#185`](https://github.com/rolker/unh_marine_autonomy/issues/185));
-  the standalone sidescan store exists — wet validation and the Shoals will
-  tell us what it's worth over rock.
+  the standalone sidescan store exists and Lewes populated it — wet
+  validation over rock is still the open question for the Shoals.
 - **Contact curation & distribution** —
   [`uma#157`](https://github.com/rolker/unh_marine_autonomy/issues/157)
   (contact manager: CRUD store, curate/confirm, map distribution). The
   explorer covers *reviewing* the 6 Massabesic marks; #157 is where a
   reviewed mark becomes a curated, distributable contact (re-survey / ROV
   target list).
+
+### Shore & stakeholder visibility *(new thread; stretch — operator priority #4)*
+
+Project participants who are **not** on the boat's network (bootcamp
+partners, the larger survey vessel, PIs following along) currently have no
+view of the operation at all — everything lives behind the operator VPN.
+The stated want: a **publicly reachable web view showing boat position and
+live survey coverage**, read-only and low-bandwidth.
+
+- Existing design seed:
+  [`uma#166`](https://github.com/rolker/unh_marine_autonomy/issues/166)
+  (web situational-awareness viewer: contacts + bathy on a browser map) —
+  re-scope it around this audience: position + live coverage first,
+  contacts/sidescan later.
+- Constraints to respect from day one: the boat link is the scarce
+  resource, so the web view must be fed from the **shore side** (salmon /
+  a cloud relay) off data already crossing the bridge — never a second
+  stream from the boat; and public exposure needs an explicit
+  auth/anonymization decision (position of an active survey asset).
+- Scoping conversation needed before issues: serving surface (static tiles
+  + GeoJSON position vs. a live map service), hosting (UNH vs. cloud), and
+  what "live" means (tens of seconds is fine for this audience).
 
 ### Autonomy robustness *(toward the end goal)*
 
