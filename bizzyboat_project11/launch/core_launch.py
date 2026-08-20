@@ -44,12 +44,24 @@ def generate_launch_description():
         'sidescan', default_value='true'
     )
 
+    # AIS decode chain (shore receiver over UDP). On by default; the chain is
+    # passive and degrades to publishing nothing if the feed is absent.
+    # Disable with ais:=false.
+    ais = LaunchConfiguration('ais')
+    ais_arg = DeclareLaunchArgument(
+        'ais', default_value='true',
+        description='Start the AIS decode chain (shore receiver on UDP 2125). '
+                    'Set false to run without AIS; ais_layer then ages out its '
+                    'contacts and contributes nothing to the costmap.'
+    )
+
     return LaunchDescription([
         namespace_arg,
         frame_prefix_arg,
         fcu_url_arg,
         gcs_url_arg,
         sidescan_arg,
+        ais_arg,
 
         GroupAction(
             actions=[
@@ -290,6 +302,27 @@ def generate_launch_description():
                             ),
                         )
                     ]
+                ),
+
+                # AIS (shore receiver -> UDP 2125 -> contacts for ais_layer).
+                # On by default so it comes up with the boat. The chain is
+                # passive: with no feed reaching the boat the relay simply
+                # blocks on an empty socket, no contacts are published, and
+                # ais_layer ages out whatever it had and contributes nothing —
+                # so a dead link degrades to "no AIS", never to an obstruction.
+                # Disable with ais:=false.
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        PathJoinSubstitution([
+                            FindPackageShare('bizzyboat_project11'),
+                            'launch',
+                            'ais_launch.py'
+                        ])
+                    ),
+                    launch_arguments={
+                        'namespace': namespace,
+                    }.items(),
+                    condition=IfCondition(ais)
                 ),
 
                 # Network monitor (boat side)

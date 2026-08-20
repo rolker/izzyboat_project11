@@ -41,10 +41,17 @@ local_costmap:
       # where it writes, so chart_layer must run BEFORE bathymetry_layer — chart
       # lays down its lethal non-depth semantics first; bathy max-combines depth
       # on top and can never un-write a charted hazard.
+      # ais_layer added 2026-08-20: surface traffic from the shore AIS receiver.
+      # Placed AFTER bathymetry_layer and BEFORE inflation_layer. Unlike
+      # s57_layer (which overwrites), ais_layer combines with updateWithMax, so
+      # it can only raise cost and can never un-write a charted hazard or a
+      # depth keepout — its position in the order is therefore about being
+      # inflated, not about arbitration.
       plugins:
         - "chart_layer"
         - "sea_surface_layer"
         - "bathymetry_layer"
+        - "ais_layer"
         - "inflation_layer"
       chart_layer:
         # ADR-0010 D10 flip (#415): suppress the depth ramp. The seafloor base's
@@ -181,6 +188,38 @@ local_costmap:
         # 0, flooding the lake LETHAL (unh_marine_autonomy#220).
         map_frame: <tf_prefix>/map
 
+      ais_layer:
+        plugin: "ais_layer::AISLayer"
+        enabled: True
+        # Absolute topic: <robot_namespace> is substituted by nav2_bringup's
+        # ReplaceString after merge. Published by ais_contact_tracker, which
+        # bizzyboat_project11/launch/ais_launch.py brings up under <ns>/ais.
+        topic: <robot_namespace>/ais/contacts
+        #
+        # COST CHOICE — 252 (MAX_NON_OBSTACLE), not 254 (LETHAL), for the first
+        # deployments. A vessel is a genuine obstacle and LETHAL is the eventual
+        # target, but the boat spends its time tied up among MOORED vessels that
+        # report on AIS: a lethal ring around each neighbour at the pier can
+        # enclose the boat and leave the planner no way out of the berth. 252
+        # makes traffic strongly repulsive while keeping an escape route
+        # plannable, which also keeps this away from the Broadkill failure mode
+        # where most of the costmap ended up lethal (#b6708fb).
+        #
+        # RAISE TO 254 once pier and underway behaviour have been watched: the
+        # check is that the boat still departs a berth cleanly with neighbours
+        # alongside, and that underway traffic produces a detour rather than an
+        # abort.
+        contact_cost: 252
+        # Cost at the outer edge of the uncertainty envelope. Non-zero so the
+        # planner sees a gradient and prefers the outside of it rather than
+        # meeting a cliff at an arbitrary radius.
+        envelope_edge_cost: 1
+        #
+        # The remaining parameters (per-class expiry, prediction cap, sigma
+        # scaling, envelope cap, sample count) are left at the layer's defaults
+        # deliberately: the first bring-up is meant to MEASURE what the design
+        # actually paints against real traffic. Tune from observation, not
+        # ahead of it. Defaults are documented in ais_layer/README.md.
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -195,6 +234,7 @@ global_costmap:
         - "chart_layer"
         - "sea_surface_relay"
         - "bathymetry_layer"
+        - "ais_layer"
         - "inflation_layer"
       chart_layer:
         # ADR-0010 D10 flip (#415): suppress the depth ramp — see the
@@ -229,6 +269,16 @@ global_costmap:
         # map_tide here, so without this the tide lookup self-references and reads
         # 0, flooding the lake LETHAL (unh_marine_autonomy#220).
         map_frame: <tf_prefix>/map
+      ais_layer:
+        plugin: "ais_layer::AISLayer"
+        enabled: True
+        topic: <robot_namespace>/ais/contacts
+        # Must track the local costmap's value: a split would give the planner
+        # and the controller different pictures of the same traffic. See the
+        # local_costmap ais_layer block for the 252-vs-254 rationale and the
+        # condition for raising it.
+        contact_cost: 252
+        envelope_edge_cost: 1
       # Match the local costmap's inflation (echoboat_project11/nav2_params.base.yaml:
       # cost_scaling_factor 1.0, inflation_radius 3.0). The base's GLOBAL inflation is
       # still BEN's tuning (150.0 m / 0.05) — an intentional coastline standoff for a
