@@ -303,9 +303,14 @@ campaign items graduates from "nice to have" to survey-relevant:
   request resume on enable ([`camp#169`](https://github.com/rolker/camp/issues/169)),
   and the oversized-tile unbounded allocation
   ([`camp#170`](https://github.com/rolker/camp/issues/170)) all closed
-  2026-08-05 (camp PR#185); the blurry-overview render
+  2026-08-05 ([camp PR#185](https://github.com/rolker/camp/pull/185)); the
+  blurry-overview render
   ([`camp#103`](https://github.com/rolker/camp/issues/103)) closed via the
-  GGGS LOD/overview arc (camp PR#182/#183/#184, 2026-07-31). The remaining
+  GGGS LOD/overview arc
+  ([camp PR#182](https://github.com/rolker/camp/pull/182) /
+  [PR#183](https://github.com/rolker/camp/pull/183) /
+  [PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31). The
+  remaining
   tail is the **eviction/reload lifecycle**:
   [`camp#171`](https://github.com/rolker/camp/issues/171) (eviction frees
   almost no memory — overview tiles are full-size),
