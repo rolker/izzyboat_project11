@@ -215,6 +215,29 @@ local_costmap:
         # meeting a cliff at an arbitrary radius.
         envelope_edge_cost: 1
         #
+        # MEASURED AT THE PIER 2026-08-20, first bring-up. A Class A contact
+        # 51 m off the boat (MMSI 366999563) reports status underway/engine but
+        # transmits NO SOG/COG, so it takes the layer's reachable-set path and
+        # its envelope grows at unknown_speed. At the 5.0 m/s default that is
+        # 150 m by 10 s of age and 350 m by 30 s — i.e. an envelope centred 51 m
+        # away that encloses the boat, and within half a minute covers the
+        # entire 350 m local costmap.
+        #
+        # That default is honest ("it could be anywhere within reach") but
+        # useless at harbour ranges: a costmap painted near-max cost everywhere
+        # conveys no preference to the planner, which is not the same as being
+        # safe. Bounded here so the layer says something usable:
+        unknown_speed: 1.0
+        max_envelope: 150.0
+        #
+        # BOTH ARE A STOPGAP. The durable fix is to derive speed from successive
+        # fixes rather than assume one — the tracker sees the same MMSI report
+        # repeatedly, so a contact whose position is not changing can be known
+        # to be stationary instead of assumed mobile. Until that exists, these
+        # two values trade a little honesty for a costmap that can be read.
+        # Revisit both if a contact is ever seen to move while reporting no
+        # SOG/COG.
+        #
         # The remaining parameters (per-class expiry, prediction cap, sigma
         # scaling, envelope cap, sample count) are left at the layer's defaults
         # deliberately: the first bring-up is meant to MEASURE what the design
@@ -279,6 +302,11 @@ global_costmap:
         # condition for raising it.
         contact_cost: 252
         envelope_edge_cost: 1
+        # Must track the local values — see the local_costmap ais_layer block
+        # for the pier measurement that motivated bounding these, and for why
+        # they are a stopgap rather than a tuning result.
+        unknown_speed: 1.0
+        max_envelope: 150.0
       # Match the local costmap's inflation (echoboat_project11/nav2_params.base.yaml:
       # cost_scaling_factor 1.0, inflation_radius 3.0). The base's GLOBAL inflation is
       # still BEN's tuning (150.0 m / 0.05) — an intentional coastline standoff for a

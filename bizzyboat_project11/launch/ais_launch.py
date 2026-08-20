@@ -39,7 +39,16 @@ def generate_launch_description():
 
         GroupAction(
             actions=[
-                PushRosNamespace(namespace),
+                # Push ONLY the sub-namespace. This launch is included from
+                # core_launch.py inside a GroupAction that has already pushed
+                # the robot namespace, and PushRosNamespace nests: pushing it
+                # again here put the nodes at /bizzy/bizzy/ais/... while
+                # ais_layer subscribed to /bizzy/ais/contacts, so the layers had
+                # zero publishers and the costmap never saw a contact.
+                # Matches sidescan_launch.py, which likewise pushes only
+                # 'sensors/sidescan'. The namespace argument is kept because
+                # callers pass it, and so this file reads the same as its
+                # siblings.
                 PushRosNamespace('ais'),
                 SetParametersFromFile(
                     filename=PathJoinSubstitution([
