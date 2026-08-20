@@ -97,10 +97,11 @@ has an ssh alias for it; pandy may need `ssh-copy-id`).
    the condition rather than the site because salmon has operated without wifi
    too. On salmon the derivation reproduces the previous literals exactly.
    Not yet exercised against the boat.
-2. **Still open** — `ping_targets_operator.yaml` keeps `gabby_direct` and
-   `router_bizzy_direct`, both unreachable from the ROC, and has no cell
-   targets. Should follow the same `wifi` argument rather than becoming an
-   `_roc` variant.
+2. **Done** (`12142f3`) — `ping_targets_operator_no_wifi.yaml` drops
+   `gabby_direct` and `router_bizzy_direct`, selected by `wifi:=false`. Both
+   lists gained the cell targets (`gabby_cell`, `router_bizzy_cell`), verified
+   reachable from the ROC. A test pins the no-wifi list to "the wifi list minus
+   exactly those two" so they cannot drift.
 3. **Effectively already done, for a reason worth recording**: the annunciator's
    indicator list lives *inside the rqt perspective* as an embedded
    `config_yaml`, not in `config/bizzyboat_operator_annunciator.yaml`. Salmon's
@@ -108,15 +109,20 @@ has an ssh alias for it; pandy may need `ssh-copy-id`).
    remove. The repo YAML (with `Op WiFi Bridge`, `Ping Gabby (WiFi)`,
    `UDP WiFi`) is dead config; `docs/logs/2026/2026-05-22_salmon_logs.md:526`
    recorded the suspicion and line 791 has the cleanup on a backlog. The real
-   ROC gaps are the stale `Op Starlink` row (no dish at the ROC) and the total
-   absence of cell-path indicators.
-4. **Still open** — `network_monitor_operator.yaml` points the mikrotik monitor
-   at `bizzy.wifi.op.p11.lan` (unreachable from the ROC) and
-   `network_monitor_operator_launch.py` hard-codes a Starlink dish at
-   192.168.100.1 that the ROC does not have. `teltonika_monitor_operator.yaml`
-   is fine — `router.op` resolves and answers.
-5. **Done for `operator_core_launch.py`** via the `wifi` argument;
-   `network_monitor_operator_launch.py` still hard-codes its config paths.
+   ROC gaps were the stale `Op Starlink` row (no dish at the ROC) and the total
+   absence of cell-path indicators — both now addressed in pandy's perspective:
+   cell rows added to both instances, `Op Starlink` replaced with `Op Router`
+   (`Teltonika: router.op: connection`). Still not under version control.
+4. **Done** (`12142f3`) — the mikrotik monitor and the Starlink node are now
+   gated by `wifi` and `op_starlink` rather than given variant configs: the
+   bridge radio and the dish are absent at the ROC, not unreachable, and a node
+   that cannot succeed should not run. Two arguments, not one, because a
+   station's radio and its dish are independent facts.
+   `teltonika_monitor_operator.yaml` is unchanged — `router.op` resolves and
+   answers.
+5. **Done** — `wifi` and `op_starlink` are declared in
+   `operator_core_launch.py` and forwarded into
+   `network_monitor_operator_launch.py`.
 6. Untested against the boat — the bridge has not been run from pandy.
 
 ## Task: wire AIS into the operator stack
@@ -154,17 +160,44 @@ drifted from the committed copy.
 
 ## Remaining before the survey
 
-- Plumb the `wifi` argument through `network_monitor_operator_launch.py` and the
-  ping-target / mikrotik / Starlink configs (handoff items 2, 4, 5).
+- **Bring the stack up from pandy and verify it against the boat** — the whole
+  config set above is tested only in isolation. See "Bringing the stack up"
+  below.
 - Tweak the rqt perspectives on pandy (window placement across four monitors),
   then put them under version control — they hold the only copy of the live
   annunciator config, which has silently diverged from the repo YAML.
 - Wire AIS into the operator stack (task above).
-- Create `~/data` on pandy: the operator bag recorder writes
-  `~/data/logs/operator/<date>/bags/` and rqt_operator_log is configured for
-  `/home/field/data/logs/operator`.
 - Install `git-bug` (field-side `/start-deployment`) and `python3.12-venv`
   (so `pre-commit` can run — commits from pandy have gone in unhooked so far).
 - Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy
   plus a concurrent RDP session to mercat, watching udp_bridge resend rates
   against the vpn/cell budgets.
+
+## Bringing the stack up from the ROC
+
+```bash
+# Core: bridge, monitors, bag recorder, operator autonomy nodes
+ros2 launch bizzyboat_project11 operator_core_launch.py wifi:=false op_starlink:=false
+
+# UI: CAMP + the four rqt windows
+ros2 launch bizzyboat_project11 operator_ui_launch.py
+```
+
+**Before the bridge starts, salmon's bridge must be down.** The boat transmits
+to whichever station last advertised a return host, so bringing pandy up while
+salmon is running moves BizzyBoat's downlink off salmon mid-session.
+
+Check on the first launch:
+
+- The startup line `operator station return hosts: pandy.vpn.bizzy.p11.lan
+  (vpn), pandy.cell.bizzy.p11.lan (cell)`. A wrong value here is otherwise
+  invisible from this end.
+- `ros2 node list` shows `teltonika_monitor` and `ping_monitor` but **not**
+  `mikrotik_monitor` or `starlink_diagnostics`.
+- `ros2 topic echo /diagnostics` carries `Ping: ping.op: gabby_cell` and
+  `udp_bridge operator: bizzy: cell` — the new annunciator rows depend on those
+  exact names.
+- `Op Router` goes green, which is the first live test that teltonika_monitor
+  can authenticate to the ROC's RUTX11.
+- Boat topics arrive under `/bizzy/...`, and udp_bridge resend rates stay
+  within the vpn and cell byte budgets.

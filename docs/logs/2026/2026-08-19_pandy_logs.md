@@ -192,6 +192,55 @@ pandy nor salmon — yet pandy is receiving. The deployed sender has drifted fro
 the committed copy. Worth reconciling; the repo copy is currently misleading
 about who gets the feed.
 
+**2026-08-20 10:25 -04:00** — Network monitoring gated on station equipment
+(commit `12142f3`). Three of the four operator-side monitor nodes poll hardware
+the ROC does not have; a launch here produced four permanently failing
+diagnostics and two dead ping targets.
+
+`network_monitor_operator_launch.py` now takes `wifi` and `op_starlink`
+(both default `true`), forwarded from `operator_core_launch.py`. `wifi:=false`
+skips the mikrotik monitor — `bizzy.wifi.op.p11.lan` is absent at the ROC, not
+temporarily unreachable — and selects `ping_targets_operator_no_wifi.yaml`.
+`op_starlink:=false` skips the Starlink node. Kept as two arguments rather than
+one: the ROC lacks both a bridge radio and a dish, but those are independent
+facts about a station's equipment.
+
+Ping targets gained the cell path (`gabby_cell`, `router_bizzy_cell`, both
+verified reachable from here). The cell link had no health signal anywhere
+despite being one of the two redundant paths to the boat. The no-wifi list is a
+full copy minus the two direct targets, not an overlay — `ping_monitor` takes
+`targets` as a flat string array, so a second file replaces the list rather than
+shortening it; a test pins the two files to that relationship so they cannot
+drift.
+
+Sweep timing is why the variant matters rather than tolerating red rows: pings
+are sequential and an unreachable target costs `ping_count * ping_timeout`
+(~15 s) against an auto stale timeout of `3 * poll_interval` (30 s). Two
+unreachable targets are enough to flip healthy ones to STALE.
+
+**2026-08-20 10:30 -04:00** — Annunciator updated in pandy's
+`bizzyboat-diagnostics` perspective (operator gave the go-ahead to edit it
+directly). Added `Ping Gabby (Cell)`, `Ping Boat Router (Cell)` and `UDP Cell`
+to both instances, and replaced the op-side `Op Starlink` row with `Op Router`
+(`Teltonika: router.op: connection`) — with no dish at the ROC the Starlink node
+does not run, so that row would have sat stale forever, while `router.op` is the
+ROC's actual uplink and teltonika_monitor already polls it. Diagnostic name
+formats verified against source before adding
+(`udp_bridge.cpp:1954`, `ping_monitor_node.py:92-117`,
+`teltonika_monitor_node.py:142-186`) so none of the new rows is a name that will
+never appear. Everything outside the two `config_yaml` values is byte-unchanged.
+
+Instance 1 (boat): Bizzy Starlink, Ping Gabby VPN/Cell, Ping Boat Router
+VPN/Cell, Internet DNS, UDP VPN/Cell, Battery, FCU System, Sound Speed.
+Instance 2 (station): Op Router, Ping Gabby VPN/Cell, Ping Boat Router VPN/Cell,
+Internet DNS, UDP VPN/Cell.
+
+**2026-08-20 10:24 -04:00** — Created `~/data/logs/operator` on pandy. The
+operator bag recorder writes `~/data/logs/operator/<date>/bags/` and
+rqt_operator_log is configured for `/home/field/data/logs/operator`; neither
+existed. Plain directory on the root filesystem (410 GB free) — relocate or
+symlink if operator bags should live on another disk.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
@@ -203,17 +252,12 @@ Updated 2026-08-20. Done items struck from the handoff list in
   version-control still to come.
 - **Annunciator** — already VPN-only in the live perspective; the ROC gaps are
   the stale `Op Starlink` row and the absent cell-path indicators.
-- `ping_targets_operator.yaml` still carries `gabby_direct` and
-  `router_bizzy_direct` (both unreachable from the ROC) and no cell targets;
-  `network_monitor_operator.yaml` still points the mikrotik monitor at
-  `bizzy.wifi.op.p11.lan` (unreachable), and `network_monitor_operator_launch.py`
-  hard-codes a Starlink dish at 192.168.100.1 that the ROC does not have. All
-  three want the `wifi` launch argument plumbed through.
+- **Network monitors** — done (`12142f3`) via `wifi` and `op_starlink`.
+  Untested against live diagnostics; the `Op Router` row in particular assumes
+  teltonika_monitor can authenticate to the ROC's RUTX11, which has not been
+  exercised from pandy.
 - **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the
   AIS task in `roc_operator_setup_2026-08-19.md`.
-- `~/data` does not exist on pandy — the operator bag recorder writes
-  `~/data/logs/operator/<date>/bags/`, and the `logger` perspective's
-  rqt_operator_log is configured for `/home/field/data/logs/operator`.
 - `git-bug` install (see 2026-08-19 entry) — `/start-deployment` stops at
   field-side issue lookup without it.
 - `pre-commit` cannot run here: `python3.12-venv` is not installed, so `make lint`
