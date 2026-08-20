@@ -68,8 +68,8 @@ set -euo pipefail
 # hosts and the test harness; edit defaults here if topics or frames change.
 # --------------------------------------------------------------------------
 BAG_ROOT="${BAG_ROOT:-$HOME/data/logs/gabby/logs/bizzyboat_sonar}"
-BATHY_STORE="${BATHY_STORE:-$HOME/data/stores/bathymetry}"
-BS_STORE="${BS_STORE:-$HOME/data/stores/backscatter}"
+BATHY_STORE="${BATHY_STORE:-$HOME/data/world/depths}"
+BS_STORE="${BS_STORE:-$HOME/data/world/imagery/backscatter}"
 
 DETECTIONS_TOPIC="${DETECTIONS_TOPIC:-/bizzy/sensors/m3/detections}"
 ODOM_TOPIC="/bizzy/odom"

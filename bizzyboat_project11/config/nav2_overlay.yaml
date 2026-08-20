@@ -140,7 +140,7 @@ local_costmap:
         # false that no-op leaves NO depth authority at all (chart depth is
         # suppressed, not a fallback) — store presence on the boat is a hard
         # pre-launch check, not a soft degradation.
-        store_path: "~/data/stores/bathymetry"
+        store_path: "~/data/world/depths"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         # Trust gate (uma#276 / ADR-0010 D7, replaces max_uncertainty 2026-08-03):
@@ -275,7 +275,7 @@ global_costmap:
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), confidence_gate (trust direction — do not raise to the chart
         # sigma) and unsurveyed_is_lethal.
-        store_path: "~/data/stores/bathymetry"
+        store_path: "~/data/world/depths"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         confidence_gate: 0.5

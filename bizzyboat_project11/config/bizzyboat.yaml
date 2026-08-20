@@ -82,10 +82,17 @@
     cell_size: 0.5
     # Persist draft coverage tiles so a stack restart re-primes the GeoMapSheet
     # instead of starting empty (open item from 2026-06-29 gabby deployment).
-    # Lives under ~/data/stores/ next to the static chart prior, outside the
-    # ~/data/logs/ offload pull. Saves run every save_interval (default 30s)
-    # while ACTIVE; lossless reload on configure (cube ADR-0001).
-    draft_dir: /home/field/data/stores/cube_draft
+    # This IS the depths store (ADR-0010 D3/D8, uma#310): draft_dir is a
+    # store ROOT — the node writes the store's draft/ layer under it
+    # (<draft_dir>/draft/*.tif) — so with the costmap's bathymetry_layer
+    # reading the same root (store_path ~/data/world/depths), nav reads
+    # exactly what CUBE writes. The pre-D8 cube_draft side-dir is retired;
+    # its legacy survey/ tiles must NOT auto-migrate to processed/ on the
+    # rebuild day (they carry live-node flyers) — route them to draft/ or
+    # archive. Outside the ~/data/logs/ offload pull. Saves run every
+    # save_interval (default 30s) while ACTIVE; lossless reload on
+    # configure (cube ADR-0001).
+    draft_dir: /home/field/data/world/depths
 
 # M3 -> SonarDetections -> soundings: the CUBE error model's pose comes from TF
 # (roll/pitch from level_frame, heave from tide_frame) + /odom (SOG); odom is
