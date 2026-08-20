@@ -312,6 +312,85 @@ flowing, or an annunciator row keyed on something that requires bidirectional
 traffic (heartbeat age). Filed as a follow-up rather than changed mid-session —
 it touches shared udp_bridge behaviour that salmon and the boat also rely on.
 
+**2026-08-20 12:05 -04:00** — AIS wired into the operator stack (`fb90cdd`,
+bizzyboat_project11) and a heading bug fixed in the parser (`9aa53be`,
+marine_ais).
+
+The feed was arriving on udp/2125 and being discarded: nothing bound the port,
+and CAMP does not read UDP — it scans the graph every second for any topic of
+type `marine_ais_msgs/AISContact` and subscribes to what it finds
+(`camp/ais/ais_manager.cpp:18-43`). `launch/ais_launch.py` runs the three nodes
+that bridge it (`nmea_relay` -> `ais_parser` -> `ais_contact_tracker`), included
+from `operator_core_launch.py` under `ais:=true`. marine_ais_tools' own launch
+file could not be used as-is: it omits `ais_contact_tracker`, the only node that
+publishes AISContact, and its parameters default to serial `/dev/ttyACM0` so the
+socket would never bind. Both failures are silent.
+
+**Operator-reported bug, confirmed and fixed**: contacts were drawing as
+pointing east. AIS encodes "true heading not available" as 511, which the
+decoder correctly turns into None, but `ais_parser.py` then skipped its
+orientation block — and leaving `geometry_msgs/Quaternion` untouched is not
+neutral. It defaults to the *identity* (0, 0, 0, 1), a valid orientation meaning
+yaw 0, which is due east in ENU. On the live feed that was 16 of 18 contacts,
+including every Class B report, every static report and all three aids to
+navigation.
+
+The consumer side was already correct and merely waiting to be told: CAMP tests
+`length2() > 0.1` before believing an orientation
+(`camp/ais/ais_contact.cpp:45-58`), falls back to course over ground when the
+contact is moving, and `ShipTrack::drawTriangle` draws an ellipse for a NaN
+heading (`ship_track.cpp:13-23`). The parser now emits a null quaternion, which
+matches its own convention (it already writes NaN for unknown position,
+altitude, rate of turn and speed). Regression test verified to fail without the
+fix. Operator confirmed the display afterwards.
+
+**2026-08-20 12:20 -04:00** — **First ROS traffic between pandy and BizzyBoat.**
+gabby's stack came up and 72 `/bizzy/...` topics appeared. Boat-side diagnostics
+are reaching the operator (`mavros: Battery` Normal, `GPS` 3D fix, `Heartbeat`
+Normal, `sound_speed_bridge` OK, `Starlink: starlink.bizzy` 0.0% drop / 22 ms /
+0.01% obstructed), so the annunciator's boat rows populate. This closes the gap
+that had stood since the station was built: everything before this was tested in
+isolation.
+
+Link rates: vpn `tx 7457 B/s, rx 420718 B/s`; cell `tx 7586 B/s, rx 122907 B/s`.
+
+**Finding — `wifi:=false` does not stop a wifi connection from existing.** A
+third connection appeared once gabby's bridge came up:
+
+```
+udp_bridge operator: bizzy: wifi    WARN  tx failures/drops
+   host                 192.168.23.5      <- gabby.cell.bizzy.p11.lan
+   tx_ok_bytes_per_sec  6931.15
+   rx_bytes_per_sec     0
+```
+
+Dropping `wifi` from the operator's `connections_list` only stops the *operator*
+configuring one. The boat's `bizzyboat.yaml` still lists `wifi` in its own
+operator remote, and `RemoteNode::update` creates a connection for every
+connection the remote advertises, filling the host from the learned source
+address (`remote_node.cpp:66-80`). The learned source was a packet that arrived
+over the cell NETMAP, so the operator now transmits ~6.9 KB/s to the cell
+address under the label "wifi" — a redundant uplink stream on the more
+constrained of the two links, mislabelled as the path that does not exist here.
+Not fatal, but it eats cell uplink budget and makes the diagnostic lie about
+which path is in use. Needs a decision: boat-side config, an operator-side way
+to refuse unconfigured connection ids, or accept it.
+
+**Observation — resend give-up rate is not trustworthy as reported.** The
+give-ups task showed `give_ups_total 247006`, `give_up_rate_per_s 18555.8`,
+`window_s 0.000754481`, while summarising as OK — the rate is computed over a
+sub-millisecond window, so it swings between 0 and five orders of magnitude
+above the 50/s error threshold depending on when it is sampled. The totals are
+worth understanding on their own, but the rate as published cannot drive an
+alarm.
+
+**Observation — vpn duplicates are the redundancy, not a fault.** vpn reports
+`rx 431207 B/s` with `rx_duplicate 122091 B/s`, and cell reports
+`rx 122907 B/s`. The duplicate rate tracks the cell receive rate almost exactly:
+the boat sends the same topics down both paths and the second copy to arrive is
+counted as a duplicate. Expected behaviour for the redundant-path design, worth
+recording so it is not re-diagnosed as loss.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
@@ -341,9 +420,9 @@ Updated 2026-08-20. Done items struck from the handoff list in
   concurrent RDP session to mercat, watching udp_bridge resend rates against the
   vpn/cell budgets.
 
-**Still not verified**: pandy has never exchanged ROS traffic with the boat. The
-2026-08-20 bring-up ran with gabby's stack down, so the uplink was transmitting
-into silence by design. Topic flow, resend rates against the vpn and cell byte
-budgets, and the boat-side annunciator rows all remain untested. The bridge must
-not run here while salmon's is up — the boat transmits to whichever station last
-advertised a return host.
+**Verified 2026-08-20**: pandy exchanges ROS traffic with BizzyBoat over both
+the vpn and cell paths, with boat-side diagnostics populating the annunciator.
+Still untested: sustained load under way, resend behaviour against the byte
+budgets over a full survey, and a concurrent RDP session to mercat. The bridge
+must not run here while salmon's is up — the boat transmits to whichever station
+last advertised a return host.
