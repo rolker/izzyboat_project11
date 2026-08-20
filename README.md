@@ -32,4 +32,8 @@ documentation.
   power-on notes.
 - [BizzyBoat reference geometry](bizzyboat_project11/docs/bizzyboat_reference_geometry.md)
   — offsets and mounting geometry.
+- [Datum polygon deploy](docs/datum_polygon_deploy.md) — materializing the
+  git-reviewed datum override polygons into `~/data/world/datum/user/` on the
+  boat host (the ADR-0010 D1 git-authored exception; CAMP provisioning
+  deferred).
 - [IzzyBoat network setup](docs/izzyboat_network.md) — legacy 160 platform.
