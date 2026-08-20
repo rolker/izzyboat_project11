@@ -1,7 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
-from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
@@ -29,7 +28,6 @@ def generate_launch_description():
     different topic layout, so it cannot produce the contacts the costmap layer
     needs. This launch is the boat's own composition rather than an include.
     """
-    namespace = LaunchConfiguration('namespace')
     namespace_arg = DeclareLaunchArgument(
         'namespace', default_value=TextSubstitution(text='bizzy')
     )
@@ -58,12 +56,19 @@ def generate_launch_description():
                     ])
                 ),
 
+                # respawn on all three: a crashed relay/parser/tracker would
+                # otherwise silently erase the traffic picture until relaunch
+                # (degrade-to-no-AIS is safe for nav, but must not be silent
+                # AND permanent).
+
                 # Shore receiver -> UDP 2125 -> Sentence messages.
                 Node(
                     package='marine_ais_tools',
                     executable='nmea_relay',
                     name='nmea_relay',
-                    emulate_tty=True
+                    emulate_tty=True,
+                    respawn=True,
+                    respawn_delay=5.0
                 ),
 
                 # Sentences -> decoded AIS messages.
@@ -71,7 +76,9 @@ def generate_launch_description():
                     package='marine_ais_tools',
                     executable='ais_parser',
                     name='ais_parser',
-                    emulate_tty=True
+                    emulate_tty=True,
+                    respawn=True,
+                    respawn_delay=5.0
                 ),
 
                 # AIS messages -> one AISContact per MMSI, carrying pose,
@@ -80,7 +87,9 @@ def generate_launch_description():
                     package='marine_ais_tools',
                     executable='ais_contact_tracker',
                     name='ais_contact_tracker',
-                    emulate_tty=True
+                    emulate_tty=True,
+                    respawn=True,
+                    respawn_delay=5.0
                 ),
             ]
         ),
