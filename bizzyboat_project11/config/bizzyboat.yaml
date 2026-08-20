@@ -143,7 +143,22 @@
     remotes:
       operator:
         connections_list:
-          - wifi
+          # wifi STOOD DOWN 2026-08-20 for ROC-based operation. The operator
+          # station (pandy) is at CCOM, and wifi on this boat is line-of-sight
+          # only (see the note in the wifi block below), so pandy never
+          # advertises a wifi address. The connection then sits at host='' with
+          # the full topic list pointed at it and delivers nothing.
+          #
+          # udp_bridge now short-circuits an unaddressed connection
+          # (Connection::send guard, test_unaddressed_connection.cpp), so this
+          # is no longer expensive -- it is commented out to keep the link
+          # inventory honest rather than to save CPU. Before that fix it cost
+          # ~1.8 MB/s of copies and resend bookkeeping and held a core at 96%.
+          #
+          # RESTORE THIS LINE when operating with an operator station in wifi
+          # range (a boat-side or dockside laptop rather than the ROC). Nothing
+          # else needs changing: the wifi connection block below is left intact.
+          # - wifi
           - vpn
           - cell
         connections:

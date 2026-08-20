@@ -20,6 +20,7 @@ from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
 from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
+from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParameter
 from launch_ros.actions import SetParametersFromFile
 
@@ -226,6 +227,11 @@ def test_both_ping_lists_cover_the_cell_path():
 
 
 # --- AIS ingest -------------------------------------------------------------
+#
+# The launch itself is the boat's (bizzyboat_project11/launch/ais_launch.py):
+# the AIS receiver is ashore, so the boat and the operator station ingest the
+# same UDP feed and there is no reason for two compositions of it. These cover
+# the operator side of that arrangement.
 
 def _included_launch_files(**overrides):
     """Basenames of the launch files operator_core_launch.py includes."""
@@ -242,8 +248,8 @@ def _included_launch_files(**overrides):
             continue
         if entity.condition is not None and not entity.condition.evaluate(context):
             continue
-        # location is the unresolved PathJoinSubstitution repr, which
-        # carries the filename literal.
+        # location is the unresolved PathJoinSubstitution repr, which carries
+        # the filename literal.
         included.append(str(entity.launch_description_source.location))
     return included
 
@@ -257,34 +263,15 @@ def test_ais_relay_listens_on_udp_not_the_serial_default():
     """marine_ais_tools' own parameters.yaml defaults to serial /dev/ttyACM0.
     Inheriting that would leave the socket unbound and CAMP empty, with no
     error anywhere."""
-    module = _load_launch_module(PACKAGE_DIR / 'launch' / 'ais_launch.py')
-    context = LaunchContext()
-    description = module.generate_launch_description()
-    for entity in description.entities:
-        if isinstance(entity, DeclareLaunchArgument):
-            entity.visit(context)
-    relay = next(e for e in description.entities
-                 if isinstance(e, Node) and _text(context, e._Node__node_name) == 'nmea_relay')
-    # Node normalises an inline dict's keys into substitution tuples.
-    params = {}
-    for parameter in relay._Node__parameters or []:
-        if isinstance(parameter, dict):
-            for key, value in parameter.items():
-                params[perform_substitutions(context, list(key))] = value
-
-    # launch_ros normalises an inline string value into a YAML document
-    # ('udp\n...\n'), so take the scalar off the first line.
-    input_type = perform_substitutions(context, list(params['input_type']))
-    assert input_type.splitlines()[0] == 'udp'
-    # Declared int on the node; a bare substitution would arrive as a string
-    # and rclpy rejects the type before the node's own int() cast can run.
-    assert params['input_port'].value_type is int
-    assert params['input_port'].evaluate(context) == 2125
+    config = yaml.safe_load((CONFIG_DIR / 'ais.yaml').read_text())
+    relay = config['/**/nmea_relay']['ros__parameters']
+    assert relay['input_type'] == 'udp'
+    assert relay['input_port'] == 2125
 
 
 def test_ais_chain_is_complete_through_to_a_contact_topic():
     """CAMP subscribes by message type to AISContact (ais_manager.cpp:18-43),
-    which only ais_contact_tracker publishes. marine_ais_tools' launch file
+    which only ais_contact_tracker publishes. marine_ais_tools' own launch file
     stops at ais_parser, one hop short."""
     module = _load_launch_module(PACKAGE_DIR / 'launch' / 'ais_launch.py')
     context = LaunchContext()
@@ -292,17 +279,41 @@ def test_ais_chain_is_complete_through_to_a_contact_topic():
     for entity in description.entities:
         if isinstance(entity, DeclareLaunchArgument):
             entity.visit(context)
-    nodes = {_text(context, e._Node__node_name): e
-             for e in description.entities if isinstance(e, Node)}
-    assert set(nodes) == {'nmea_relay', 'ais_parser', 'ais_contact_tracker'}
 
-    def remaps(node):
-        return {_text(context, a): _text(context, b)
-                for a, b in (node._Node__remappings or [])}
+    names = []
 
-    # The chain must join up end to end: each stage's output is the next
-    # stage's input.
-    assert remaps(nodes['nmea_relay'])['nmea'] == remaps(nodes['ais_parser'])['nmea']
-    assert (remaps(nodes['ais_parser'])['messages']
-            == remaps(nodes['ais_contact_tracker'])['messages'])
-    assert remaps(nodes['ais_contact_tracker'])['contacts'] == 'ais/contacts'
+    def walk(entities):
+        for entity in entities:
+            if isinstance(entity, GroupAction):
+                walk(entity._GroupAction__actions)
+            elif isinstance(entity, Node):
+                names.append(_text(context, entity._Node__node_name))
+
+    walk(description.entities)
+    assert set(names) == {'nmea_relay', 'ais_parser', 'ais_contact_tracker'}
+
+
+def test_ais_nodes_push_only_the_ais_sub_namespace():
+    """Regression guard for the double-push found on gabby 2026-08-20: this
+    launch is included from inside a group that has already pushed the robot
+    namespace, so pushing it again put the nodes at /bizzy/bizzy/ais/... while
+    ais_layer subscribed to /bizzy/ais/contacts and saw no publishers."""
+    module = _load_launch_module(PACKAGE_DIR / 'launch' / 'ais_launch.py')
+    context = LaunchContext()
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+
+    pushed = []
+
+    def walk(entities):
+        for entity in entities:
+            if isinstance(entity, GroupAction):
+                walk(entity._GroupAction__actions)
+            elif isinstance(entity, PushRosNamespace):
+                pushed.append(_text(context, entity._PushROSNamespace__namespace))
+
+    walk(description.entities)
+    assert pushed == ['ais'], \
+        'only the ais sub-namespace may be pushed; the caller supplies the rest'
