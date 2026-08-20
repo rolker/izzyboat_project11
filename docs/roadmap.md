@@ -15,7 +15,9 @@ the findings of the 2026-07-23 shakedown deployment
 OTH sections reconciled against delivered work 2026-07-31
 ([#401](https://github.com/rolker/unh_echoboats_project11/issues/401));
 reconciled 2026-08-20
-([#413](https://github.com/rolker/unh_echoboats_project11/issues/413))
+([#413](https://github.com/rolker/unh_echoboats_project11/issues/413),
+same-day status sweep
+[#439](https://github.com/rolker/unh_echoboats_project11/issues/439))
 against the chart-bathy delivery arc, the 2026-08 Lewes/Broadkill week
 (deployments [#406](https://github.com/rolker/unh_echoboats_project11/issues/406)
 → [#428](https://github.com/rolker/unh_echoboats_project11/issues/428)), and
@@ -161,11 +163,11 @@ bridge path carries no coverage tiles, and
 [#432](https://github.com/rolker/unh_echoboats_project11/issues/432) the
 capability-envelope re-measure (the differential-drive experiment of 08-04
 was reverted to vectored thrust on 08-06, leaving the new helm capability
-curve disabled with stale numbers). Field-import stopgaps still in PR:
+curve disabled with stale numbers). Field-import stopgaps:
 [`s57_tools#36`](https://github.com/rolker/s57_tools/pull/36) (D10
-suppressed-mode cell claim) and
+suppressed-mode cell claim) merged 2026-08-20;
 [`nav#106`](https://github.com/rolker/unh_marine_navigation/pull/106)
-(RobotOnPath lead-in threshold).
+(RobotOnPath lead-in threshold) still in PR.
 
 ## Active threads
 
@@ -309,13 +311,12 @@ campaign items graduates from "nice to have" to survey-relevant:
   GGGS LOD/overview arc
   ([camp PR#182](https://github.com/rolker/camp/pull/182) /
   [PR#183](https://github.com/rolker/camp/pull/183) /
-  [PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31). The
-  remaining
-  tail is the **eviction/reload lifecycle**:
-  [`camp#171`](https://github.com/rolker/camp/issues/171) (eviction frees
-  almost no memory — overview tiles are full-size),
-  [`camp#172`](https://github.com/rolker/camp/issues/172) (evicted fine
-  tiles never reload in-session — degradation persists until restart),
+  [PR#184](https://github.com/rolker/camp/pull/184), 2026-07-31); and the
+  **eviction/reload lifecycle closed 2026-08-20**
+  ([`camp#171`](https://github.com/rolker/camp/issues/171) eviction budget +
+  [`camp#172`](https://github.com/rolker/camp/issues/172) in-session fine-tile
+  reload, via [camp PR#190](https://github.com/rolker/camp/pull/190) — the
+  world-store-LOD step-4 live cache). The remaining tail:
   [`camp#163`](https://github.com/rolker/camp/issues/163) (overview
   lifecycle on catalog retraction), plus the boat-side structural bound
   [`cube_bathymetry#112`](https://github.com/rolker/cube_bathymetry/issues/112)
@@ -503,8 +504,14 @@ also firmed up: the `world/datum/` support-data home is delivered
 ([`uma#288`](https://github.com/rolker/unh_marine_autonomy/issues/288)
 items 1–3 + the
 [`s57_tools#37`](https://github.com/rolker/s57_tools/issues/37) provisioner —
-geoid grid with SHA-256 pin + VDatum bundles, updater-managed). What
-remains:
+geoid grid with SHA-256 pin + VDatum bundles, updater-managed) — and as of
+2026-08-20 the importer consumes those grids too:
+[`uma#315`](https://github.com/rolker/unh_marine_autonomy/issues/315)
+(merged) gives `import_geotiff` per-cell MLLW→ellipsoid conversion
+(`--source-datum mllw`), so a tidal-datum-referenced reference grid — the
+pending 1 m Appledore grid,
+[`uma#314`](https://github.com/rolker/unh_marine_autonomy/issues/314)
+step 2 — imports without hand-computed offsets. What remains:
 
 - **Datum-aware depth display in CAMP** *(operator priority #3)*: depths
   shown to the operator should be referenced to chart datum, not raw
@@ -536,20 +543,30 @@ returns.
   [`s57_tools#37`](https://github.com/rolker/s57_tools/issues/37) datum
   provisioner, and the S-102 area importer
   ([`uma#278`](https://github.com/rolker/unh_marine_autonomy/issues/278)).
-  The **closeout set (filed 2026-08-20)** is the named finish line:
+  The **closeout set (filed 2026-08-20)** is the named finish line, and
+  most of it landed the same day:
   [`uma#308`](https://github.com/rolker/unh_marine_autonomy/issues/308)
   D8 re-split restoring the quality axis (survey/ → draft/ live +
   processed/ offline re-run; store-writer co-land
-  [`cube#133`](https://github.com/rolker/cube_bathymetry/issues/133)),
+  [`cube#133`](https://github.com/rolker/cube_bathymetry/issues/133)) —
+  **both merged 2026-08-20**, as did
   [`uma#309`](https://github.com/rolker/unh_marine_autonomy/issues/309)
-  shallowest-preserving depths pyramid,
+  (shallowest-preserving depths pyramid). Remaining:
   [`uma#310`](https://github.com/rolker/unh_marine_autonomy/issues/310)
-  `~/data/stores` → `~/data/world` root migration, and
+  `~/data/stores` → `~/data/world` root migration,
   [`uma#311`](https://github.com/rolker/unh_marine_autonomy/issues/311)
-  housekeeping. Plus the remaining uma#288 umbrella items (4–6, including
-  the updater-run acceptance gate on the operator/boat hosts). The D8
-  re-split also *completes* the old "draft→processed promotion is thin"
-  line — promotion becomes the offline re-run into `processed/`.
+  housekeeping, and the uma#288 umbrella items 4–6 (including the
+  updater-run acceptance gate on the operator/boat hosts). The D8
+  re-split *completes* the old "draft→processed promotion is thin"
+  line — promotion is now the offline re-run into `processed/`. The
+  ENC side got rescheme-proofed the same day:
+  [`s57_tools#40`](https://github.com/rolker/s57_tools/issues/40)
+  region-driven cell selection derives the updater's cell set from the
+  live catalog's coverage polygons (the Shoals bbox selects 13 cells
+  where a hand-pinned list had 3), and the first world-root store at
+  `~/data/world/store` carries that chart layer
+  ([`uma#314`](https://github.com/rolker/unh_marine_autonomy/issues/314)
+  step 1).
 - **CUBE quality chain — delivered, activation owed.** The slope+gate
   chain completed 2026-08-18:
   [`cube#59`](https://github.com/rolker/cube_bathymetry/issues/59)
