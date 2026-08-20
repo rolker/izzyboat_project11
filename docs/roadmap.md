@@ -163,11 +163,12 @@ bridge path carries no coverage tiles, and
 [#432](https://github.com/rolker/unh_echoboats_project11/issues/432) the
 capability-envelope re-measure (the differential-drive experiment of 08-04
 was reverted to vectored thrust on 08-06, leaving the new helm capability
-curve disabled with stale numbers). Field-import stopgaps:
+curve disabled with stale numbers). Field-import stopgaps: both
 [`s57_tools#36`](https://github.com/rolker/s57_tools/pull/36) (D10
-suppressed-mode cell claim) merged 2026-08-20;
+suppressed-mode cell claim) and
 [`nav#106`](https://github.com/rolker/unh_marine_navigation/pull/106)
-(RobotOnPath lead-in threshold) still in PR.
+(RobotOnPath lead-in threshold) merged 2026-08-20 with the full
+GitHub⇄gitcloud field-import reconciliation.
 
 ## Active threads
 
