@@ -176,10 +176,28 @@ drifted from the committed copy.
 ## Bringing the stack up from the ROC
 
 ```bash
-# Core: bridge, monitors, bag recorder, operator autonomy nodes
-ros2 launch bizzyboat_project11 operator_core_launch.py wifi:=false op_starlink:=false
+~/start_tmux_operator_project11.bash     # then: tmux attach -t project11
+~/stop_tmux_project11.bash               # to shut it down
+```
 
-# UI: CAMP + the four rqt windows
+Same symlinks as salmon (`start_tmux_operator_project11.bash`,
+`stop_tmux_project11.bash`, `screenshooter.bash`, all pointing into the source
+tree so edits take effect without a rebuild). The ROC arguments come from
+`~/.config/project11/station.env`, which the launcher sources and echoes:
+
+```
+OPERATOR_LAUNCH_ARGS="wifi:=false op_starlink:=false"
+```
+
+That file is per-machine and not in the repo — a station's equipment is a fact
+about the machine, not about BizzyBoat. See `config/station.env.example`.
+Stations with a bridge radio and a dish have no file and get the defaults, so
+salmon is unaffected.
+
+Equivalent by hand:
+
+```bash
+ros2 launch bizzyboat_project11 operator_core_launch.py wifi:=false op_starlink:=false
 ros2 launch bizzyboat_project11 operator_ui_launch.py
 ```
 

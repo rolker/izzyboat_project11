@@ -241,6 +241,29 @@ rqt_operator_log is configured for `/home/field/data/logs/operator`; neither
 existed. Plain directory on the root filesystem (410 GB free) — relocate or
 symlink if operator bags should live on another disk.
 
+**2026-08-20 11:10 -04:00** — One-command bring-up replicated from salmon
+(commit `717ff4b`). Salmon symlinks `start_tmux_operator_project11.bash`,
+`stop_tmux_project11.bash` and `screenshooter.bash` into `~`, pointing into the
+source tree so edits take effect without a rebuild; pandy now has the same three.
+
+The script launched `operator_core_launch.py` with no arguments, which since
+`12142f3` is only correct at a station that has both a bridge radio and a dish.
+Rather than forking it, it now sources `~/.config/project11/station.env` if
+present and appends `$OPERATOR_LAUNCH_ARGS` / `$OPERATOR_UI_LAUNCH_ARGS`,
+echoing both so the tmux log shows what was picked up. Arguments passed to the
+script are appended after the file's, for one-off overrides.
+
+The env file is deliberately outside the repo — a station's equipment is a fact
+about the machine and where it sits, not about BizzyBoat, and committing one
+station's would hand it to every other. Stations without the file get the
+defaults, so salmon's behaviour is byte-identical. `config/station.env.example`
+documents the options and ships with the package.
+
+pandy's file sets `OPERATOR_LAUNCH_ARGS="wifi:=false op_starlink:=false"`.
+Verified by dry run against a tmux shim: with the file the core launch receives
+both arguments; with `STATION_ENV` pointed at a nonexistent path it falls back
+to the bare command salmon runs today.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
