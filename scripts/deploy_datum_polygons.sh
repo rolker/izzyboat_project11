@@ -77,6 +77,17 @@ done
 
 DEST="$DEST_DIR/$(basename "$SRC")"
 
+# DEST must be absent or a plain regular file. Anything else there — a
+# directory, or a symlink — makes the atomic `mv` below silently misfire:
+# `mv` into a directory drops the temp *inside* it (orphaned; the real DEST
+# path unchanged) yet still prints "deployed" and exits 0, and a symlink would
+# be followed/overwritten instead of the intended file. Refuse loudly instead
+# of reporting a success that did not happen.
+if [[ -L "$DEST" || ( -e "$DEST" && ! -f "$DEST" ) ]]; then
+  die "destination exists but is not a regular file: $DEST
+       refusing to deploy over a directory or symlink — remove it and re-run."
+fi
+
 # Already materialized and identical: nothing to do (the idempotent case).
 if [[ -f "$DEST" ]] && cmp -s "$SRC" "$DEST"; then
   echo "up to date: $DEST already matches $SRC"
