@@ -72,17 +72,35 @@ def generate_launch_description():
                     ],
                 ),
 
-                # NTRIP diagnostics (monitors RTCM flow)
+                # RTCM diagnostics: liveness (the 'NTRIP' status, unchanged
+                # from the retired ntrip_diagnostics_node) plus correction
+                # PROVENANCE -- which base station and how far away. The
+                # credentials YAML is passed so the caster host/port/mountpoint
+                # actually in force appear in the diagnostic; the password in
+                # that file is never declared by the node and so never read.
                 Node(
                     package='bizzyboat_project11',
-                    executable='ntrip_diagnostics_node.py',
-                    name='ntrip_diagnostics',
-                    parameters=[{
-                        'rtcm_topic': 'mavros/gps_rtk/send_rtcm',
-                        'diagnostic_name': 'NTRIP',
-                        'warn_timeout': 5.0,
-                        'error_timeout': 15.0,
-                    }],
+                    executable='rtcm_diagnostics_node.py',
+                    name='rtcm_diagnostics',
+                    parameters=[
+                        ntrip_credentials,
+                        {
+                            'rtcm_topic': 'mavros/gps_rtk/send_rtcm',
+                            'rtcm_message_package': 'mavros_msgs',
+                            'fix_topic': 'mavros/global_position/global',
+                            'liveness_diagnostic_name': 'NTRIP',
+                            'provenance_diagnostic_name': 'RTK: corrections',
+                            'warn_timeout': 5.0,
+                            'error_timeout': 15.0,
+                            # MaCORS serves this berth from station 42 at
+                            # 27.4 km, so 35 km is a working headroom for NH
+                            # operations; past 100 km a reported fix should not
+                            # be believed at all (the Delaware caster that hid
+                            # here for 18 days was 509 km).
+                            'warn_baseline_km': 35.0,
+                            'error_baseline_km': 100.0,
+                        }
+                    ],
                     emulate_tty=True
                 ),
             ]

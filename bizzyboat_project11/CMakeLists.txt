@@ -16,7 +16,7 @@ install(PROGRAMS
   scripts/start_tmux_operator_bridge.bash
   scripts/stop_tmux_project11.bash
   scripts/gps_rtk_diagnostics_node.py
-  scripts/ntrip_diagnostics_node.py
+  scripts/rtcm_diagnostics_node.py
   scripts/rtcm_relay_node.py
   DESTINATION lib/${PROJECT_NAME})
 
@@ -32,6 +32,8 @@ if(BUILD_TESTING)
   # Station-agnostic wiring in operator_core_launch.py (return_host derivation
   # + the wifi:=false overlay). Both fail silently in the field if broken.
   ament_add_pytest_test(test_operator_core_launch test/test_operator_core_launch.py)
+  # RTCM framing/CRC, 1005-1006 decode, baseline and thresholds.
+  ament_add_pytest_test(test_rtcm_diagnostics test/test_rtcm_diagnostics.py)
 endif()
 
 ament_package()

@@ -57,6 +57,14 @@ indicators:
     format: "{}"
     stale_timeout: 10.0
 
+  # Correction provenance: which base station and how far away. A liveness
+  # check cannot see a caster left pointed at the wrong state (2026-08-21).
+  - name: RTCM
+    source: diagnostics
+    diagnostic_name: "RTK: corrections"
+    format: "{}"
+    stale_timeout: 10.0
+
   - name: FCU
     source: diagnostics
     diagnostic_name: "mavros: Heartbeat"
