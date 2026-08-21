@@ -413,6 +413,81 @@ Full evidence, method and the gabby-side checks in the deep-dive:
 [`2026-08-20_pandy_link-stalls_logs.md`](2026-08-20_pandy_link-stalls_logs.md).
 Needs someone on the boat.
 
+**2026-08-20 20:19 -04:00** — **Automated chart updates working on pandy.**
+This closes the item parked on 2026-08-19, when ENC data was deliberately not
+downloaded by hand pending "the auto stuff". The auto stuff is
+`enc_updater` in `s57_tools` — actively developed, with merges landing today
+(`ff11faa`, `e9e3413`) — and it now runs here.
+
+Ran `--dry-run` first (which is a real download, export, stage and validate; it
+only skips the interlock and the swap), then a committing run. Both exit 0.
+
+- 13 cells selected from the region bbox `[-70.85, 42.93, -70.55, 43.11]`
+  (the shipped New Castle / Isles of Shoals example; covers the Shoals and the
+  Piscataqua): `US4NH1BC/BD`, `US5NH1AD/AE/AF/AG/CD`, `US5PSMBC/BD/BE/CC/CD/CE`.
+- Datum grids auto-provisioned: geoid `us_noaa_g2018u0` (SHA-256 pinned) and
+  the `MENHMAgome23_8301` VDatum bundle — **312 MB**, the bulk of the transfer.
+- Exported 12 of 13. `US4NH1BC` has no in-datum data (all pixels no-data) and
+  wrote an empty tif with a warning — a band-4 approach cell that does not
+  overlap the vertical-datum coverage. Benign, but it is the kind of warning
+  that should not be allowed to become background noise.
+- Chart layer swapped into `~/data/world/store`: **85 MB**, GGGS levels 6-8.
+
+Config at `~/.config/enc_updater/region.yaml` (per-machine, not in the repo —
+same reasoning as `station.env`).
+
+**PRUNING — operator was not aware of this, flagging it prominently.**
+`enc_updater` treats `corpus_dir` as **its own**: every run removes cells that
+are not in the current region/catalog selection. That is deliberate (the D7
+export runs over the whole corpus, so a stale cell would keep feeding tiles
+into every future chart layer) and it is documented, but it means the tool
+DELETES from that directory. Anything hand-placed there will disappear on the
+next run. Pruning is skipped under `--dry-run`, is refused if a still-Active
+cell has unparseable coverage, and runs only after a successful download pass —
+but the ownership is the point: **do not point `corpus_dir` at a directory that
+holds anything you put there yourself.**
+
+**Corpus location — moved, `~/data/ENC_ROOT` retired.** It was first set to
+`~/data/ENC_ROOT` to share one corpus with `ROS_S57_ENC_ROOT`; the operator's
+plan to retire that path made the location wrong, so at 20:24 the corpus moved
+to `~/data/world/charts/ENC_ROOT` (the path the shipped
+`region_example.yaml` uses). Three changes, all on this machine only:
+`corpus_dir` in the config, the 5.7 MB corpus itself, and
+`ROS_S57_ENC_ROOT` in `~/.bashrc` (backup alongside). The sharing arrangement
+is unchanged — one corpus, two consumers — only its location moved.
+
+Verified by re-running the updater afterwards: `no upstream change — nothing to
+do`, exit 0. The manifest travelled with the corpus and change detection
+matched the store's edition registry, so nothing re-downloaded. `~/data/ENC_ROOT`
+no longer exists.
+
+This also lines pandy up with where gabby is going: their
+`scripts/build_bathy_store.sh` moved its defaults to `~/data/world/depths` and
+`~/data/world/imagery/backscatter` the same day. The layout on this machine is
+now `~/data/world/{charts/ENC_ROOT, datum, store}` — 5.7 MB corpus, 312 MB
+datum grids, 85 MB chart layer.
+
+**Store-dir guard, worth knowing.** The first run failed with `cannot create
+store dir ... parent must already exist (is the data volume mounted?)`. That is
+the tool working correctly: it creates the store leaf but refuses to invent the
+parent, so an unmounted data volume fails loudly instead of silently building a
+chart layer on the root filesystem. `~/data/world` had to be created by hand.
+
+**Interlock is NOT configured here**, and the tool says so on every run:
+`nav-liveness interlock not configured (nav_liveness.nodes is empty) —
+skipping probe`. Acceptable on the operator station, where the chart layer
+feeds CAMP's display. An empty list means **no** interlock, not a lenient one —
+any machine where the chart layer feeds a nav stack must list its nav nodes.
+
+**Not scheduled.** `crontab -l` is still empty. Running it by hand first was
+the operator's call and the right one.
+
+**Doc bug in `enc_updater/README.md`**: both the usage block and the cron
+example invoke a bare `enc_updater`, but the entry point installs to
+`lib/enc_updater/` and is not on PATH. The correct form is
+`ros2 run enc_updater enc_updater --config ...`. The published cron line would
+fail with "command not found" — worth fixing upstream before anyone copies it.
+
 ### Outstanding for pandy before the survey
 
 Updated 2026-08-20. Done items struck from the handoff list in
@@ -429,6 +504,12 @@ Updated 2026-08-20. Done items struck from the handoff list in
 - **Follow-up**: udp_bridge connection diagnostics report OK with `rx 0 B/s`
   (see the 11:33 entry) — the annunciator's UDP rows are green with no peer.
 - **Follow-up (operator request)**: add rviz to the operator UI launch.
+- **Schedule enc_updater** once the corpus move is settled. The nav-liveness
+  interlock needs thought at the ROC: pandy sees `/bizzy/...` nodes whenever
+  the bridge is up, so a nightly slot with nodes configured would refuse on any
+  evening the boat is running (the README calls this the "Exit 2 every night"
+  symptom).
+- **Fix the `enc_updater` README PATH/cron bug** in `s57_tools` (see above).
 - **OPEN, needs gabby**: recurring 5-16 s stalls of all boat data, escalating —
   see `2026-08-20_pandy_link-stalls_logs.md`.
 - **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the

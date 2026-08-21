@@ -18,7 +18,7 @@
 # rebuilt 2026-08-20 and satisfies this.
 
 corpus_dir: ~/data/world/charts/ENC_ROOT
-store_dir: ~/data/world/store
+store_dir: ~/data/world/depths
 
 # Portsmouth Harbor + the Isles of Shoals. Region mode (not a pinned cell
 # list) so NOAA rescheming is tracked automatically each cycle.
