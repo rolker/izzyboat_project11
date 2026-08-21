@@ -136,3 +136,31 @@ sub-agent: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 445 --
 - [ ] No issues found. LGTM.
 
 Round-2 re-review after the Round-1 changes-requested entry. Verified: DEST non-regular-file guard closes the silent failed-deploy (must-fix); trap extended to EXIT INT TERM; empty-source `[[ -s ]]` guard added; regression suite 26 -> 38 checks, all pass. shellcheck clean; yamllint unavailable (ci.yml reviewed manually, valid). Two fresh-context Claude Adversarial passes (Lens A logic + Lens B systemic) both clean; the mktemp->trap window Lens B raised was dropped as non-actionable (unhittable two-statement window; harmless ignored dotfile; matches the repo's own build_bathy_store.sh idiom). Local Adversarial skipped (Ollama unreachable); Copilot off (default).
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-21 00:18 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**PR**: #448 at `1690c61`
+**Addressed**: host-validated Copilot comment on PR #448 (drift dry-run test case captured output but never asserted exit 0)
+**Commits**: `1690c61`
+
+Single trivial finding from the PR review. The drift dry-run block ("in-place
+edit is corrected back to git") captured `out` but, unlike every other dry-run
+block in the file (lines 49-50, 69-70), never captured `rc` or asserted the
+script exited 0. Added `; rc=$?` to the invocation and a `check "exits 0"`
+assertion ahead of the "would update" content check, matching the file's
+existing idiom (exit-code assertion first, then output-content assertion).
+
+### Actions
+- [x] Drift dry-run test asserts exit 0 — `scripts/test_deploy_datum_polygons.sh:75` (commit `1690c61`)
+
+### Verification
+- `shellcheck scripts/test_deploy_datum_polygons.sh` → clean.
+- `bash scripts/test_deploy_datum_polygons.sh` → **39 passed, 0 failed** (was 38; +1 new assertion).
+- Committed with pre-commit hooks active (no `--no-verify`). No push (host performs pushes).
+
+### Next step
+Re-review the fix (Implementation → review-code). Dispatch a fresh-context
+sub-agent: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 445 --skill review-code`.
