@@ -1,0 +1,64 @@
+# enc_updater config — BizzyBoat, Portsmouth Harbor / Isles of Shoals.
+#
+# Derived from s57_tools/enc_updater/config/region_example.yaml, which already
+# targets this exact area. Two deliberate departures from that example are
+# called out below: the nav-liveness interlock is ENABLED here, and the paths
+# are the ~/data/world layout.
+#
+# Offline tooling — runs with the workspace sourced, never inside the ROS
+# runtime:
+#   source ~/project11/.agent/scripts/setup.bash
+#   enc_updater --config <this file> --dry-run    # inspect first
+#   enc_updater --config <this file>              # full cycle
+#
+# Prerequisite (ADR-0010 D7 / uma#276): the host whose costmap reads store_dir
+# must run a bathymetry_layer including uma#276 (worst-case-clearance cost
+# model + confidence gate, merged 2026-08-03). Older builds render
+# high-uncertainty chart cells LETHAL under unsurveyed_is_lethal. gabby was
+# rebuilt 2026-08-20 and satisfies this.
+
+corpus_dir: ~/data/world/charts/ENC_ROOT
+store_dir: ~/data/world/store
+
+# Portsmouth Harbor + the Isles of Shoals. Region mode (not a pinned cell
+# list) so NOAA rescheming is tracked automatically each cycle.
+region: [-70.85, 42.93, -70.55, 43.11]
+
+# Vertical-datum grids. Auto-provisioned on first run, idempotent, existing
+# grids trusted and never re-downloaded.
+geoid: ~/data/world/datum/geoid/us_noaa_g2018u0.tif
+geoid_sha256: fa9a407ac7ee3f5a3694008e4bcd09ce9cc250452f0c3b11700a4960340abce2
+vdatum_dir: ~/data/world/datum/vdatum
+vdatum_bundles:
+  - MENHMAgome23_8301   # ME/NH/MA Gulf of Maine
+
+# --- DEPARTURE FROM THE EXAMPLE: the nav interlock is ENABLED ---
+#
+# region_example.yaml ships `nodes: []`, which DISABLES the probe entirely.
+# The example says that is "only appropriate on hosts with no navigation
+# stack (dev machines)". gabby is not that: it runs the live nav stack, and a
+# chart-layer swap under a running costmap is exactly what this interlock
+# exists to refuse. Leaving the example's empty list here would be a landmine
+# for the first cron run that happened to fire while nav was up.
+#
+# These are the nodes whose presence must refuse the swap. Names are the live
+# ones observed on gabby 2026-08-20 under the `bizzy` namespace.
+#
+# FAIL-OPEN HAZARD, per the enc_updater README: the probe queries the DDS
+# graph in ITS OWN environment. If ROS_DOMAIN_ID or RMW_IMPLEMENTATION differ
+# from the live stack's, it sees an EMPTY graph, concludes nav is down, and
+# permits the swap while nav is running. This boat runs rmw_zenoh_cpp, which
+# additionally needs its router reachable for discovery to work at all — an
+# absent router looks identical to an absent nav stack. So a cron invocation
+# MUST export RMW_IMPLEMENTATION=rmw_zenoh_cpp as well as sourcing ros_setup
+# below; sourcing alone is not sufficient.
+nav_liveness:
+  nodes:
+    - /bizzy/controller_server
+    - /bizzy/planner_server
+    - /bizzy/bt_navigator
+    - /bizzy/local_costmap/local_costmap
+    - /bizzy/global_costmap/global_costmap
+  ros_domain_id: 0
+  ros_setup: /opt/ros/jazzy/setup.bash
+  timeout: 20.0
