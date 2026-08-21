@@ -447,13 +447,25 @@ cell has unparseable coverage, and runs only after a successful download pass �
 but the ownership is the point: **do not point `corpus_dir` at a directory that
 holds anything you put there yourself.**
 
-**Corpus location — needs changing, see below.** I set `corpus_dir:
-~/data/ENC_ROOT` to share one corpus with `ROS_S57_ENC_ROOT` (exported in
-`~/.bashrc`) rather than keep two copies. The operator has since stated the
-plan is to **retire `~/data/ENC_ROOT`** in favour of the auto-downloaded tree
-under `~/data/world`, which makes that choice wrong. Left as-is pending the
-move rather than rewiring the shell environment unannounced; the corpus is only
-5.7 MB so relocating it is cheap. See Outstanding.
+**Corpus location — moved, `~/data/ENC_ROOT` retired.** It was first set to
+`~/data/ENC_ROOT` to share one corpus with `ROS_S57_ENC_ROOT`; the operator's
+plan to retire that path made the location wrong, so at 20:24 the corpus moved
+to `~/data/world/charts/ENC_ROOT` (the path the shipped
+`region_example.yaml` uses). Three changes, all on this machine only:
+`corpus_dir` in the config, the 5.7 MB corpus itself, and
+`ROS_S57_ENC_ROOT` in `~/.bashrc` (backup alongside). The sharing arrangement
+is unchanged — one corpus, two consumers — only its location moved.
+
+Verified by re-running the updater afterwards: `no upstream change — nothing to
+do`, exit 0. The manifest travelled with the corpus and change detection
+matched the store's edition registry, so nothing re-downloaded. `~/data/ENC_ROOT`
+no longer exists.
+
+This also lines pandy up with where gabby is going: their
+`scripts/build_bathy_store.sh` moved its defaults to `~/data/world/depths` and
+`~/data/world/imagery/backscatter` the same day. The layout on this machine is
+now `~/data/world/{charts/ENC_ROOT, datum, store}` — 5.7 MB corpus, 312 MB
+datum grids, 85 MB chart layer.
 
 **Store-dir guard, worth knowing.** The first run failed with `cannot create
 store dir ... parent must already exist (is the data volume mounted?)`. That is
@@ -492,12 +504,6 @@ Updated 2026-08-20. Done items struck from the handoff list in
 - **Follow-up**: udp_bridge connection diagnostics report OK with `rx 0 B/s`
   (see the 11:33 entry) — the annunciator's UDP rows are green with no peer.
 - **Follow-up (operator request)**: add rviz to the operator UI launch.
-- **Move the ENC corpus** out of `~/data/ENC_ROOT` and under `~/data/world`
-  (operator plan: retire the old path). Needs `corpus_dir` in
-  `~/.config/enc_updater/region.yaml` updated, the 5.7 MB corpus moved, and
-  `ROS_S57_ENC_ROOT` in `~/.bashrc` either repointed or dropped depending on
-  whether `s57_grids` still needs it. Note enc_updater PRUNES whatever
-  `corpus_dir` points at.
 - **Schedule enc_updater** once the corpus move is settled. The nav-liveness
   interlock needs thought at the ROC: pandy sees `/bizzy/...` nodes whenever
   the bridge is up, so a nightly slot with nodes configured would refuse on any
