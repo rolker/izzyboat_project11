@@ -97,3 +97,25 @@ A boat-host deploy step that copies the git-reviewed
 - [x] (suggestion) Add regression tests for DEST-as-directory / symlink-DEST / unwritable DEST_DIR / empty source — `scripts/test_deploy_datum_polygons.sh`
 
 Static analysis: shellcheck clean; test suite 26/26 pass; yamllint unavailable (ci.yml reviewed manually, valid). Local Adversarial skipped (Ollama unreachable); Copilot off (default). CI two-command `run: |` block verified safe (GH Actions default `bash -eo pipefail`).
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-21 00:06 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-445 at `48921b0`
+**Addressed**: Local Review (Pre-Push) — 2026-08-21 00:00 +00:00, branch `feature/issue-445` at `2cf7ad9`
+**Commits**: `11f9ea9`, `7a40b7b`, `48921b0`
+
+Addressed all three open findings from the pre-push review (1 must-fix, 2
+suggestions). shellcheck clean on both scripts; regression suite grew 26 → 38
+checks, all passing. No push (host performs pushes).
+
+### Actions
+- [x] (must-fix) DEST-as-directory/symlink silently misfires the atomic `mv` — added a `[[ -L "$DEST" || ( -e "$DEST" && ! -f "$DEST" ) ]]` guard that dies loudly ("not a regular file") before the idempotent check, so a directory/symlink at DEST is refused instead of reported as a phantom "deployed". — `scripts/deploy_datum_polygons.sh:80` (commit `11f9ea9`)
+- [x] (suggestion) Cleanup trap EXIT-only — added `trap 'exit 130' INT` / `trap 'exit 143' TERM` alongside the existing EXIT cleanup (and cleared all three after the successful `mv`). A signal mid-copy now becomes an ordinary exit that fires the EXIT trap, so the staging temp is never orphaned. — `scripts/deploy_datum_polygons.sh:101` (commit `7a40b7b`)
+- [x] (suggestion) Missing edge-case regression tests — added four cases (DEST-as-directory, symlink-DEST, unwritable DEST_DIR [skipped as root], empty source), +12 checks. The empty-source case is a genuine failure because I also added a `[[ -s "$SRC" ]]` non-empty-source guard (consistent with the script's existing loud-failure-on-bad-source philosophy; a zero-byte safety-relevant datum config is refused rather than silently deployed). — `scripts/test_deploy_datum_polygons.sh`, `scripts/deploy_datum_polygons.sh:78` (commit `48921b0`)
+
+### Next step
+Re-review the fixes (Implementation → review-code). Dispatch a fresh-context
+sub-agent: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 445 --skill review-code`.
