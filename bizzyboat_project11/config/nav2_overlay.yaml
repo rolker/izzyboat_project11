@@ -140,7 +140,28 @@ local_costmap:
         # false that no-op leaves NO depth authority at all (chart depth is
         # suppressed, not a fallback) — store presence on the boat is a hard
         # pre-launch check, not a soft degradation.
-        store_path: "~/data/stores/bathymetry"
+        #
+        # REPOINTED 2026-08-20 to the ~/data/world layout. The store here is now
+        # the one enc_updater maintains (config/enc_updater_shoals.yaml), whose
+        # chart layer is regenerated wholesale from the live NOAA ENC corpus for
+        # the Portsmouth / Isles of Shoals region — 13 cells, 12 exported, first
+        # run 2026-08-20. The previous store (~/data/stores/bathymetry) carried a
+        # chart layer built for LEWES, DE on 2026-08-05, which is the wrong coast
+        # for this campaign.
+        #
+        # KNOWN DIFFERENCE, deliberate: the new store has ONLY a chart layer. The
+        # old one also held a 46 MB `reference` layer of Lake Massabesic tiles.
+        # Those describe a New Hampshire lake and contribute nothing at Shoals, so
+        # they are not migrated — but note the consequence: where the old store
+        # could fall back to a reference prior, this one has chart only. With
+        # chart_layer running depth_costs:false, bathymetry_layer remains the sole
+        # depth authority, so a cell with no chart coverage now has NO depth data
+        # at all rather than a reference fallback.
+        #
+        # The old store is deliberately LEFT IN PLACE, untouched, as a one-line
+        # revert if the new chart layer misbehaves. It costs 95 MB on a volume
+        # with 1.4 TB free.
+        store_path: "~/data/world/store"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         # Trust gate (uma#276 / ADR-0010 D7, replaces max_uncertainty 2026-08-03):
@@ -275,7 +296,13 @@ global_costmap:
         # See the local_costmap bathymetry_layer block for the store_path (~ expands
         # to $HOME), confidence_gate (trust direction — do not raise to the chart
         # sigma) and unsurveyed_is_lethal.
-        store_path: "~/data/stores/bathymetry"
+        #
+        # Repointed 2026-08-20 with the local costmap — see that block for the
+        # rationale and for the reference-layer consequence. These two MUST stay
+        # in step: a split would give the planner and the controller different
+        # charted depth, which is the same failure the unsurveyed_is_lethal note
+        # below warns about.
+        store_path: "~/data/world/store"
         minimum_depth: 1.0
         maximum_caution_depth: 2.5
         confidence_gate: 0.5
