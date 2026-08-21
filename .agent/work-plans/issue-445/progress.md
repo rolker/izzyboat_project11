@@ -119,3 +119,20 @@ checks, all passing. No push (host performs pushes).
 ### Next step
 Re-review the fixes (Implementation → review-code). Dispatch a fresh-context
 sub-agent: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 445 --skill review-code`.
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-21 00:11 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-445 at `4efb70e`
+**Mode**: pre-push
+**Depth**: Deep (reason: >200 lines; ci.yml CI override-trigger)
+**Must-fix**: 0 | **Suggestions**: 0
+**Round**: 2 | **Ship**: recommended — Round-1 must-fix + both suggestions addressed and independently re-verified; static clean, 38/38 tests, both Deep adversarial lenses clean
+
+### Findings
+- [ ] No issues found. LGTM.
+
+Round-2 re-review after the Round-1 changes-requested entry. Verified: DEST non-regular-file guard closes the silent failed-deploy (must-fix); trap extended to EXIT INT TERM; empty-source `[[ -s ]]` guard added; regression suite 26 -> 38 checks, all pass. shellcheck clean; yamllint unavailable (ci.yml reviewed manually, valid). Two fresh-context Claude Adversarial passes (Lens A logic + Lens B systemic) both clean; the mktemp->trap window Lens B raised was dropped as non-actionable (unhittable two-statement window; harmless ignored dotfile; matches the repo's own build_bathy_store.sh idiom). Local Adversarial skipped (Ollama unreachable); Copilot off (default).
