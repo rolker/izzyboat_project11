@@ -219,6 +219,24 @@ def generate_launch_description():
                     ]
                 ),
 
+                # Ellipsoidal-height correction for the mavros fused fix.
+                # mru_transform reads the output of this node, not
+                # mavros/global_position/global -- see the fcu block in
+                # bizzyboat.yaml for why.
+                Node(
+                    package='echo_helm',
+                    executable='ellipsoidal_fix_node',
+                    name='ellipsoidal_fix',
+                    parameters=[{
+                        'input_topic': 'mavros/global_position/global',
+                        'raw_fix_topic': 'mavros/global_position/raw/fix',
+                        'gps_raw_topic': 'mavros/gpsstatus/gps1/raw',
+                        'output_topic': 'mavros/global_position/global_ellipsoidal',
+                        'diagnostic_name': 'GPS: ellipsoidal fix',
+                    }],
+                    emulate_tty=True
+                ),
+
                 # GPS RTK diagnostics
                 Node(
                     package='bizzyboat_project11',

@@ -133,7 +133,17 @@
       fcu:
         topics:
           orientation: "mavros/imu/data"
-          position: "mavros/global_position/global"
+          # NOT mavros/global_position/global: mavros builds that NavSatFix by
+          # taking GLOBAL_POSITION_INT's AMSL altitude and adding a
+          # GeographicLib EGM96-5 undulation, while the receiver derived that
+          # AMSL value with its own internal geoid table. The two models
+          # disagree by 0.626 m here (measured 2026-08-21), and the difference
+          # landed in odom.z, the sea-surface estimate, map_tide and every
+          # sounding. echo_helm's ellipsoidal_fix_node removes the round trip
+          # and republishes a NavSatFix whose altitude really is above the
+          # WGS-84 ellipsoid, as the message type specifies. Retire this
+          # indirection if mavros starts preferring alt_ellipsoid upstream.
+          position: "mavros/global_position/global_ellipsoidal"
           velocity: "mavros/local_position/velocity_body"
     sensor_names:
     - fcu
@@ -912,6 +922,14 @@
 /**/sea_surface_estimator:
   ros__parameters:
     sea_surface_frame: bizzy/map_tide
+    # The estimator averages odom Z, which is the height of base_link, not of
+    # the water. bizzy/waterline is 0.030 m above base_link (measured
+    # 2026-06-15 at Lake Massabesic: draft reference +0.180, water line 0.150
+    # below that). Without this the published tide is low by that offset --
+    # the node's original TODO, unaddressed from 2025-05-05 until 2026-08-21.
+    # NOTE the 0.030 m is a FRESHWATER figure and predates later payload
+    # changes; salt water alone raises the hull ~5 mm. Re-measure at the pier.
+    water_line_frame: bizzy/waterline
     chart_datum_frame: bizzy/chart_datum
     mhhw_frame: bizzy/chart_datum_mhhw
 

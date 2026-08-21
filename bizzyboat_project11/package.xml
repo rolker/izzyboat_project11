@@ -22,6 +22,7 @@
   <exec_depend>mavros_extras</exec_depend>
   <exec_depend>mavros_msgs</exec_depend>
   <exec_depend>mikrotik_monitor</exec_depend>
+  <exec_depend>echo_helm</exec_depend>
   <exec_depend>mru_transform</exec_depend>
   <exec_depend>network_tools</exec_depend>
   <depend>ntrip_client</depend>
