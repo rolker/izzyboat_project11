@@ -109,10 +109,15 @@ mkdir -p "$DEST_DIR"
 # destination, so a consumer discovering world/datum/user/ never reads a
 # half-written polygon file.
 tmp="$(mktemp "$DEST_DIR/.$(basename "$SRC").XXXXXX")"
+# Clean the staging temp on any exit path. The INT/TERM traps turn a signal
+# mid-copy into an ordinary exit, which then fires the EXIT trap — so a
+# Ctrl-C or `kill` during cp never orphans the temp file.
 trap 'rm -f "$tmp"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 cp "$SRC" "$tmp"
 chmod 644 "$tmp"
 mv -f "$tmp" "$DEST"
-trap - EXIT
+trap - EXIT INT TERM
 
 echo "deployed $SRC -> $DEST"
