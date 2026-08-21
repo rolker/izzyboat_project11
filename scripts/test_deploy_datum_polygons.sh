@@ -103,6 +103,50 @@ else
   echo "  FAIL: real in-tree config missing at $REAL_SRC"; ((++FAIL))
 fi
 
+echo "== refuses when DEST is a directory =="
+# A directory sitting at the DEST path would make `mv` drop the temp inside it
+# and still report success — the guard must reject it loudly, untouched.
+dir_dest="$TMP/dir_case/user"
+mkdir -p "$dir_dest/my_polygons.yaml"
+out=$(DEST_DIR="$dir_dest" bash "$SUT" 2>&1); rc=$?
+check "exits non-zero"              [ "$rc" -ne 0 ]
+check "names not-a-regular-file"    contains "$out" "not a regular file"
+check "leaves the directory intact" [ -d "$dir_dest/my_polygons.yaml" ]
+check "no temp orphaned inside it"  [ -z "$(find "$dir_dest/my_polygons.yaml" -name '.my_polygons.yaml.*' -print -quit)" ]
+
+echo "== refuses when DEST is a symlink =="
+# A symlink at DEST would be followed/overwritten instead of the real target;
+# the guard rejects any symlink even if it points at matching content.
+sym_dest="$TMP/sym_case/user"
+mkdir -p "$sym_dest"
+ln -s "$SRC" "$sym_dest/my_polygons.yaml"
+out=$(DEST_DIR="$sym_dest" bash "$SUT" 2>&1); rc=$?
+check "exits non-zero"              [ "$rc" -ne 0 ]
+check "names not-a-regular-file"    contains "$out" "not a regular file"
+check "left the symlink in place"   [ -L "$sym_dest/my_polygons.yaml" ]
+
+echo "== unwritable DEST_DIR fails loudly =="
+if [[ "$(id -u)" -ne 0 ]]; then
+  ro_dest="$TMP/ro_case/user"
+  mkdir -p "$ro_dest"
+  chmod a-w "$ro_dest"
+  out=$(DEST_DIR="$ro_dest" bash "$SUT" 2>&1); rc=$?
+  check "exits non-zero"            [ "$rc" -ne 0 ]
+  check "wrote no dest file"        [ ! -e "$ro_dest/my_polygons.yaml" ]
+  chmod u+w "$ro_dest"  # restore so the EXIT trap can clean up
+else
+  echo "  skip: unwritable DEST_DIR case is meaningless as root"
+fi
+
+echo "== empty source fails loudly =="
+# A zero-byte polygon config is a silent safety regression — must be rejected.
+empty_src="$TMP/src/empty.yaml"
+: > "$empty_src"
+out=$(SRC="$empty_src" DEST_DIR="$TMP/empty_case/user" bash "$SUT" 2>&1); rc=$?
+check "exits non-zero"              [ "$rc" -ne 0 ]
+check "says the source is empty"    contains "$out" "empty"
+check "wrote no dest file"          [ ! -e "$TMP/empty_case/user/empty.yaml" ]
+
 # --------------------------------------------------------------------------
 echo
 echo "$PASS passed, $FAIL failed"

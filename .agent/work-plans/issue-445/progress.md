@@ -94,6 +94,6 @@ A boat-host deploy step that copies the git-reviewed
 ### Findings
 - [x] (must-fix) DEST pre-existing as a directory -> `mv` orphans temp inside it, prints "deployed", exits 0 (silent failed deploy); add regular-file type guard on `$DEST` (also closes symlink-on-DEST) — `scripts/deploy_datum_polygons.sh:81,104`
 - [x] (suggestion) Cleanup trap is EXIT-only; extend to `EXIT INT TERM` so a signal mid-copy doesn't orphan the staging temp — `scripts/deploy_datum_polygons.sh:101`
-- [ ] (suggestion) Add regression tests for DEST-as-directory / symlink-DEST / unwritable DEST_DIR / empty source — `scripts/test_deploy_datum_polygons.sh`
+- [x] (suggestion) Add regression tests for DEST-as-directory / symlink-DEST / unwritable DEST_DIR / empty source — `scripts/test_deploy_datum_polygons.sh`
 
 Static analysis: shellcheck clean; test suite 26/26 pass; yamllint unavailable (ci.yml reviewed manually, valid). Local Adversarial skipped (Ollama unreachable); Copilot off (default). CI two-command `run: |` block verified safe (GH Actions default `bash -eo pipefail`).

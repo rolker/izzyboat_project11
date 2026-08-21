@@ -75,6 +75,13 @@ done
 [[ -f "$SRC" ]] || die "source polygon config not found: $SRC
        git is the source of truth — run this from the repo checkout, or set SRC=<file>."
 
+# An empty source is almost certainly a truncated/mis-generated file. These
+# polygons set the lake chart-datum height the whole vertical solution rides
+# on, so deploying a zero-byte config would be a silent safety regression —
+# fail loudly rather than materialize it.
+[[ -s "$SRC" ]] || die "source polygon config is empty: $SRC
+       an empty datum config is almost certainly a mistake — refusing to deploy it."
+
 DEST="$DEST_DIR/$(basename "$SRC")"
 
 # DEST must be absent or a plain regular file. Anything else there — a
