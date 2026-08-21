@@ -488,46 +488,149 @@ example invoke a bare `enc_updater`, but the entry point installs to
 `ros2 run enc_updater enc_updater --config ...`. The published cron line would
 fail with "command not found" — worth fixing upstream before anyone copies it.
 
+**2026-08-20 20:43 -04:00** — **End of day. Both stacks up; station verified
+against the boat.**
+
+Link state after both sides relaunched — and the headline is an absence:
+
+```
+udp_bridge operator: bizzy: cell   tx 3257 B/s, rx 108076 B/s
+udp_bridge operator: bizzy: vpn    tx 3228 B/s, rx 293571 B/s
+resend give-ups: 6,637 total, 0.00/s
+```
+
+**No wifi connection.** gabby's `a33f264` took effect on their relaunch, so for
+the first time today the phantom is gone from both ends. Give-ups fell from
+6,867,594 to a few thousand at 0.00/s — three orders of magnitude, which is the
+scale of what two connections aimed at a bearer that could not carry them were
+costing.
+
+Today's merged changes confirmed live on real traffic, not just built:
+
+- Both unknown-heading signals agree in every sample — 8 AIS messages,
+  2 `heading_valid=True`, 6 null quaternions, and the invariant
+  (`heading_valid == False` iff null quaternion) held. The merge resolution
+  works: the flag for `ais_layer`, the quaternion for CAMP, neither consumer
+  re-broken.
+- 5 of those 8 carried NaN velocity, so `cog: n/a` is the common case rather
+  than an edge case — which is what made the huge-number bug so visible.
+- CAMP launches with the workspace directory only, no `.KAP`. OSM backdrop.
+- AIS chain running as `/ais/{nmea_relay,ais_parser,ais_contact_tracker}`, the
+  single boat-and-operator composition settled in the merge.
+- Monitor gating holds: `ping_monitor` + `teltonika_monitor` present,
+  `mikrotik_monitor` and `starlink_diagnostics` correctly absent.
+
+**Stalls: 3-minute watch clean, NOT a verdict.** Zero gaps over 3 s in 181
+boat-sourced messages. Against the earlier cadence (one every 3-7 minutes) that
+is encouraging, but quiet windows of 4-7 minutes occurred during the bad period
+too, and load at the time of the watch (vpn 293 kB/s) was still below the
+~370 kB/s where the stalls were happening. Recorded as "not reproduced in a
+short clean window", not as fixed. The phantom-wifi removal is a credible
+mechanism — that traffic plus its resend bookkeeping is exactly what would
+amplify head-of-line blocking on a serialised send loop — but it is untested at
+full load.
+
+**The precondition is unchanged**: `router.bizzy` cellular still reports
+`No service`, `mob1s1a1 Down`, `mwan3/mob1s1a1 disabled`, `mwan3/wan Online`.
+Both connections still ride the one Starlink bearer. If the stalls return, that
+is where to look, and the lever is standing down the cell connection until the
+modem is fixed.
+
+**RTK did not return to Fixed.** Ended at RTK Float, `fix_type 5`, 33
+satellites, EPH 0.50 m / EPV 0.70 m, with NTRIP healthy — `last_rtcm_age_s 0.0`,
+2774 messages. Corrections are arriving fresh and plentiful, so this is
+carrier-phase ambiguity resolution, not a data or link problem. It was Fixed
+earlier today at this berth. Dockside multipath is the usual suspect and it
+varies with satellite geometry and what is moored nearby. **Worth noting
+whether it returns to Fixed once the boat is off the pier** — if it does, it is
+multipath and not worth chasing.
+
+**Charts**: `enc_updater` produces the `chart` layer only. There is no `depths`
+layer on pandy and nothing here to build one from — `depths` comes from
+`scripts/build_bathy_store.sh` over CUBE bathymetry, which is why the two are
+separate layers and why `chart` can be regenerated wholesale on every NOAA
+edition change without touching a collected sounding. The chart tiles do carry
+depth: band 1 is ellipsoidal height, band 2 uncertainty.
+
+### Proposed Lessons Learned (operator to accept, reword or discard)
+
+- **A metric averaged over the wrong window hides the event.** Per-minute
+  aggregates showed a healthy link straight through 5-16 s stalls; a 14 s stall
+  inside a 60 s bucket still leaves a normal-looking maximum. Arrival-gap
+  analysis on a boat-sourced topic is the detector. The same flaw makes the
+  resend give-up rate unusable as published — computed over a sub-millisecond
+  window, it read ERROR continuously through six demonstrably healthy hours.
+- **A row that is green when the link is dead is worse than one that is red
+  when it is alive.** The UDP connection rows report transmit health only, so
+  they stayed green through an entire bring-up with no boat on the other end.
+  Both failure directions train operators to stop reading the panel, but this
+  one also misleads.
+- **Redundancy you have not verified end to end may already be gone.** vpn and
+  cell looked like two independent paths all day. The modem had no service, so
+  both were riding one Starlink bearer — visible from the boat (modem state) or
+  from the operator (cell still delivering 108 kB/s), but only obvious when the
+  two views were put together.
+- **When two people fix the same bug differently, check whether the fixes
+  compose before choosing.** heading_valid and the null quaternion each serve a
+  different consumer; keeping both cost one assignment, and picking either alone
+  would have re-broken the other consumer.
+- **Configuration that describes a machine belongs on the machine.** station.env
+  and the enc_updater region config are per-station and deliberately outside the
+  repo; committing one station's equipment or paths hands them to every other.
+
 ### Outstanding for pandy before the survey
 
-Updated 2026-08-20. Done items struck from the handoff list in
-`roc_operator_setup_2026-08-19.md`; see that doc for the current task list.
+Updated 2026-08-20 end of day.
 
-- **udp_bridge config** — done (`eaf8976`), station-agnostic rather than as a
-  pandy variant. Not yet exercised against the boat.
-- **rqt perspectives** — imported on pandy from salmon; layout tweaks and
-  version-control still to come.
-- **Annunciator** — already VPN-only in the live perspective; the ROC gaps are
-  the stale `Op Starlink` row and the absent cell-path indicators.
-- **Network monitors** — done (`12142f3`) and verified live 2026-08-20,
-  `Op Router` included.
-- **Follow-up**: udp_bridge connection diagnostics report OK with `rx 0 B/s`
-  (see the 11:33 entry) — the annunciator's UDP rows are green with no peer.
-- **Follow-up (operator request)**: add rviz to the operator UI launch.
-- **Schedule enc_updater** once the corpus move is settled. The nav-liveness
-  interlock needs thought at the ROC: pandy sees `/bizzy/...` nodes whenever
-  the bridge is up, so a nightly slot with nodes configured would refuse on any
-  evening the boat is running (the README calls this the "Exit 2 every night"
-  symptom).
-- **Fix the `enc_updater` README PATH/cron bug** in `s57_tools` (see above).
-- **OPEN, needs gabby**: recurring 5-16 s stalls of all boat data, escalating —
-  see `2026-08-20_pandy_link-stalls_logs.md`.
-- **AIS into CAMP** — live traffic on udp/2125 is currently discarded; see the
-  AIS task in `roc_operator_setup_2026-08-19.md`.
-- `git-bug` install (see 2026-08-19 entry) — `/start-deployment` stops at
-  field-side issue lookup without it.
-- `pre-commit` cannot run here: `python3.12-venv` is not installed, so `make lint`
-  fails at `ensurepip`. Both commits made from pandy so far went in unhooked, with
-  the markdown/YAML hooks hand-checked instead.
-- ssh key auth to the boat from pandy (`ssh-copy-id`) — salmon has the alias set
-  up, pandy may not. (ssh pandy→salmon with key auth is confirmed working.)
-- Dockside/pre-departure rehearsal from the ROC: full bridge load from pandy plus a
-  concurrent RDP session to mercat, watching udp_bridge resend rates against the
-  vpn/cell budgets.
+**Boat / link**
+- **`router.bizzy` cellular `No service`** — the modem has been down since at
+  least 18:45. Until it is fixed, vpn and cell both ride one Starlink bearer and
+  there is no redundancy, whatever the annunciator suggests. Root cause not
+  investigated.
+- **Do the stalls return under full load?** Not reproduced in a 3-minute window
+  after both relaunches, but that window was below the throughput where they
+  occurred. See `2026-08-20_pandy_link-stalls_logs.md`; gabby has the
+  send-loop analysis.
+- **RTK ended at Float, not Fixed**, with corrections healthy. Check whether it
+  recovers off the pier before treating it as a fault.
+
+**Operator station**
+- Tweak the rqt perspectives (window placement across four monitors), then put
+  them under version control — they hold the only copy of the live annunciator
+  config, which has diverged further from the repo YAML today (cell rows,
+  Op Router, RTK, NTRIP).
+- `pre-commit` still cannot run: `python3.12-venv` is not installed, so every
+  commit from pandy today went in unhooked with the markdown/YAML hooks
+  hand-checked.
+- `git-bug` not installed — field-side `/start-deployment` stops at issue lookup.
+- ssh key auth to the boat from pandy (`ssh-copy-id`).
+- Dockside/pre-departure rehearsal from the ROC: full bridge load plus a
+  concurrent RDP session to mercat, watching resend rates against the budgets.
+
+**Follow-ups raised today**
+- Add rviz to the operator UI launch (operator request). `marine_autonomy`'s
+  operator UI launch already has `rviz` / `rviz_configuration` arguments,
+  defaulting off; the BizzyBoat wrapper passes neither and there is no committed
+  rviz config.
+- udp_bridge connection rows are green on transmit health alone — consider a
+  WARN on sustained `rx 0 B/s` while tx flows, or an annunciator row keyed on
+  something requiring bidirectional traffic.
+- Resend give-up rate is computed over a sub-millisecond window and cannot drive
+  an alarm; the totals are still meaningful.
+- Schedule `enc_updater`. The nav-liveness interlock needs thought at the ROC:
+  pandy sees `/bizzy/...` nodes whenever the bridge is up, so a nightly slot
+  with nodes configured would refuse on any evening the boat is running.
+- Fix the `enc_updater` README PATH/cron bug in `s57_tools` — the published cron
+  line invokes a bare `enc_updater`, which is not on PATH.
+- Dead `background_chart` wiring remains in `lr30_project11` and
+  `unh_marine_simulation` (4 launch files plus `vrx_project11`). Harmless —
+  launch ignores an undeclared argument — but it is the one piece of the raster
+  removal deliberately left.
+- `bizzyboat_operator_annunciator.yaml` is dead config: the live indicator list
+  lives in the rqt perspective. Delete it or head it with a note.
 
 **Verified 2026-08-20**: pandy exchanges ROS traffic with BizzyBoat over both
-the vpn and cell paths, with boat-side diagnostics populating the annunciator.
-Still untested: sustained load under way, resend behaviour against the byte
-budgets over a full survey, and a concurrent RDP session to mercat. The bridge
-must not run here while salmon's is up — the boat transmits to whichever station
-last advertised a return host.
+paths, with boat-side diagnostics populating the annunciator, AIS painting in
+CAMP, and every change made today confirmed live rather than merely built. The
+bridge must not run here while salmon's is up — the boat transmits to whichever
+station last advertised a return host.
