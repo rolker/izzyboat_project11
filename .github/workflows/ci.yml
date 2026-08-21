@@ -31,9 +31,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Test scripts
-        # Self-contained (stubs ros2, synthesizes bag fixtures); runs before
-        # the ROS build so script regressions fail fast.
-        run: bash scripts/test_build_bathy_store.sh
+        # Self-contained (stub/synthesize fixtures, no ROS runtime); runs
+        # before the ROS build so script regressions fail fast.
+        run: |
+          bash scripts/test_build_bathy_store.sh
+          bash scripts/test_deploy_datum_polygons.sh
 
       - name: Init rosdep
         run: |
