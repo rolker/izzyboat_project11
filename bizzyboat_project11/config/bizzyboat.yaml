@@ -656,6 +656,34 @@
       - /bizzy/mavros/imu/data
       - /bizzy/mavros/state
       - /bizzy/mavros/gps_rtk/send_rtcm
+      # RTK + NTRIP state, added 2026-08-20 to back the new RTK and NTRIP
+      # annunciators. Motivated by that day's finding: the FCU sat in
+      # RTK_FLOAT for ~45 minutes (17:20-18:05 EDT) with vertical accuracy
+      # degrading to 1.75 m, putting ~1 m of error into the nav solution and
+      # therefore into the tide. gpsstatus/gps1/raw already recorded the
+      # fix_type that revealed it after the fact, but nothing captured WHY —
+      # whether corrections were arriving at all. These do.
+      #
+      # The annunciators themselves read /diagnostics (already recorded, and
+      # carrying the "GPS: RTK" and "NTRIP" entries they display), so this is
+      # about the underlying evidence, not the indicator state.
+      #
+      # All are low volume: ntrip/fix ~1 Hz, the rest event-driven and idle
+      # most of the time. gps2 is omitted deliberately — GPS_TYPE2 is 0 on
+      # this boat, so there is no second receiver to report.
+      - /bizzy/mavros/gpsstatus/gps1/rtk
+      - /bizzy/mavros/gps_rtk/rtk_baseline
+      - /bizzy/sensors/ntrip/fix
+      - /bizzy/sensors/ntrip/nmea
+      # Which navigation source mru_transform is actually using. Publishes at
+      # the position rate (10 Hz) on every update, not just on change. NOT
+      # previously recorded, which on 2026-08-20 meant a suspected FCU/SBG
+      # failover had to be disproved indirectly by correlating /bizzy/odom
+      # against both receivers' raw fixes across 3.6 GB of bag. With this
+      # topic the same question is a one-line answer. Tiny: a short string.
+      - /bizzy/nav/active_sensor/position
+      - /bizzy/nav/active_sensor/orientation
+      - /bizzy/nav/active_sensor/velocity
       # FCU control effort — see what the autopilot is actually commanding
       # to the thrusters/servos (rc/out) and how hard its internal nav
       # controller is working to follow cmd_vel (nav_controller_output).
