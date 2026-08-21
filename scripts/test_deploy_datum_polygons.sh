@@ -72,7 +72,8 @@ check "reports up to date"          contains "$out" "up to date"
 
 echo "== in-place edit is corrected back to git (D1 invariant) =="
 printf '\n# tampered in place\n' >> "$DEST"
-out=$(bash "$SUT" --dry-run 2>&1)
+out=$(bash "$SUT" --dry-run 2>&1); rc=$?
+check "exits 0"                     [ "$rc" -eq 0 ]
 check "dry-run flags the drift"     contains "$out" "would update"
 out=$(bash "$SUT" 2>&1); rc=$?
 check "exits 0"                     [ "$rc" -eq 0 ]
