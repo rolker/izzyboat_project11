@@ -8,8 +8,11 @@
 # Offline tooling — runs with the workspace sourced, never inside the ROS
 # runtime:
 #   source ~/project11/.agent/scripts/setup.bash
-#   enc_updater --config <this file> --dry-run    # inspect first
-#   enc_updater --config <this file>              # full cycle
+#   ros2 run enc_updater enc_updater --config <this file> --dry-run   # inspect first
+#   ros2 run enc_updater enc_updater --config <this file>             # full cycle
+#
+# (`ros2 run`, not a bare `enc_updater`: the console script installs to
+# lib/enc_updater/, which sourcing does not put on PATH.)
 #
 # Prerequisite (ADR-0010 D7 / uma#276): the host whose costmap reads store_dir
 # must run a bathymetry_layer including uma#276 (worst-case-clearance cost
