@@ -78,3 +78,22 @@ A boat-host deploy step that copies the git-reviewed
 - `datum/geoid/` + `datum/vdatum/` grid provisioning — separate queued
   `s57_tools` follow-on (#288 items 2/6), not this deploy step.
 - No push, no GitHub interaction (host performs pushes).
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-21 00:00 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-445 at `2cf7ad9`
+**Mode**: pre-push
+**Depth**: Deep (reason: 364 lines ≥200; ci.yml CI override-trigger)
+**Must-fix**: 1 | **Suggestions**: 2
+**Round**: 1 | **Ship**: continue — one must-fix (silent failed-deploy when DEST pre-exists as a directory); mechanical one-line guard, re-review after fix
+
+### Findings
+- [ ] (must-fix) DEST pre-existing as a directory -> `mv` orphans temp inside it, prints "deployed", exits 0 (silent failed deploy); add regular-file type guard on `$DEST` (also closes symlink-on-DEST) — `scripts/deploy_datum_polygons.sh:81,104`
+- [ ] (suggestion) Cleanup trap is EXIT-only; extend to `EXIT INT TERM` so a signal mid-copy doesn't orphan the staging temp — `scripts/deploy_datum_polygons.sh:101`
+- [ ] (suggestion) Add regression tests for DEST-as-directory / symlink-DEST / unwritable DEST_DIR / empty source — `scripts/test_deploy_datum_polygons.sh`
+
+Static analysis: shellcheck clean; test suite 26/26 pass; yamllint unavailable (ci.yml reviewed manually, valid). Local Adversarial skipped (Ollama unreachable); Copilot off (default). CI two-command `run: |` block verified safe (GH Actions default `bash -eo pipefail`).
