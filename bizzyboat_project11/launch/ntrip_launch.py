@@ -82,6 +82,11 @@ def generate_launch_description():
                     package='bizzyboat_project11',
                     executable='rtcm_diagnostics_node.py',
                     name='rtcm_diagnostics',
+                    # Same policy as the ntrip_client above it: a diagnostics
+                    # node that dies stops publishing, and a missing status
+                    # reads as health on the annunciator. Restart it.
+                    respawn=True,
+                    respawn_delay=5,
                     parameters=[
                         ntrip_credentials,
                         {
