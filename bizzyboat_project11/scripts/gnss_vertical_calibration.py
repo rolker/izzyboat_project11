@@ -34,7 +34,39 @@ TOPICS = {
 }
 FIX_RTK_FIXED = 6
 SBG_SIGZ_MAX = 0.020              # RTK_INT ran 0.010; float ran 0.046
-MAX_AGE_NS = int(1.0e9)
+
+# Pairing tolerance, applied to SENSOR timestamps (message headers), not to bag
+# receive timestamps.
+#
+# "Tide, waves and heave cancel: both receivers ride the same hull" is the whole
+# premise of this comparison, and it only holds if the two fixes describe the
+# same instant. Pairing at 1 s of bag-arrival time does not: a hull heaving
+# +/-0.15 m at a 4 s period moves the full amplitude in a quarter period, which
+# is several times the ~55 mm being measured. Receive timestamps make it worse
+# still -- they carry transport and mavros queueing jitter that has nothing to
+# do with when the receiver computed its solution, and on the planned transit
+# re-run (underway, real heave) that error stops averaging out.
+#
+# The sources run at 5-10 Hz, so 0.15 s is both achievable and enough to bound
+# the heave term to roughly a centimetre at that sea state. The observed skew is
+# reported at the end so the assumption is checked rather than asserted.
+MAX_PAIR_SKEW_NS = int(0.15e9)
+
+
+def stamp_ns(msg, bag_ts, fallbacks):
+    """Sensor time from the message header, falling back to bag receive time.
+
+    Every topic here carries a std_msgs/Header. A zero stamp means the driver
+    never filled it in, and pairing on arrival time is then the only option --
+    but it is counted and reported rather than passed off as sensor time.
+    """
+    header = getattr(msg, 'header', None)
+    if header is not None:
+        stamp = header.stamp.sec * 1000000000 + header.stamp.nanosec
+        if stamp > 0:
+            return stamp
+    fallbacks[0] += 1
+    return bag_ts
 
 
 def lever_z(x, z, pitch):
@@ -47,7 +79,7 @@ def pitch_of(q):
     return math.asin(max(-1.0, min(1.0, 2.0 * (q.w * q.y - q.z * q.x))))
 
 
-def read_bag(bag_dir, samples, bag_tag):
+def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
     files = sorted(Path(bag_dir).glob('*.mcap'),
                    key=lambda p: int(p.stem.rsplit('_', 1)[1]))
     types = {}
@@ -62,9 +94,10 @@ def read_bag(bag_dir, samples, bag_tag):
                 types[t.name] = get_message(t.type)
         reader.set_filter(rosbag2_py.StorageFilter(topics=list(TOPICS)))
         while reader.has_next():
-            topic, data, ts = reader.read_next()
+            topic, data, bag_ts = reader.read_next()
             key = TOPICS[topic]
             msg = deserialize_message(data, types[topic])
+            ts = stamp_ns(msg, bag_ts, fallbacks)
             if key == 'fcu':
                 latest['fcu'] = (ts, msg.alt_ellipsoid / 1000.0, msg.fix_type)
             elif key == 'sbg':
@@ -80,12 +113,17 @@ def read_bag(bag_dir, samples, bag_tag):
             n_raw += 1
             if len(latest) < 5:
                 continue
-            if any(ts - v[0] > MAX_AGE_NS for v in latest.values()):
+            # Skew against the SBG fix's own sensor time, in either direction:
+            # header stamps are not monotonic across topics the way bag arrival
+            # order is.
+            skew = max(abs(ts - v[0]) for v in latest.values())
+            if skew > MAX_PAIR_SKEW_NS:
                 continue
             _, fcu_ant, fix = latest['fcu']
             _, sbg_ant, sigz = latest['sbg']
             if fix != FIX_RTK_FIXED or sigz > SBG_SIGZ_MAX:
                 continue
+            skews.append(skew)
             samples.append(dict(
                 t=ts, bag=bag_tag, fcu_ant=fcu_ant, sbg_ant=sbg_ant,
                 odom=latest['odom'][1],
@@ -104,10 +142,13 @@ def summarise(name, values, unit_mm=True):
 def main():
     bags = sys.argv[1:]
     samples = []
+    skews = []
+    fallbacks = [0]
     total_raw = 0
-    for b in bags:
-        n = read_bag(b, samples, Path(b).name)
-        print(f'{Path(b).name}: {n} SBG fixes read, running total kept {len(samples)}')
+    for bag in bags:
+        n = read_bag(bag, samples, Path(bag).name, fallbacks, skews)
+        print(f'{Path(bag).name}: {n} SBG fixes read, '
+              f'running total kept {len(samples)}')
         total_raw += n
     if not samples:
         print('no samples survived the quality gates')
@@ -116,7 +157,14 @@ def main():
     samples.sort(key=lambda s: s['t'])
     span_h = (samples[-1]['t'] - samples[0]['t']) / 3.6e12
     print(f'\n{len(samples)} samples kept of {total_raw} '
-          f'({100*len(samples)/total_raw:.1f}%), spanning {span_h:.2f} h\n')
+          f'({100*len(samples)/total_raw:.1f}%), spanning {span_h:.2f} h')
+    # The heave-cancels premise stands or falls on this number, so print it.
+    print(f'  pairing skew (sensor time): mean {st.mean(skews)/1e6:.0f} ms, '
+          f'max {max(skews)/1e6:.0f} ms, tolerance {MAX_PAIR_SKEW_NS/1e6:.0f} ms')
+    if fallbacks[0]:
+        print(f'  WARNING: {fallbacks[0]} messages had no header stamp and were '
+              f'paired on bag receive time instead')
+    print()
 
     # --- antenna-to-antenna, reduced with a single common attitude ---------
     print('FCU minus SBG at base_link, both antennas reduced by URDF lever arms (mm):')
