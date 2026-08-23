@@ -21,9 +21,25 @@ import rosbag2_py
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 
-# URDF, base_link frame (x fwd, z up)
+# URDF, base_link frame (x fwd, z UP -- REP-103)
 FCU_ANT = (0.835, 0.890)          # gnss_forward  == GPS_POS1
 SBG_ANT = (-1.073, 0.882)         # sbg_gnss_primary, surveyed w/ phase centre
+
+# ArduPilot's GPS_POS* offsets are in the autopilot body frame, which is FRD:
+# its z is DOWN. The same forward antenna is therefore +0.890 in the URDF and
+# -0.890 in the parameter file, and this repo's records carry both numbers
+# (docs/logs/2026/2026-05-21_gabby_logs.md, bizzyboat_project11/docs/
+# bizzyboat_hardware.md). A correction to the antenna height is thus written
+# with OPPOSITE signs in the two places, which is why the report below prints
+# each target's own new value rather than one signed delta to apply to both.
+GPS_POS_Z_IS_DOWN = True
+
+# An antenna-height error larger than this is not an antenna-height error. The
+# geoid round trip that started this whole investigation is 0.626 m, so a datum
+# mismatch between the two sources lands squarely above this bound -- and the
+# tool would otherwise report it in the same confident millimetres as a real
+# 55 mm phase-centre offset.
+MAX_PLAUSIBLE_CORRECTION_M = 0.5
 
 TOPICS = {
     '/bizzy/mavros/gpsstatus/gps1/raw': 'fcu',
@@ -152,6 +168,72 @@ def summarise(name, values, unit_mm=True):
     return m
 
 
+def corrected_antenna_height(correction_m, urdf_z=FCU_ANT[1]):
+    """Where this measurement puts the CUAV forward antenna, in both frames.
+
+    ``correction_m`` is the FCU-minus-SBG difference at base_link with z UP.
+    base_link altitude is computed as ``antenna altitude - lever arm``, so a
+    negative difference means the FCU path puts base_link too low, which means
+    its lever arm is too long and the antenna really sits lower than the URDF
+    places it. Hence ``new URDF z = urdf_z + correction``.
+
+    ``GPS_POS1_Z`` describes the same antenna in ArduPilot's FRD body frame, so
+    it is the negation -- and its edit has the opposite sign. Returns
+    ``(new_urdf_z, new_gps_pos_z)`` in metres.
+    """
+    new_urdf_z = urdf_z + correction_m
+    return new_urdf_z, -new_urdf_z
+
+
+def correction_report(correction_m, urdf_z=FCU_ANT[1]):
+    """The lines an operator copies. Kept separate so the signs are testable.
+
+    Printing one signed delta for both targets was wrong and dangerous: applied
+    to GPS_POS1_Z = -0.890 it moves the antenna the wrong way, ADDING about
+    110 mm to the FCU vertical path instead of removing 55 mm. Each target gets
+    its own before/after value, with the frame that fixes its sign named beside
+    it.
+    """
+    if abs(correction_m) > MAX_PLAUSIBLE_CORRECTION_M:
+        return [
+            '',
+            f'REFUSING to quote a correction: measured {correction_m*1000:+.0f} mm, '
+            f'over the {MAX_PLAUSIBLE_CORRECTION_M*1000:.0f} mm plausibility bound.',
+            '  A discrepancy this size is not an antenna mounting height. Likely',
+            '  causes, in order: the two altitude sources are on different datums',
+            '  (the mavros geoid round trip is 0.626 m, and gpsstatus/gps1/raw',
+            '  alt_ellipsoid is the field that avoids it); a lever arm in this',
+            '  file no longer matches the URDF; or the bags are from another hull.',
+        ]
+    new_urdf_z, new_gps_pos_z = corrected_antenna_height(correction_m, urdf_z)
+    old_gps_pos_z = -urdf_z
+    return [
+        '',
+        f'Implied correction to the CUAV forward antenna height '
+        f'({correction_m*1000:+.0f} mm measured at base_link, z up):',
+        '',
+        f'  {"URDF gnss_forward z":<22}{"(base_link, z UP)":<30}'
+        f'{urdf_z:+.3f} -> {new_urdf_z:+.3f} m  '
+        f'({(new_urdf_z - urdf_z)*1000:+.0f} mm)',
+        f'  {"GPS_POS1_Z":<22}{"(ArduPilot body FRD, z DOWN)":<30}'
+        f'{old_gps_pos_z:+.3f} -> {new_gps_pos_z:+.3f} m  '
+        f'({(new_gps_pos_z - old_gps_pos_z)*1000:+.0f} mm)',
+        '',
+        '  The two edits carry OPPOSITE signs because the two frames do. Writing',
+        '  the z-up number into GPS_POS1_Z moves the antenna the wrong way and',
+        '  roughly doubles the error rather than removing it.',
+        '',
+        '  GPS_POS2_Z (aft antenna) is NOT covered by this measurement: only the',
+        '  forward antenna was compared against the SBG. It currently carries the',
+        '  same -0.890, so if the two masts are identical the same edit applies --',
+        '  but that is an assumption, not a result.',
+        '',
+        '  This is a measurement, not a recommendation. Compare it against the',
+        '  spread above before writing it anywhere, and note that GPS_POS1_Z also',
+        '  affects horizontal lever-arm compensation during turns.',
+    ]
+
+
 def main():
     bags = sys.argv[1:]
     samples = []
@@ -218,12 +300,8 @@ def main():
     # The SBG-attitude reduction is the one quoted: no assumed FCU pitch enters
     # the side being corrected.
     correction = with_sbg_attitude
-    fcu_z = FCU_ANT[1]
-    print('\nImplied correction: GPS_POS1_Z / GPS_POS2_Z and the URDF gnss_* z')
-    print(f'  should change by {correction*1000:+.0f} mm, '
-          f'i.e. {fcu_z:.3f} -> {fcu_z + correction:.3f} m')
-    print('  (this is a measurement, not a recommendation -- compare it against '
-          'the\n   spread above before writing it anywhere)')
+    for line in correction_report(correction):
+        print(line)
 
 
 if __name__ == '__main__':
