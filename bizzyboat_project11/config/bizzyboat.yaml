@@ -929,6 +929,15 @@
     # the node's original TODO, unaddressed from 2025-05-05 until 2026-08-21.
     # NOTE the 0.030 m is a FRESHWATER figure and predates later payload
     # changes; salt water alone raises the hull ~5 mm. Re-measure at the pier.
+    #
+    # CROSS-REPO DEPENDENCY: water_line_frame only exists in mru_transform's
+    # sea_surface_estimator from 58b7f97 (2026-08-21) onward. Setting a
+    # parameter a node does not declare is a SILENT NO-OP -- rclcpp drops it,
+    # the node starts normally, and the tide simply stays low by this offset.
+    # There is no startup failure to notice, so an mru_transform install older
+    # than that commit reverts the correction without any signal. Verify after
+    # a rebuild:
+    #   ros2 param get /bizzy/sea_surface_estimator water_line_frame
     water_line_frame: bizzy/waterline
     chart_datum_frame: bizzy/chart_datum
     mhhw_frame: bizzy/chart_datum_mhhw
