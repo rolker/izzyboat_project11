@@ -287,6 +287,24 @@ def test_leading_garbage_before_a_good_frame():
 # hold back as a frame that might still be completed by the next delivery.
 MAX_FRAME_LEN = rd.RTCM_HEADER_LEN + rd.RTCM_MAX_PAYLOAD + rd.RTCM_CRC_LEN
 
+
+def crc_budget_for(buf):
+    """The most CRC the parser may do in one call on ``buf``."""
+    return rd.RTCM_CRC_BUDGET_FACTOR * len(buf) + rd.RTCM_MAX_FRAME
+
+
+def counting_crc(monkeypatch):
+    """Patch crc24q to record the length of every buffer it is asked to sum."""
+    spans = []
+    real = rd.crc24q
+
+    def counted(data):
+        spans.append(len(data))
+        return real(data)
+
+    monkeypatch.setattr(rd, 'crc24q', counted)
+    return spans
+
 def test_reserved_bits_reject_a_false_preamble_before_the_crc(monkeypatch):
     """The reserved-bit check is what keeps a garbled stream linear.
 
@@ -322,13 +340,111 @@ def test_hostile_buffer_costs_no_more_than_a_few_milliseconds():
     assert time.perf_counter() - start < 0.03
 
 
+# The pattern that defeats the reserved-bit filter: 0x03 leaves the reserved
+# bits clear, so every third byte is a candidate header declaring the longest
+# legal payload. Before the CRC budget this cost 1.10 s in a single _on_rtcm.
+MAX_LENGTH_FALSE_HEADERS = b'\xd3\x03\xff'
+
+
+@pytest.mark.parametrize('pattern', [
+    MAX_LENGTH_FALSE_HEADERS,
+    b'\xd3\x01\xff',         # 511-byte payloads: 1.21 s before the budget
+    b'\xd3\x00',              # 1-byte payloads:   0.74 s before the budget
+    b'\xd3',                   # rejected by the reserved bits alone
+])
+def test_no_input_can_exceed_the_crc_budget_in_one_call(pattern, monkeypatch):
+    """The bound the reserved-bit filter does not provide.
+
+    That filter is a filter: it drops 63 of every 64 false preambles, but a
+    candidate declaring a maximum-length payload sails through it, so cost per
+    callback was still unbounded by input. What bounds it is the budget -- and
+    a budget is only a bound if nothing can talk the parser past it.
+    """
+    buf = bytearray((pattern * (rd.RTCM_MAX_BUFFER // len(pattern) + 1))
+                    [:rd.RTCM_MAX_BUFFER])
+    spans = counting_crc(monkeypatch)
+
+    frames, consumed = rd.iter_rtcm_frames(buf)
+
+    assert frames == []
+    assert sum(spans) <= crc_budget_for(buf)
+    # An absolute ceiling as well as the declared one, so that widening
+    # RTCM_CRC_BUDGET_FACTOR cannot quietly widen the test with it. 4x the
+    # buffer is ~20 ms of CRC; the 1 Hz timer survives that, and nothing a
+    # conforming stream sends comes close to it.
+    assert sum(spans) <= 4 * rd.RTCM_MAX_BUFFER
+    # ...and the call still made progress, so a hostile stream cannot stall
+    # the parser instead of wedging it.
+    assert consumed > 0
+
+
+def test_max_length_false_headers_cost_no_more_than_a_few_milliseconds():
+    """Wall-clock backstop, measured against the 1.10 s this replaced."""
+    import time
+    buf = bytearray(MAX_LENGTH_FALSE_HEADERS
+                    * (rd.RTCM_MAX_BUFFER // len(MAX_LENGTH_FALSE_HEADERS)))
+    start = time.perf_counter()
+    rd.iter_rtcm_frames(buf)
+    assert time.perf_counter() - start < 0.10
+
+
+def test_a_hostile_buffer_drains_and_gives_up_the_frame_hiding_behind_it():
+    """Budget exhaustion must not lose the stream.
+
+    The parser stops early on hostile input, so the caller sees it across
+    several callbacks rather than one long one. Each must consume something,
+    and a real frame sitting behind the garbage must still come out.
+    """
+    good = frame(station_1005(42, MACORS_42[0], MACORS_42[1], -10.3))
+    garbage = MAX_LENGTH_FALSE_HEADERS * 400
+    # Trailing filler so every false header in the garbage has room for the
+    # frame it claims: this exercises budget exhaustion rather than the
+    # separate "frame straddles the end of the buffer" path.
+    buf = bytearray(garbage + good + bytes(MAX_FRAME_LEN))
+    seen = []
+    for _ in range(500):
+        frames, consumed = rd.iter_rtcm_frames(buf)
+        seen.extend(t for t, _ in frames)
+        if consumed == 0:
+            break
+        del buf[:consumed]
+        if not buf:
+            break
+    assert seen == [1005]
+
+
+def test_the_budget_never_rejects_a_conforming_stream():
+    """A budget that a real stream can exhaust would drop real corrections.
+
+    Back-to-back maximum-length frames are the densest legal input there is,
+    and they are exactly what an MSM7 mountpoint sends. One CRC pass each,
+    well inside the budget.
+    """
+    stub = typed_payload(1077)
+    payload = stub + bytes(rd.RTCM_MAX_PAYLOAD - len(stub))
+    assert len(payload) == rd.RTCM_MAX_PAYLOAD
+    whole = frame(payload)
+    count = rd.RTCM_MAX_BUFFER // len(whole)
+    buf = bytearray(whole * count)
+    assert len(buf) <= rd.RTCM_MAX_BUFFER
+
+    frames, consumed = rd.iter_rtcm_frames(buf)
+
+    assert [t for t, _ in frames] == [1077] * count
+    assert consumed == len(buf)
+
+
 def test_alternating_garbage_that_survives_the_reserved_bits_is_still_bounded():
-    """0xD3 0x00 pairs pass the reserved-bit check, so the CRC still runs --
-    but only once per candidate, and only over a declared length."""
+    """0xD3 0x00 pairs pass the reserved-bit check, so the CRC still runs.
+
+    What stops it is the budget, not the filter, so the call now returns with
+    bytes still in hand rather than grinding through the whole buffer -- the
+    caller sees the same work spread over several callbacks.
+    """
     buf = bytearray(b'\xd3\x00' * (rd.RTCM_MAX_BUFFER // 2))
     frames, consumed = rd.iter_rtcm_frames(buf)
     assert frames == []
-    assert len(buf) - consumed <= MAX_FRAME_LEN
+    assert 0 < consumed <= len(buf)
 
 
 def test_reserved_bits_set_on_an_otherwise_valid_frame_is_rejected():

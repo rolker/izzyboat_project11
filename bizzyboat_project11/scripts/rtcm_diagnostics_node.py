@@ -55,10 +55,30 @@ RTCM_CRC_LEN = 3
 RTCM_RESERVED_MASK = 0xFC
 # Longest legal RTCM3 payload (10-bit length field).
 RTCM_MAX_PAYLOAD = 1023
+# The 10-bit length field lives in the low 2 bits of the first header byte and
+# all 8 of the second.
+RTCM_LENGTH_MASK = 0x03
+# Longest a whole frame can be, preamble to CRC.
+RTCM_MAX_FRAME = RTCM_HEADER_LEN + RTCM_MAX_PAYLOAD + RTCM_CRC_LEN
 # Cap the reassembly buffer so a stream that never syncs cannot grow without
 # bound. Four maximum-length frames is ample to recover framing after a
 # dropped message.
-RTCM_MAX_BUFFER = 4 * (RTCM_HEADER_LEN + RTCM_MAX_PAYLOAD + RTCM_CRC_LEN)
+RTCM_MAX_BUFFER = 4 * RTCM_MAX_FRAME
+# How many bytes of CRC one call to iter_rtcm_frames may compute, as a multiple
+# of the buffer it was given (plus one whole frame, so the head candidate is
+# always affordable however small the buffer).
+#
+# The reserved-bit check below rejects 63 of every 64 false preambles for free,
+# but it is a filter, not a bound: b"\xd3\x03\xff" repeated passes it and
+# declares a 1023-byte payload, so every 3 bytes buys a 1026-byte CRC --
+# measured at 1.10 s of CPU in a single _on_rtcm on one 4116-byte buffer, which
+# starves the 1 Hz publish timer and takes /diagnostics silent. Only a budget
+# bounds that, because no cheap test can tell a false header from a real one.
+#
+# A conforming stream never needs more than one CRC pass over each byte it
+# delivered -- frames do not overlap, and a validated frame is skipped whole --
+# so twice the buffer length cannot reject a real frame.
+RTCM_CRC_BUDGET_FACTOR = 2
 
 # A real antenna reference point sits within a few kilometres of the WGS84
 # surface, so its ECEF norm is bounded. Zeros -- a placeholder ARP, or a
@@ -128,16 +148,31 @@ def iter_rtcm_frames(buf):
     the caller should drop. Bytes belonging to a frame that is not yet complete
     are left in place for the next call.
 
-    Cost is bounded on hostile input. A buffer of nothing but 0xD3 bytes offers
-    a candidate frame at every byte, and validating each by CRC is quadratic:
-    measured at 3.4 s of CPU in a single callback, which starves the 1 Hz
-    publish timer and takes /diagnostics silent -- the node failing exactly the
-    way it exists to prevent. The reserved-bit check below is what keeps that
-    linear: it rejects a false preamble in constant time, and 0xD3 itself is
-    one of the bytes it rejects.
+    Cost is bounded on hostile input, which matters because a callback that
+    runs for a second starves the 1 Hz publish timer and takes /diagnostics
+    silent -- the node failing exactly the way it exists to prevent. Two
+    mechanisms, and the second is the one that is load-bearing:
+
+      * The reserved-bit check rejects a false preamble in constant time. It
+        is what makes a buffer of nothing but 0xD3 (0xD3 & 0xFC = 0xD0, so
+        every byte is rejected) cost 1.6 ms instead of the 3.4 s measured
+        before it existed.
+      * A CRC budget, because that check is a filter and not a bound: a
+        candidate that declares a maximum-length payload passes it, and
+        b"\xd3\x03\xff" repeated is 1.10 s of CRC in one callback. Once the
+        budget is spent the scan stops and returns, consuming the bytes it has
+        already proven cannot start a frame; the remainder is re-examined on
+        the next call, with a fresh budget. Every call therefore costs at most
+        RTCM_CRC_BUDGET_FACTOR * len(buf) + RTCM_MAX_FRAME bytes of CRC and
+        consumes at least one byte, so no input can wedge the callback and
+        none can stall the parser either.
     """
     frames = []
     index = 0
+    # Enough for one whole frame however small the buffer, so the candidate at
+    # the head of the buffer is always validated -- which is what guarantees
+    # the forward progress described above.
+    budget = RTCM_CRC_BUDGET_FACTOR * len(buf) + RTCM_MAX_FRAME
     while True:
         start = buf.find(RTCM_PREAMBLE, index)
         if start < 0:
@@ -151,11 +186,23 @@ def iter_rtcm_frames(buf):
             # cost of a garbled or hostile stream.
             index = start + 1
             continue
-        length = (buf[start + 1] << 8) | buf[start + 2]
+        # Masked explicitly rather than relying on the reserved-bit check above
+        # having already forced the high 6 bits to zero: the two are separate
+        # concerns, and a length read from unmasked bits would span megabytes.
+        length = ((buf[start + 1] & RTCM_LENGTH_MASK) << 8) | buf[start + 2]
         end = start + RTCM_HEADER_LEN + length + RTCM_CRC_LEN
         if end > len(buf):
             # Frame straddles the end of the buffer; wait for more bytes.
             return frames, start
+        span = end - start - RTCM_CRC_LEN
+        if span > budget:
+            # Out of CRC budget. Everything before this candidate has been
+            # proven not to start a frame, so consume it and stop; the caller
+            # keeps the rest and we resume here next call. start is never 0
+            # at this point -- the budget always covers at least one whole
+            # frame -- so this always makes progress.
+            return frames, start
+        budget -= span
         frame = bytes(buf[start:end])
         received = (frame[-3] << 16) | (frame[-2] << 8) | frame[-1]
         if crc24q(frame[:-RTCM_CRC_LEN]) != received:
