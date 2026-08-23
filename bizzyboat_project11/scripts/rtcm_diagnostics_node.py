@@ -49,11 +49,15 @@ EARTH_MEAN_R_KM = 6371.0088
 RTCM_PREAMBLE = 0xD3
 RTCM_HEADER_LEN = 3
 RTCM_CRC_LEN = 3
+# The 6 bits between the preamble and the 10-bit length field are reserved and
+# transmitted as zero. Checking them costs one AND and rejects 63 of every 64
+# false preambles before the CRC is computed -- see iter_rtcm_frames.
+RTCM_RESERVED_MASK = 0xFC
 # Longest legal RTCM3 payload (10-bit length field).
 RTCM_MAX_PAYLOAD = 1023
 # Cap the reassembly buffer so a stream that never syncs cannot grow without
-# bound. Two maximum frames is ample to recover framing after a dropped
-# message.
+# bound. Four maximum-length frames is ample to recover framing after a
+# dropped message.
 RTCM_MAX_BUFFER = 4 * (RTCM_HEADER_LEN + RTCM_MAX_PAYLOAD + RTCM_CRC_LEN)
 
 # Station-description messages carrying the antenna reference point.
@@ -115,6 +119,14 @@ def iter_rtcm_frames(buf):
     ``(message_type, payload)`` and ``consumed`` is the number of leading bytes
     the caller should drop. Bytes belonging to a frame that is not yet complete
     are left in place for the next call.
+
+    Cost is bounded on hostile input. A buffer of nothing but 0xD3 bytes offers
+    a candidate frame at every byte, and validating each by CRC is quadratic:
+    measured at 3.4 s of CPU in a single callback, which starves the 1 Hz
+    publish timer and takes /diagnostics silent -- the node failing exactly the
+    way it exists to prevent. The reserved-bit check below is what keeps that
+    linear: it rejects a false preamble in constant time, and 0xD3 itself is
+    one of the bytes it rejects.
     """
     frames = []
     index = 0
@@ -125,7 +137,13 @@ def iter_rtcm_frames(buf):
             return frames, len(buf)
         if start + RTCM_HEADER_LEN > len(buf):
             return frames, start
-        length = ((buf[start + 1] & 0x03) << 8) | buf[start + 2]
+        if buf[start + 1] & RTCM_RESERVED_MASK:
+            # Reserved bits are non-zero, so this cannot be a frame header.
+            # Reject before the CRC -- this is the cheap check that bounds the
+            # cost of a garbled or hostile stream.
+            index = start + 1
+            continue
+        length = (buf[start + 1] << 8) | buf[start + 2]
         end = start + RTCM_HEADER_LEN + length + RTCM_CRC_LEN
         if end > len(buf):
             # Frame straddles the end of the buffer; wait for more bytes.

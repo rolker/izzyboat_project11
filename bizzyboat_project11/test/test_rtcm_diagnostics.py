@@ -175,6 +175,63 @@ def test_leading_garbage_before_a_good_frame():
     assert [t for t, _ in frames] == [1005]
 
 
+# --- cost bound on hostile input -------------------------------------------
+
+# Longest a single frame can be, and so the most the parser may legitimately
+# hold back as a frame that might still be completed by the next delivery.
+MAX_FRAME_LEN = rd.RTCM_HEADER_LEN + rd.RTCM_MAX_PAYLOAD + rd.RTCM_CRC_LEN
+
+def test_reserved_bits_reject_a_false_preamble_before_the_crc(monkeypatch):
+    """The reserved-bit check is what keeps a garbled stream linear.
+
+    A buffer of nothing but 0xD3 offers a candidate frame at every byte. Before
+    the check, each was validated by CRC over ~979 bytes -- 3.4 s of CPU in one
+    callback, measured on the boat's payload sizes, which starves the 1 Hz
+    publish timer and takes /diagnostics silent. 0xD3 has reserved bits set
+    (0xD3 & 0xFC = 0xD0), so not one CRC should now be computed.
+    """
+    calls = []
+    real_crc = rd.crc24q
+    monkeypatch.setattr(rd, 'crc24q', lambda data: calls.append(len(data)) or real_crc(data))
+
+    buf = bytearray(b'\xd3' * rd.RTCM_MAX_BUFFER)
+    frames, consumed = rd.iter_rtcm_frames(buf)
+
+    assert frames == []
+    assert calls == []
+    # Only a possible straddling frame may be retained, never the whole buffer.
+    assert len(buf) - consumed <= MAX_FRAME_LEN
+
+
+def test_hostile_buffer_costs_no_more_than_a_few_milliseconds():
+    """Wall-clock backstop on the same input, in case the check is ever moved.
+
+    The bound is deliberately loose (100x under the 3.4 s that was measured):
+    it is here to catch a return to quadratic behaviour, not to benchmark.
+    """
+    import time
+    buf = bytearray(b'\xd3' * rd.RTCM_MAX_BUFFER)
+    start = time.perf_counter()
+    rd.iter_rtcm_frames(buf)
+    assert time.perf_counter() - start < 0.03
+
+
+def test_alternating_garbage_that_survives_the_reserved_bits_is_still_bounded():
+    """0xD3 0x00 pairs pass the reserved-bit check, so the CRC still runs --
+    but only once per candidate, and only over a declared length."""
+    buf = bytearray(b'\xd3\x00' * (rd.RTCM_MAX_BUFFER // 2))
+    frames, consumed = rd.iter_rtcm_frames(buf)
+    assert frames == []
+    assert len(buf) - consumed <= MAX_FRAME_LEN
+
+
+def test_reserved_bits_set_on_an_otherwise_valid_frame_is_rejected():
+    good = bytearray(frame(typed_payload(1074)))
+    good[1] |= 0x04          # lowest reserved bit
+    frames, _ = rd.iter_rtcm_frames(good)
+    assert frames == []
+
+
 # --- reference station decode ---------------------------------------------
 
 @pytest.mark.parametrize('lat,lon,height', [
