@@ -126,11 +126,20 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
 - The heavy boat runtime deps (mavros, sbg_driver, mru_transform, …) are
   `exec_depend` only — building needs little beyond ament_cmake + xacro.
   First-party exec_depends have no rosdep keys; CI uses `rosdep install -r`.
-- Only test: `bizzyboat_project11/test/test_retrofit_m3_bag.py` (pytest, 500+
-  lines) covering `scripts/retrofit_m3_bag.py` — integer-second clock-skew
-  correction (windowed-max envelope), `/tf_static` M3-offset rewrite,
-  histogram reporting, and bag path/format handling. Integration cases
-  self-skip if message packages are missing.
+- Three pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
+  - `test/test_retrofit_m3_bag.py` (500+ lines) covering
+    `scripts/retrofit_m3_bag.py` — integer-second clock-skew correction
+    (windowed-max envelope), `/tf_static` M3-offset rewrite, histogram
+    reporting, and bag path/format handling. Integration cases self-skip if
+    message packages are missing.
+  - `test/test_operator_core_launch.py` — station-agnostic wiring in
+    `operator_core_launch.py` (`return_host` derivation, the `wifi:=false`
+    overlay); both fail silently in the field if broken.
+  - `test/test_rtcm_diagnostics.py` — RTCM3 framing and CRC, the 1005/1006
+    reference-point decode, baseline classification, and the cost bound on
+    garbled input. Note the "external check vectors" section: most cases build
+    their own frames and so are self-consistent rather than verified, and those
+    vectors are what pin the implementation to something outside this repo.
 - CI also runs `xacro ... | check_urdf` on both boats' URDFs — a URDF that no
   longer parses means no `/tf_static` on the boat.
 
@@ -149,9 +158,9 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
 - **Changes take effect on a live boat.** Topic/param/frame renames ripple
   into field operations; field-tuned overlay values deliberately differ from
   upstream defaults ("differs from default" is not a bug).
-- **The retrofit scripts are NOT installed.** `retrofit_m3_bag.py` /
-  `retrofit_sidescan_bag.py` are one-off offline bag fixers, run manually;
-  the test imports `retrofit_m3_bag.py` by relative path via importlib, so
+- **The offline bag tools are NOT installed.** `retrofit_m3_bag.py`,
+  `retrofit_sidescan_bag.py` and `gnss_vertical_calibration.py` are run
+  manually from the source tree; the test imports `retrofit_m3_bag.py` by relative path via importlib, so
   moving/renaming the script silently orphans the test target. Only the tmux
   scripts and three diagnostics/relay Python nodes are installed
   (see `bizzyboat_project11/CMakeLists.txt`).

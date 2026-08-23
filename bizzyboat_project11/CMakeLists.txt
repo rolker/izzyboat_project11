@@ -18,6 +18,10 @@ install(PROGRAMS
   scripts/gps_rtk_diagnostics_node.py
   scripts/rtcm_diagnostics_node.py
   scripts/rtcm_relay_node.py
+  # NOT installed, deliberately: scripts/gnss_vertical_calibration.py is an
+  # offline bag-analysis tool run by hand from the source tree, like the
+  # retrofit_*_bag.py scripts. It reads bags and prints numbers; nothing on the
+  # boat launches it.
   DESTINATION lib/${PROJECT_NAME})
 
 ament_export_dependencies(
