@@ -253,6 +253,12 @@ def generate_launch_description():
                         'ok_min_fix_type': 6,
                         'warn_min_fix_type': 3,
                     }],
+                    # Same argument as ellipsoidal_fix above and mavros before
+                    # it: a diagnostics node that stays down publishes nothing,
+                    # and nothing renders on the annunciator as a missing tile
+                    # rather than a fault.
+                    respawn=True,
+                    respawn_delay=2,
                     emulate_tty=True
                 ),
 

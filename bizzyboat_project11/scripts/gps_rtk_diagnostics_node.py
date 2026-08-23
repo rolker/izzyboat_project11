@@ -214,10 +214,25 @@ class GpsRtkDiagnosticsNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = GpsRtkDiagnosticsNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    node = None
+    try:
+        # Construction is inside the try for the same reason it is in
+        # rtcm_diagnostics_node.py: a bad parameter -- an int launch override
+        # against a float-typed threshold is enough -- raises here, and an
+        # unhandled exception permanently silences /diagnostics. Absence reads
+        # as health on the annunciator, which is the failure this whole file
+        # exists to prevent, reintroduced one level up. Launch respawns this
+        # node, so a clean exit that leaves rclpy shut down is what lets the
+        # respawn mean anything.
+        node = GpsRtkDiagnosticsNode()
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if node is not None:
+            node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == '__main__':
