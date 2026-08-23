@@ -105,3 +105,61 @@ def test_nose_down_pitch_lowers_a_forward_antenna():
     drops. Getting this backwards would flip the sign of the whole result."""
     assert gvc.lever_z(0.835, 0.890, math.radians(5.0)) < 0.890
     assert gvc.lever_z(-1.073, 0.882, math.radians(5.0)) > 0.882
+
+
+# --- honesty gates on the corpus -------------------------------------------
+
+def test_the_run_this_tool_was_written_for_passes_its_own_gates():
+    """4.91 h, 91 samples, ten populated buckets -- the 2026-08-21 corpus."""
+    assert gvc.uncertainty_gates(91, 4.91, 10) == []
+
+
+def test_a_single_bucket_is_reported_as_not_measured_not_as_stable():
+    """The failure this gate exists for: under 30 minutes everything lands in
+    one bucket, max(drift) - min(drift) is 0, and the tool printed '0.0 mm --
+    this, not the sem, is the honest uncertainty'."""
+    failures = gvc.uncertainty_gates(200, 0.4, 1)
+    assert failures
+    assert any('bucket' in f for f in failures)
+    assert any('not measured' in f.lower() or 'stable' in f for f in failures)
+
+
+def test_one_sample_fails_the_sample_count_gate():
+    """pstdev and sem of a single sample are both exactly 0, which prints as
+    millimetre-perfect agreement from one reading."""
+    failures = gvc.uncertainty_gates(1, 4.0, 8)
+    assert any('samples' in f for f in failures)
+
+
+def test_a_short_corpus_fails_the_timespan_gate():
+    failures = gvc.uncertainty_gates(500, 0.6, 2)
+    assert any('h of data' in f for f in failures)
+
+
+def test_every_failure_names_which_gate_failed():
+    """'no samples survived' told an operator nothing; a bare refusal would
+    repeat that."""
+    for failure in gvc.uncertainty_gates(1, 0.1, 1):
+        assert len(failure) > 20
+
+
+def test_a_failing_corpus_marks_the_report_provisional():
+    text = '\n'.join(gvc.correction_report(
+        MEASURED, gate_failures=gvc.uncertainty_gates(1, 0.1, 1)))
+    assert 'PROVISIONAL' in text
+    assert 'do not write these values' in text
+    # The numbers are still shown -- the operator needs to see what was
+    # measured -- but they are not presented as quotable.
+    assert '+0.890 -> +0.835' in text
+
+
+def test_a_passing_corpus_is_not_marked_provisional():
+    text = '\n'.join(gvc.correction_report(MEASURED, gate_failures=[]))
+    assert 'PROVISIONAL' not in text
+
+
+def test_summarise_does_not_claim_zero_scatter_from_one_sample(capsys):
+    gvc.summarise('one sample', [0.055])
+    out = capsys.readouterr().out
+    assert 'n/a' in out
+    assert 'sd    0.0' not in out

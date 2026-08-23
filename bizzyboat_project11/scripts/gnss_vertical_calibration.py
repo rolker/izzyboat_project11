@@ -41,6 +41,48 @@ GPS_POS_Z_IS_DOWN = True
 # 55 mm phase-centre offset.
 MAX_PLAUSIBLE_CORRECTION_M = 0.5
 
+# Honesty gates on the corpus itself. The apparatus below reports "perfect" on
+# exactly the run it was written for: half-hourly buckets mean any corpus under
+# 30 minutes lands in a single bucket, so max(drift) - min(drift) is 0 and the
+# tool prints "spread of half-hourly means: 0.0 mm -- this, not the sem, is the
+# honest uncertainty". With one surviving sample pstdev and sem are 0 too, and
+# a confident millimetre figure still prints. The planned transit re-run is
+# short, so this is not hypothetical.
+#
+# Two populated buckets is the minimum that can show drift at all; an hour and
+# 30 samples are what make the two buckets mean something rather than being an
+# accident of where the boundary fell.
+MIN_POPULATED_BUCKETS = 2
+MIN_SAMPLES = 30
+MIN_SPAN_H = 1.0
+BUCKET_H = 0.5
+
+
+def uncertainty_gates(n_samples, span_h, populated_buckets):
+    """Name the gates this corpus fails, so 'no drift' cannot mean 'no data'.
+
+    Returns a list of human-readable failures. Empty means the spread figure
+    below is a measurement of stability rather than an artefact of a corpus too
+    short to contain any.
+    """
+    failures = []
+    if populated_buckets < MIN_POPULATED_BUCKETS:
+        failures.append(
+            f'only {populated_buckets} populated '
+            f'{BUCKET_H*60:.0f}-minute bucket(s); drift needs at least '
+            f'{MIN_POPULATED_BUCKETS}, so a spread of 0.0 mm here means '
+            f'"not measured", not "stable"')
+    if n_samples < MIN_SAMPLES:
+        failures.append(
+            f'{n_samples} samples, under the {MIN_SAMPLES} this quotes an sd '
+            f'and sem from (at n=1 both are exactly 0)')
+    if span_h < MIN_SPAN_H:
+        failures.append(
+            f'{span_h:.2f} h of data, under {MIN_SPAN_H:.1f} h; a phase-centre '
+            f'offset is constant, so a short window cannot distinguish it from '
+            f'whatever the ionosphere was doing')
+    return failures
+
 TOPICS = {
     '/bizzy/mavros/gpsstatus/gps1/raw': 'fcu',
     '/bizzy/sensors/sbg/imu/nav_sat_fix': 'sbg',
@@ -162,7 +204,13 @@ def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
 
 def summarise(name, values, unit_mm=True):
     k = 1000.0 if unit_mm else 1.0
-    m, sd = st.mean(values), st.pstdev(values)
+    m = st.mean(values)
+    if len(values) < 2:
+        # pstdev and sem of one sample are both exactly 0, which prints as
+        # millimetre-perfect agreement from a single reading.
+        print(f'  {name:52s} {m*k:+8.1f}   sd    n/a   sem   n/a   n=1')
+        return m
+    sd = st.pstdev(values)
     sem = sd / math.sqrt(len(values))
     print(f'  {name:52s} {m*k:+8.1f}   sd {sd*k:6.1f}   sem {sem*k:5.2f}   n={len(values)}')
     return m
@@ -185,7 +233,7 @@ def corrected_antenna_height(correction_m, urdf_z=FCU_ANT[1]):
     return new_urdf_z, -new_urdf_z
 
 
-def correction_report(correction_m, urdf_z=FCU_ANT[1]):
+def correction_report(correction_m, urdf_z=FCU_ANT[1], gate_failures=()):
     """The lines an operator copies. Kept separate so the signs are testable.
 
     Printing one signed delta for both targets was wrong and dangerous: applied
@@ -207,7 +255,12 @@ def correction_report(correction_m, urdf_z=FCU_ANT[1]):
         ]
     new_urdf_z, new_gps_pos_z = corrected_antenna_height(correction_m, urdf_z)
     old_gps_pos_z = -urdf_z
-    return [
+    header = []
+    if gate_failures:
+        header = ['', 'PROVISIONAL -- do not write these values anywhere. '
+                      'The corpus does not support them:']
+        header += [f'    - {failure}' for failure in gate_failures]
+    return header + [
         '',
         f'Implied correction to the CUAV forward antenna height '
         f'({correction_m*1000:+.0f} mm measured at base_link, z up):',
@@ -294,13 +347,25 @@ def main():
         print(f'    +{k*0.5:4.1f} h  {st.mean(vals)*1000:+8.1f}   '
               f'sd {st.pstdev(vals)*1000:6.1f}   n={len(vals)}')
     drift = [st.mean(buckets[k]) for k in sorted(buckets)]
-    print(f'\n  spread of half-hourly means: {(max(drift)-min(drift))*1000:.1f} mm '
-          f'-- this, not the sem, is the honest uncertainty')
+    gate_failures = uncertainty_gates(len(samples), span_h, len(buckets))
+    if len(drift) >= MIN_POPULATED_BUCKETS:
+        print(f'\n  spread of half-hourly means: '
+              f'{(max(drift)-min(drift))*1000:.1f} mm '
+              f'-- this, not the sem, is the honest uncertainty')
+    else:
+        # Printing 0.0 mm here is how the tool told itself it was perfect.
+        print(f'\n  spread of half-hourly means: NOT MEASURED '
+              f'({len(drift)} populated bucket) -- a single bucket cannot show '
+              f'drift, and 0.0 mm would read as stability')
+    if gate_failures:
+        print('\n  This corpus does not support a quoted correction:')
+        for failure in gate_failures:
+            print(f'    - {failure}')
 
     # The SBG-attitude reduction is the one quoted: no assumed FCU pitch enters
     # the side being corrected.
     correction = with_sbg_attitude
-    for line in correction_report(correction):
+    for line in correction_report(correction, gate_failures=gate_failures):
         print(line)
 
 
