@@ -88,6 +88,13 @@ def typed_payload(message_type):
     return BitWriter().u(message_type, 12).u(0, 12).bytes()
 
 
+# --- the two real casters, used throughout ---------------------------------
+
+BOAT = (43.0720, -70.7115)          # UNH pier, Portsmouth NH
+UDEL_649 = (39.982667, -75.221965)  # decoded live 2026-08-21, Delaware caster
+MACORS_42 = (42.862746, -70.890263)  # decoded live 2026-08-21 after the revert
+
+
 # --- CRC -------------------------------------------------------------------
 
 def test_crc24q_empty_is_zero():
@@ -390,6 +397,105 @@ def test_never_described_station_is_left_alone():
         DiagnosticStatus.WARN, 'no fix', None, 60.0)[0] == DiagnosticStatus.WARN
 
 
+# --- station kind and caster switches --------------------------------------
+
+class FakeStationTracker:
+    """The node's station bookkeeping without a ROS graph.
+
+    _record_station is pure bookkeeping apart from the logger and the clock, so
+    binding the real method to a stub tests the shipped code rather than a
+    re-implementation of it.
+    """
+
+    def __init__(self, switch_m=1000.0):
+        self._station = None
+        self._first_station_position = None
+        self._station_moved_m = 0.0
+        self._station_reports = 0
+        self._last_station_time = None
+        self._station_switch_m = switch_m
+        self.log = []
+
+    def get_logger(self):
+        tracker = self
+
+        class _Logger:
+            def info(self, message):
+                tracker.log.append(message)
+        return _Logger()
+
+    def get_clock(self):
+        class _Clock:
+            def now(self):
+                return 0
+        return _Clock()
+
+    _record_station = rd.RtcmDiagnosticsNode._record_station
+    _reset_station_tracking = rd.RtcmDiagnosticsNode._reset_station_tracking
+
+    def record(self, station):
+        self._record_station(station)
+
+
+def test_station_kind_needs_two_reports_before_asserting_physical():
+    assert rd.classify_station_kind(0.0, 1, 5.0) == 'unknown (single report)'
+    assert rd.classify_station_kind(0.0, 2, 5.0) == 'physical'
+
+
+def test_station_kind_reports_virtual_once_the_point_walks():
+    assert rd.classify_station_kind(120.0, 9, 5.0) == 'virtual (tracks rover)'
+
+
+def test_physical_station_stays_physical_across_repeats():
+    tracker = FakeStationTracker()
+    for _ in range(5):
+        tracker.record((42, MACORS_42[0], MACORS_42[1], -10.3))
+    assert tracker._station_moved_m == pytest.approx(0.0, abs=1e-6)
+    assert rd.classify_station_kind(tracker._station_moved_m,
+                                    tracker._station_reports, 5.0) == 'physical'
+
+
+def test_vrs_motion_is_detected():
+    tracker = FakeStationTracker()
+    for step in range(4):
+        tracker.record((1, MACORS_42[0] + step * 0.001, MACORS_42[1], 0.0))
+    assert tracker._station_moved_m > 5.0
+    assert rd.classify_station_kind(tracker._station_moved_m,
+                                    tracker._station_reports,
+                                    5.0) == 'virtual (tracks rover)'
+
+
+def test_caster_switch_does_not_latch_the_old_stations_excursion():
+    """The 2026-08-21 revert: Delaware VRS, then MaCORS 509 km away.
+
+    Before the reset, the 509 km jump was folded into the same running maximum
+    and pinned reference_station_kind to 'virtual' for the process lifetime.
+    """
+    tracker = FakeStationTracker()
+    for step in range(4):
+        tracker.record((649, UDEL_649[0] + step * 0.001, UDEL_649[1], 68.0))
+    assert rd.classify_station_kind(tracker._station_moved_m,
+                                    tracker._station_reports,
+                                    5.0) == 'virtual (tracks rover)'
+
+    for _ in range(3):
+        tracker.record((42, MACORS_42[0], MACORS_42[1], -10.3))
+    assert tracker._station_moved_m == pytest.approx(0.0, abs=1e-6)
+    assert rd.classify_station_kind(tracker._station_moved_m,
+                                    tracker._station_reports, 5.0) == 'physical'
+    assert any('649 -> 42' in line for line in tracker.log)
+
+
+def test_same_id_at_a_wholly_different_position_also_resets():
+    """Two casters can serve the same station number; the jump is the tell."""
+    tracker = FakeStationTracker()
+    tracker.record((7, UDEL_649[0], UDEL_649[1], 68.0))
+    tracker.record((7, UDEL_649[0] + 0.001, UDEL_649[1], 68.0))
+    tracker.record((7, MACORS_42[0], MACORS_42[1], -10.3))
+    assert tracker._station_reports == 1
+    assert tracker._station_moved_m == pytest.approx(0.0, abs=1e-6)
+
+
 # --- rover fix expiry ------------------------------------------------------
 
 def test_fresh_rover_fix_is_usable():
@@ -412,9 +518,6 @@ def test_rover_fix_at_the_timeout_boundary_is_still_usable():
 
 # --- regressions on the two real casters -----------------------------------
 
-BOAT = (43.0720, -70.7115)          # UNH pier, Portsmouth NH
-UDEL_649 = (39.982667, -75.221965)  # decoded live 2026-08-21, Delaware caster
-MACORS_42 = (42.862746, -70.890263)  # decoded live 2026-08-21 after the revert
 
 
 def test_delaware_caster_is_an_error():

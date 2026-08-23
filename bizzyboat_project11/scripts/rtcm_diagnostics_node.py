@@ -250,6 +250,22 @@ def apply_station_staleness(level, message, station_age, station_timeout):
             f'{message} (station last described {station_age:.0f}s ago)')
 
 
+def classify_station_kind(moved_m, reports, motion_threshold_m):
+    """Name what kind of base station the reference point describes.
+
+    A virtual station is recomputed for the rover's position, so its reference
+    point walks; a physical one does not move at all. One report cannot tell
+    the two apart -- a VRS looks exactly like a physical station until it is
+    seen a second time -- so say so rather than asserting 'physical' from a
+    single observation.
+    """
+    if moved_m > motion_threshold_m:
+        return 'virtual (tracks rover)'
+    if reports < 2:
+        return 'unknown (single report)'
+    return 'physical'
+
+
 def rover_fix_usable(fix, fix_age, fix_timeout):
     """Is the stored rover position still fit to compute a baseline from?
 
@@ -313,9 +329,15 @@ class RtcmDiagnosticsNode(Node):
         # position feed is gone, and a baseline computed from the last one is
         # measured from wherever the boat was when it stopped.
         self.declare_parameter('fix_timeout', 10.0)
-        # A reference point that jumps by more than this between reports is a
-        # virtual station being recomputed for our position, not a real one.
+        # A reference point that walks further than this from where it was
+        # first seen is a virtual station being recomputed for our position,
+        # not a real one.
         self.declare_parameter('vrs_motion_threshold_m', 5.0)
+        # A reference point that JUMPS further than this between consecutive
+        # reports is a different base station -- a caster or mountpoint switch,
+        # as on 2026-08-21 -- not a VRS tracking us. A VRS walks with the boat,
+        # so metres per report; a switch is the whole baseline at once.
+        self.declare_parameter('station_switch_m', 1000.0)
         self.declare_parameter('publish_rate', 1.0)
         # Caster identity, for the record. These names line up with the NTRIP
         # credentials YAML so the same file can be passed to this node; the
@@ -336,6 +358,7 @@ class RtcmDiagnosticsNode(Node):
         self._station_timeout = self.get_parameter('station_timeout').value
         self._fix_timeout = self.get_parameter('fix_timeout').value
         self._vrs_motion_threshold_m = self.get_parameter('vrs_motion_threshold_m').value
+        self._station_switch_m = self.get_parameter('station_switch_m').value
         rate = self.get_parameter('publish_rate').value
 
         self._buffer = bytearray()
@@ -346,6 +369,7 @@ class RtcmDiagnosticsNode(Node):
         self._station = None
         self._first_station_position = None
         self._station_moved_m = 0.0
+        self._station_reports = 0
         self._message_types = {}
         self._rover_fix = None
         self._last_fix_time = None
@@ -402,7 +426,25 @@ class RtcmDiagnosticsNode(Node):
                 self._record_station(station)
 
     def _record_station(self, station):
-        _, latitude, longitude, _ = station
+        station_id, latitude, longitude, _ = station
+
+        if self._station is not None:
+            previous_id, previous_lat, previous_lon, _ = self._station
+            jump_m = 1000.0 * baseline_km(previous_lat, previous_lon,
+                                          latitude, longitude)
+            if previous_id != station_id or jump_m > self._station_switch_m:
+                # A different base station. Without this reset the excursion
+                # accumulated from the OLD station's position pins
+                # reference_station_kind to 'virtual' for the life of the
+                # process -- which is exactly what a Delaware-to-MaCORS revert
+                # looks like, and it must not poison the new station's
+                # classification.
+                self.get_logger().info(
+                    f'Reference station changed: {previous_id} -> {station_id}, '
+                    f'{jump_m / 1000.0:.1f} km away; restarting motion tracking')
+                self._reset_station_tracking()
+
+        self._station_reports += 1
         if self._first_station_position is None:
             self._first_station_position = (latitude, longitude)
         else:
@@ -412,6 +454,11 @@ class RtcmDiagnosticsNode(Node):
             self._station_moved_m = max(self._station_moved_m, moved_m)
         self._station = station
         self._last_station_time = self.get_clock().now()
+
+    def _reset_station_tracking(self):
+        self._first_station_position = None
+        self._station_moved_m = 0.0
+        self._station_reports = 0
 
     def _on_fix(self, msg: NavSatFix):
         if msg.status.status >= 0 and not (math.isnan(msg.latitude)
@@ -491,9 +538,9 @@ class RtcmDiagnosticsNode(Node):
             return status
 
         station_id, latitude, longitude, height = self._station
-        kind = ('virtual (tracks rover)'
-                if self._station_moved_m > self._vrs_motion_threshold_m
-                else 'physical')
+        kind = classify_station_kind(self._station_moved_m,
+                                     self._station_reports,
+                                     self._vrs_motion_threshold_m)
         values.extend([
             KeyValue(key='reference_station_id', value=str(station_id)),
             KeyValue(key='reference_latitude', value=f'{latitude:.7f}'),
