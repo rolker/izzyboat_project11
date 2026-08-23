@@ -345,6 +345,65 @@ def fix_position_usable(status, latitude, longitude):
             and -180.0 <= longitude <= 180.0)
 
 
+def classify_liveness(byte_age, frame_age, warn_timeout, error_timeout):
+    """Classify the correction stream from two ages, in seconds or None.
+
+    ``byte_age`` is time since bytes last arrived; ``frame_age`` is time since
+    a frame last passed its CRC. They are not the same question. A caster
+    dribbling garbage, a half-open socket replaying a buffer, or a mountpoint
+    serving a format this parser cannot frame all deliver bytes forever, and
+    the old check -- stamped from raw arrival before framing -- reported
+    'OK - receiving corrections' for a stream containing not one usable frame.
+
+    None means never (for byte_age) or unknown (a backward clock step).
+    """
+    if byte_age is None:
+        return DiagnosticStatus.ERROR, 'no data received'
+    if byte_age > error_timeout:
+        return DiagnosticStatus.ERROR, f'no data for {byte_age:.0f}s'
+    if byte_age > warn_timeout:
+        return DiagnosticStatus.WARN, f'no data for {byte_age:.0f}s'
+    if frame_age is None:
+        return (DiagnosticStatus.WARN,
+                'bytes arriving but no valid RTCM frame yet')
+    if frame_age > error_timeout:
+        return (DiagnosticStatus.ERROR,
+                f'bytes arriving but no valid frame for {frame_age:.0f}s')
+    if frame_age > warn_timeout:
+        return (DiagnosticStatus.WARN,
+                f'bytes arriving but no valid frame for {frame_age:.0f}s')
+    return DiagnosticStatus.OK, 'receiving corrections'
+
+
+def should_reset_station_tracking(previous_id, station_id, jump_m,
+                                  same_id_switch_m):
+    """Is this a different base station, or the same one re-anchoring?
+
+    Two conditions have to be told apart, and both are real:
+
+      * A caster or mountpoint switch. Almost always a new station ID, but two
+        networks can serve the same station number, and then only the jump
+        tells you -- the 2026-08-21 Delaware-to-MaCORS revert was 509 km.
+      * A virtual station re-anchoring. A VRS is recomputed for the rover's
+        position, so on a transit its reference point legitimately moves
+        kilometres under an unchanged ID.
+
+    A jump threshold alone conflated them: at 1 km a routine re-anchor was
+    read as a caster switch, which threw away the excursion history that is
+    the only evidence the station is virtual, dropped reference_station_kind
+    to 'unknown (single report)', and logged 'Reference station changed:
+    42 -> 42'.
+
+    So: a changed ID always resets. An unchanged ID resets only past
+    ``same_id_switch_m``, which is set to a distance a re-anchor cannot reach
+    -- a VRS is computed near the rover, and the rover has not crossed a state
+    line between two 1005 messages.
+    """
+    if previous_id != station_id:
+        return True
+    return jump_m > same_id_switch_m
+
+
 def rover_fix_usable(fix, fix_age, fix_timeout):
     """Is the stored rover position still fit to compute a baseline from?
 
@@ -417,6 +476,14 @@ class RtcmDiagnosticsNode(Node):
         # as on 2026-08-21 -- not a VRS tracking us. A VRS walks with the boat,
         # so metres per report; a switch is the whole baseline at once.
         self.declare_parameter('station_switch_m', 1000.0)
+        # ...but a jump under an UNCHANGED station ID needs a much bigger
+        # threshold, because that is what a virtual station re-anchoring on a
+        # transit looks like and it must not be mistaken for a caster switch.
+        # 50 km is beyond any re-anchor (the VRS is computed near the rover,
+        # and the boat has not crossed a state line between two 1005 messages)
+        # while still catching two networks that happen to reuse a station
+        # number -- the 2026-08-21 revert was 509 km.
+        self.declare_parameter('same_id_switch_m', 50000.0)
         self.declare_parameter('publish_rate', 1.0)
         # Recent-history window for the message-type inventory. Counts that
         # never decay merge two casters into one after a mountpoint switch --
@@ -442,6 +509,7 @@ class RtcmDiagnosticsNode(Node):
         self._fix_timeout = self.get_parameter('fix_timeout').value
         self._vrs_motion_threshold_m = self.get_parameter('vrs_motion_threshold_m').value
         self._station_switch_m = self.get_parameter('station_switch_m').value
+        self._same_id_switch_m = self.get_parameter('same_id_switch_m').value
         self._message_type_window = self.get_parameter('message_type_window').value
         rate = self.get_parameter('publish_rate').value
         if rate <= 0.0:
@@ -452,7 +520,9 @@ class RtcmDiagnosticsNode(Node):
         self._buffer = bytearray()
         self._message_count = 0
         self._byte_count = 0
+        self._frame_count = 0
         self._last_rtcm_time = None
+        self._last_valid_frame_time = None
         self._last_station_time = None
         self._station = None
         self._first_station_position = None
@@ -525,6 +595,9 @@ class RtcmDiagnosticsNode(Node):
 
         frames, consumed = iter_rtcm_frames(self._buffer)
         del self._buffer[:consumed]
+        if frames:
+            self._frame_count += len(frames)
+            self._last_valid_frame_time = self._last_rtcm_time
         for message_type, frame_payload in frames:
             self._message_types[message_type] = \
                 self._message_types.get(message_type, 0) + 1
@@ -540,7 +613,8 @@ class RtcmDiagnosticsNode(Node):
             previous_id, previous_lat, previous_lon, _ = self._station
             jump_m = 1000.0 * baseline_km(previous_lat, previous_lon,
                                           latitude, longitude)
-            if previous_id != station_id or jump_m > self._station_switch_m:
+            if should_reset_station_tracking(previous_id, station_id, jump_m,
+                                             self._same_id_switch_m):
                 # A different base station. Without this reset the excursion
                 # accumulated from the OLD station's position pins
                 # reference_station_kind to 'virtual' for the life of the
@@ -551,6 +625,13 @@ class RtcmDiagnosticsNode(Node):
                     f'Reference station changed: {previous_id} -> {station_id}, '
                     f'{jump_m / 1000.0:.1f} km away; restarting motion tracking')
                 self._reset_station_tracking()
+            elif jump_m > self._station_switch_m:
+                # Same ID, big jump: a virtual station re-anchoring on a
+                # transit. Keep the history -- that excursion is the evidence
+                # it is virtual -- and say so once.
+                self.get_logger().info(
+                    f'Reference station {station_id} re-anchored '
+                    f'{jump_m / 1000.0:.1f} km; virtual station tracking the boat')
 
         self._station_reports += 1
         if self._first_station_position is None:
@@ -588,31 +669,36 @@ class RtcmDiagnosticsNode(Node):
             if (self._age(stamp, now) or 0.0) <= self._message_type_window)
 
     def _age(self, stamp, now):
+        """Seconds since ``stamp``, or None for never-seen or unknown.
+
+        A negative delta is not a fresh sample, it is a backward clock step --
+        routine on this boat, whose system clock is disciplined by GPS and NTP
+        after boot. Left unclamped every ``age > timeout`` comparison is false,
+        so stale station descriptions, dead rover fixes and a dead correction
+        stream all read fresh at once, and precisely at the moment the boat has
+        just come up.
+        """
         if stamp is None:
             return None
-        return (now - stamp).nanoseconds / 1e9
+        age = (now - stamp).nanoseconds / 1e9
+        return None if age < 0.0 else age
 
     def _liveness_status(self, now):
         status = DiagnosticStatus()
         status.name = self._liveness_name
         status.hardware_id = self._hardware_id
         age = self._age(self._last_rtcm_time, now)
+        frame_age = self._age(self._last_valid_frame_time, now)
+        age_text = '-1.0' if age is None else f'{age:.1f}'
 
-        if age is None:
-            status.level = DiagnosticStatus.ERROR
-            status.message = 'no data received'
-            age_text = '-1.0'
+        if self._last_rtcm_time is not None and age is None:
+            # Seen, but the clock has stepped backward since. Say that rather
+            # than reporting the data fresh or reporting it absent.
+            status.level = DiagnosticStatus.WARN
+            status.message = 'age unknown: clock stepped backward'
         else:
-            age_text = f'{age:.1f}'
-            if age > self._error_timeout:
-                status.level = DiagnosticStatus.ERROR
-                status.message = f'no data for {age:.0f}s'
-            elif age > self._warn_timeout:
-                status.level = DiagnosticStatus.WARN
-                status.message = f'no data for {age:.0f}s'
-            else:
-                status.level = DiagnosticStatus.OK
-                status.message = 'receiving corrections'
+            status.level, status.message = classify_liveness(
+                age, frame_age, self._warn_timeout, self._error_timeout)
 
         status.values = [
             # Key names kept identical to the retired ntrip_diagnostics_node so
@@ -621,6 +707,11 @@ class RtcmDiagnosticsNode(Node):
             KeyValue(key='last_rtcm_age_s', value=age_text),
             KeyValue(key='bytes_received', value=str(self._byte_count)),
             KeyValue(key='rtcm_topic', value=str(self._rtcm_topic)),
+            # Bytes arriving is not corrections arriving. This is the age of
+            # the last frame that actually passed its CRC.
+            KeyValue(key='last_valid_frame_age_s',
+                     value='-1.0' if frame_age is None else f'{frame_age:.1f}'),
+            KeyValue(key='frames_decoded', value=str(self._frame_count)),
         ]
         return status
 

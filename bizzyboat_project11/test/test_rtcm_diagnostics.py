@@ -784,13 +784,14 @@ class FakeStationTracker:
     re-implementation of it.
     """
 
-    def __init__(self, switch_m=1000.0):
+    def __init__(self, switch_m=1000.0, same_id_switch_m=50000.0):
         self._station = None
         self._first_station_position = None
         self._station_moved_m = 0.0
         self._station_reports = 0
         self._last_station_time = None
         self._station_switch_m = switch_m
+        self._same_id_switch_m = same_id_switch_m
         self.log = []
 
     def get_logger(self):
@@ -864,7 +865,11 @@ def test_caster_switch_does_not_latch_the_old_stations_excursion():
 
 
 def test_same_id_at_a_wholly_different_position_also_resets():
-    """Two casters can serve the same station number; the jump is the tell."""
+    """Two casters can serve the same station number; only the jump tells you.
+
+    509 km is past same_id_switch_m, so this still resets -- unlike the routine
+    VRS re-anchor below, which used to reset at 1 km and should not.
+    """
     tracker = FakeStationTracker()
     tracker.record((7, UDEL_649[0], UDEL_649[1], 68.0))
     tracker.record((7, UDEL_649[0] + 0.001, UDEL_649[1], 68.0))
@@ -921,3 +926,91 @@ def test_decoded_delaware_station_survives_a_frame_round_trip():
     assert height == pytest.approx(68.0, abs=1e-3)
     distance = rd.baseline_km(BOAT[0], BOAT[1], lat, lon)
     assert rd.classify_baseline(distance, 35.0, 100.0)[0] == DiagnosticStatus.ERROR
+
+
+# --- liveness: bytes are not frames ----------------------------------------
+
+WARN_T, ERROR_T = 5.0, 15.0
+
+
+def test_a_healthy_stream_is_ok():
+    assert gd_liveness(1.0, 1.0)[0] == DiagnosticStatus.OK
+
+
+def gd_liveness(byte_age, frame_age):
+    return rd.classify_liveness(byte_age, frame_age, WARN_T, ERROR_T)
+
+
+def test_no_bytes_at_all_is_an_error():
+    assert gd_liveness(None, None)[0] == DiagnosticStatus.ERROR
+
+
+def test_bytes_arriving_with_no_valid_frame_is_not_ok():
+    """The gap this closes: _last_rtcm_time was stamped from raw byte arrival
+    before framing, so a stream containing zero CRC-valid frames -- a half-open
+    socket replaying a buffer, a mountpoint serving a format this cannot frame
+    -- read 'OK - receiving corrections'."""
+    level, message = gd_liveness(0.5, None)
+    assert level == DiagnosticStatus.WARN
+    assert 'no valid RTCM frame' in message
+
+
+def test_a_stream_that_stops_framing_escalates_like_one_that_stops_arriving():
+    assert gd_liveness(0.5, 8.0)[0] == DiagnosticStatus.WARN
+    assert gd_liveness(0.5, 30.0)[0] == DiagnosticStatus.ERROR
+
+
+def test_a_dead_stream_is_reported_as_dead_not_as_unframed():
+    """Byte age dominates: 'no data for 30s' is more useful than 'no valid
+    frame for 30s' when nothing is arriving at all."""
+    level, message = gd_liveness(30.0, 30.0)
+    assert level == DiagnosticStatus.ERROR
+    assert message == 'no data for 30s'
+
+
+# --- station identity vs a virtual station re-anchoring --------------------
+
+SAME_ID_SWITCH_M = 50000.0
+
+
+def test_a_different_station_id_resets_tracking():
+    assert rd.should_reset_station_tracking(649, 42, 509000.0, SAME_ID_SWITCH_M)
+
+
+def test_a_reused_station_number_at_another_caster_still_resets():
+    """Two networks can serve the same station number; 509 km is the tell."""
+    assert rd.should_reset_station_tracking(7, 7, 509000.0, SAME_ID_SWITCH_M)
+
+
+def test_the_same_station_re_anchoring_does_not_reset_tracking():
+    """A VRS is recomputed for the rover, so on a transit its reference point
+    legitimately moves kilometres under one ID. Resetting threw away the very
+    excursion history that identifies it as virtual, dropped the kind back to
+    'unknown (single report)', and logged 'Reference station changed: 42 ->
+    42'."""
+    assert not rd.should_reset_station_tracking(42, 42, 4000.0, SAME_ID_SWITCH_M)
+
+
+def test_a_small_move_under_one_id_still_does_not_reset():
+    assert not rd.should_reset_station_tracking(42, 42, 3.0, SAME_ID_SWITCH_M)
+
+
+def test_a_re_anchored_vrs_is_still_classified_virtual():
+    """The consequence of not resetting: the excursion survives, so the kind
+    is right."""
+    assert rd.classify_station_kind(4000.0, 5, 5.0) == 'virtual (tracks rover)'
+
+
+def test_a_vrs_re_anchoring_on_a_transit_keeps_its_history():
+    """End to end through the node's own bookkeeping: the case that used to
+    reset at 1 km and log 'Reference station changed: 42 -> 42'."""
+    tracker = FakeStationTracker()
+    tracker.record((42, MACORS_42[0], MACORS_42[1], -10.3))
+    tracker.record((42, MACORS_42[0] + 0.02, MACORS_42[1], -10.3))   # ~2.2 km
+    tracker.record((42, MACORS_42[0] + 0.04, MACORS_42[1], -10.3))
+    assert tracker._station_reports == 3
+    assert tracker._station_moved_m > 1000.0
+    assert rd.classify_station_kind(tracker._station_moved_m,
+                                    tracker._station_reports,
+                                    5.0) == 'virtual (tracks rover)'
+    assert not any('42 -> 42' in line for line in tracker.log)
