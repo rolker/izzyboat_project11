@@ -96,6 +96,7 @@ def uncertainty_gates(n_samples, span_h, populated_buckets):
             f'whatever the ionosphere was doing')
     return failures
 
+
 DEFAULT_NAMESPACE = 'bizzy'
 RELATIVE_TOPICS = {
     'mavros/gpsstatus/gps1/raw': 'fcu',
@@ -123,6 +124,8 @@ TOPICS = topics_for(DEFAULT_NAMESPACE)
 def apply_namespace(namespace):
     global TOPICS
     TOPICS = topics_for(namespace)
+
+
 FIX_RTK_FIXED = 6
 SBG_SIGZ_MAX = 0.020              # RTK_INT ran 0.010; float ran 0.046
 

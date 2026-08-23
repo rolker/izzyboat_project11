@@ -369,6 +369,7 @@ def counting_crc(monkeypatch):
     monkeypatch.setattr(rd, 'crc24q', counted)
     return spans
 
+
 def test_reserved_bits_reject_a_false_preamble_before_the_crc(monkeypatch):
     """The reserved-bit check is what keeps a garbled stream linear.
 
@@ -930,8 +931,6 @@ def test_rover_fix_at_the_timeout_boundary_is_still_usable():
 
 
 # --- regressions on the two real casters -----------------------------------
-
-
 
 def test_delaware_caster_is_an_error():
     # 509.2 km by the WGS84 geodesic (pyproj Geod); the node's great-circle

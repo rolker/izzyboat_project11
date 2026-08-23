@@ -126,7 +126,7 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
 - The heavy boat runtime deps (mavros, sbg_driver, mru_transform, …) are
   `exec_depend` only — building needs little beyond ament_cmake + xacro.
   First-party exec_depends have no rosdep keys; CI uses `rosdep install -r`.
-- Three pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
+- Six pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
   - `test/test_retrofit_m3_bag.py` (500+ lines) covering
     `scripts/retrofit_m3_bag.py` — integer-second clock-skew correction
     (windowed-max envelope), `/tf_static` M3-offset rewrite, histogram
@@ -140,6 +140,25 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
     garbled input. Note the "external check vectors" section: most cases build
     their own frames and so are self-consistent rather than verified, and those
     vectors are what pin the implementation to something outside this repo.
+    The cost bound is a CRC budget per callback, not just the reserved-bit
+    pre-filter: the filter drops false preambles, but a candidate declaring a
+    maximum-length payload passes it, and that was 1.10 s in one callback.
+  - `test/test_gps_rtk_diagnostics.py` — `fix_type` to diagnostic level, and
+    the vertical-accuracy override that catches the 2026-08-20 case (`RTK
+    Fixed`, OK, green, with `v_acc` 1.750 m beside it). Also the GPSRAW
+    sentinel fields (`eph`/`epv` are DOP x100; 255/65535 mean unknown).
+  - `test/test_core_launch.py` — the cross-repo preflight in `core_launch.py`.
+    `echo_helm`'s `ellipsoidal_fix_node` exists only on
+    seafloor_echoboat_project11 #56, so a stale `echo_helm` must fail at
+    startup with a message naming the repo to rebuild. **Merge order is not
+    optional**: this launch file does not run on an `echo_helm` that predates
+    #56.
+  - `test/test_gnss_vertical_calibration.py` — the sign of the correction
+    `scripts/gnss_vertical_calibration.py` prints. The URDF is z-up and
+    ArduPilot's `GPS_POS*` are z-down (FRD), so the two edits it recommends
+    carry opposite signs; it is the line an operator copies. Also the honesty
+    gates on the corpus, so a run too short to show drift cannot report 0.0 mm
+    of it.
 - CI also runs `xacro ... | check_urdf` on both boats' URDFs — a URDF that no
   longer parses means no `/tf_static` on the boat.
 
