@@ -53,6 +53,20 @@ SBG_SIGZ_MAX = 0.020              # RTK_INT ran 0.010; float ran 0.046
 MAX_PAIR_SKEW_NS = int(0.15e9)
 
 
+def mcap_sort_key(path):
+    """Order a bag's split files by their trailing index.
+
+    rosbag2 names splits ``<bag>_0.mcap``, ``<bag>_1.mcap``, ... and they must
+    be read in that order for the 'latest sample' bookkeeping to mean anything.
+    A file that does not follow the convention sorts last by name rather than
+    taking the whole run down with a ValueError.
+    """
+    stem = path.stem.rsplit('_', 1)
+    if len(stem) == 2 and stem[1].isdigit():
+        return (0, int(stem[1]), path.name)
+    return (1, 0, path.name)
+
+
 def stamp_ns(msg, bag_ts, fallbacks):
     """Sensor time from the message header, falling back to bag receive time.
 
@@ -80,8 +94,7 @@ def pitch_of(q):
 
 
 def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
-    files = sorted(Path(bag_dir).glob('*.mcap'),
-                   key=lambda p: int(p.stem.rsplit('_', 1)[1]))
+    files = sorted(Path(bag_dir).glob('*.mcap'), key=mcap_sort_key)
     types = {}
     latest = {}
     n_raw = 0
@@ -172,9 +185,10 @@ def main():
            - (s['sbg_ant'] - lever_z(*SBG_ANT, s['fp'])) for s in samples]
     v_s = [s['fcu_ant'] - lever_z(*FCU_ANT, s['sp'])
            - (s['sbg_ant'] - lever_z(*SBG_ANT, s['sp'])) for s in samples]
-    a = summarise('using FCU attitude', v_f)
-    b = summarise('using SBG attitude', v_s)
-    print(f'  {"spread between the two attitudes":52s} {abs(a-b)*1000:8.1f}   '
+    with_fcu_attitude = summarise('using FCU attitude', v_f)
+    with_sbg_attitude = summarise('using SBG attitude', v_s)
+    print(f'  {"spread between the two attitudes":52s} '
+          f'{abs(with_fcu_attitude - with_sbg_attitude)*1000:8.1f}   '
           f'(= the IMUs\' pitch disagreement at 33 mm/deg)')
 
     # --- FCU EKF reduction vs SBG, less sensitive to attitude -------------
@@ -201,8 +215,16 @@ def main():
     print(f'\n  spread of half-hourly means: {(max(drift)-min(drift))*1000:.1f} mm '
           f'-- this, not the sem, is the honest uncertainty')
 
-    print(f'\nImplied correction: GPS_POS1_Z / GPS_POS2_Z and the URDF gnss_* z')
-    print(f'  should change by {b*1000:+.0f} mm, i.e. 0.890 -> {0.890 + b:.3f} m')
+    # The SBG-attitude reduction is the one quoted: no assumed FCU pitch enters
+    # the side being corrected.
+    correction = with_sbg_attitude
+    fcu_z = FCU_ANT[1]
+    print('\nImplied correction: GPS_POS1_Z / GPS_POS2_Z and the URDF gnss_* z')
+    print(f'  should change by {correction*1000:+.0f} mm, '
+          f'i.e. {fcu_z:.3f} -> {fcu_z + correction:.3f} m')
+    print('  (this is a measurement, not a recommendation -- compare it against '
+          'the\n   spread above before writing it anywhere)')
 
 
-main()
+if __name__ == '__main__':
+    main()
