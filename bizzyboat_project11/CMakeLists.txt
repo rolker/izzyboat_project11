@@ -38,6 +38,9 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_operator_core_launch test/test_operator_core_launch.py)
   # RTCM framing/CRC, 1005-1006 decode, baseline and thresholds.
   ament_add_pytest_test(test_rtcm_diagnostics test/test_rtcm_diagnostics.py)
+  # fix_type -> level, and the vertical-accuracy override that catches the
+  # 2026-08-20 case: 'RTK Fixed', OK, green, with v_acc 1.750 m beside it.
+  ament_add_pytest_test(test_gps_rtk_diagnostics test/test_gps_rtk_diagnostics.py)
   # The sign of the correction gnss_vertical_calibration.py prints: the URDF is
   # z-up and ArduPilot's GPS_POS* are z-down, so the two edits it recommends
   # are opposite in sign, and it is the line an operator copies.
