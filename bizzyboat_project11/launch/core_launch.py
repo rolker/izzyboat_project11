@@ -234,6 +234,11 @@ def generate_launch_description():
                         'output_topic': 'mavros/global_position/global_ellipsoidal',
                         'diagnostic_name': 'GPS: ellipsoidal fix',
                     }],
+                    # This node now owns the FCU navigation position that reaches
+                    # mru_transform, so a crash that left it down would be an
+                    # open-ended vertical outage. Matches mavros beside it.
+                    respawn=True,
+                    respawn_delay=2,
                     emulate_tty=True
                 ),
 
@@ -278,6 +283,16 @@ def generate_launch_description():
                 ),
 
                 # Echo helm
+                #
+                # enable_ellipsoidal_fix:=false because BizzyBoat launches its
+                # own copy of ellipsoidal_fix_node above, carrying this hull's
+                # topic parameters. echo_helm_launch.py gained the same node
+                # (seafloor_echoboat_project11#56) so every EchoBoat gets the
+                # correction -- the defect is a property of mavros behind an
+                # ArduPilot FCU, not of one hull -- but two copies in the
+                # bizzy namespace would publish duplicates on the output topic.
+                # Drop the node above and remove this argument once the shared
+                # launch can take the topic names as launch arguments.
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution([
@@ -286,6 +301,9 @@ def generate_launch_description():
                             'echo_helm_launch.py'
                         ])
                     ),
+                    launch_arguments={
+                        'enable_ellipsoidal_fix': 'false',
+                    }.items(),
                 ),
 
                 # S57 charts
