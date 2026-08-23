@@ -504,6 +504,53 @@ def test_reserved_bits_set_on_an_otherwise_valid_frame_is_rejected():
     assert frames == []
 
 
+# --- rover fix acceptance --------------------------------------------------
+
+def test_a_good_fix_is_accepted():
+    assert rd.fix_position_usable(0, BOAT[0], BOAT[1])
+    assert rd.fix_position_usable(2, BOAT[0], BOAT[1])
+
+
+def test_a_fix_with_no_solution_is_rejected():
+    assert not rd.fix_position_usable(-1, BOAT[0], BOAT[1])
+
+
+@pytest.mark.parametrize('lat,lon', [
+    (float('nan'), -70.7115),
+    (43.0720, float('nan')),
+    (float('inf'), -70.7115),
+    (43.0720, float('-inf')),
+])
+def test_a_non_finite_position_is_rejected(lat, lon):
+    """nan was already rejected; inf was not, and inf reaches math.radians in
+    the publish timer, where math.sin raises ValueError past main()'s
+    KeyboardInterrupt-only guard. The process exits and /diagnostics goes
+    silent -- which this node's own docstring says reads as health."""
+    assert not rd.fix_position_usable(0, lat, lon)
+
+
+@pytest.mark.parametrize('lat,lon', [
+    (91.0, 0.0), (-90.001, 0.0), (0.0, 181.0), (0.0, -180.001), (1e30, 1e30),
+])
+def test_an_out_of_range_position_is_rejected(lat, lon):
+    """Not a crash but a silent one: a nonsense latitude is a nonsense baseline
+    and a confident ERROR about a station that is fine."""
+    assert not rd.fix_position_usable(0, lat, lon)
+
+
+def test_the_poles_and_the_antimeridian_are_still_valid_positions():
+    for lat, lon in ((90.0, 180.0), (-90.0, -180.0)):
+        assert rd.fix_position_usable(0, lat, lon)
+
+
+def test_an_infinite_fix_never_reaches_the_baseline_maths():
+    """The end-to-end statement of the same thing: whatever the guard is, an
+    inf must not be able to reach math.sin."""
+    assert not rd.fix_position_usable(0, float('inf'), 0.0)
+    with pytest.raises(ValueError):
+        rd.baseline_km(float('inf'), 0.0, MACORS_42[0], MACORS_42[1])
+
+
 # --- reference station decode ---------------------------------------------
 
 @pytest.mark.parametrize('lat,lon,height', [

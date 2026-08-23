@@ -325,6 +325,26 @@ def classify_station_kind(moved_m, reports, motion_threshold_m):
     return 'physical'
 
 
+def fix_position_usable(status, latitude, longitude):
+    """Is a NavSatFix carrying a position we can measure a baseline from?
+
+    isnan is not enough. +/-inf survives it and reaches math.radians in the
+    timer callback, where math.sin raises ValueError -- past main()'s
+    KeyboardInterrupt-only guard, so the process exits and /diagnostics goes
+    silent, which the module docstring above says reads as health. Nothing
+    upstream promises a finite float: NavSatFix is whatever the driver put in
+    it.
+
+    The range check is the same argument one step further. An inf is a crash; a
+    latitude of 1e30 is a silent 5000 km baseline and a confident ERROR about a
+    station that is fine.
+    """
+    return (status >= 0
+            and math.isfinite(latitude) and math.isfinite(longitude)
+            and -90.0 <= latitude <= 90.0
+            and -180.0 <= longitude <= 180.0)
+
+
 def rover_fix_usable(fix, fix_age, fix_timeout):
     """Is the stored rover position still fit to compute a baseline from?
 
@@ -549,8 +569,7 @@ class RtcmDiagnosticsNode(Node):
         self._station_reports = 0
 
     def _on_fix(self, msg: NavSatFix):
-        if msg.status.status >= 0 and not (math.isnan(msg.latitude)
-                                           or math.isnan(msg.longitude)):
+        if fix_position_usable(msg.status.status, msg.latitude, msg.longitude):
             self._rover_fix = (msg.latitude, msg.longitude)
             self._last_fix_time = self.get_clock().now()
 
