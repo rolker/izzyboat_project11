@@ -112,38 +112,38 @@ issue: 452
 **Round**: 2. Round 1's two adversarial sub-passes stalled and never returned, so its 10 must-fix came from a single lead reading plus one focused logic pass plus the Copilot bot. This round split the adversarial work into four bounded, area-scoped passes (RTCM3 parser; test vectors; diagnostics nodes + calibration tool; launch/config wiring) and **all four completed**. The local Ollama cross-model specialist was deliberately skipped (it OOM'd on a diff this size twice and killed the llama-server); the Copilot specialist was not run (no `--copilot`). Findings below are the four passes plus lead-reviewer spot-checks executed against the real code.
 
 ### Findings
-- [ ] (must-fix) The reserved-bit pre-filter added in round 1 does NOT bound parser cost: `b"\xd3\x03\xff"` repeated passes the filter and claims length 1023, so every 3 bytes triggers a 1026-byte CRC. Measured 1.10 s in one `_on_rtcm` on a single 4116-byte buffer (`\xd3\x01\xff` 1.21 s, `\xd3\x00` 0.74 s) — the same executor-starving wedge round 1 thought it had closed, re-reachable with a different pattern. The all-`0xD3` case IS fixed (1.6 ms). Cap CRC work per callback or require a plausible following preamble — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:141-168`
-- [ ] (must-fix) `_on_fix` rejects NaN but not ±inf; an inf latitude reaches `math.sin(math.radians(inf))` in the timer callback, raising ValueError past `main()`'s KeyboardInterrupt-only guard. Process exits, `/diagnostics` goes silent, which the module docstring itself says reads as health. Use `math.isfinite` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:505-508,231-233`
-- [ ] (must-fix) No framing test uses a payload over 255 bytes, so the top 2 bits of the 10-bit length field are never exercised: mutating `RTCM_RESERVED_MASK` from `0xFC` to `0xFF` passes all 77 tests while silently discarding real MSM7 frames (1077/1087/1097/1127 routinely exceed 255 bytes). Add a framing case at length 1023 — `bizzyboat_project11/test/test_rtcm_diagnostics.py` (framing section, 195-345)
-- [ ] (must-fix) `test_swapping_x_and_y_would_be_caught` is vacuous — it re-encodes with the test's own `llh_to_ecef` and asserts a property of `atan2` argument order, never re-decoding the frame. It PASSES under an X↔Y-swapped `parse_reference_station`. It is the one self-referential test sitting inside the "external check vectors" section, claiming independence it does not have — `bizzyboat_project11/test/test_rtcm_diagnostics.py:166`
-- [ ] (must-fix) Hard lockstep on an unmerged sibling branch: `ellipsoidal_fix_node` does not exist in `echo_helm` on origin/jazzy (only on `seafloor_echoboat_project11` `feature/issue-55`). If this branch reaches gabby before #55 is merged and echo_helm rebuilt, `core_launch.py` aborts at Node execute — the whole boat launch dies, it does not degrade. Neither the comment nor `<exec_depend>echo_helm</exec_depend>` expresses a version constraint — `bizzyboat_project11/launch/core_launch.py:226-247`
-- [ ] (must-fix) `sensor_msgs` is imported by the now-installed `rtcm_diagnostics_node.py` but is not an `exec_depend` (`rclpy` is `test_depend` only, a pre-existing gap this compounds). On a clean rosdep install the node dies on import and both the `NTRIP` and `RTK: corrections` tiles simply never publish — rendered as absence, not fault — `bizzyboat_project11/package.xml`
-- [ ] (must-fix) `v_acc`/`h_acc` are now published but never affect `status.level`, so the exact 2026-08-20 case (v_acc 1.750 m while fix_type read 6) still publishes OK/"RTK Fixed" and the tile stays green. The code comment says vertical accuracy "degrades long before fix_type does" and then nothing acts on it. Add `warn_v_acc_m`/`error_v_acc_m` that pass through on the not-reported sentinel — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:121-141`
-- [ ] (must-fix) `main()` is unguarded and `core_launch.py` launches this node without `respawn`, unlike its neighbour: one exception (e.g. an int launch override against a float-typed parameter) permanently silences `/diagnostics` — reintroducing, one level up, the absence-reads-as-health failure this file exists to prevent. Round 1 moved construction inside `main()`'s try for `rtcm_diagnostics_node`; this sibling did not get the same treatment — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:151-156`, `bizzyboat_project11/launch/core_launch.py:249-259`
-- [ ] (must-fix) Sign error in the printed correction instruction. ArduPilot's body frame is FRD, and this repo's own records have `GPS_POS1_Z = -0.890` for a URDF z of `+0.890`. The tool tells the operator both "should change by {c} mm", illustrated with the URDF value — applying `+c` to `-0.890` moves the FCU antenna the wrong way, injecting ~110 mm into the FCU vertical path instead of removing ~55 mm. Print the two targets with their own signs, and say that `GPS_POS2` (aft antenna) was never measured — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:222-224`
-- [ ] (must-fix) The tool's own uncertainty apparatus reads "perfect" on exactly the run it was written for: half-hourly buckets mean any corpus under 30 min lands in one bucket, so `max(drift)-min(drift)` is 0 and it prints "spread of half-hourly means: 0.0 mm -- this, not the sem, is the honest uncertainty"; and with one surviving sample `pstdev` and `sem` are both 0 and a confident millimetre figure still prints. The planned transit re-run is short. Require >=2 populated buckets and a minimum n/timespan, and name which gate failed — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:206-216,147-152,220`
-- [ ] (suggestion) `length = (buf[start+1] << 8) | buf[start+2]` omits the `& 0x03` mask; correct only as a side effect of the reserved-bit check three lines above, so any reordering re-opens megabyte-span CRCs — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:154`
-- [ ] (suggestion) Liveness reports `OK - receiving corrections` for a stream containing zero CRC-valid frames, because `_last_rtcm_time` is stamped from raw byte arrival before framing. Stamp a separate `_last_valid_frame_time` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:449-453,529-549`
-- [ ] (suggestion) (cross-pass confirmed: RTCM + nodes passes) Ages are computed on the ROS system clock, so a backward clock step — routine on a GPS/NTP-disciplined boat after boot — makes every `age > timeout` comparison false and stale data read fresh. Clamp negatives and treat a negative delta as unknown — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:524-527`, `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:112`
-- [ ] (suggestion) A legitimate VRS re-anchor beyond `station_switch_m` (1 km) is misread as a caster switch: tracking resets, `classify_station_kind` drops to `unknown (single report)`, and a spurious "Reference station changed" logs at the same station ID. Gate the reset on a station-ID change too — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:476,488`
-- [ ] (suggestion) All five parameters passed to the local `ellipsoidal_fix` Node are byte-identical to the node's own defaults, so the stated reason for keeping a local copy ("carrying this hull's topic parameters") does not hold. Deleting the local Node and the `enable_ellipsoidal_fix:=false` argument collapses the two-repo coupling and is also the cleanest resolution of the launch-abort must-fix — `bizzyboat_project11/launch/core_launch.py:230-236`
-- [ ] (suggestion) `water_line_frame` silent no-op confirmed against the checked-out mru_transform: the declaration lands in `58b7f97`, which is on `feature/issue-32` and `gitcloud/jazzy` but NOT origin/jazzy. The YAML comment documents this honestly; nothing enforces it. The other three keys in that block are declared and the `/**/sea_surface_estimator` wildcard matches exactly — `bizzyboat_project11/config/bizzyboat.yaml:941`
-- [ ] (suggestion) The new 35/100 km baseline thresholds are tuned for MaCORS, but the credentials file they read (`ccomjhc_project11/configuration/bizzyboat_ntrip.yaml`) still points at the Delaware caster, so the tile goes straight to ERROR on the next NH boot. Arguably the feature working, but it is a cross-repo edit owed outside this PR — `bizzyboat_project11/launch/ntrip_launch.py:96-99`
-- [ ] (suggestion) The credentials YAML is now loaded by a second node. Verified genuinely inert (the node declares only host/port/mountpoint; rclpy discards the rest), but splitting the non-secret host/port/mountpoint into their own file would remove the question — `bizzyboat_project11/launch/ntrip_launch.py:82`
-- [ ] (suggestion) `test_hostile_buffer_costs_no_more_than_a_few_milliseconds` asserts wall-clock under 0.03 s (measured 1.4-2.4 ms). The preceding test already proves the invariant deterministically via a monkeypatched CRC counter, so this one is a redundant flake source under coverage tracing or a contended runner — `bizzyboat_project11/test/test_rtcm_diagnostics.py:312`
-- [ ] (suggestion) `test_resync_from_a_mid_frame_start_recovers_the_next_frame` does not exercise resync — the tail it starts from contains no `0xD3`, so it is behaviourally identical to the leading-garbage test. Real resync IS covered by the corrupt-payload and embedded-false-preamble cases — `bizzyboat_project11/test/test_rtcm_diagnostics.py:252`
-- [ ] (suggestion) Untested edges: the `RTCM_MAX_BUFFER` trim (the unbounded-growth guard the docstring advertises), and a valid-CRC frame with a 0/1-byte payload (behaviour verified correct by hand) — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:455-457,158`
-- [ ] (suggestion) `test_1006_is_accepted` patches the message number into a 19-byte 1005-shaped payload; a real 1006 payload is 21 bytes (DF028 antenna height). The test never sees a realistically-shaped 1006 — `bizzyboat_project11/test/test_rtcm_diagnostics.py:371`
-- [ ] (suggestion) `eph`/`epv`/`satellites_visible` publish raw: per GPSRAW they are DOP scaled x100 with UINT16_MAX (and 255) meaning unknown, so HDOP 1.21 reads "121" and an unpopulated field reads "65535" — the same class the adjacent `accuracy_text()` was just written to prevent — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:133-135`
-- [ ] (suggestion) ERROR fires on the first tick ~1 s after launch, before mavros has streamed anything, so the RTK tile flashes red on every boot. WARN "waiting for first message" until `stale_timeout` elapses — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:97-109`
-- [ ] (suggestion) Key sets still diverge: the no-data branch carries `gps_raw_topic` and `fix_type`, every other path carries the accuracy/age keys and not `gps_raw_topic`. Emit the full key set on every path — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:102-107,131-141`
-- [ ] (suggestion) `ok_min_fix_type`/`warn_min_fix_type` are unvalidated (a `warn_min > ok_min` override makes the WARN branch unreachable), and the 1 Hz publish period is hard-coded while `stale_timeout` is a parameter, so a sub-second timeout is unsatisfiable — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:71-72,80`
-- [ ] (suggestion) `FCU_ANT`/`SBG_ANT` are a hand copy of the URDF that this tool's own output causes to change; they match `/tf_static` today, but the next run after anyone applies the correction is reduced with stale lever arms and nothing catches it. Read them from the bag's `/tf_static`, or at least print them beside the result. `lever_z` also drops the y component — safe only while both antennas are on the centreline; assert it — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:24-26,86-89`
-- [ ] (suggestion) Pairing is one-directional in read order (FCU/attitude always at-or-before the SBG fix) and the printed skew is `abs`-ed, so a systematic one-sided lag — precisely what would break the heave-cancels premise the skew print exists to check — is hidden. Print the signed mean alongside max absolute — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:109-143,132,175`
-- [ ] (suggestion) `latest` entries are never consumed, so one FCU/attitude sample can back several SBG-triggered samples when rates differ; `n`, `pstdev` and `sem` then treat correlated samples as independent, and the buckets over-weight stretches where rates diverge — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:99,127-134`
-- [ ] (suggestion) The quoted correction pools every bag while the odom section is deliberately split per bag because a config change landed mid-corpus. Print `v_s` per bag too — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:184-189,220,197-202`
-- [ ] (suggestion) No plausibility bound on the result: if the two altitude sources are ever on different datums the tool prints "should change by +27000 mm" in the same confident tone. Refuse above ~0.5 m and name the likely cause — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:220-224`
-- [ ] (suggestion) One message, 'no samples survived the quality gates', covers at least six distinct causes, several of them wrong-input rather than bad-data: no bags on the command line (no argparse, no --help), a directory with no `*.mcap` (non-recursive glob; a path to a single .mcap matches nothing), a bag from another namespace (`/bizzy` hard-coded), a missing topic, and `position_covariance_type = UNKNOWN` rejecting 100%. Count rejections by cause and report per-topic counts — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:166-168`
+- [x] (must-fix) The reserved-bit pre-filter added in round 1 does NOT bound parser cost: `b"\xd3\x03\xff"` repeated passes the filter and claims length 1023, so every 3 bytes triggers a 1026-byte CRC. Measured 1.10 s in one `_on_rtcm` on a single 4116-byte buffer (`\xd3\x01\xff` 1.21 s, `\xd3\x00` 0.74 s) — the same executor-starving wedge round 1 thought it had closed, re-reachable with a different pattern. The all-`0xD3` case IS fixed (1.6 ms). Cap CRC work per callback or require a plausible following preamble — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:141-168`
+- [x] (must-fix) `_on_fix` rejects NaN but not ±inf; an inf latitude reaches `math.sin(math.radians(inf))` in the timer callback, raising ValueError past `main()`'s KeyboardInterrupt-only guard. Process exits, `/diagnostics` goes silent, which the module docstring itself says reads as health. Use `math.isfinite` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:505-508,231-233`
+- [x] (must-fix) No framing test uses a payload over 255 bytes, so the top 2 bits of the 10-bit length field are never exercised: mutating `RTCM_RESERVED_MASK` from `0xFC` to `0xFF` passes all 77 tests while silently discarding real MSM7 frames (1077/1087/1097/1127 routinely exceed 255 bytes). Add a framing case at length 1023 — `bizzyboat_project11/test/test_rtcm_diagnostics.py` (framing section, 195-345)
+- [x] (must-fix) `test_swapping_x_and_y_would_be_caught` is vacuous — it re-encodes with the test's own `llh_to_ecef` and asserts a property of `atan2` argument order, never re-decoding the frame. It PASSES under an X↔Y-swapped `parse_reference_station`. It is the one self-referential test sitting inside the "external check vectors" section, claiming independence it does not have — `bizzyboat_project11/test/test_rtcm_diagnostics.py:166`
+- [x] (must-fix) Hard lockstep on an unmerged sibling branch: `ellipsoidal_fix_node` does not exist in `echo_helm` on origin/jazzy (only on `seafloor_echoboat_project11` `feature/issue-55`). If this branch reaches gabby before #55 is merged and echo_helm rebuilt, `core_launch.py` aborts at Node execute — the whole boat launch dies, it does not degrade. Neither the comment nor `<exec_depend>echo_helm</exec_depend>` expresses a version constraint — `bizzyboat_project11/launch/core_launch.py:226-247`
+- [x] (must-fix) `sensor_msgs` is imported by the now-installed `rtcm_diagnostics_node.py` but is not an `exec_depend` (`rclpy` is `test_depend` only, a pre-existing gap this compounds). On a clean rosdep install the node dies on import and both the `NTRIP` and `RTK: corrections` tiles simply never publish — rendered as absence, not fault — `bizzyboat_project11/package.xml`
+- [x] (must-fix) `v_acc`/`h_acc` are now published but never affect `status.level`, so the exact 2026-08-20 case (v_acc 1.750 m while fix_type read 6) still publishes OK/"RTK Fixed" and the tile stays green. The code comment says vertical accuracy "degrades long before fix_type does" and then nothing acts on it. Add `warn_v_acc_m`/`error_v_acc_m` that pass through on the not-reported sentinel — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:121-141`
+- [x] (must-fix) `main()` is unguarded and `core_launch.py` launches this node without `respawn`, unlike its neighbour: one exception (e.g. an int launch override against a float-typed parameter) permanently silences `/diagnostics` — reintroducing, one level up, the absence-reads-as-health failure this file exists to prevent. Round 1 moved construction inside `main()`'s try for `rtcm_diagnostics_node`; this sibling did not get the same treatment — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:151-156`, `bizzyboat_project11/launch/core_launch.py:249-259`
+- [x] (must-fix) Sign error in the printed correction instruction. ArduPilot's body frame is FRD, and this repo's own records have `GPS_POS1_Z = -0.890` for a URDF z of `+0.890`. The tool tells the operator both "should change by {c} mm", illustrated with the URDF value — applying `+c` to `-0.890` moves the FCU antenna the wrong way, injecting ~110 mm into the FCU vertical path instead of removing ~55 mm. Print the two targets with their own signs, and say that `GPS_POS2` (aft antenna) was never measured — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:222-224`
+- [x] (must-fix) The tool's own uncertainty apparatus reads "perfect" on exactly the run it was written for: half-hourly buckets mean any corpus under 30 min lands in one bucket, so `max(drift)-min(drift)` is 0 and it prints "spread of half-hourly means: 0.0 mm -- this, not the sem, is the honest uncertainty"; and with one surviving sample `pstdev` and `sem` are both 0 and a confident millimetre figure still prints. The planned transit re-run is short. Require >=2 populated buckets and a minimum n/timespan, and name which gate failed — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:206-216,147-152,220`
+- [x] (suggestion) `length = (buf[start+1] << 8) | buf[start+2]` omits the `& 0x03` mask; correct only as a side effect of the reserved-bit check three lines above, so any reordering re-opens megabyte-span CRCs — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:154`
+- [x] (suggestion) Liveness reports `OK - receiving corrections` for a stream containing zero CRC-valid frames, because `_last_rtcm_time` is stamped from raw byte arrival before framing. Stamp a separate `_last_valid_frame_time` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:449-453,529-549`
+- [x] (suggestion) (cross-pass confirmed: RTCM + nodes passes) Ages are computed on the ROS system clock, so a backward clock step — routine on a GPS/NTP-disciplined boat after boot — makes every `age > timeout` comparison false and stale data read fresh. Clamp negatives and treat a negative delta as unknown — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:524-527`, `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:112`
+- [x] (suggestion) A legitimate VRS re-anchor beyond `station_switch_m` (1 km) is misread as a caster switch: tracking resets, `classify_station_kind` drops to `unknown (single report)`, and a spurious "Reference station changed" logs at the same station ID. Gate the reset on a station-ID change too — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:476,488`
+- [x] (suggestion) All five parameters passed to the local `ellipsoidal_fix` Node are byte-identical to the node's own defaults, so the stated reason for keeping a local copy ("carrying this hull's topic parameters") does not hold. Deleting the local Node and the `enable_ellipsoidal_fix:=false` argument collapses the two-repo coupling and is also the cleanest resolution of the launch-abort must-fix — `bizzyboat_project11/launch/core_launch.py:230-236` (deferred: kept deliberately -- see the launch commit; deleting it makes the stale-echo_helm case silent instead of loud)
+- [x] (suggestion) `water_line_frame` silent no-op confirmed against the checked-out mru_transform: the declaration lands in `58b7f97`, which is on `feature/issue-32` and `gitcloud/jazzy` but NOT origin/jazzy. The YAML comment documents this honestly; nothing enforces it. The other three keys in that block are declared and the `/**/sea_surface_estimator` wildcard matches exactly — `bizzyboat_project11/config/bizzyboat.yaml:941` (deferred: the enforcement belongs in mru_transform, a sibling repo this sub-agent may not edit)
+- [x] (suggestion) The new 35/100 km baseline thresholds are tuned for MaCORS, but the credentials file they read (`ccomjhc_project11/configuration/bizzyboat_ntrip.yaml`) still points at the Delaware caster, so the tile goes straight to ERROR on the next NH boot. Arguably the feature working, but it is a cross-repo edit owed outside this PR — `bizzyboat_project11/launch/ntrip_launch.py:96-99` (deferred: the credentials file is in ccomjhc_project11, a sibling repo; recorded as a cross-repo item)
+- [x] (suggestion) The credentials YAML is now loaded by a second node. Verified genuinely inert (the node declares only host/port/mountpoint; rclpy discards the rest), but splitting the non-secret host/port/mountpoint into their own file would remove the question — `bizzyboat_project11/launch/ntrip_launch.py:82` (deferred: the split belongs in ccomjhc_project11, a sibling repo; verified inert here)
+- [x] (suggestion) `test_hostile_buffer_costs_no_more_than_a_few_milliseconds` asserts wall-clock under 0.03 s (measured 1.4-2.4 ms). The preceding test already proves the invariant deterministically via a monkeypatched CRC counter, so this one is a redundant flake source under coverage tracing or a contended runner — `bizzyboat_project11/test/test_rtcm_diagnostics.py:312`
+- [x] (suggestion) `test_resync_from_a_mid_frame_start_recovers_the_next_frame` does not exercise resync — the tail it starts from contains no `0xD3`, so it is behaviourally identical to the leading-garbage test. Real resync IS covered by the corrupt-payload and embedded-false-preamble cases — `bizzyboat_project11/test/test_rtcm_diagnostics.py:252`
+- [x] (suggestion) Untested edges: the `RTCM_MAX_BUFFER` trim (the unbounded-growth guard the docstring advertises), and a valid-CRC frame with a 0/1-byte payload (behaviour verified correct by hand) — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:455-457,158`
+- [x] (suggestion) `test_1006_is_accepted` patches the message number into a 19-byte 1005-shaped payload; a real 1006 payload is 21 bytes (DF028 antenna height). The test never sees a realistically-shaped 1006 — `bizzyboat_project11/test/test_rtcm_diagnostics.py:371`
+- [x] (suggestion) `eph`/`epv`/`satellites_visible` publish raw: per GPSRAW they are DOP scaled x100 with UINT16_MAX (and 255) meaning unknown, so HDOP 1.21 reads "121" and an unpopulated field reads "65535" — the same class the adjacent `accuracy_text()` was just written to prevent — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:133-135`
+- [x] (suggestion) ERROR fires on the first tick ~1 s after launch, before mavros has streamed anything, so the RTK tile flashes red on every boot. WARN "waiting for first message" until `stale_timeout` elapses — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:97-109`
+- [x] (suggestion) Key sets still diverge: the no-data branch carries `gps_raw_topic` and `fix_type`, every other path carries the accuracy/age keys and not `gps_raw_topic`. Emit the full key set on every path — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:102-107,131-141`
+- [x] (suggestion) `ok_min_fix_type`/`warn_min_fix_type` are unvalidated (a `warn_min > ok_min` override makes the WARN branch unreachable), and the 1 Hz publish period is hard-coded while `stale_timeout` is a parameter, so a sub-second timeout is unsatisfiable — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py:71-72,80`
+- [x] (suggestion) `FCU_ANT`/`SBG_ANT` are a hand copy of the URDF that this tool's own output causes to change; they match `/tf_static` today, but the next run after anyone applies the correction is reduced with stale lever arms and nothing catches it. Read them from the bag's `/tf_static`, or at least print them beside the result. `lever_z` also drops the y component — safe only while both antennas are on the centreline; assert it — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:24-26,86-89`
+- [x] (suggestion) Pairing is one-directional in read order (FCU/attitude always at-or-before the SBG fix) and the printed skew is `abs`-ed, so a systematic one-sided lag — precisely what would break the heave-cancels premise the skew print exists to check — is hidden. Print the signed mean alongside max absolute — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:109-143,132,175`
+- [x] (suggestion) `latest` entries are never consumed, so one FCU/attitude sample can back several SBG-triggered samples when rates differ; `n`, `pstdev` and `sem` then treat correlated samples as independent, and the buckets over-weight stretches where rates diverge — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:99,127-134`
+- [x] (suggestion) The quoted correction pools every bag while the odom section is deliberately split per bag because a config change landed mid-corpus. Print `v_s` per bag too — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:184-189,220,197-202`
+- [x] (suggestion) No plausibility bound on the result: if the two altitude sources are ever on different datums the tool prints "should change by +27000 mm" in the same confident tone. Refuse above ~0.5 m and name the likely cause — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:220-224`
+- [x] (suggestion) One message, 'no samples survived the quality gates', covers at least six distinct causes, several of them wrong-input rather than bad-data: no bags on the command line (no argparse, no --help), a directory with no `*.mcap` (non-recursive glob; a path to a single .mcap matches nothing), a bag from another namespace (`/bizzy` hard-coded), a missing topic, and `position_covariance_type = UNKNOWN` rejecting 100%. Count rejections by cause and report per-topic counts — `bizzyboat_project11/scripts/gnss_vertical_calibration.py:166-168`
 
 ### Verified correct (checked, no finding)
 - The reserved-bit test itself (`buf[start+1] & 0xFC`) is exactly right per RTCM3 framing and has **no false-negative path** — no conforming frame is ever dropped. It fixes the all-`0xD3` case it was written for (3.4 s -> 1.6 ms). It just is not a general cost bound (must-fix 1).
@@ -165,3 +165,209 @@ Four Copilot reviews, nine inline comments. Eight are against superseded commits
 
 ### Plan adherence
 No work plan exists at `.agent/work-plans/issue-452/plan.md` (field-import PR; only progress.md). Plan Drift specialist skipped.
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-23 17:43 -04:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-452 at `9bd0484`
+**PR**: #453
+**Addressed**: the round-2 `## Local Review` (2026-08-23 01:10 -04:00, at `7bef686`) — 10 must-fix, 21 suggestions
+**Commits**: `1e695a5` `002196a` `47f563e` `f21964e` `b0ddc19` `cb2ced2` `83beb3a` `4bf161a` `8de44e3` `78faad9` `075f09a` `45433aa` `c37a98e` `9bd0484`
+
+Test suite before writing this entry: **231 passed** (`pytest test/`, with the
+platforms_ws overlay sourced — sourcing only `/opt/ros/jazzy` fails the eight
+pre-existing `test_operator_core_launch.py` cases on `get_package_prefix`, which
+is an environment artefact, not a regression). Was 77 at the start of round 2;
+three new suites and 154 new cases. `flake8 --select=E9,F,C90,E501` clean on every
+changed file.
+
+### The parser wedge now has a work bound, not a better filter
+
+`1e695a5`. The round-1 reserved-bit filter is correct and drops no conforming
+frame, but it is a filter: `b"\xd3\x03\xff"` repeated passes it and declares a
+1023-byte payload, so every 3 bytes bought a 1026-byte CRC. `iter_rtcm_frames`
+now carries a CRC budget of `2 * len(buf) + RTCM_MAX_FRAME`.
+
+| input, one full 4116-byte buffer | before | after |
+|---|---|---|
+| `\xd3\x03\xff` repeated | 1.10 s | **8.3 ms** |
+| `\xd3\x01\xff` repeated | 1.21 s | **8.5 ms** |
+| `\xd3\x00` repeated | 0.74 s | **6.5 ms** |
+| `\xd3` repeated | 1.6 ms (round 1) | 1.2 ms |
+
+Two properties make the budget safe rather than merely small. A conforming
+stream needs at most one CRC pass over each byte it delivered — frames do not
+overlap and a validated frame is skipped whole — so twice the buffer length
+cannot reject a real frame; `test_the_budget_never_rejects_a_conforming_stream`
+packs the buffer with back-to-back 1023-byte frames and checks all of them come
+out. And the floor of one whole frame guarantees the head candidate is always
+validated, so every call consumes at least one byte and a hostile stream cannot
+stall the parser instead of wedging it.
+
+The regression test is parametrized over all four patterns and asserts against
+**two** ceilings: the declared budget, and an absolute `4 * RTCM_MAX_BUFFER`
+that does not move when `RTCM_CRC_BUDGET_FACTOR` does — without the second,
+widening the constant would have widened the test with it. Verified by mutation:
+`RTCM_CRC_BUDGET_FACTOR = 100000` fails 4 tests.
+
+### The calibration sign error
+
+`002196a`. `correction_report()` now prints each target's own before/after value
+with the frame that fixes its sign named beside it:
+
+```
+  URDF gnss_forward z   (base_link, z UP)             +0.890 -> +0.835 m  (-55 mm)
+  GPS_POS1_Z            (ArduPilot body FRD, z DOWN)  -0.890 -> -0.835 m  (+55 mm)
+```
+
+and says `GPS_POS2_Z` was never measured. The arithmetic moved into
+`corrected_antenna_height()` so the signs are testable without a bag;
+`test_the_same_measurement_raises_gps_pos1_z_because_that_frame_is_down` pins
+the naive application at `-0.945`, exactly `2 * |correction|` from the truth.
+Mutating the function to `-urdf_z + correction_m` fails 5 tests.
+
+### Vertical accuracy reaches the level
+
+`47f563e`. `apply_vertical_accuracy()` with `warn_v_acc_m` 0.10 m and
+`error_v_acc_m` 0.50 m. The 2026-08-20 case (fix_type 6, `v_acc` 1.750 m) is now
+ERROR. It raises and never lowers, passes through on the not-reported sentinel,
+and leaves STALE alone.
+
+**A default worth your eye**: 0.10 / 0.50 m are my numbers, not measured ones. I
+took them from what a working RTK fix on this hull reports (0.02–0.05 m) and from
+0.10 m already being worse than the 55 mm lever-arm error this branch spent a day
+chasing. They are parameters, but they decide when the tile goes amber.
+
+### The two weak tests
+
+`f21964e`. Both now fail under the mutation they claimed to catch:
+`RTCM_RESERVED_MASK` `0xFC`→`0xFF` fails 4 tests (was 0), and an X↔Y swap in
+`parse_reference_station` fails 7 (`test_swapping_x_and_y_would_be_caught` used
+to pass under it — it never re-decoded anything). The replacement applies the
+swap to the decoder itself via monkeypatch rather than asserting a property of
+`atan2` alongside it.
+
+### The judgement call: `core_launch.py` and echo_helm
+
+`4bf161a`. **Kept the local Node; did not delete it.** Reasoning, since this
+reverses the round-2 suggestion:
+
+- **Verified, not assumed**, how `launch` treats an argument an included
+  description does not declare: `IncludeLaunchDescription`'s own docstring says
+  unmatched arguments "will still be set as Launch Configurations using the
+  `SetLaunchConfiguration` action". A silent no-op, no error. So
+  `enable_ellipsoidal_fix:=false` is harmless in **either** merge order.
+- The `Node` is the half that is not harmless. `ExecutableInPackage.perform()`
+  raises `SubstitutionFailure` when the executable is missing, at execute time,
+  and that aborts the whole launch description.
+- **Confirmed on this machine**: `ellipsoidal_fix_node` is on
+  `seafloor_echoboat_project11` `feature/issue-55` only, not `origin/jazzy`, and
+  the installed `echo_helm` ships only `echo_helm_node`. This branch aborts the
+  boat launch here *today*.
+- Neither end state is safe under both merge orders. Deleting the local Node
+  makes the stale-echo_helm case **silent**: nothing publishes
+  `mavros/global_position/global_ellipsoidal`, `mru_transform` has no FCU
+  position, and the `GPS: ellipsoidal fix` tile is simply absent — and absence
+  reading as health is the failure this entire PR exists to close. A boat that
+  will not start beats a boat that floats with a dead vertical.
+
+So the required order is made loud instead: a preflight `OpaqueFunction`, first
+in the launch description so it fires before 130-odd nodes are part-way up. It
+resolves the same `ExecutableInPackage` lookup `Node` uses — it cannot pass while
+the Node it guards fails — and raises with the repo, the PR, the reason, and the
+`colcon build --packages-select echo_helm` line. It stays useful after #56
+merges, because a stale build on a boat is the same symptom.
+
+**MERGE ORDER — needs your decision, not mine**: this branch must not reach a
+boat before `rolker/seafloor_echoboat_project11#56` is merged and `echo_helm`
+rebuilt. It is stated in `core_launch.py` at the include, in the preflight
+message, and in `.agents/README.md`.
+
+### Everything else
+
+Remaining must-fixes: `b0ddc19` (`math.isfinite` plus a coordinate-range check
+on the rover fix — ±inf reached `math.sin` in the timer and exited the process),
+`cb2ced2` (`rclpy` + `sensor_msgs` as `exec_depend`), `83beb3a` (guarded
+`main()` + `respawn` to match its two neighbours), `8de44e3` (uncertainty gates:
+≥2 populated buckets, 30 samples, 1 h, each failure named; a single bucket prints
+NOT MEASURED rather than 0.0 mm, and a failing corpus marks the report
+PROVISIONAL — the 2026-08-21 corpus passes all three, so the result on record
+stands).
+
+Suggestions: `78faad9` (liveness stamped from CRC-valid frames rather than raw
+bytes; negative clock deltas clamped in both nodes; VRS re-anchor no longer read
+as a caster switch), `075f09a` (DOP scaling, first-tick WARN instead of a red
+flash on every boot, one key set on every path, threshold and timeout
+validation), `45433aa` (four test gaps), `c37a98e` (argparse + `--namespace`,
+recursive mcap search, rejection counts by cause, signed skew, samples consumed
+so they are independent, per-bag quoted quantity), `9bd0484` (agent guide).
+
+**One reconciliation you should know about.** Round 1 added
+`test_same_id_at_a_wholly_different_position_also_resets` ("two casters can serve
+the same station number; the jump is the tell"); round 2 said a 1 km jump
+threshold misreads a legitimate VRS re-anchor. Both are right, so rather than
+overwrite one with the other I split the threshold: a changed station ID always
+resets, and an unchanged one resets only past a new `same_id_switch_m` (50 km).
+The 509 km Delaware→MaCORS case still resets; a 4 km re-anchor no longer does.
+Round 1's test still passes unmodified.
+
+### Actions
+- [x] (must-fix) CRC budget bounds parser cost per callback; 1.10 s → 8.3 ms — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py:141-200`
+- [x] (must-fix) `fix_position_usable()` rejects ±inf and out-of-range coordinates — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py`
+- [x] (must-fix) Framing tested across the whole 10-bit length field; the mask mutation now fails 4 tests — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (must-fix) The X↔Y test now applies the swap to the decoder; the mutation fails 7 tests — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (must-fix) echo_helm lockstep made loud and self-explaining; local Node kept deliberately — `bizzyboat_project11/launch/core_launch.py`
+- [x] (must-fix) `rclpy` + `sensor_msgs` declared `exec_depend` — `bizzyboat_project11/package.xml`
+- [x] (must-fix) `warn_v_acc_m` / `error_v_acc_m` raise the level, pass through on the sentinel — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (must-fix) `main()` guarded and the node respawned like its siblings — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`, `bizzyboat_project11/launch/core_launch.py`
+- [x] (must-fix) Correction printed per target with each frame's own sign; `GPS_POS2` named as unmeasured — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (must-fix) Uncertainty gates on buckets, n and timespan, each failure named — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) Length field masked with `0x03` explicitly — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py`
+- [x] (suggestion) `_last_valid_frame_time` + `last_valid_frame_age_s` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py`
+- [x] (suggestion) Negative clock deltas clamped in both nodes — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py`, `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (suggestion) VRS re-anchor split from a caster switch via `same_id_switch_m` — `bizzyboat_project11/scripts/rtcm_diagnostics_node.py`
+- [x] (suggestion) Delete the local `ellipsoidal_fix` Node (deferred: kept deliberately — deleting it makes the stale-echo_helm case silent instead of loud; see the judgement above) — `bizzyboat_project11/launch/core_launch.py`
+- [x] (suggestion) `water_line_frame` silent no-op (deferred: enforcement belongs in `mru_transform`, a sibling repo this sub-agent may not edit) — `bizzyboat_project11/config/bizzyboat.yaml:941`
+- [x] (suggestion) Baseline thresholds vs the Delaware credentials (deferred: the credentials file is in `ccomjhc_project11`, a sibling repo — see cross-repo items) — `bizzyboat_project11/launch/ntrip_launch.py`
+- [x] (suggestion) Split the credentials YAML (deferred: belongs in `ccomjhc_project11`; verified inert here) — `bizzyboat_project11/launch/ntrip_launch.py`
+- [x] (suggestion) Redundant wall-clock test dropped; one backstop kept on the pattern with the 1.10 s history — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (suggestion) The mid-frame resync test now contains a candidate preamble — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (suggestion) Buffer-cap and 0/1-byte-payload cases added — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (suggestion) `station_1006()` builds a realistic 21-byte payload — `bizzyboat_project11/test/test_rtcm_diagnostics.py`
+- [x] (suggestion) `hdop`/`vdop` scaled, sentinels honoured — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (suggestion) First tick WARNs instead of flashing red on every boot — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (suggestion) One key set on every path — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (suggestion) Thresholds and `stale_timeout` validated; `publish_rate` is a parameter — `bizzyboat_project11/scripts/gps_rtk_diagnostics_node.py`
+- [x] (suggestion) Lever arms printed beside the result; centreline asserted (deferred in part: reading them from the bag's `/tf_static` is the real fix and is not done) — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) Signed mean skew printed alongside max absolute — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) Sample sets consumed, so `n`/`pstdev`/`sem` see independent samples — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) The quoted quantity printed per bag too — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) Plausibility bound at 0.5 m, naming the likely cause — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+- [x] (suggestion) Empty-corpus report names which of the six causes happened — `bizzyboat_project11/scripts/gnss_vertical_calibration.py`
+
+### Deferred, and why
+- **Delete the local `ellipsoidal_fix` Node** — reversed after verifying the
+  failure modes on both sides. The full reasoning is in the judgement section
+  above and in `4bf161a`'s message. This is the one place I did not follow the
+  review, so it deserves your eye.
+- **`/tf_static` lever arms** in the calibration tool — the cheap half is done
+  (printed beside the result, with a note that they are a hand copy that this
+  tool's own output invalidates). Reading them from the bag is a real change to
+  the read loop and belongs in its own issue.
+
+### Cross-repo items (recorded, not edited — sub-agent scope)
+- `rolker/seafloor_echoboat_project11#56` — **must merge and `echo_helm` must be
+  rebuilt before this branch reaches a boat.** Nothing in this repo can enforce
+  that; the preflight makes it loud rather than preventing it.
+- `ccomjhc_project11/configuration/bizzyboat_ntrip.yaml` still points at the
+  Delaware caster, so the new 35/100 km baseline thresholds will take the tile
+  straight to ERROR on the next NH boot. Arguably the feature working, but it is
+  an edit owed outside this PR.
+- Splitting the non-secret host/port/mountpoint out of that same credentials
+  file would remove the question of a second node loading it. Verified inert
+  today (the node declares only those three keys; rclpy drops the rest).
+- `mru_transform` declares `water_line_frame` only on `feature/issue-32` and
+  `gitcloud/jazzy`, not `origin/jazzy`. The YAML comment documents the silent
+  no-op honestly; nothing enforces it.
