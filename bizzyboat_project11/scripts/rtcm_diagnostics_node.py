@@ -250,6 +250,17 @@ def apply_station_staleness(level, message, station_age, station_timeout):
             f'{message} (station last described {station_age:.0f}s ago)')
 
 
+def rover_fix_usable(fix, fix_age, fix_timeout):
+    """Is the stored rover position still fit to compute a baseline from?
+
+    A frozen fix is worse than no fix: the baseline is then measured from
+    wherever the boat was when its position feed died, so a transit away from
+    the base can turn ERROR back into OK while the boat drifts further from a
+    base it can no longer see. Age it out and say so instead.
+    """
+    return fix is not None and fix_age is not None and fix_age <= fix_timeout
+
+
 def msm_info(message_type):
     """Return ``(constellation, msm_level)`` for an MSM message, else None."""
     block, level = divmod(message_type, 10)
@@ -298,6 +309,10 @@ class RtcmDiagnosticsNode(Node):
         # 1005/1006 are typically sent every 5-10 s; allow generous slack
         # before declaring the station identity unknown.
         self.declare_parameter('station_timeout', 60.0)
+        # The rover fix arrives at ~10 Hz. Ten seconds without one means the
+        # position feed is gone, and a baseline computed from the last one is
+        # measured from wherever the boat was when it stopped.
+        self.declare_parameter('fix_timeout', 10.0)
         # A reference point that jumps by more than this between reports is a
         # virtual station being recomputed for our position, not a real one.
         self.declare_parameter('vrs_motion_threshold_m', 5.0)
@@ -319,6 +334,7 @@ class RtcmDiagnosticsNode(Node):
         self._warn_baseline_km = self.get_parameter('warn_baseline_km').value
         self._error_baseline_km = self.get_parameter('error_baseline_km').value
         self._station_timeout = self.get_parameter('station_timeout').value
+        self._fix_timeout = self.get_parameter('fix_timeout').value
         self._vrs_motion_threshold_m = self.get_parameter('vrs_motion_threshold_m').value
         rate = self.get_parameter('publish_rate').value
 
@@ -332,6 +348,7 @@ class RtcmDiagnosticsNode(Node):
         self._station_moved_m = 0.0
         self._message_types = {}
         self._rover_fix = None
+        self._last_fix_time = None
 
         # BEST_EFFORT subscriptions are compatible with both BEST_EFFORT and
         # RELIABLE publishers, so this node attaches to whatever the NTRIP
@@ -400,6 +417,7 @@ class RtcmDiagnosticsNode(Node):
         if msg.status.status >= 0 and not (math.isnan(msg.latitude)
                                            or math.isnan(msg.longitude)):
             self._rover_fix = (msg.latitude, msg.longitude)
+            self._last_fix_time = self.get_clock().now()
 
     # -- outputs -----------------------------------------------------------
 
@@ -446,6 +464,7 @@ class RtcmDiagnosticsNode(Node):
         status.hardware_id = self._hardware_id
 
         station_age = self._age(self._last_station_time, now)
+        fix_age = self._age(self._last_fix_time, now)
         types_text = '+'.join(str(t) for t in sorted(self._message_types))
         values = [
             KeyValue(key='caster_host', value=str(self.get_parameter('host').value)),
@@ -454,6 +473,11 @@ class RtcmDiagnosticsNode(Node):
                      value=str(self.get_parameter('mountpoint').value)),
             KeyValue(key='message_types', value=types_text or 'none'),
             KeyValue(key='msm', value=summarise_msm(self._message_types)),
+            # Published unconditionally: a baseline is only as current as the
+            # rover position it was measured from, and that age was previously
+            # invisible to anyone reading the diagnostic.
+            KeyValue(key='rover_fix_age_s',
+                     value='-1.0' if fix_age is None else f'{fix_age:.1f}'),
         ]
 
         if self._station is None:
@@ -481,9 +505,11 @@ class RtcmDiagnosticsNode(Node):
                      value='-1.0' if station_age is None else f'{station_age:.1f}'),
         ])
 
-        if self._rover_fix is None:
+        if not rover_fix_usable(self._rover_fix, fix_age, self._fix_timeout):
+            reason = ('no fix' if self._rover_fix is None
+                      else f'rover fix {fix_age:.0f}s old')
             status.level = DiagnosticStatus.WARN
-            status.message = f'station {station_id}, baseline unknown (no fix)'
+            status.message = f'station {station_id}, baseline unknown ({reason})'
             values.append(KeyValue(key='baseline_km', value='nan'))
         else:
             distance = baseline_km(self._rover_fix[0], self._rover_fix[1],

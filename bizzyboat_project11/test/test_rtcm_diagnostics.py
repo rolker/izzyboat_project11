@@ -390,6 +390,26 @@ def test_never_described_station_is_left_alone():
         DiagnosticStatus.WARN, 'no fix', None, 60.0)[0] == DiagnosticStatus.WARN
 
 
+# --- rover fix expiry ------------------------------------------------------
+
+def test_fresh_rover_fix_is_usable():
+    assert rd.rover_fix_usable((43.07, -70.71), 0.4, 10.0)
+
+
+def test_missing_rover_fix_is_not_usable():
+    assert not rd.rover_fix_usable(None, None, 10.0)
+
+
+def test_frozen_rover_fix_ages_out():
+    """A fix that stopped updating during a transit would otherwise measure the
+    baseline from where the boat used to be -- which can turn ERROR into OK."""
+    assert not rd.rover_fix_usable((43.07, -70.71), 45.0, 10.0)
+
+
+def test_rover_fix_at_the_timeout_boundary_is_still_usable():
+    assert rd.rover_fix_usable((43.07, -70.71), 10.0, 10.0)
+
+
 # --- regressions on the two real casters -----------------------------------
 
 BOAT = (43.0720, -70.7115)          # UNH pier, Portsmouth NH
