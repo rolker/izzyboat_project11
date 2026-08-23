@@ -163,15 +163,27 @@ def test_captured_frame_ecef_round_trips_to_the_documented_metres():
         assert got == pytest.approx(want, abs=1e-3)
 
 
-def test_swapping_x_and_y_would_be_caught():
-    """Why the captured frame earns its place: the decoder's own encoder cannot
-    catch an axis swap, but a real reference point can. Washington DC becomes
-    the western Pacific."""
+def test_an_x_y_swap_in_the_decoder_is_caught_by_the_captured_frame(monkeypatch):
+    """Why the captured frame earns its place, demonstrated on the decoder.
+
+    A frame this suite encoded itself cannot catch an axis swap: encode with
+    the swap, decode with the swap, and the right answer comes back. A frame
+    encoded outside this repo can. So swap the axes in the decoder for real --
+    not in a separate expression alongside it -- and watch the captured frame's
+    documented reference point stop matching: Washington DC lands in the
+    western Pacific.
+    """
+    real_ecef_to_llh = rd.ecef_to_llh
+    monkeypatch.setattr(rd, 'ecef_to_llh',
+                        lambda x, y, z: real_ecef_to_llh(y, x, z))
+
     _, lat, lon, _ = rd.parse_reference_station(
         rd.iter_rtcm_frames(bytearray(CAPTURED_1005_FRAME))[0][0][1])
-    x, y, z = llh_to_ecef(lat, lon, 114.561)
-    _, swapped_lon, _ = rd.ecef_to_llh(y, x, z)
-    assert abs(swapped_lon - lon) > 90.0
+
+    assert abs(lon - CAPTURED_1005_LLH[1]) > 90.0
+    # And the assertion the unswapped test makes would now fail, which is the
+    # property being claimed.
+    assert lon != pytest.approx(CAPTURED_1005_LLH[1], abs=1e-6)
 
 
 # --- CRC -------------------------------------------------------------------
@@ -279,6 +291,44 @@ def test_leading_garbage_before_a_good_frame():
     buf = bytearray(b'\x00\xff\x12' + frame(typed_payload(1005)))
     frames, _ = rd.iter_rtcm_frames(buf)
     assert [t for t, _ in frames] == [1005]
+
+
+@pytest.mark.parametrize('payload_len', [0, 1, 2, 3, 255, 256, 1023])
+def test_the_whole_ten_bit_length_field_frames_correctly(payload_len):
+    """The top 2 bits of the length live in the header's first byte, beside the
+    reserved bits.
+
+    Nothing here used to exceed 255 bytes, so those 2 bits were never
+    exercised: widening RTCM_RESERVED_MASK from 0xFC to 0xFF passed the entire
+    suite while silently discarding every frame longer than 255 bytes -- which
+    is most of what an MSM7 mountpoint sends (1077/1087/1097/1127 routinely run
+    past 700). 1023 is the longest a frame can declare.
+    """
+    stub = typed_payload(1077)
+    payload = (stub + bytes(max(0, payload_len - len(stub))))[:payload_len]
+    whole = frame(payload)
+    assert len(whole) == payload_len + rd.RTCM_HEADER_LEN + rd.RTCM_CRC_LEN
+
+    frames, consumed = rd.iter_rtcm_frames(bytearray(whole))
+
+    assert consumed == len(whole)
+    if payload_len >= 2:
+        # Under 2 bytes there is no message number to report, so the frame is
+        # validated and dropped rather than surfaced.
+        assert [t for t, _ in frames] == [1077]
+    else:
+        assert frames == []
+
+
+def test_a_maximum_length_frame_survives_leading_garbage():
+    """The long-frame path and the resync path at once -- an MSM7 frame picked
+    up mid-stream is the realistic case, and it is the one no test covered."""
+    stub = typed_payload(1127)
+    payload = stub + bytes(rd.RTCM_MAX_PAYLOAD - len(stub))
+    buf = bytearray(b'\x00\xff\x12' + frame(payload))
+    frames, consumed = rd.iter_rtcm_frames(buf)
+    assert [t for t, _ in frames] == [1127]
+    assert consumed == len(buf)
 
 
 # --- cost bound on hostile input -------------------------------------------
