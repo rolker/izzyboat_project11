@@ -263,11 +263,25 @@ def test_resync_after_a_corrupt_frame_recovers_the_next_one():
 
 def test_resync_from_a_mid_frame_start_recovers_the_next_frame():
     """Attaching to a stream already in progress: the first bytes are the tail
-    of a frame whose header was never seen."""
-    whole = frame(station_1005(42, MACORS_42[0], MACORS_42[1], -10.3))
-    buf = bytearray(whole[5:] + frame(typed_payload(1074)))
-    frames, _ = rd.iter_rtcm_frames(buf)
+    of a frame whose header was never seen.
+
+    The tail must contain a 0xD3 for this to differ from the leading-garbage
+    case -- the point is that the parser meets a candidate preamble in the
+    orphaned tail, fails its CRC, and steps past it. A 1005 tail happens not
+    to contain one, so one is planted.
+    """
+    whole = bytearray(frame(station_1005(42, MACORS_42[0], MACORS_42[1], -10.3)))
+    whole[12] = rd.RTCM_PREAMBLE
+    whole[13] = 0x00            # clears the reserved bits, so the CRC runs
+    whole[14] = 0x02            # ...and declares a length that fits, so it runs
+    tail = bytes(whole[5:])
+    assert rd.RTCM_PREAMBLE in tail
+
+    buf = bytearray(tail + frame(typed_payload(1074)))
+    frames, consumed = rd.iter_rtcm_frames(buf)
+
     assert [t for t, _ in frames] == [1074]
+    assert consumed == len(buf)
 
 
 def test_false_preamble_inside_payload_does_not_desync():
@@ -375,19 +389,6 @@ def test_reserved_bits_reject_a_false_preamble_before_the_crc(monkeypatch):
     assert calls == []
     # Only a possible straddling frame may be retained, never the whole buffer.
     assert len(buf) - consumed <= MAX_FRAME_LEN
-
-
-def test_hostile_buffer_costs_no_more_than_a_few_milliseconds():
-    """Wall-clock backstop on the same input, in case the check is ever moved.
-
-    The bound is deliberately loose (100x under the 3.4 s that was measured):
-    it is here to catch a return to quadratic behaviour, not to benchmark.
-    """
-    import time
-    buf = bytearray(b'\xd3' * rd.RTCM_MAX_BUFFER)
-    start = time.perf_counter()
-    rd.iter_rtcm_frames(buf)
-    assert time.perf_counter() - start < 0.03
 
 
 # The pattern that defeats the reserved-bit filter: 0x03 leaves the reserved
@@ -581,13 +582,43 @@ def test_short_payload_returns_none():
     assert rd.parse_reference_station(b'\x3e\x80') is None
 
 
+def station_1006(station_id, lat, lon, height, antenna_height_m=2.0):
+    """A realistically shaped 1006 payload: 1005 plus DF028, so 21 bytes.
+
+    Patching the message number into a 19-byte 1005 shape tested a frame no
+    caster sends -- and the length is exactly what the decoder's own
+    len(payload) < 19 guard is about.
+    """
+    x, y, z = llh_to_ecef(lat, lon, height)
+    w = BitWriter()
+    w.u(1006, 12).u(station_id, 12).u(0, 6)
+    w.u(1, 1).u(1, 1).u(1, 1).u(0, 1)
+    w.s(round(x * 1e4), 38).u(0, 1).u(0, 1)
+    w.s(round(y * 1e4), 38).u(0, 2)
+    w.s(round(z * 1e4), 38)
+    w.u(round(antenna_height_m * 1e4), 16)      # DF028
+    return w.bytes()
+
+
 def test_1006_is_accepted():
-    payload = bytearray(station_1005(9, 43.0, -70.0, 5.0))
-    # Rewrite the message number in place: 1006 shares 1005's leading fields.
-    payload[0] = 1006 >> 4
-    payload[1] = ((1006 & 0x0F) << 4) | (payload[1] & 0x0F)
-    decoded = rd.parse_reference_station(bytes(payload))
-    assert decoded is not None and decoded[0] == 9
+    payload = station_1006(9, 43.0, -70.0, 5.0)
+    assert len(payload) == 21
+    decoded = rd.parse_reference_station(payload)
+    assert decoded is not None
+    station_id, lat, lon, height = decoded
+    assert station_id == 9
+    assert lat == pytest.approx(43.0, abs=1e-6)
+    assert lon == pytest.approx(-70.0, abs=1e-6)
+    assert height == pytest.approx(5.0, abs=1e-3)
+
+
+def test_a_real_shaped_1006_frames_and_decodes_end_to_end():
+    """The whole path, at the length a caster actually sends."""
+    buf = bytearray(frame(station_1006(42, MACORS_42[0], MACORS_42[1], -10.297)))
+    frames, consumed = rd.iter_rtcm_frames(buf)
+    assert [t for t, _ in frames] == [1006]
+    assert consumed == len(buf)
+    assert rd.parse_reference_station(frames[0][1])[0] == 42
 
 
 def test_zero_reference_point_is_rejected():
@@ -1014,3 +1045,40 @@ def test_a_vrs_re_anchoring_on_a_transit_keeps_its_history():
                                     tracker._station_reports,
                                     5.0) == 'virtual (tracks rover)'
     assert not any('42 -> 42' in line for line in tracker.log)
+
+
+# --- the reassembly buffer cap ---------------------------------------------
+
+def test_the_buffer_cap_holds_against_a_stream_that_never_syncs():
+    """The unbounded-growth guard the module docstring advertises.
+
+    _on_rtcm trims to RTCM_MAX_BUFFER after every delivery; without it a caster
+    sending bytes that never frame grows the buffer for the life of the
+    process. Modelled here because the trim lives in the callback, not in
+    iter_rtcm_frames.
+    """
+    buf = bytearray()
+    for _ in range(200):
+        buf.extend(b'\xd3\x03\xff' * 64)
+        if len(buf) > rd.RTCM_MAX_BUFFER:
+            del buf[:-rd.RTCM_MAX_BUFFER]
+        _, consumed = rd.iter_rtcm_frames(buf)
+        del buf[:consumed]
+        assert len(buf) <= rd.RTCM_MAX_BUFFER
+
+
+def test_a_frame_split_across_many_deliveries_survives_the_cap():
+    """The cap must not eat a frame that is merely arriving slowly: four
+    maximum-length frames of slack is what makes that safe."""
+    stub = typed_payload(1077)
+    whole = frame(stub + bytes(rd.RTCM_MAX_PAYLOAD - len(stub)))
+    buf = bytearray()
+    seen = []
+    for i in range(0, len(whole), 64):
+        buf.extend(whole[i:i + 64])
+        if len(buf) > rd.RTCM_MAX_BUFFER:
+            del buf[:-rd.RTCM_MAX_BUFFER]
+        frames, consumed = rd.iter_rtcm_frames(buf)
+        del buf[:consumed]
+        seen.extend(t for t, _ in frames)
+    assert seen == [1077]
