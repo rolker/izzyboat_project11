@@ -38,6 +38,10 @@ if(BUILD_TESTING)
   ament_add_pytest_test(test_operator_core_launch test/test_operator_core_launch.py)
   # RTCM framing/CRC, 1005-1006 decode, baseline and thresholds.
   ament_add_pytest_test(test_rtcm_diagnostics test/test_rtcm_diagnostics.py)
+  # The cross-repo preflight check in core_launch.py: echo_helm's
+  # ellipsoidal_fix_node exists only on seafloor_echoboat_project11 #56, and a
+  # stale build must fail with a message naming the repo to rebuild.
+  ament_add_pytest_test(test_core_launch test/test_core_launch.py)
   # fix_type -> level, and the vertical-accuracy override that catches the
   # 2026-08-20 case: 'RTK Fixed', OK, green, with v_acc 1.750 m beside it.
   ament_add_pytest_test(test_gps_rtk_diagnostics test/test_gps_rtk_diagnostics.py)
