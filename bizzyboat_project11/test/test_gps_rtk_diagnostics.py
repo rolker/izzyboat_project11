@@ -125,3 +125,51 @@ def test_the_text_and_the_number_agree_about_what_is_reported():
     level would describe different receivers."""
     for raw in (-1, 0, 1, 25, 1750, 65535):
         assert (gd.accuracy_text(raw) == 'not reported') == (gd.accuracy_m(raw) is None)
+
+
+# --- GPSRAW sentinel fields ------------------------------------------------
+
+def test_dop_is_published_as_a_dop_not_as_hundredths():
+    """HDOP 1.21 arrives as 121. Published raw it reads '121', which is not a
+    DOP anyone recognises -- the same class of defect accuracy_text() was
+    written to prevent, one field along."""
+    assert gd.dop_text(121) == '1.21'
+    assert gd.dop_text(85) == '0.85'
+
+
+@pytest.mark.parametrize('raw', [0, 65535])
+def test_an_unpopulated_dop_is_not_published_as_a_number(raw):
+    assert gd.dop_text(raw) == 'unknown'
+
+
+def test_an_unknown_satellite_count_is_not_published_as_255():
+    assert gd.satellite_text(255) == 'unknown'
+    assert gd.satellite_text(12) == '12'
+
+
+# --- parameter validation --------------------------------------------------
+
+def test_a_warn_threshold_above_the_ok_threshold_is_rejected():
+    """It silently deletes the WARN branch: every fix_type either clears
+    ok_min or falls through to ERROR, so a degraded fix shows red and the
+    operator learns to ignore red."""
+    with pytest.raises(ValueError) as caught:
+        gd.validate_thresholds(ok_min=3, warn_min=6)
+    assert 'unreachable' in str(caught.value)
+
+
+def test_matching_thresholds_are_allowed():
+    gd.validate_thresholds(ok_min=6, warn_min=6)
+    gd.validate_thresholds(ok_min=6, warn_min=3)
+
+
+def test_a_stale_timeout_shorter_than_the_publish_period_is_rejected():
+    """Every status would be born stale. The period used to be hard-coded at
+    1 Hz while stale_timeout was a parameter, so this was unsatisfiable and
+    silent."""
+    with pytest.raises(ValueError):
+        gd.validate_stale_timeout(stale_timeout=0.5, publish_period=1.0)
+
+
+def test_a_stale_timeout_longer_than_the_publish_period_is_allowed():
+    gd.validate_stale_timeout(stale_timeout=5.0, publish_period=1.0)

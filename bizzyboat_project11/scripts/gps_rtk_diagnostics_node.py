@@ -50,6 +50,55 @@ def accuracy_text(millimetres):
     return f'{millimetres / 1000.0:.3f}'
 
 
+# MAVLink GPS_RAW_INT sentinels. eph/epv are DOP scaled by 100 and
+# satellites_visible is a count; all three use UINT16_MAX / 255 for 'unknown'.
+UINT16_MAX = 65535
+UINT8_MAX = 255
+
+
+def dop_text(raw):
+    """Format eph/epv as a DOP, or say it is unknown.
+
+    Published raw, HDOP 1.21 reads '121' and an unpopulated field reads
+    '65535' -- the same class of defect accuracy_text() was written to
+    prevent, one field along. Anyone eyeballing the tile sees a number either
+    way and has no way to tell which.
+    """
+    if raw in (0, UINT16_MAX):
+        return 'unknown'
+    return f'{raw / 100.0:.2f}'
+
+
+def satellite_text(raw):
+    """Satellite count, or 'unknown' for the 255 sentinel."""
+    if raw == UINT8_MAX:
+        return 'unknown'
+    return str(raw)
+
+
+def validate_thresholds(ok_min, warn_min):
+    """Reject a threshold pair that makes a level unreachable.
+
+    warn_min > ok_min silently deletes the WARN branch: every fix_type either
+    clears ok_min or falls through to ERROR, so a degraded fix shows red and
+    the operator learns to ignore red.
+    """
+    if warn_min > ok_min:
+        raise ValueError(
+            f'warn_min_fix_type ({warn_min}) must not exceed ok_min_fix_type '
+            f'({ok_min}); as given, the WARN level is unreachable and a '
+            f'degraded fix reports ERROR')
+
+
+def validate_stale_timeout(stale_timeout, publish_period):
+    """A timeout shorter than the publish period can never be satisfied."""
+    if stale_timeout < publish_period:
+        raise ValueError(
+            f'stale_timeout ({stale_timeout} s) is shorter than the publish '
+            f'period ({publish_period} s), so every status would be born '
+            f'stale')
+
+
 def accuracy_m(millimetres):
     """h_acc/v_acc in metres, or ``None`` when the receiver is not reporting it.
 
@@ -126,6 +175,9 @@ class GpsRtkDiagnosticsNode(Node):
         # branch spent a day chasing, and 0.50 m is past any use for soundings.
         self.declare_parameter('warn_v_acc_m', 0.10)
         self.declare_parameter('error_v_acc_m', 0.50)
+        # Hard-coded before, while stale_timeout was a parameter -- so a
+        # sub-second timeout was unsatisfiable and nothing said so.
+        self.declare_parameter('publish_rate', 1.0)
 
         self._topic = self.get_parameter('gps_raw_topic').value
         self._diagnostic_name = self.get_parameter('diagnostic_name').value
@@ -135,13 +187,22 @@ class GpsRtkDiagnosticsNode(Node):
         self._stale_timeout = self.get_parameter('stale_timeout').value
         self._warn_v_acc_m = self.get_parameter('warn_v_acc_m').value
         self._error_v_acc_m = self.get_parameter('error_v_acc_m').value
+        rate = self.get_parameter('publish_rate').value
+        if rate <= 0.0:
+            raise ValueError(
+                f'publish_rate must be positive, got {rate}. A diagnostics '
+                'node that never publishes turns a fault into an absence.')
+        publish_period = 1.0 / rate
+        validate_thresholds(self._ok_min, self._warn_min)
+        validate_stale_timeout(self._stale_timeout, publish_period)
 
         self._last_msg = None
         self._last_msg_time = None
+        self._start_time = self.get_clock().now()
 
         self._pub = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
         self._sub = self.create_subscription(GPSRAW, self._topic, self._on_gps_raw, 10)
-        self._timer = self.create_timer(1.0, self._publish_diagnostic)
+        self._timer = self.create_timer(publish_period, self._publish_diagnostic)
 
         self.get_logger().info(
             f'Publishing RTK diagnostics from "{self._topic}" as "{self._diagnostic_name}" '
@@ -162,20 +223,31 @@ class GpsRtkDiagnosticsNode(Node):
 
         if self._last_msg is None:
             # Never heard from the receiver. Say so loudly rather than
-            # publishing nothing.
-            status.level = DiagnosticStatus.ERROR
-            status.message = f'no data on "{self._topic}"'
-            status.values = [
-                KeyValue(key='gps_raw_topic', value=str(self._topic)),
-                # Present on every other path, so anything keying off it does
-                # not have to treat 'missing' and 'no data' as separate cases.
-                KeyValue(key='fix_type', value='-1'),
-            ]
+            # publishing nothing -- but not on the first tick, ~1 s after
+            # launch, before mavros has streamed anything: the tile flashed
+            # red on every single boot, and an alarm that always cries wolf at
+            # startup is one the operator learns to scroll past.
+            waited = (now - self._start_time).nanoseconds / 1e9
+            if 0.0 <= waited <= self._stale_timeout:
+                status.level = DiagnosticStatus.WARN
+                status.message = f'waiting for first message on "{self._topic}"'
+            else:
+                status.level = DiagnosticStatus.ERROR
+                status.message = f'no data on "{self._topic}"'
+            status.values = self._values(fix_type=-1, msg=None, age=None)
             self._publish(status, now)
             return
 
         msg = self._last_msg
         age = (now - self._last_msg_time).nanoseconds / 1e9
+        if age < 0.0:
+            # A backward clock step, routine on this GPS/NTP-disciplined boat
+            # after boot. Unclamped it makes 'age > stale_timeout' false, so a
+            # frozen fix_type reads fresh at exactly the moment the boat has
+            # just come up.
+            age = 0.0
+            self.get_logger().warning(
+                'clock stepped backward; treating the last GPSRAW as current')
         fix_type = msg.fix_type
         label = FIX_TYPE_LABELS.get(fix_type, f'Unknown ({fix_type})')
 
@@ -192,18 +264,37 @@ class GpsRtkDiagnosticsNode(Node):
             status.level, status.message, accuracy_m(msg.v_acc),
             self._warn_v_acc_m, self._error_v_acc_m)
 
-        status.values = [
+        status.values = self._values(fix_type, msg, age)
+        self._publish(status, now)
+
+    def _values(self, fix_type, msg, age):
+        """The same key set on every path.
+
+        The no-data branch used to carry gps_raw_topic and fix_type while every
+        other path carried the accuracy and age keys and not gps_raw_topic, so
+        anything reading the diagnostic had to treat 'key missing' and 'no
+        data' as separate cases. Absent keys are how a fault reads as an
+        absence, one level down from the status itself.
+        """
+        return [
+            KeyValue(key='gps_raw_topic', value=str(self._topic)),
             KeyValue(key='fix_type', value=str(fix_type)),
-            KeyValue(key='satellites_visible', value=str(msg.satellites_visible)),
-            KeyValue(key='eph', value=str(msg.eph)),
-            KeyValue(key='epv', value=str(msg.epv)),
+            KeyValue(key='satellites_visible',
+                     value='unknown' if msg is None
+                     else satellite_text(msg.satellites_visible)),
+            # eph/epv are DOP scaled by 100, with UINT16_MAX for unknown.
+            KeyValue(key='hdop', value='unknown' if msg is None
+                     else dop_text(msg.eph)),
+            KeyValue(key='vdop', value='unknown' if msg is None
+                     else dop_text(msg.epv)),
             # Vertical accuracy is the quantity tide and soundings depend on,
             # and it degrades long before fix_type does.
-            KeyValue(key='h_acc_m', value=accuracy_text(msg.h_acc)),
-            KeyValue(key='v_acc_m', value=accuracy_text(msg.v_acc)),
-            KeyValue(key='age_s', value=f'{age:.1f}'),
+            KeyValue(key='h_acc_m', value='not reported' if msg is None
+                     else accuracy_text(msg.h_acc)),
+            KeyValue(key='v_acc_m', value='not reported' if msg is None
+                     else accuracy_text(msg.v_acc)),
+            KeyValue(key='age_s', value='-1.0' if age is None else f'{age:.1f}'),
         ]
-        self._publish(status, now)
 
     def _publish(self, status, now):
         array = DiagnosticArray()
