@@ -36,6 +36,20 @@ FIX_TYPE_LABELS = {
 }
 
 
+def accuracy_text(millimetres):
+    """Format a GPSRAW accuracy field, or say it is not being reported.
+
+    h_acc/v_acc are MAVLink GPS_RAW_INT *extension* fields. A receiver or a
+    mavros build that does not populate them leaves them zero, and zero
+    formatted as metres is '0.000' -- millimetre-perfect accuracy, published
+    from a receiver that said nothing at all. That is the same failure this
+    node exists to prevent, one field down.
+    """
+    if millimetres <= 0:
+        return 'not reported'
+    return f'{millimetres / 1000.0:.3f}'
+
+
 class GpsRtkDiagnosticsNode(Node):
 
     def __init__(self):
@@ -85,7 +99,12 @@ class GpsRtkDiagnosticsNode(Node):
             # publishing nothing.
             status.level = DiagnosticStatus.ERROR
             status.message = f'no data on "{self._topic}"'
-            status.values = [KeyValue(key='gps_raw_topic', value=str(self._topic))]
+            status.values = [
+                KeyValue(key='gps_raw_topic', value=str(self._topic)),
+                # Present on every other path, so anything keying off it does
+                # not have to treat 'missing' and 'no data' as separate cases.
+                KeyValue(key='fix_type', value='-1'),
+            ]
             self._publish(status, now)
             return
 
@@ -116,8 +135,8 @@ class GpsRtkDiagnosticsNode(Node):
             KeyValue(key='epv', value=str(msg.epv)),
             # Vertical accuracy is the quantity tide and soundings depend on,
             # and it degrades long before fix_type does.
-            KeyValue(key='h_acc_m', value=f'{msg.h_acc / 1000.0:.3f}'),
-            KeyValue(key='v_acc_m', value=f'{msg.v_acc / 1000.0:.3f}'),
+            KeyValue(key='h_acc_m', value=accuracy_text(msg.h_acc)),
+            KeyValue(key='v_acc_m', value=accuracy_text(msg.v_acc)),
             KeyValue(key='age_s', value=f'{age:.1f}'),
         ]
         self._publish(status, now)
