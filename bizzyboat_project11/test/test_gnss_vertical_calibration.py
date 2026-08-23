@@ -163,3 +163,81 @@ def test_summarise_does_not_claim_zero_scatter_from_one_sample(capsys):
     out = capsys.readouterr().out
     assert 'n/a' in out
     assert 'sd    0.0' not in out
+
+
+# --- input handling --------------------------------------------------------
+
+def test_the_namespace_is_not_hard_coded():
+    """A bag from any other hull used to produce 'no samples survived the
+    quality gates', indistinguishable from bad data."""
+    topics = gvc.topics_for('izzy')
+    assert '/izzy/odom' in topics
+    assert not any(t.startswith('/bizzy/') for t in topics)
+    assert set(topics.values()) == set(gvc.RELATIVE_TOPICS.values())
+
+
+def test_a_path_to_a_single_mcap_file_is_read(tmp_path):
+    """The glob was non-recursive and directory-only, so a path to one .mcap
+    matched nothing and reported it as bad data."""
+    single = tmp_path / 'run_0.mcap'
+    single.write_bytes(b'')
+    assert gvc.mcap_files(single) == [single]
+
+
+def test_mcap_files_searches_recursively(tmp_path):
+    nested = tmp_path / '2026-08-21' / 'bag'
+    nested.mkdir(parents=True)
+    (nested / 'run_0.mcap').write_bytes(b'')
+    (nested / 'run_1.mcap').write_bytes(b'')
+    found = gvc.mcap_files(tmp_path)
+    assert [f.name for f in found] == ['run_0.mcap', 'run_1.mcap']
+
+
+def test_a_missing_bag_is_named_as_missing_not_as_bad_data():
+    lines = gvc.report_empty_corpus(
+        ['/no/such/bag'], seen_topics={}, rejects={}, total_raw=0)
+    text = '\n'.join(lines)
+    assert 'does not exist' in text
+    assert 'namespace is wrong' in text
+
+
+def test_a_wrong_namespace_is_distinguished_from_a_bad_corpus():
+    """Six causes used to share one message, several of them wrong-input
+    rather than bad-data."""
+    text = '\n'.join(gvc.report_empty_corpus(
+        ['bag'], seen_topics={}, rejects={}, total_raw=0))
+    assert '--namespace' in text
+
+
+def test_rejections_are_counted_by_cause():
+    text = '\n'.join(gvc.report_empty_corpus(
+        ['bag'],
+        seen_topics={t: 100 for t in gvc.TOPICS},
+        rejects={'fix not RTK fixed': 90, 'pair skew': 10},
+        total_raw=100))
+    assert 'fix not RTK fixed' in text and '90' in text
+    assert 'pair skew' in text
+    for reason in gvc.REJECT_REASONS:
+        assert reason in text
+
+
+def test_a_missing_topic_is_named():
+    seen = {t: 5 for t in gvc.TOPICS}
+    absent = sorted(gvc.TOPICS)[0]
+    del seen[absent]
+    text = '\n'.join(gvc.report_empty_corpus(
+        ['bag'], seen_topics=seen, rejects={}, total_raw=0))
+    assert 'MISSING' in text
+    assert absent in text
+
+
+def test_antennas_are_asserted_to_be_on_the_centreline():
+    """lever_z() ignores y, which is only valid while y is zero."""
+    gvc.assert_antennas_on_centreline()
+
+
+def test_an_off_centreline_antenna_is_refused(monkeypatch):
+    monkeypatch.setattr(gvc, 'FCU_ANT_Y', 0.15)
+    with pytest.raises(SystemExit) as caught:
+        gvc.assert_antennas_on_centreline()
+    assert 'roll' in str(caught.value)

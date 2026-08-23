@@ -12,6 +12,7 @@ Tide, waves and heave cancel: both receivers ride the same hull.
 
 Run over every bag recorded since the switch back to MaCORS corrections.
 """
+import argparse
 import math
 import statistics as st
 import sys
@@ -21,9 +22,21 @@ import rosbag2_py
 from rclpy.serialization import deserialize_message
 from rosidl_runtime_py.utilities import get_message
 
-# URDF, base_link frame (x fwd, z UP -- REP-103)
+# URDF, base_link frame (x fwd, z UP -- REP-103). These are (x, z): the y
+# offsets are omitted because both antennas are on the centreline, and
+# lever_z() below is only valid while that holds -- a y offset would need roll
+# as well as pitch. Asserted at startup rather than assumed.
 FCU_ANT = (0.835, 0.890)          # gnss_forward  == GPS_POS1
 SBG_ANT = (-1.073, 0.882)         # sbg_gnss_primary, surveyed w/ phase centre
+FCU_ANT_Y = 0.0
+SBG_ANT_Y = 0.0
+
+# These are a hand copy of the URDF, and this tool's own output is what causes
+# the URDF to change. They match /tf_static today; the run after anyone applies
+# a correction would be reduced with stale lever arms and nothing here would
+# notice. They are printed beside the result so a mismatch is at least visible
+# in the output that gets pasted into a log. Reading them from the bag's
+# /tf_static is the real fix and is not done here.
 
 # ArduPilot's GPS_POS* offsets are in the autopilot body frame, which is FRD:
 # its z is DOWN. The same forward antenna is therefore +0.890 in the URDF and
@@ -83,13 +96,33 @@ def uncertainty_gates(n_samples, span_h, populated_buckets):
             f'whatever the ionosphere was doing')
     return failures
 
-TOPICS = {
-    '/bizzy/mavros/gpsstatus/gps1/raw': 'fcu',
-    '/bizzy/sensors/sbg/imu/nav_sat_fix': 'sbg',
-    '/bizzy/mavros/imu/data': 'fcu_att',
-    '/bizzy/sensors/sbg/imu/data': 'sbg_att',
-    '/bizzy/odom': 'odom',
+DEFAULT_NAMESPACE = 'bizzy'
+RELATIVE_TOPICS = {
+    'mavros/gpsstatus/gps1/raw': 'fcu',
+    'sensors/sbg/imu/nav_sat_fix': 'sbg',
+    'mavros/imu/data': 'fcu_att',
+    'sensors/sbg/imu/data': 'sbg_att',
+    'odom': 'odom',
 }
+
+
+def topics_for(namespace):
+    """Absolute topic names under ``namespace``.
+
+    Hard-coding /bizzy meant a bag from any other hull produced 'no samples
+    survived the quality gates' -- indistinguishable from bad data.
+    """
+    prefix = namespace.strip('/')
+    return {f'/{prefix}/{name}' if prefix else f'/{name}': key
+            for name, key in RELATIVE_TOPICS.items()}
+
+
+TOPICS = topics_for(DEFAULT_NAMESPACE)
+
+
+def apply_namespace(namespace):
+    global TOPICS
+    TOPICS = topics_for(namespace)
 FIX_RTK_FIXED = 6
 SBG_SIGZ_MAX = 0.020              # RTK_INT ran 0.010; float ran 0.046
 
@@ -143,16 +176,47 @@ def stamp_ns(msg, bag_ts, fallbacks):
 
 def lever_z(x, z, pitch):
     """Vertical component of a body-frame lever arm at the given pitch
-    (positive pitch = nose down, REP-103)."""
+    (positive pitch = nose down, REP-103).
+
+    Roll is deliberately absent: with both antennas on the centreline the y
+    term is zero at any roll. assert_antennas_on_centreline() is what keeps
+    that true.
+    """
     return -x * math.sin(pitch) + z * math.cos(pitch)
+
+
+def assert_antennas_on_centreline():
+    """lever_z ignores y, which is only safe while y is zero."""
+    if FCU_ANT_Y != 0.0 or SBG_ANT_Y != 0.0:
+        raise SystemExit(
+            f'lever_z() ignores the y component, but FCU_ANT_Y={FCU_ANT_Y} '
+            f'SBG_ANT_Y={SBG_ANT_Y}. An off-centreline antenna needs roll in '
+            f'the reduction; fix lever_z before trusting any number below.')
 
 
 def pitch_of(q):
     return math.asin(max(-1.0, min(1.0, 2.0 * (q.w * q.y - q.z * q.x))))
 
 
-def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
-    files = sorted(Path(bag_dir).glob('*.mcap'), key=mcap_sort_key)
+REJECT_REASONS = ('incomplete set', 'pair skew', 'fix not RTK fixed',
+                  'sbg vertical sigma')
+
+
+def mcap_files(bag_path):
+    """Every .mcap under ``bag_path``, or the file itself.
+
+    The glob was non-recursive and directory-only, so a path to a single .mcap
+    -- or to a directory of dated subdirectories, which is how these are filed
+    -- matched nothing and reported 'no samples survived the quality gates'.
+    """
+    path = Path(bag_path)
+    if path.is_file():
+        return [path]
+    return sorted(path.rglob('*.mcap'), key=mcap_sort_key)
+
+
+def read_bag(bag_dir, samples, bag_tag, fallbacks, skews, rejects, seen_topics):
+    files = mcap_files(bag_dir)
     types = {}
     latest = {}
     n_raw = 0
@@ -167,6 +231,7 @@ def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
         while reader.has_next():
             topic, data, bag_ts = reader.read_next()
             key = TOPICS[topic]
+            seen_topics[topic] = seen_topics.get(topic, 0) + 1
             msg = deserialize_message(data, types[topic])
             ts = stamp_ns(msg, bag_ts, fallbacks)
             if key == 'fcu':
@@ -182,23 +247,42 @@ def read_bag(bag_dir, samples, bag_tag, fallbacks, skews):
             if key != 'sbg':
                 continue
             n_raw += 1
-            if len(latest) < 5:
+            if len(latest) < len(TOPICS):
+                rejects['incomplete set'] = rejects.get('incomplete set', 0) + 1
                 continue
             # Skew against the SBG fix's own sensor time, in either direction:
             # header stamps are not monotonic across topics the way bag arrival
             # order is.
-            skew = max(abs(ts - v[0]) for v in latest.values())
+            # Signed, not absolute: the pairing is one-directional in read
+            # order, so a systematic one-sided lag -- precisely what would
+            # break the heave-cancels premise -- is invisible once abs() has
+            # been taken. Keep the sign and report both.
+            signed = max((ts - v[0] for v in latest.values()), key=abs)
+            skew = abs(signed)
             if skew > MAX_PAIR_SKEW_NS:
+                rejects['pair skew'] = rejects.get('pair skew', 0) + 1
                 continue
             _, fcu_ant, fix = latest['fcu']
             _, sbg_ant, sigz = latest['sbg']
-            if fix != FIX_RTK_FIXED or sigz > SBG_SIGZ_MAX:
+            if fix != FIX_RTK_FIXED:
+                rejects['fix not RTK fixed'] = \
+                    rejects.get('fix not RTK fixed', 0) + 1
                 continue
-            skews.append(skew)
+            if sigz > SBG_SIGZ_MAX:
+                rejects['sbg vertical sigma'] = \
+                    rejects.get('sbg vertical sigma', 0) + 1
+                continue
+            skews.append(signed)
             samples.append(dict(
                 t=ts, bag=bag_tag, fcu_ant=fcu_ant, sbg_ant=sbg_ant,
                 odom=latest['odom'][1],
                 fp=latest['fcu_att'][1], sp=latest['sbg_att'][1]))
+            # Consume the set. Without this one FCU or attitude sample backs
+            # several SBG-triggered samples whenever the rates differ, and n,
+            # pstdev and sem then treat correlated samples as independent
+            # while the half-hourly buckets over-weight the stretches where
+            # the rates diverged.
+            latest.clear()
     return n_raw
 
 
@@ -287,28 +371,98 @@ def correction_report(correction_m, urdf_z=FCU_ANT[1], gate_failures=()):
     ]
 
 
-def main():
-    bags = sys.argv[1:]
+def parse_args(argv):
+    parser = argparse.ArgumentParser(
+        description=__doc__.splitlines()[0],
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='Bags are rosbag2 directories or single .mcap files. Reads '
+               f'{", ".join(sorted(TOPICS))}.')
+    parser.add_argument('bags', nargs='+', metavar='BAG',
+                        help='rosbag2 directory (searched recursively) or '
+                             '.mcap file')
+    parser.add_argument('--namespace', default=DEFAULT_NAMESPACE,
+                        help='robot namespace the topics live under '
+                             f'(default: {DEFAULT_NAMESPACE})')
+    return parser.parse_args(argv)
+
+
+def report_empty_corpus(bags, seen_topics, rejects, total_raw):
+    """Say which of the six ways to get nothing actually happened.
+
+    One message, 'no samples survived the quality gates', covered a bag path
+    that matched no files, a namespace this run does not use, a topic the
+    recording never had, and four different quality gates. Several of those are
+    wrong-input rather than bad-data, and the operator could not tell which.
+    """
+    lines = ['', 'no samples survived the quality gates. What was seen:']
+    for bag in bags:
+        path = Path(bag)
+        if not path.exists():
+            lines.append(f'  {bag}: does not exist')
+        elif not mcap_files(path):
+            lines.append(f'  {bag}: directory contains no .mcap files')
+        else:
+            lines.append(f'  {bag}: read')
+    if not seen_topics:
+        lines.append('  no messages on ANY expected topic. Either the '
+                     'namespace is wrong (--namespace) or these bags are from')
+        lines.append('  a different recording profile. Expected: '
+                     + ', '.join(sorted(TOPICS)))
+    else:
+        lines.append('  messages per topic:')
+        for topic in sorted(TOPICS):
+            lines.append(f'    {topic:48s} {seen_topics.get(topic, 0)}')
+        missing = [t for t in TOPICS if not seen_topics.get(t)]
+        if missing:
+            lines.append('  MISSING (a sample needs all five): '
+                         + ', '.join(sorted(missing)))
+    if total_raw:
+        lines.append(f'  {total_raw} SBG fixes reached the quality gates and '
+                     f'were rejected:')
+        for reason in REJECT_REASONS:
+            lines.append(f'    {reason:24s} {rejects.get(reason, 0)}')
+    return lines
+
+
+def main(argv=None):
+    assert_antennas_on_centreline()
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    apply_namespace(args.namespace)
+    bags = args.bags
     samples = []
     skews = []
     fallbacks = [0]
+    rejects = {}
+    seen_topics = {}
     total_raw = 0
     for bag in bags:
-        n = read_bag(bag, samples, Path(bag).name, fallbacks, skews)
+        n = read_bag(bag, samples, Path(bag).name, fallbacks, skews,
+                     rejects, seen_topics)
         print(f'{Path(bag).name}: {n} SBG fixes read, '
               f'running total kept {len(samples)}')
         total_raw += n
     if not samples:
-        print('no samples survived the quality gates')
-        return
+        for line in report_empty_corpus(bags, seen_topics, rejects, total_raw):
+            print(line)
+        return 1
 
     samples.sort(key=lambda s: s['t'])
     span_h = (samples[-1]['t'] - samples[0]['t']) / 3.6e12
     print(f'\n{len(samples)} samples kept of {total_raw} '
           f'({100*len(samples)/total_raw:.1f}%), spanning {span_h:.2f} h')
     # The heave-cancels premise stands or falls on this number, so print it.
-    print(f'  pairing skew (sensor time): mean {st.mean(skews)/1e6:.0f} ms, '
-          f'max {max(skews)/1e6:.0f} ms, tolerance {MAX_PAIR_SKEW_NS/1e6:.0f} ms')
+    print(f'  pairing skew (sensor time): signed mean '
+          f'{st.mean(skews)/1e6:+.0f} ms, max |skew| '
+          f'{max(abs(k) for k in skews)/1e6:.0f} ms, tolerance '
+          f'{MAX_PAIR_SKEW_NS/1e6:.0f} ms')
+    print('    (signed, because pairing is one-directional in read order: a '
+          'systematic one-sided lag is\n     exactly what would break the '
+          'heave-cancels premise, and abs() hides it)')
+    print(f'  lever arms used (URDF, base_link z up): '
+          f'FCU {FCU_ANT[1]:+.3f} m at x {FCU_ANT[0]:+.3f}, '
+          f'SBG {SBG_ANT[1]:+.3f} m at x {SBG_ANT[0]:+.3f}')
+    print('    (hand-copied from the URDF; if a correction has since been '
+          'applied these are stale)')
     if fallbacks[0]:
         print(f'  WARNING: {fallbacks[0]} messages had no header stamp and were '
               f'paired on bag receive time instead')
@@ -335,6 +489,17 @@ def main():
         v = [s['odom'] - (s['sbg_ant'] - lever_z(*SBG_ANT, s['sp'])) for s in sub]
         summarise(tag, v)
     print('  (epochs differ by the 0.626 m geoid fix that went live at 17:01 UTC)')
+
+    # The quoted correction pools every bag, while the section above is split
+    # per bag because a config change landed mid-corpus. Print the quoted
+    # quantity per bag too, so a mid-corpus change in THIS number is visible
+    # rather than averaged away.
+    print('\nAntenna-to-antenna difference, SBG attitude, per recording epoch (mm):')
+    by_bag = {}
+    for sample, value in zip(samples, v_s):
+        by_bag.setdefault(sample['bag'], []).append(value)
+    for tag in sorted(by_bag):
+        summarise(tag, by_bag[tag])
 
     # --- stability over time ----------------------------------------------
     print('\nHalf-hourly means of the antenna-to-antenna difference, SBG attitude (mm):')
@@ -370,4 +535,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main() or 0)
