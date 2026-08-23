@@ -234,6 +234,22 @@ def classify_baseline(distance_km, warn_km, error_km):
     return DiagnosticStatus.OK, ''
 
 
+def apply_station_staleness(level, message, station_age, station_timeout):
+    """Fold a stale station description into an already-classified status.
+
+    A station that has stopped sending 1005/1006 is a WARN in its own right,
+    but it must never *mask* the baseline classification. The last decoded
+    position is still the base we are being corrected from: a 509 km base stays
+    an ERROR whether or not it is still describing itself. Raising the level
+    (rather than replacing it) is the whole point -- returning early on
+    staleness downgraded exactly the condition this node was written to catch.
+    """
+    if station_age is None or station_age <= station_timeout:
+        return level, message
+    return (max(level, DiagnosticStatus.WARN),
+            f'{message} (station last described {station_age:.0f}s ago)')
+
+
 def msm_info(message_type):
     """Return ``(constellation, msm_level)`` for an MSM message, else None."""
     block, level = divmod(message_type, 10)
@@ -465,28 +481,21 @@ class RtcmDiagnosticsNode(Node):
                      value='-1.0' if station_age is None else f'{station_age:.1f}'),
         ])
 
-        if station_age is not None and station_age > self._station_timeout:
-            status.level = DiagnosticStatus.WARN
-            status.message = (f'station {station_id} last described '
-                              f'{station_age:.0f}s ago')
-            status.values = values
-            return status
-
         if self._rover_fix is None:
             status.level = DiagnosticStatus.WARN
             status.message = f'station {station_id}, baseline unknown (no fix)'
             values.append(KeyValue(key='baseline_km', value='nan'))
-            status.values = values
-            return status
+        else:
+            distance = baseline_km(self._rover_fix[0], self._rover_fix[1],
+                                   latitude, longitude)
+            values.append(KeyValue(key='baseline_km', value=f'{distance:.1f}'))
+            status.level, detail = classify_baseline(
+                distance, self._warn_baseline_km, self._error_baseline_km)
+            status.message = (f'station {station_id}, {distance:.1f} km, '
+                              f'{summarise_msm(self._message_types)}{detail}')
 
-        distance = baseline_km(self._rover_fix[0], self._rover_fix[1],
-                               latitude, longitude)
-        values.append(KeyValue(key='baseline_km', value=f'{distance:.1f}'))
-
-        status.level, detail = classify_baseline(
-            distance, self._warn_baseline_km, self._error_baseline_km)
-        status.message = (f'station {station_id}, {distance:.1f} km, '
-                          f'{summarise_msm(self._message_types)}{detail}')
+        status.level, status.message = apply_station_staleness(
+            status.level, status.message, station_age, self._station_timeout)
         status.values = values
         return status
 

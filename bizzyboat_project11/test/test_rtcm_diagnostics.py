@@ -357,6 +357,39 @@ def test_classify_baseline_message_only_set_when_degraded():
     assert 'not trustworthy' in rd.classify_baseline(500.0, 35.0, 100.0)[1]
 
 
+# --- stale station description ---------------------------------------------
+
+def test_staleness_does_not_mask_an_error_baseline():
+    """The Delaware case with 1005/1006 stopped: still an ERROR.
+
+    Returning early on staleness downgraded a 509 km base to WARN -- the exact
+    condition the node exists to catch, hidden by a secondary one.
+    """
+    level, message = rd.apply_station_staleness(
+        DiagnosticStatus.ERROR, 'station 649, 509.2 km', 120.0, 60.0)
+    assert level == DiagnosticStatus.ERROR
+    assert '120s ago' in message
+    assert '509.2 km' in message
+
+
+def test_staleness_raises_an_ok_baseline_to_warn():
+    level, message = rd.apply_station_staleness(
+        DiagnosticStatus.OK, 'station 42, 27.4 km', 90.0, 60.0)
+    assert level == DiagnosticStatus.WARN
+    assert '90s ago' in message
+
+
+def test_fresh_station_description_is_left_alone():
+    assert rd.apply_station_staleness(
+        DiagnosticStatus.OK, 'station 42, 27.4 km', 5.0, 60.0) == \
+        (DiagnosticStatus.OK, 'station 42, 27.4 km')
+
+
+def test_never_described_station_is_left_alone():
+    assert rd.apply_station_staleness(
+        DiagnosticStatus.WARN, 'no fix', None, 60.0)[0] == DiagnosticStatus.WARN
+
+
 # --- regressions on the two real casters -----------------------------------
 
 BOAT = (43.0720, -70.7115)          # UNH pier, Portsmouth NH
