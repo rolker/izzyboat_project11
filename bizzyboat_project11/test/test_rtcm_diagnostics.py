@@ -5,6 +5,12 @@ All pure logic: RTCM3 framing and CRC, the 1005/1006 reference-point decode,
 the ECEF->geodetic conversion, baseline distance, MSM summary, and the
 threshold classification. No ROS graph is required.
 
+Most cases build their own frames, which makes them self-consistent rather
+than verified -- a bit-reversed CRC or a swapped X/Y would round-trip and pass.
+The "external check vectors" section is the antidote: a catalogued CRC-24/LTE-A
+check value and a complete 1005 frame encoded outside this repo, which pin the
+implementation to something it did not produce itself.
+
 The regression cases at the bottom are the two casters this boat has actually
 been connected to -- the UDEL Delaware station found on 2026-08-21 at 509 km,
 and the MassDOT MaCORS station it was moved back to at 27.4 km -- because those
@@ -95,6 +101,77 @@ UDEL_649 = (39.982667, -75.221965)  # decoded live 2026-08-21, Delaware caster
 MACORS_42 = (42.862746, -70.890263)  # decoded live 2026-08-21 after the revert
 
 
+# --- external check vectors ------------------------------------------------
+#
+# Everything else in this file builds its frames with BitWriter and its CRCs
+# with the node's own crc24q, so the suite is self-consistent by construction:
+# a bit-reversed CRC, or an X/Y swap in the decoder, would round-trip happily
+# and every test would still pass. These two vectors come from outside this
+# repo and are the only things here that can catch that.
+
+# CRC-24/LTE-A: poly 0x1864CFB, init 0, no reflection, no final XOR -- the same
+# parameters RTCM3 uses. Its catalogued check value is the CRC of the ASCII
+# string "123456789".
+CRC24_LTE_A_CHECK_INPUT = b'123456789'
+CRC24_LTE_A_CHECK_VALUE = 0xCDE703
+
+# A complete RTCM3 message-1005 frame, preamble to CRC, produced by an encoder
+# outside this repo. Its three CRC bytes were computed elsewhere, so it
+# validates here only if crc24q is bit-exact; and its antenna reference point
+# decodes to a real place, so an X/Y swap or a sign error in the 38-bit ECEF
+# fields cannot hide (see the swapped-axis test below).
+CAPTURED_1005_FRAME = bytes.fromhex(
+    'd300133ed7d3020298 0edeef34b4bd62ac09 41986f33360b98'.replace(' ', ''))
+CAPTURED_1005_STATION_ID = 2003
+CAPTURED_1005_ECEF = (1114104.5999, -4850729.7108, 3975521.4643)
+CAPTURED_1005_LLH = (38.8047594, -77.0647736, 114.561)
+
+
+def test_crc24q_matches_the_published_lte_a_check_value():
+    """Pins the CRC to a catalogued vector, not to itself."""
+    assert rd.crc24q(CRC24_LTE_A_CHECK_INPUT) == CRC24_LTE_A_CHECK_VALUE
+
+
+def test_captured_frame_validates_against_its_own_crc():
+    frames, consumed = rd.iter_rtcm_frames(bytearray(CAPTURED_1005_FRAME))
+    assert [t for t, _ in frames] == [1005]
+    assert consumed == len(CAPTURED_1005_FRAME)
+
+
+def test_crc_over_a_frame_including_its_checksum_is_zero():
+    """A property of CRC-24Q the captured frame lets us assert independently."""
+    assert rd.crc24q(CAPTURED_1005_FRAME) == 0
+
+
+def test_captured_frame_decodes_to_its_documented_reference_point():
+    frames, _ = rd.iter_rtcm_frames(bytearray(CAPTURED_1005_FRAME))
+    station_id, lat, lon, height = rd.parse_reference_station(frames[0][1])
+    assert station_id == CAPTURED_1005_STATION_ID
+    assert lat == pytest.approx(CAPTURED_1005_LLH[0], abs=1e-6)
+    assert lon == pytest.approx(CAPTURED_1005_LLH[1], abs=1e-6)
+    assert height == pytest.approx(CAPTURED_1005_LLH[2], abs=1e-3)
+
+
+def test_captured_frame_ecef_round_trips_to_the_documented_metres():
+    """Guards the geodetic conversion itself: back to ECEF, to the 0.1 mm the
+    38-bit fields carry."""
+    frames, _ = rd.iter_rtcm_frames(bytearray(CAPTURED_1005_FRAME))
+    _, lat, lon, height = rd.parse_reference_station(frames[0][1])
+    for got, want in zip(llh_to_ecef(lat, lon, height), CAPTURED_1005_ECEF):
+        assert got == pytest.approx(want, abs=1e-3)
+
+
+def test_swapping_x_and_y_would_be_caught():
+    """Why the captured frame earns its place: the decoder's own encoder cannot
+    catch an axis swap, but a real reference point can. Washington DC becomes
+    the western Pacific."""
+    _, lat, lon, _ = rd.parse_reference_station(
+        rd.iter_rtcm_frames(bytearray(CAPTURED_1005_FRAME))[0][0][1])
+    x, y, z = llh_to_ecef(lat, lon, 114.561)
+    _, swapped_lon, _ = rd.ecef_to_llh(y, x, z)
+    assert abs(swapped_lon - lon) > 90.0
+
+
 # --- CRC -------------------------------------------------------------------
 
 def test_crc24q_empty_is_zero():
@@ -157,6 +234,26 @@ def test_corrupt_crc_is_rejected():
     bad[-1] ^= 0xFF
     frames, _ = rd.iter_rtcm_frames(bad)
     assert frames == []
+
+
+def test_resync_after_a_corrupt_frame_recovers_the_next_one():
+    """The actual resync path: a damaged frame must not swallow the good one
+    behind it. The parser steps one byte at a time until a header validates."""
+    bad = bytearray(frame(typed_payload(1074)))
+    bad[4] ^= 0xFF                    # corrupt the payload, so the CRC fails
+    buf = bytearray(bad + frame(typed_payload(1084)))
+    frames, consumed = rd.iter_rtcm_frames(buf)
+    assert [t for t, _ in frames] == [1084]
+    assert consumed == len(buf)
+
+
+def test_resync_from_a_mid_frame_start_recovers_the_next_frame():
+    """Attaching to a stream already in progress: the first bytes are the tail
+    of a frame whose header was never seen."""
+    whole = frame(station_1005(42, MACORS_42[0], MACORS_42[1], -10.3))
+    buf = bytearray(whole[5:] + frame(typed_payload(1074)))
+    frames, _ = rd.iter_rtcm_frames(buf)
+    assert [t for t, _ in frames] == [1074]
 
 
 def test_false_preamble_inside_payload_does_not_desync():
