@@ -60,6 +60,14 @@ RTCM_MAX_PAYLOAD = 1023
 # dropped message.
 RTCM_MAX_BUFFER = 4 * (RTCM_HEADER_LEN + RTCM_MAX_PAYLOAD + RTCM_CRC_LEN)
 
+# A real antenna reference point sits within a few kilometres of the WGS84
+# surface, so its ECEF norm is bounded. Zeros -- a placeholder ARP, or a
+# 1005/1006 whose position fields were never filled in -- decode to latitude 90
+# and a height of -6357 km, which then reads as a 5218 km baseline and a
+# perfectly confident ERROR about a station that was never described.
+ECEF_MIN_NORM_M = 6.3e6
+ECEF_MAX_NORM_M = 6.5e6
+
 # Station-description messages carrying the antenna reference point.
 RTCM_STATIONARY_ARP = 1005
 RTCM_STATIONARY_ARP_HEIGHT = 1006
@@ -184,6 +192,10 @@ def parse_reference_station(payload):
     y = bits.s(38) * 1e-4
     bits.u(2)   # quarter-cycle indicator
     z = bits.s(38) * 1e-4
+    if not ECEF_MIN_NORM_M <= math.sqrt(x * x + y * y + z * z) <= ECEF_MAX_NORM_M:
+        # Not a point on the earth: a placeholder or unpopulated ARP. Better to
+        # report the station as unknown than to invent a position for it.
+        return None
     latitude, longitude, height = ecef_to_llh(x, y, z)
     return station_id, latitude, longitude, height
 
@@ -339,6 +351,10 @@ class RtcmDiagnosticsNode(Node):
         # so metres per report; a switch is the whole baseline at once.
         self.declare_parameter('station_switch_m', 1000.0)
         self.declare_parameter('publish_rate', 1.0)
+        # Recent-history window for the message-type inventory. Counts that
+        # never decay merge two casters into one after a mountpoint switch --
+        # 'MSM4/5' from a boat that only ever received one of them.
+        self.declare_parameter('message_type_window', 60.0)
         # Caster identity, for the record. These names line up with the NTRIP
         # credentials YAML so the same file can be passed to this node; the
         # password in that file is deliberately never declared or read.
@@ -359,7 +375,12 @@ class RtcmDiagnosticsNode(Node):
         self._fix_timeout = self.get_parameter('fix_timeout').value
         self._vrs_motion_threshold_m = self.get_parameter('vrs_motion_threshold_m').value
         self._station_switch_m = self.get_parameter('station_switch_m').value
+        self._message_type_window = self.get_parameter('message_type_window').value
         rate = self.get_parameter('publish_rate').value
+        if rate <= 0.0:
+            raise ValueError(
+                f'publish_rate must be positive, got {rate}. A diagnostics node '
+                'that never publishes turns a fault into an absence.')
 
         self._buffer = bytearray()
         self._message_count = 0
@@ -371,6 +392,7 @@ class RtcmDiagnosticsNode(Node):
         self._station_moved_m = 0.0
         self._station_reports = 0
         self._message_types = {}
+        self._type_last_seen = {}
         self._rover_fix = None
         self._last_fix_time = None
 
@@ -386,9 +408,27 @@ class RtcmDiagnosticsNode(Node):
         if package == 'rtcm_msgs':
             from rtcm_msgs.msg import Message as RtcmMessage
             self._payload_field = 'message'
-        else:
+        elif package == 'mavros_msgs':
             from mavros_msgs.msg import RTCM as RtcmMessage
             self._payload_field = 'data'
+        else:
+            # Falling through to mavros_msgs on a typo subscribes to a topic
+            # that never matches, and the node then reports 'no corrections'
+            # forever while corrections are in fact flowing.
+            raise ValueError(
+                f'rtcm_message_package must be "mavros_msgs" or "rtcm_msgs", '
+                f'got "{package}"')
+
+        # The NTRIP credentials YAML is passed to this node whole so the caster
+        # actually in force appears in the diagnostic. The password is safe only
+        # because an undeclared parameter is dropped, so assert that rather than
+        # trusting it: if this node ever gains undeclared-parameter support, the
+        # secret would land in a diagnostic published to the whole fleet.
+        for name in ('password', 'passwd', 'secret', 'token', 'ntrip_password'):
+            if self.has_parameter(name):
+                raise ValueError(
+                    f'refusing to run: parameter "{name}" is declared on a node '
+                    'that publishes its parameters in a diagnostic')
 
         self._pub = self.create_publisher(DiagnosticArray, '/diagnostics', 10)
         self._rtcm_sub = self.create_subscription(
@@ -421,6 +461,7 @@ class RtcmDiagnosticsNode(Node):
         for message_type, frame_payload in frames:
             self._message_types[message_type] = \
                 self._message_types.get(message_type, 0) + 1
+            self._type_last_seen[message_type] = self._last_rtcm_time
             station = parse_reference_station(frame_payload)
             if station is not None:
                 self._record_station(station)
@@ -468,6 +509,18 @@ class RtcmDiagnosticsNode(Node):
 
     # -- outputs -----------------------------------------------------------
 
+    def _recent_message_types(self, now):
+        """Message types seen within the decay window.
+
+        Cumulative counts describe the whole session, which after a mountpoint
+        switch is two casters at once: the inventory would claim MSM4/5 from
+        both when only one is being received. What the operator needs is what
+        is arriving NOW.
+        """
+        return sorted(
+            message_type for message_type, stamp in self._type_last_seen.items()
+            if (self._age(stamp, now) or 0.0) <= self._message_type_window)
+
     def _age(self, stamp, now):
         if stamp is None:
             return None
@@ -512,14 +565,15 @@ class RtcmDiagnosticsNode(Node):
 
         station_age = self._age(self._last_station_time, now)
         fix_age = self._age(self._last_fix_time, now)
-        types_text = '+'.join(str(t) for t in sorted(self._message_types))
+        recent_types = self._recent_message_types(now)
+        types_text = '+'.join(str(t) for t in recent_types)
         values = [
             KeyValue(key='caster_host', value=str(self.get_parameter('host').value)),
             KeyValue(key='caster_port', value=str(self.get_parameter('port').value)),
             KeyValue(key='caster_mountpoint',
                      value=str(self.get_parameter('mountpoint').value)),
             KeyValue(key='message_types', value=types_text or 'none'),
-            KeyValue(key='msm', value=summarise_msm(self._message_types)),
+            KeyValue(key='msm', value=summarise_msm(recent_types)),
             # Published unconditionally: a baseline is only as current as the
             # rover position it was measured from, and that age was previously
             # invisible to anyone reading the diagnostic.
@@ -565,7 +619,7 @@ class RtcmDiagnosticsNode(Node):
             status.level, detail = classify_baseline(
                 distance, self._warn_baseline_km, self._error_baseline_km)
             status.message = (f'station {station_id}, {distance:.1f} km, '
-                              f'{summarise_msm(self._message_types)}{detail}')
+                              f'{summarise_msm(recent_types)}{detail}')
 
         status.level, status.message = apply_station_staleness(
             status.level, status.message, station_age, self._station_timeout)
@@ -582,13 +636,18 @@ class RtcmDiagnosticsNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = RtcmDiagnosticsNode()
+    node = None
     try:
+        # Construction is inside the try: a bad parameter raises here, and
+        # leaving rclpy initialised on the way out is how a launch-time
+        # configuration error becomes a hung process rather than a clean exit.
+        node = RtcmDiagnosticsNode()
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
+        if node is not None:
+            node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()
 

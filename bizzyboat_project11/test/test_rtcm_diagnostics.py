@@ -21,6 +21,8 @@ import pathlib
 
 import pytest
 
+from rclpy.time import Time
+
 from diagnostic_msgs.msg import DiagnosticStatus
 
 HERE = pathlib.Path(__file__).resolve().parent
@@ -373,6 +375,71 @@ def test_1006_is_accepted():
     payload[1] = ((1006 & 0x0F) << 4) | (payload[1] & 0x0F)
     decoded = rd.parse_reference_station(bytes(payload))
     assert decoded is not None and decoded[0] == 9
+
+
+def test_zero_reference_point_is_rejected():
+    """An unpopulated ARP decodes to latitude 90 and a height of -6357 km,
+    which then reads as a 5218 km baseline -- a confident ERROR about a station
+    that was never described."""
+    w = BitWriter()
+    w.u(1005, 12).u(3, 12).u(0, 6).u(0, 4)
+    w.s(0, 38).u(0, 1).u(0, 1).s(0, 38).u(0, 2).s(0, 38)
+    assert rd.parse_reference_station(w.bytes()) is None
+
+
+def test_reference_point_far_off_the_ellipsoid_is_rejected():
+    w = BitWriter()
+    w.u(1005, 12).u(3, 12).u(0, 6).u(0, 4)
+    w.s(round(1.0e6 * 1e4), 38).u(0, 1).u(0, 1)
+    w.s(0, 38).u(0, 2).s(0, 38)
+    assert rd.parse_reference_station(w.bytes()) is None
+
+
+def test_real_reference_points_are_still_accepted():
+    for lat, lon, height in ((MACORS_42[0], MACORS_42[1], -10.297),
+                             (UDEL_649[0], UDEL_649[1], 68.0),
+                             (0.0, 0.0, 0.0),
+                             (-33.85, 151.21, 25.0)):
+        assert rd.parse_reference_station(station_1005(1, lat, lon, height))
+
+
+# --- message-type inventory decay ------------------------------------------
+
+class FakeTypeInventory:
+    """The node's message-type window without a ROS graph."""
+
+    _recent_message_types = rd.RtcmDiagnosticsNode._recent_message_types
+    _age = rd.RtcmDiagnosticsNode._age
+
+    def __init__(self, window=60.0):
+        self._message_type_window = window
+        self._type_last_seen = {}
+
+    def seen(self, message_type, seconds):
+        self._type_last_seen[message_type] = Time(nanoseconds=int(seconds * 1e9))
+
+
+def test_message_types_outside_the_window_drop_out():
+    """After a mountpoint switch the old caster's types must not be merged with
+    the new one's -- 'MSM4/5' from a boat receiving only one of them."""
+    inventory = FakeTypeInventory(window=60.0)
+    for message_type in (1075, 1085, 1095, 1125):     # the Delaware caster
+        inventory.seen(message_type, 0.0)
+    for message_type in (1074, 1084, 1094, 1124):     # MaCORS, 90 s later
+        inventory.seen(message_type, 90.0)
+
+    now = Time(nanoseconds=int(90.0 * 1e9))
+    assert inventory._recent_message_types(now) == [1074, 1084, 1094, 1124]
+    assert rd.summarise_msm(inventory._recent_message_types(now)) == \
+        'MSM4 GPS+GLONASS+Galileo+BeiDou'
+
+
+def test_message_types_inside_the_window_are_kept():
+    inventory = FakeTypeInventory(window=60.0)
+    inventory.seen(1074, 0.0)
+    inventory.seen(1005, 30.0)
+    now = Time(nanoseconds=int(50.0 * 1e9))
+    assert inventory._recent_message_types(now) == [1005, 1074]
 
 
 # --- geodesy ---------------------------------------------------------------
