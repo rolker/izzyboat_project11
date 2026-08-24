@@ -10,7 +10,7 @@ issue: 455
 **By**: Claude Opus
 
 **Issue**: #455
-**Branch**: `feature/issue-455` (2 commits, local only — not pushed, no PR; operator confirms publishing)
+**Branch**: `feature/issue-455` (3 commits; published as PR #456 after operator confirmation)
 
 ### What changed
 

@@ -50,9 +50,9 @@
             # headroom. RE-CHECK THIS VALUE if a maximum_bytes_per_second is
             # ever added here.
             #
-            # Must be written as a float: udp_bridge declares the parameter as
-            # a double (udp_bridge.cpp:544), and an integer override in YAML
-            # is a parameter-type error at configure.
+            # Must be written as a float: udp_bridge declares the parameter
+            # as a double, and an integer override in YAML is a
+            # parameter-type error that fails the configure transition.
             #
             # This is the stopgap. The fix is to stop generating the rate:
             # rolker/unh_marine_autonomy#352 rate-limits joy_to_helm to 20 Hz
