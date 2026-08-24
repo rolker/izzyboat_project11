@@ -15,9 +15,23 @@
             port: 4200
             return_host: salmon_ib
             return_port: 4200
+            # Admission-control floor for manual-control helm (#455).
+            #
+            # Same exposure as bizzy: this connection carries
+            # /izzy/piloting_mode/manual/helm, sets no
+            # maximum_bytes_per_second (so it runs at
+            # Connection::default_rate_limit = 50000 B/s), and would
+            # otherwise sit on udp_bridge's 8192 B/s default floor -- which a
+            # ~170 B Helm message exceeds above ~48 msg/s. Izzy's own helm
+            # rate has NOT been measured; 32768.0 is carried over from the
+            # bizzy measurements (p99.9 27.9-32.0 kB/s) as the same-shape
+            # config. Float, not int: the parameter is declared as a double.
+            # See bizzyboat_project11/config/operator.yaml for the full
+            # rationale and the min(floor, rate_limit) caveat.
+            admission_floor_bytes_per_second: 32768.0
             topics_list:
-            - command
-            - joystick_helm
+              - command
+              - joystick_helm
             topics:
               command: {source: /izzy/project11/command}
               joystick_helm: {source: /izzy/piloting_mode/manual/helm}
@@ -27,9 +41,11 @@
             port: 4200
             return_host: salmon_v
             return_port: 4200
+            # Helm admission floor -- rationale in the wifi block above (#455).
+            admission_floor_bytes_per_second: 32768.0
             topics_list:
-            - command
-            - joystick_helm
+              - command
+              - joystick_helm
             topics:
               command: {source: /izzy/project11/command}
               joystick_helm: {source: /izzy/piloting_mode/manual/helm}
