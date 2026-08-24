@@ -122,3 +122,31 @@ hand-applying this on a field host from the issue text must use the float.
   even the old default floor; it needs on-water verification and lands on
   its own schedule. Expect the floor to become redundant, not wrong, when it
   does.
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-08-24 19:26 -04:00
+**By**: Claude Code Agent (Claude Opus 5 (1M context))
+
+**PR**: #456 at `3d11410` (fixes pushed as `ff329b5`)
+**Sources**: 1 (Copilot @ `3d11410`)
+**Cross-source confirmations**: 0
+**CI**: all-pass (build-and-test success; copilot-pull-request-reviewer success)
+
+Copilot verdict: **approval recommended** — "the functional config changes are
+consistent and well-scoped; remaining feedback is minor documentation/
+maintainability cleanup." No prior local timeline for this issue: it was a
+direct config change rather than a full lifecycle run, so Copilot is the only
+review source.
+
+### Findings
+- [x] (suggestion, Copilot) The config comment cited `udp_bridge.cpp:544` for the parameter's `double` declaration. Cross-repo line citations go stale silently — demonstrated the same day, when a citation in udp_bridge's own `.agents/README.md` went stale within hours because unrelated edits in that PR shifted the line. Rationale reads the same without it — `bizzyboat_project11/config/operator.yaml:54`. Fixed in `ff329b5`.
+- [x] (suggestion, Copilot) Progress entry still said the branch was "local only — not pushed, no PR", written before the operator confirmed publishing — `.agent/work-plans/issue-455/progress.md:13`. Fixed in `ff329b5`.
+
+### Notes
+- Both configs re-validated as parseable YAML after the edits. No functional change; the `admission_floor_bytes_per_second: 32768.0` values are untouched.
+- Deliberately NOT fixed: `bizzyboat_project11/config/operator_no_wifi.yaml:9` carries a pre-existing citation (`udp_bridge.cpp:376-383`) with the identical drift hazard, in a file this PR does not otherwise change. Left for its own change rather than widening a config diff that is about to be deployed to a boat — the same scope discipline applied when declining to touch the boat-side configs.
+- Governance: config-only change, no new ROS parameter introduced by this repo, so no `.agents/` parameter-table row is implicated here.
+
+### False positives
+- None. Both Copilot comments were checked against the files and hold.
