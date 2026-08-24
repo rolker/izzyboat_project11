@@ -16,8 +16,8 @@
             return_host: salmon_ib
             return_port: 4200
             topics_list:
-            - command
-            - joystick_helm
+              - command
+              - joystick_helm
             topics:
               command: {source: /izzy/project11/command}
               joystick_helm: {source: /izzy/piloting_mode/manual/helm}
@@ -28,8 +28,8 @@
             return_host: salmon_v
             return_port: 4200
             topics_list:
-            - command
-            - joystick_helm
+              - command
+              - joystick_helm
             topics:
               command: {source: /izzy/project11/command}
               joystick_helm: {source: /izzy/piloting_mode/manual/helm}
