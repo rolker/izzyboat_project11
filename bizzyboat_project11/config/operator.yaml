@@ -26,6 +26,38 @@
             host: gabby.bizzy.p11.lan
             port: 4200
             return_port: 4200
+            # Admission-control floor for manual-control helm (#455).
+            #
+            # udp_bridge's per-connection AIMD cap (rolker/udp_bridge#43, #52)
+            # decays toward this floor when a connection is quiet -- and this
+            # uplink is quiet whenever nobody is driving. At the 8192 B/s
+            # default, helm was being refused at the operator: a Helm message
+            # costs ~170 B on the wire, so the default is exceeded above ~48
+            # msg/s, and measured driving hits p90 54 / p95 74 / p99 111 msg/s
+            # (2026-08-06 run, 122,057 msgs over 5,577 active seconds). 10-16%
+            # of active-driving seconds exceeded the floor; on wifi 31% of all
+            # helm bytes never left the operator station. It went unnoticed
+            # only because helm is sent redundantly on all three connections
+            # (#145) -- a mask that fails under correlated loss.
+            #
+            # 32768 covers p99.9 of measured helm across five runs
+            # (27.9-32.0 kB/s). It must stay MEANINGFULLY BELOW the
+            # connection's rate limit: the floor is applied as
+            # min(admission_floor, data_rate_limit), so a floor at the cap
+            # disables AIMD backoff entirely. These connections set no
+            # maximum_bytes_per_second, so they run at
+            # Connection::default_rate_limit = 50000 B/s -- 32768 leaves ~35%
+            # headroom. RE-CHECK THIS VALUE if a maximum_bytes_per_second is
+            # ever added here.
+            #
+            # Must be written as a float: udp_bridge declares the parameter as
+            # a double (udp_bridge.cpp:544), and an integer override in YAML
+            # is a parameter-type error at configure.
+            #
+            # This is the stopgap. The fix is to stop generating the rate:
+            # rolker/unh_marine_autonomy#352 rate-limits joy_to_helm to 20 Hz
+            # (~3.4 kB/s peak), pending on-water verification.
+            admission_floor_bytes_per_second: 32768.0
             topics_list:
               - command
               - joystick_helm
@@ -37,6 +69,8 @@
             host: gabby.vpn.bizzy.p11.lan
             port: 4200
             return_port: 4200
+            # Helm admission floor -- rationale in the wifi block above (#455).
+            admission_floor_bytes_per_second: 32768.0
             topics_list:
               - command
               - joystick_helm
@@ -58,6 +92,8 @@
             host: gabby.cell.bizzy.p11.lan
             port: 4200
             return_port: 4200
+            # Helm admission floor -- rationale in the wifi block above (#455).
+            admission_floor_bytes_per_second: 32768.0
             topics_list:
               - command
               - joystick_helm
