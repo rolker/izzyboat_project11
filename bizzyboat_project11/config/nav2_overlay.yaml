@@ -256,7 +256,15 @@ local_costmap:
         # conveys no preference to the planner, which is not the same as being
         # safe. Bounded here so the layer says something usable:
         unknown_speed: 1.0
-        max_envelope: 150.0
+        # 150.0 -> 40.0 IN THE FIELD 2026-08-24, Cod Rock survey, and kept.
+        # A Coast Guard vessel reporting no SOG/COG (MMSI 366999563, the same
+        # contact as the 08-20 pier measurement) grew its envelope until the
+        # painted cost pushed the boat toward the pier. Bounding it to 40 m
+        # resolved that, and the boat then successfully veered away from an AIS
+        # target later in the same run -- so this bounds the envelope without
+        # costing avoidance. contact_cost stays 252: the vessel is still a
+        # strong obstacle, only the reachable-set halo is tighter.
+        max_envelope: 40.0
         #
         # BOTH ARE A STOPGAP. The durable fix is to derive speed from successive
         # fixes rather than assume one — the tracker sees the same MMSI report
@@ -340,7 +348,8 @@ global_costmap:
         # for the pier measurement that motivated bounding these, and for why
         # they are a stopgap rather than a tuning result.
         unknown_speed: 1.0
-        max_envelope: 150.0
+        # Tracks the local costmap's field-reduced value (2026-08-24).
+        max_envelope: 40.0
       # Match the local costmap's inflation (echoboat_project11/nav2_params.base.yaml:
       # cost_scaling_factor 1.0, inflation_radius 3.0). The base's GLOBAL inflation is
       # still BEN's tuning (150.0 m / 0.05) — an intentional coastline standoff for a
