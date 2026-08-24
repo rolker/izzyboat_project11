@@ -1,17 +1,92 @@
+from ament_index_python.packages import PackageNotFoundError
+
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
+from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch.substitutions import PathJoinSubstitution
 from launch.substitutions import TextSubstitution
+from launch.substitutions import SubstitutionFailure
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParameter
 from launch_ros.actions import SetParametersFromFile
+from launch_ros.substitutions import ExecutableInPackage
 from launch_ros.substitutions import FindPackageShare
+
+
+# BizzyBoat's FCU navigation position comes from
+# mavros/global_position/global_ellipsoidal, published by echo_helm's
+# ellipsoidal_fix_node. That node landed in echo_helm on
+# seafloor_echoboat_project11 feature/issue-55 (PR #56) and is NOT on its
+# jazzy branch, so this launch file requires a version of echo_helm that
+# #56 has reached. See check_ellipsoidal_fix_available below for why this
+# is enforced loudly rather than degraded past.
+ELLIPSOIDAL_FIX_PACKAGE = 'echo_helm'
+ELLIPSOIDAL_FIX_EXECUTABLE = 'ellipsoidal_fix_node'
+ELLIPSOIDAL_FIX_SOURCE = 'seafloor_echoboat_project11 PR #56 (feature/issue-55)'
+
+
+def missing_ellipsoidal_fix_message():
+    """What the operator reads when echo_helm is too old to start this boat.
+
+    Kept as text so the wording is testable and so the merge-order requirement
+    is stated in one place rather than inferred from a stack trace.
+    """
+    return (
+        f'{ELLIPSOIDAL_FIX_PACKAGE} does not provide '
+        f'"{ELLIPSOIDAL_FIX_EXECUTABLE}", which this launch file requires.\n'
+        '\n'
+        'mru_transform takes the FCU navigation position from '
+        'mavros/global_position/global_ellipsoidal (see the fcu block in '
+        'config/bizzyboat.yaml), and that topic has no other publisher.\n'
+        '\n'
+        'Refusing to start is deliberate. Coming up without the node would '
+        'leave the topic silent, mru_transform without an FCU position, and '
+        f'the "GPS: ellipsoidal fix" tile simply absent from the annunciator '
+        '-- and an absent tile reads as health, which is the failure this '
+        'whole diagnostic chain exists to prevent. Not sailing is the safer '
+        'half of that choice.\n'
+        '\n'
+        f'Fix: rebuild {ELLIPSOIDAL_FIX_PACKAGE} from a version carrying the '
+        f'node ({ELLIPSOIDAL_FIX_SOURCE}):\n'
+        f'    colcon build --packages-select {ELLIPSOIDAL_FIX_PACKAGE}'
+    )
+
+
+def check_ellipsoidal_fix_available(context, *args, **kwargs):
+    """Fail before the stack comes up, with a message that says what to do.
+
+    This is the loud end of a hard cross-repo ordering requirement, and it is
+    a judgement rather than an oversight. The two available end states are:
+
+      * Keep the node and require the newer echo_helm. A stale install stops
+        the whole boat launch at startup -- 130-odd nodes -- but stops it on
+        the bench, before anything is in the water.
+      * Drop the node and let echo_helm launch its own. A stale install then
+        starts cleanly with no publisher on global_ellipsoidal, so the boat
+        floats with a dead FCU vertical and a missing annunciator tile.
+
+    Neither is safe under both merge orders, so this file takes the loud one
+    and makes it self-explaining. Without this check the same failure arrives
+    as SubstitutionFailure on an executable name, which says nothing about
+    which repo to rebuild.
+
+    Left in place after #56 merges: the case it actually guards is a stale
+    build on a boat, which is the same symptom and does not go away.
+    """
+    try:
+        ExecutableInPackage(package=ELLIPSOIDAL_FIX_PACKAGE,
+                            executable=ELLIPSOIDAL_FIX_EXECUTABLE).perform(context)
+    except (SubstitutionFailure, PackageNotFoundError) as exc:
+        # PackageNotFoundError covers echo_helm being absent entirely, which is
+        # the same operator problem with a different traceback.
+        raise RuntimeError(f'{missing_ellipsoidal_fix_message()}\n\n({exc})')
+    return []
 
 
 def generate_launch_description():
@@ -56,6 +131,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        # First, so a stale echo_helm stops the launch here rather than
+        # part-way through bringing 130-odd nodes up.
+        OpaqueFunction(function=check_ellipsoidal_fix_available),
         namespace_arg,
         frame_prefix_arg,
         fcu_url_arg,
@@ -219,6 +297,29 @@ def generate_launch_description():
                     ]
                 ),
 
+                # Ellipsoidal-height correction for the mavros fused fix.
+                # mru_transform reads the output of this node, not
+                # mavros/global_position/global -- see the fcu block in
+                # bizzyboat.yaml for why.
+                Node(
+                    package='echo_helm',
+                    executable='ellipsoidal_fix_node',
+                    name='ellipsoidal_fix',
+                    parameters=[{
+                        'input_topic': 'mavros/global_position/global',
+                        'raw_fix_topic': 'mavros/global_position/raw/fix',
+                        'gps_raw_topic': 'mavros/gpsstatus/gps1/raw',
+                        'output_topic': 'mavros/global_position/global_ellipsoidal',
+                        'diagnostic_name': 'GPS: ellipsoidal fix',
+                    }],
+                    # This node now owns the FCU navigation position that reaches
+                    # mru_transform, so a crash that left it down would be an
+                    # open-ended vertical outage. Matches mavros beside it.
+                    respawn=True,
+                    respawn_delay=2,
+                    emulate_tty=True
+                ),
+
                 # GPS RTK diagnostics
                 Node(
                     package='bizzyboat_project11',
@@ -230,6 +331,12 @@ def generate_launch_description():
                         'ok_min_fix_type': 6,
                         'warn_min_fix_type': 3,
                     }],
+                    # Same argument as ellipsoidal_fix above and mavros before
+                    # it: a diagnostics node that stays down publishes nothing,
+                    # and nothing renders on the annunciator as a missing tile
+                    # rather than a fault.
+                    respawn=True,
+                    respawn_delay=2,
                     emulate_tty=True
                 ),
 
@@ -260,6 +367,27 @@ def generate_launch_description():
                 ),
 
                 # Echo helm
+                #
+                # enable_ellipsoidal_fix:=false because BizzyBoat launches its
+                # own copy of ellipsoidal_fix_node above, carrying this hull's
+                # topic parameters. echo_helm_launch.py gained the same node
+                # (seafloor_echoboat_project11#56) so every EchoBoat gets the
+                # correction -- the defect is a property of mavros behind an
+                # ArduPilot FCU, not of one hull -- but two copies in the
+                # bizzy namespace would publish duplicates on the output topic.
+                # Drop the node above and remove this argument once the shared
+                # launch can take the topic names as launch arguments -- at
+                # which point the preflight check at the top of this file goes
+                # with it.
+                #
+                # MERGE ORDER, and it is not optional: this launch file does
+                # not run on an echo_helm that predates #56. Passing an
+                # argument the older echo_helm_launch.py does not declare is a
+                # silent no-op (launch sets it as a plain launch configuration
+                # -- IncludeLaunchDescription's documented behaviour), so that
+                # half is harmless in either order. The Node above is the half
+                # that is not: it aborts. #56 must be merged and echo_helm
+                # rebuilt before this branch reaches a boat.
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
                         PathJoinSubstitution([
@@ -268,6 +396,9 @@ def generate_launch_description():
                             'echo_helm_launch.py'
                         ])
                     ),
+                    launch_arguments={
+                        'enable_ellipsoidal_fix': 'false',
+                    }.items(),
                 ),
 
                 # S57 charts

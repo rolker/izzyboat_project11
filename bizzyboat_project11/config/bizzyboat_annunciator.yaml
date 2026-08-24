@@ -57,6 +57,26 @@ indicators:
     format: "{}"
     stale_timeout: 10.0
 
+  # Correction provenance: which base station and how far away. A liveness
+  # check cannot see a caster left pointed at the wrong state (2026-08-21).
+  - name: RTCM
+    source: diagnostics
+    diagnostic_name: "RTK: corrections"
+    format: "{}"
+    stale_timeout: 10.0
+
+  # Ellipsoidal-height correction for the FCU fix. This node is IN the nav
+  # position path -- mru_transform takes fcu.position from its output topic
+  # (see the fcu block in bizzyboat.yaml) -- so if it stops, the position feed
+  # stops and mru_transform fails over to the SBG, whose ~2 deg roll offset
+  # tilts the costmap and produces aft false positives (bizzyboat.yaml:114).
+  # That failover is silent everywhere else on this panel.
+  - name: Ellipsoid
+    source: diagnostics
+    diagnostic_name: "GPS: ellipsoidal fix"
+    format: "{}"
+    stale_timeout: 10.0
+
   - name: FCU
     source: diagnostics
     diagnostic_name: "mavros: Heartbeat"

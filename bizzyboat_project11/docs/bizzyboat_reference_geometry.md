@@ -87,7 +87,13 @@ starboard, aft). All cameras are tilted ~5 degrees downward from horizontal.
 
 ### 2x CUAV C-RTK 2HP GNSS Antennas
 
-Black puck antennas in white mounting brackets, fore and aft.
+Black **cylindrical** antennas (helical form factor, roughly 1.5x taller than
+wide, unmarked — no visible part number) seated in white cylindrical risers on
+white base plates, fore and aft. See `2026-04-22_GPS_antennas_aft.jpg` --
+local-only, in `~/bizzyboat/` per the install photo index in
+`hydro_payload_install_log.md`, not in this repo. They
+were previously described here as "puck" antennas, which is wrong and led to a
+bad phase-centre derivation — see the note below.
 
 | Antenna | x | y | z | Status |
 |---------|---|---|---|--------|
@@ -96,7 +102,33 @@ Black puck antennas in white mounting brackets, fore and aft.
 
 **Notes**:
 - Baseline ~1.67m (fore-aft separation).
-- GNSS antenna phase center is at the top surface of the puck.
+- **The antenna phase centre is NOT known.** This entry previously asserted
+  "phase center is at the top surface of the puck". That claim is **unsourced**,
+  describes the wrong form factor, and on 2026-08-21 was traced as the origin of
+  a +12 cm correction in `hydro_payload_install_log.md` that live measurement
+  refutes. Do not use it.
+  - CUAV publishes no phase-centre, ARP or dimensional data for this antenna
+    (product page and C-RTK 2HP manual give frequency bands only).
+  - CUAV does not appear in the NGS antenna calibration database (ANTCAL), which
+    covers 150+ manufacturers.
+  - The antenna model is unrecorded (`bizzyboat_hardware.md` lists it as
+    "model TBD") and the unit carries no visible marking.
+  - The practical substitute is a **field calibration against the SBG**, whose
+    Trimble antenna offsets were surveyed with the documented phase centre: the
+    FCU-minus-SBG difference at `base_link` absorbs the CUAV phase centre and
+    mounting reference together.
+  - **Measured 2026-08-21 over 4.91 h of post-MaCORS bag: the CUAV vertical
+    reference is low by 55 +/- 25 mm** (implied correction to the 0.890 m z:
+    **-55 mm**). The uncertainty is the spread of the half-hourly
+    means, not the standard error of the mean, which is the honest figure here.
+    An earlier 90 s sample from the same day gave ~38 mm; it is superseded --
+    a 90 s window cannot see the inter-receiver wander that the half-hourly
+    means expose.
+  - **Not applied.** At 25 mm of scatter against a 55 mm signal, writing
+    `GPS_POS1_Z` / `GPS_POS2_Z` and the URDF `gnss_*` z would be adopting a
+    number the data does not yet support. The right dataset is the Isles of
+    Shoals transit -- underway, varied heading and pitch -- not a hull tied to
+    a pier. `scripts/gnss_vertical_calibration.py` recomputes it from bags.
 - Positions are rough measurements from base_link (center screw hole).
 
 ### Imagenex DeltaT Sonar

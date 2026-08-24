@@ -22,9 +22,18 @@
   <exec_depend>mavros_extras</exec_depend>
   <exec_depend>mavros_msgs</exec_depend>
   <exec_depend>mikrotik_monitor</exec_depend>
+  <exec_depend>echo_helm</exec_depend>
   <exec_depend>mru_transform</exec_depend>
   <exec_depend>network_tools</exec_depend>
   <depend>ntrip_client</depend>
+  <!-- Installed python nodes (gps_rtk_diagnostics_node.py,
+       rtcm_diagnostics_node.py, rtcm_relay_node.py) import these at runtime.
+       Without them a clean rosdep install produces nodes that die on import,
+       and the NTRIP and 'RTK: corrections' tiles then never publish at all,
+       rendered as absence, which is the failure mode those nodes exist to
+       prevent. -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>rmw_zenoh_cpp</exec_depend>
   <depend>robot_state_publisher</depend>
   <depend>rosbag2_transport</depend>
@@ -40,7 +49,6 @@
 
   <!-- Test-only: unit tests for the M3 bag-retrofit utility (#342). -->
   <test_depend>ament_cmake_pytest</test_depend>
-  <test_depend>rclpy</test_depend>
   <test_depend>rosbag2_py</test_depend>
   <!-- The retrofit tests write real bags with storage_id='mcap'; the plugin
        is not pulled in by rosbag2_py on minimal installs (e.g. CI). -->
