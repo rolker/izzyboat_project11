@@ -718,6 +718,18 @@
       - /bizzy/marine/heartbeat
       - /bizzy/marine/status/mission_manager
       - /bizzy/marine/status/mission_tasks
+      # AIS, added 2026-08-24 (field). Nothing AIS was recorded before this,
+      # even though ais_layer has been painting surface traffic into both
+      # costmaps since 2026-08-20 -- so an AIS-driven avoidance manoeuvre could
+      # not be reconstructed from a bag at all. Logged rawest-first, matching
+      # the sonar_logger's detections rationale: nmea is the wire text and lets
+      # messages/contacts be re-derived offline, while contacts is what
+      # ais_layer actually consumes and is the thing to replay when asking why
+      # the costmap looked the way it did.
+      - /bizzy/ais/nmea
+      - /bizzy/ais/messages
+      - /bizzy/ais/contacts
+      - /bizzy/ais/atons
       - /bizzy/robot_description
       - /bizzy/sensors/cameras/oak_forward/rgb/camera_info
       - /bizzy/sensors/cameras/oak_forward/rgb/image_raw/compressed
