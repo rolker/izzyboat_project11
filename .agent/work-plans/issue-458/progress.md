@@ -168,3 +168,41 @@ detail) plus direct verification against the working tree.
 - [x] (suggestion) Shutdown step still says "Ctrl-C in each window" with no ordering; logging should be stopped last, and `stop_tmux_project11.bash` should be named — `docs/bizzyboat_operator_manual.md:107-109`
 - [x] (suggestion) A mid-deployment `sonar_log_directory:=` relocation now leaves the M3 `.all` archive at the old root; the two-argument split is documented only in code comments — `bizzyboat_project11/launch/perception_launch.py:22-42`
 - [x] (suggestion) The four removed perception launch args are now silently ignored if still passed (ros2launch does not validate top-level args), and `m3_all_directory` is undocumented outside the launch file — `bizzyboat_project11/launch/perception_launch.py:22-42`
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-25 23:46 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-458 at `177e03e`
+**Addressed**: `## Local Review (Pre-Push)` (2026-08-25 23:38 +00:00, branch `feature/issue-458` at `7561482`) — 3 must-fix, 6 suggestions, all open
+**Commits**: `ef81379`, `57061e8`, `6451ddf`, `d182e3c`, `a5e528a`, `a83e99a`, `e04db45`, `177e03e`
+
+### Actions
+- [x] (must-fix) `SHUTDOWN_TIMEOUT` 10 s → 25 s, with a comment tying it to the recorders' `sigterm_timeout=15` + `sigkill_timeout=5` — `bizzyboat_project11/scripts/stop_tmux_project11.bash:11-17` (`ef81379`)
+- [x] (must-fix) Both recorders now set `record.disable_keyboard_controls: True`, so a stray SPACE in the operator-facing logging window cannot pause a bag — `bizzyboat_project11/launch/logging_launch.py:105-123,138-149` (`57061e8`)
+- [x] (must-fix) `.agents/README.md` bring-up chain now names `logging_launch.py` as the recorders' home and says explicitly that they are *not* in `perception_launch.py` — `.agents/README.md:82-90` (`6451ddf`)
+- [x] (suggestion) Added `test/test_logging_launch.py` (18 tests, registered in `CMakeLists.txt`) covering both-recorders-by-default, independent disable, keyboard-pause disabled, `output='both'`, per-recorder output dirs, distinct bag dirs, the shared config file, the `m3_all` sibling invariant, the moved-argument guard, and the stop-script-outwaits-the-grace cross-file invariant; corrected the plan's wrong "no automated launch-file test exists in this package" claim in both the step-4 note and the Test-what-breaks row — `bizzyboat_project11/test/test_logging_launch.py`, `bizzyboat_project11/CMakeLists.txt:52-57`, `.agent/work-plans/issue-458/plan.md:81-90,113` (`d182e3c`, `177e03e`)
+- [x] (suggestion) Both recorders set `output='both'`, so the dedicated logging window shows start-up and failures instead of nothing — `bizzyboat_project11/launch/logging_launch.py:124-131,150-158` (`a5e528a`)
+- [x] (suggestion) New **Confirming recording is running** section in the operator manual: check the `logging` window, `ros2 node list | grep -E '/bizzy/(sonar_)?logger'`, confirm a fresh bag dir is growing, and how to restart recording mid-deployment — it states outright that the split removed the "perception up ⇒ bags recording" invariant — `docs/bizzyboat_operator_manual.md:320-351` (`a83e99a`)
+- [x] (suggestion) Shutdown step now names `~/stop_tmux_project11.bash` and, for a manual shutdown, says to stop `logging` **last** and why (~20 s of mcap finalization) — `docs/bizzyboat_operator_manual.md:105-115` (`e04db45`)
+- [x] (suggestion) New **Sending the data somewhere else** subsection documents the two-launch-file split as a table (bag dirs vs `m3_all_directory`), warns that restarting `logging` with `sonar_log_directory:=` moves the bag but not the still-running `.all` archive, and states the sibling-directory rule outside code comments — `docs/bizzyboat_operator_manual.md:352-378` (`177e03e`)
+- [x] (suggestion) `perception_launch.py` now rejects the four moved recorder arguments with an `OpaqueFunction` preflight (same idiom as `core_launch.py`'s `check_ellipsoidal_fix_available`) that names `logging_launch.py` and shows the corrected command line, rather than letting `ros2 launch` silently ignore them; `m3_all_directory` is now documented in both `.agents/README.md` and the operator manual — `bizzyboat_project11/launch/perception_launch.py:18-63,66-71`, `.agents/README.md:82-95` (`177e03e`)
+
+### Deferred actions
+None — all nine findings were actioned.
+
+### Verification
+- `pytest test/test_logging_launch.py` — 18 passed.
+- `pytest test/` — 241 passed, 8 failed; all 8 failures are in `test_operator_core_launch.py` and reproduce on a clean stash of this branch (they need the package installed / a specific hostname). Untouched by this pass.
+- `bash -n scripts/stop_tmux_project11.bash` — clean.
+- `flake8` on the three changed Python files — only the `D1xx`/`I1xx`/`Q003` classes this package already carries in its sibling launch files and tests; no new class of warning introduced. (The package registers no `ament_flake8` test.)
+- Pre-commit hooks ran on every commit; none bypassed.
+
+### Not verified here
+On-boat behaviour still needs the hardware: that the `logging` tmux window comes up and prints recorder start-up, that `ros2 bag info` shows the same topic sets as before the split, and that a Ctrl-C in `logging` leaves the other windows running. That was already the plan's manual-verification list and is unchanged by this pass.
+
+### Next step
+`review-code` (re-review) — hand off to a fresh-context sub-agent:
+
+    .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill review-code
