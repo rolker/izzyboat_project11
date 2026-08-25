@@ -288,9 +288,14 @@ The stack comes up in this order (zenoh-first):
    waits for it.
 2. **Core** (`core_launch.py`) — MAVROS (flight-controller link on `/dev/fcu`),
    the helm, transforms, UDP bridge to the operator, NTRIP, etc.
-3. **Perception** (`perception_launch.py`) — cameras, sonar logging, the
+3. **Perception** (`perception_launch.py`) — cameras, sonar, the
    forward-facing segmentation used by the collision monitor.
-4. **Navigation** (`nav_launch.py`) — the Nav2 stack configured for model **240**.
+4. **Logging** (`logging_launch.py`) — the two rosbag2 recorders (the general
+   bag and the sonar bag). Its own window so recording can be stopped and
+   restarted without taking perception down: Ctrl-C here closes the bags
+   cleanly, and starting the window again begins a fresh timestamped bag.
+   `logger:=false` / `sonar_logger:=false` bring up only one of the two.
+5. **Navigation** (`nav_launch.py`) — the Nav2 stack configured for model **240**.
 
 > For the *physical* power-on (battery switches, etc.) follow the field briefing
 > and [`bizzyboat_project11/docs/bizzyboat_power.md`](../bizzyboat_project11/docs/bizzyboat_power.md);
