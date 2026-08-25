@@ -115,3 +115,31 @@ stand on its own regardless of whether that broader manager is ever built.
 
 ### Open questions
 - [ ] Which `IfCondition` idiom this package's Jazzy launch files use for boolean args — confirm against an existing example (e.g. `core_launch.py`/`nav_launch.py`) during implementation.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-08-25 23:13 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Plan**: `.agent/work-plans/issue-458/plan.md` at `bfb8606`
+**PR**: PR-less (`--issue 458`, fresh-context sub-agent in worktree `feature/issue-458`)
+**Verdict**: changes-requested
+
+**Independence**: independent. The `## Plan Authored` entry's agent-name portion
+("Claude Code Agent") matches `$AGENT_NAME`, which the skill's name-based
+heuristic would read as an author self-review — but this is a separate
+fresh-context dispatch on a different model (Sonnet authored, Opus reviewed),
+so the annotation is deliberately omitted. Every agent in this workspace shares
+one `$AGENT_NAME`, so that heuristic cannot discriminate here.
+
+**Note**: `gh` is unauthenticated in this worktree, so the issue body and any
+`review-issue` comment could not be re-fetched from GitHub. The review used the
+`## Issue Review` entry above (which records the issue's claims and findings in
+detail) plus direct verification against the working tree.
+
+### Findings
+- [ ] (must-fix) Removing `sonar_log_directory` breaks the M3 `.all` archive — `kongsberg_em_bridge.save_all_dir` still consumes it at `perception_launch.py:124-126` — `plan.md:52-54`
+- [ ] (must-fix) `sonar_log_directory` becomes shared across two launch files; the `<base>/m3_all` collision-free-sibling invariant (`perception_launch.py:114-123`) silently breaks if only one launch gets an override — not in the Consequences table — `plan.md:110-114`
+- [ ] (must-fix) `docs/bizzyboat_operator_manual.md:291` ("Perception ... cameras, sonar logging") and its 4-step boat bring-up list go stale; plan asserts the tmux comment is the only invalidated doc — `plan.md:118-123`
+- [ ] (suggestion) `bag_recorder_operator_launch.py` is the closer in-repo precedent than `usb_camera_launch.py` — carries the rosbag2 SIGTTOU / clean-flush lessons (`--disable-keyboard-controls`, `sigterm_timeout=15`) that bear directly on #458's "Ctrl-C leaves a readable bag" goal — `plan.md:28-30`
+- [ ] (suggestion) Close the Open Question now: `core_launch.py:117-130` + `:456,:500` and `bag_recorder_operator_launch.py:98` both use `DeclareLaunchArgument(default_value='true')` + `IfCondition(LaunchConfiguration(...))` — no `PythonExpression` needed — `plan.md:129-136`
