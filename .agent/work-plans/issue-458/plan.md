@@ -79,10 +79,16 @@ a working precedent in this same file for exactly this kind of extraction
      own window), and add a `# Logging: rosbag2 recorders (independently
      stop/restartable)` comment above the new window.
 
-4. **Manual verification** (per issue's Verification section — no
-   automated test exists for tmux/launch-file glue in this package today,
-   consistent with how `usb_camera_launch.py`'s prior extraction was
-   verified):
+4. **Manual verification** (per issue's Verification section — the tmux
+   glue and the on-boat behaviour still need eyes on the hardware):
+
+   > **Correction (Round 1 review):** this plan originally claimed no
+   > automated launch-file test exists in this package. That was wrong —
+   > `test_core_launch.py` and `test_operator_core_launch.py` test exactly
+   > this kind of wiring. `test_logging_launch.py` was added to match, so
+   > the parts that can be tested offline are, and the list below covers
+   > only what needs the boat.
+
    - Boat bringup starts all four windows; `ros2 node list` shows
      `/bizzy/logger` and `/bizzy/sonar_logger`.
    - `ros2 bag info` on both bags shows the same topic sets as before the
@@ -110,7 +116,7 @@ a working precedent in this same file for exactly this kind of extraction
 | Human control and transparency | Directly serves operator control — logging becomes stop/restartable without taking down perception; `logger:=`/`sonar_logger:=` give finer-grained control (e.g. stop sonar bags, keep diagnostics recording), matching the issue's stated example. |
 | Only what's needed | Verbatim node move, no speculative abstraction beyond the two booleans the issue explicitly asks for. Explicitly does not touch `core_launch.py`, `bizzyboat.yaml`, or the M3 `.all` archive (issue's declared non-goals / known gap). |
 | A change includes its consequences | Includes the `start_tmux_project11.bash` comment fix flagged by the Issue Review as missing from the issue's own Scope section. |
-| Test what breaks | No automated launch-file test exists in this package; verification stays manual (tmux + `ros2 node list` + `ros2 bag info`), matching the issue's own Verification section and this package's existing practice for launch-file changes. |
+| Test what breaks | `test_logging_launch.py` (registered in `CMakeLists.txt`) pins the parts that fail silently: both recorders on by default, each independently disableable, keyboard pause disabled, separate output directories, the M3 `.all` archive still a sibling of the sonar bag dir, and `stop_tmux_project11.bash` outwaiting the recorders' mcap shutdown grace. On-boat behaviour (tmux windows, `ros2 bag info` topic sets) stays manual. |
 
 ## ADR Compliance
 
