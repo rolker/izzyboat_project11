@@ -206,3 +206,43 @@ On-boat behaviour still needs the hardware: that the `logging` tmux window comes
 `review-code` (re-review) — hand off to a fresh-context sub-agent:
 
     .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill review-code
+
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-25 23:56 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-458 at `93daa76`
+**Mode**: pre-push
+**Depth**: Deep (reason: 981 changed lines / 10 files — over both the 200-line and 10-file thresholds; `.agents/README.md` is also a project-repo override trigger)
+**Must-fix**: 2 | **Suggestions**: 14
+**Round**: 2 | **Ship**: recommended — must-fix is flat at 2 (down from 3), both are precise mechanical fixes (a test that checks the wrong node, a stale count in a README); no specialist found a correctness defect in the shipped launch/script code this round.
+
+**Specialists**: Static Analysis, Governance, Plan Drift, Claude Adversarial x2 (Lens A + Lens B). Copilot and Local Adversarial off (default).
+**Note**: `git fetch origin` failed (host key verification / offline); diff is against the local `origin/jazzy` ref, which may be stale. No `.agents/review-context.yaml` exists in this repo, so the review used `.agents/README.md` only.
+
+### Findings
+- [ ] (must-fix) `test_the_stop_script_outwaits_the_recorder_shutdown_grace` reads the grace from `logger` only, though its docstring says "the recorders" and it is the sole guard on the cross-file SHUTDOWN_TIMEOUT invariant; mutation-verified (sonar_logger sigterm_timeout='60' leaves all 18 tests green) — `bizzyboat_project11/test/test_logging_launch.py:207-218`
+- [ ] (must-fix) `.agents/README.md` still says "Six pytest suites, all registered in CMakeLists.txt" — this PR registers a seventh (6 bullets vs 7 `ament_add_pytest_test` calls) — `.agents/README.md:141`
+- [ ] (suggestion) Nothing pins `PushRosNamespace(namespace)`; mutation-verified — deleting it leaves all 18 tests green while the recorders would come up as `/logger` / `/sonar_logger`, breaking the manual's own verification grep — `bizzyboat_project11/launch/logging_launch.py:98`
+- [ ] (suggestion) The moved-argument guard is one-directional: `m3_all_directory:=` passed to `logging_launch.py` (the natural mistake from the new three-row relocation table) is silently ignored and the `.all` archive stays on the internal disk — cross-pass confirmed (Lens A + Lens B) — `bizzyboat_project11/launch/logging_launch.py`, `docs/bizzyboat_operator_manual.md:369-371`
+- [ ] (suggestion) Both subdirectory defaults share one `datetime_str`, so pointing `P11_LOG_DIR` and `P11_SONAR_LOG_DIR` at one disk (which the manual newly invites) gives both recorders an identical `storage.uri` and one dies at start; pre-existing but newly advertised — cross-pass confirmed — `bizzyboat_project11/launch/logging_launch.py:74-85`
+- [ ] (suggestion) The confirm-recording step cannot detect the double-start the split newly makes cheap: it says "only one means the other died" and never that more than one of each halves the disk budget into two half-authoritative datasets — `docs/bizzyboat_operator_manual.md:347-352`
+- [ ] (suggestion) Tests resolve `P11_LOG_DIR` / `P11_SONAR_LOG_DIR` / `OVERRIDE_LAUNCH_PROCESS_OUTPUT` from the ambient environment; verified both failure modes locally — isolate with `monkeypatch.delenv` — `bizzyboat_project11/test/test_logging_launch.py:47-71,135`
+- [ ] (suggestion) `SHUTDOWN_TIMEOUT` is a per-window sequential budget (worst case ~50s → ~150s though only `logging` needs 20+s), and on expiry the script warns then `kill-session`s anyway, so the truncation the new comment says it prevents still happens 15s later — 3-way confirmed — `bizzyboat_project11/scripts/stop_tmux_project11.bash:17,37-56,82`
+- [ ] (suggestion) The manual says the stop script "Ctrl-Cs every window in order" then says to stop `logging` last, but the script Ctrl-Cs every non-zenoh window in one loop — cross-pass confirmed — `docs/bizzyboat_operator_manual.md:107,112-115`
+- [ ] (suggestion) `_ExecuteLocal__output` / `__sigterm_timeout` / `__sigkill_timeout` / `__emulate_tty` all have public properties (verified against the installed `launch`); only `_Node__node_name` needs the mangled form — `bizzyboat_project11/test/test_logging_launch.py:126,135,212-213`
+- [ ] (suggestion) Neither recorder sets `respawn`, and `storage.uri` frozen at launch time forecloses it (a respawn would crash-loop on "Bag directory already exists") — recovery needs a per-process subdirectory — `bizzyboat_project11/launch/logging_launch.py:101-160`
+- [ ] (suggestion) The moved-arg guard trips on presence in `launch_configurations`, not on the arg being user-supplied, so an including bring-up that declares `log_directory` would abort the whole boat — `bizzyboat_project11/launch/perception_launch.py:43-44`
+- [ ] (suggestion) The "parent directory would race the bag" rule is not real — rosbag2 aborts only on the exact `storage.uri` pre-existing — so `assert all_dir != sonar_uri.parent` will fail CI for a legitimate future config — `bizzyboat_project11/launch/perception_launch.py:157-165`, `bizzyboat_project11/test/test_logging_launch.py:177`
+- [ ] (suggestion) Plan's Documentation & Instruction Impact still says the tmux comment is "the only doc the diff invalidates" and "Agent-instruction candidates: None"; Files to Change omits the four files added since Round 1 — `.agent/work-plans/issue-458/plan.md:103-110,136-148`
+- [ ] (suggestion) Five launch args carry no `description=`, though four are now the documented operator handle for relocating the boat's data of record — `bizzyboat_project11/launch/logging_launch.py:47,65,74,85,90`
+- [ ] (suggestion) "Pass `log_subdirectory:=/sonar_log_subdirectory:=` to override" reads as one path-like token; it means two separate arguments — `bizzyboat_project11/launch/logging_launch.py:31`
+
+### Instruction-update candidate (proposal only — not applied)
+- [ ] "Moving a launch argument between launch files fails silently" → `.agent/knowledge/ros2_development_patterns.md`. `ros2 launch` does not validate top-level `name:=value`, so a stale habit or runbook line gives a clean bring-up with the wrong behaviour and no message anywhere. Leave a preflight `OpaqueFunction` in the old file that inspects `context.launch_configurations` and raises, naming the new file. Reference implementation: `perception_launch.py:18-63`, tested at `test_logging_launch.py:178-201`. Verified absent from the knowledge docs today.
+
+### Pre-merge (not a code finding)
+- [ ] ADR-0018: no `git notes --ref=ci-local` attestation on HEAD; full-scope local CI verification required before merge.
