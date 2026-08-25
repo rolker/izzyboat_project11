@@ -177,7 +177,15 @@
           # else needs changing: the wifi connection block below is left intact.
           # - wifi
           - vpn
-          - cell
+          # cell STOOD DOWN 2026-08-25 (field, gabby) — there is no SIM card in
+          # the boat's modem, so this connection never had an independent path.
+          # Measured on the water: cell and vpn both resolve to the same physical
+          # uplink (ip route get shows 192.168.24.144 and 192.168.22.144 BOTH via
+          # 192.168.20.1 dev enp7s0), so the ~85 kB/s of cell telemetry was pure
+          # duplicate load competing with the vpn on one pipe. RESTORE THIS LINE
+          # when a SIM is fitted and the cell path is genuinely separate; the cell
+          # connection block below is left intact.
+          # - cell
         connections:
           wifi:
             maximum_bytes_per_second: 1500000
@@ -388,9 +396,20 @@
             topics_list:
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
             # via udp_bridge remote_advertise, confirmed working; persisted here).
-            - coverage_catalog
-            - coverage_tiles
-            - manda_coverage_swath
+            # STOOD DOWN 2026-08-25 (field, gabby) to keep the vpn connection
+            # inside its budget. Measured per-topic on the water; see
+            # docs/logs/2026/2026-08-25_gabby_logs.md for the numbers. The vpn
+            # admission controller collapses to its floor when offered load
+            # exceeds what the link delivers, and recovery is a ~30-40 s ramp,
+            # so each collapse is a multi-second blackout at the operator.
+            # coverage_* are the CUBE live-tile view: a single tile message is
+            # 960x960 cells x 4 bytes = ~3.7 MB, more than twice the whole
+            # 1.5 MB/s connection budget, and sub-window patching is not yet
+            # implemented on the producer. RESTORE once tiles are patched or
+            # the link budget grows.
+            # - coverage_catalog
+            # - coverage_tiles
+            # - manda_coverage_swath
             - battery
             - command_response
             - diagnostics
