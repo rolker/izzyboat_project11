@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.actions import IncludeLaunchDescription
+from launch.actions import OpaqueFunction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import EnvironmentVariable
 from launch.substitutions import LaunchConfiguration
@@ -12,6 +13,48 @@ from launch_ros.actions import PushRosNamespace
 from launch_ros.actions import SetParametersFromFile
 from launch_ros.actions import SetRemap
 from launch_ros.substitutions import FindPackageShare
+
+
+# The recorder arguments this file used to declare, before the rosbag2
+# recorders moved to logging_launch.py (#458).
+MOVED_RECORDER_ARGUMENTS = (
+    'log_directory',
+    'log_subdirectory',
+    'sonar_log_directory',
+    'sonar_log_subdirectory',
+)
+
+
+def reject_moved_recorder_arguments(context, *args, **kwargs):
+    """Fail loudly on a `name:=value` this file no longer honours.
+
+    `ros2 launch` does not validate top-level arguments: an undeclared
+    `name:=value` just sets a launch configuration nobody reads. So a field
+    script or a habit that still points the recorders at a chosen directory
+    through *this* launch file would come up perfectly clean -- cameras, sonar
+    and all -- while the bags went to the default location, and nothing would
+    say so until someone went looking for the data. That is exactly the class
+    of silent field failure this package tries not to ship, so it is a hard
+    error naming where the argument went.
+
+    Nothing includes this launch file, so an inherited configuration cannot
+    trip this by accident; if that ever changes, scope the include.
+    """
+    stale = [name for name in MOVED_RECORDER_ARGUMENTS
+             if name in context.launch_configurations]
+    if stale:
+        raise RuntimeError(
+            'perception_launch.py no longer runs the rosbag2 recorders; '
+            f"the argument(s) {', '.join(stale)} moved to logging_launch.py "
+            '(#458) and would be ignored here, leaving the bags at their '
+            'default location.\n\n'
+            'Pass them to the logging launch instead, e.g.:\n'
+            '  ros2 launch bizzyboat_project11 logging_launch.py '
+            f'{stale[0]}:=<value>\n\n'
+            "To relocate the M3's raw .all archive (which does still live "
+            'here), use m3_all_directory:=<value> -- keep it a sibling of the '
+            'sonar bag directory, never the bag directory or its parent.')
+    return []
 
 
 def generate_launch_description():
@@ -43,6 +86,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        # First, so a stale recorder argument stops the launch here rather
+        # than part-way through a bring-up that would not have recorded.
+        OpaqueFunction(function=reject_moved_recorder_arguments),
         namespace_arg,
         m3_all_directory_arg,
 

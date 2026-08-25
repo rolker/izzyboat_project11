@@ -179,6 +179,32 @@ def test_the_m3_all_archive_stays_a_sibling_of_the_sonar_bag():
         'the archive is meant to be a collision-free sibling of the bag dir'
 
 
+@pytest.mark.parametrize('argument', [
+    'log_directory',
+    'log_subdirectory',
+    'sonar_log_directory',
+    'sonar_log_subdirectory',
+])
+def test_perception_rejects_the_recorder_arguments_that_moved(argument):
+    """`ros2 launch` ignores undeclared top-level args, so passing one of these
+    to perception_launch.py would bring the boat up clean with the bags at the
+    default location and nothing saying so. It has to be a hard error."""
+    perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)
+    context = LaunchContext()
+    context.launch_configurations[argument] = '/tmp/somewhere-else'
+    with pytest.raises(RuntimeError) as excinfo:
+        perception.reject_moved_recorder_arguments(context)
+    message = str(excinfo.value)
+    assert argument in message
+    assert 'logging_launch.py' in message, 'the error must say where it went'
+
+
+def test_perception_accepts_a_bare_bring_up():
+    """The guard must not fire on the normal case."""
+    perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)
+    assert perception.reject_moved_recorder_arguments(LaunchContext()) == []
+
+
 def test_the_stop_script_outwaits_the_recorder_shutdown_grace():
     """stop_tmux_project11.bash kill-sessions after its timeout; if that is
     shorter than sigterm+sigkill, it SIGHUPs a finalizing mcap."""

@@ -359,6 +359,34 @@ closes the current bags cleanly — wait for it), then re-run
 `ros2 launch bizzyboat_project11 logging_launch.py`. A new timestamped bag
 begins; perception, core, and nav keep running throughout.
 
+#### Sending the data somewhere else (e.g. an external disk)
+
+The bags and the M3's raw `.all` archive are written by **two different launch
+files**, so relocating the data takes **two** overrides — one on each:
+
+| What | Default | Argument | Launch file |
+| --- | --- | --- | --- |
+| General bag | `/home/field/data/logs/bizzyboat/<UTC stamp>/` | `log_directory:=` (and `log_subdirectory:=`) | `logging_launch.py` |
+| Sonar bag | `/home/field/data/logs/bizzyboat_sonar/<UTC stamp>/` | `sonar_log_directory:=` (and `sonar_log_subdirectory:=`) | `logging_launch.py` |
+| M3 raw `.all` archive | `/home/field/data/logs/bizzyboat_sonar/m3_all/` | `m3_all_directory:=` | `perception_launch.py` |
+
+`P11_LOG_DIR` and `P11_SONAR_LOG_DIR` in the environment move the defaults for
+all three at once, which is usually what you want.
+
+> ⚠️ **Restarting `logging` with `sonar_log_directory:=<new disk>` moves the
+> sonar *bag* only.** The `.all` archive keeps writing wherever
+> `perception_launch.py` was started with, because that window is still
+> running. To move both mid-deployment you have to restart perception too.
+>
+> Keep `m3_all_directory` a **sibling** of the sonar bag directory — never the
+> bag directory itself or its parent. The bridge creates its save directory,
+> and the rosbag2 recorder refuses to start if its own target directory
+> already exists, so overlapping the two makes recording fail to start.
+>
+> Passing `log_directory:=`/`sonar_log_directory:=` to **`perception_launch.py`**
+> (where they used to live) is now a hard error naming `logging_launch.py`, so
+> a stale habit stops the launch instead of quietly recording to the default.
+
 ---
 
 ## 4. The operator station displays

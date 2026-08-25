@@ -84,7 +84,14 @@ same care as launch files.
   writing to `/home/field/data/logs/...`) run alongside. The recorders live in
   `logging_launch.py`, NOT in `perception_launch.py` — they were split out in
   #458 so recording can be stopped and restarted without taking the perception
-  chain down, and each launch mints a fresh timestamped bag directory. tmux
+  chain down, and each launch mints a fresh timestamped bag directory.
+  `perception_launch.py` keeps only the M3's raw Kongsberg `.all` archive, under
+  its own `m3_all_directory` argument (default `<P11_SONAR_LOG_DIR>/m3_all`) —
+  deliberately a *sibling* of the sonar bag dir, since the bridge makedirs its
+  save dir and rosbag2 refuses a pre-existing target. The four recorder args
+  that moved are rejected with a hard error if still passed to
+  `perception_launch.py` (`ros2 launch` does not validate top-level args, so
+  the alternative was a silent bring-up recording to the default). tmux
   session scripts under `scripts/start_tmux_*.bash` tie these together on the
   hosts, giving logging its own window.
 - **Sim**: `bizzyboat_sim_core_launch.py` reuses the REAL `bizzyboat.yaml`
