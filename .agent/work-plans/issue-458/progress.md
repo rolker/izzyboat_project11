@@ -103,3 +103,15 @@ stand on its own regardless of whether that broader manager is ever built.
 ### Actions
 - [ ] Update the stale `# Perception: cameras, sonar, logging` tmux-window comment when the `logging` window is added (start_tmux_project11.bash:49).
 - [ ] Consider a short "moved from perception_launch.py" note in the new logging_launch.py for discoverability, mirroring usb_camera_launch.py's precedent.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-08-25 23:10 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-458/plan.md` at `bfb8606`
+**Branch**: feature/issue-458 at `bfb8606`
+**Phases**: single
+
+### Open questions
+- [ ] Which `IfCondition` idiom this package's Jazzy launch files use for boolean args — confirm against an existing example (e.g. `core_launch.py`/`nav_launch.py`) during implementation.
