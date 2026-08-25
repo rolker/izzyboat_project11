@@ -79,9 +79,14 @@ same care as launch files.
   serial bridges, Garmin sidescan (on by default, `sidescan:=false` to
   disable), URDF via `publish_state_launch.py`, NTRIP, SBG INS.
   `nav_launch.py` (Nav2 via shared `echoboat_project11` bringup, model 240 +
-  `config/nav2_overlay.yaml`) and `perception_launch.py` (cameras, sonar,
-  logging to `/home/field/data/logs/...`) run alongside. tmux session
-  scripts under `scripts/start_tmux_*.bash` tie these together on the hosts.
+  `config/nav2_overlay.yaml`), `perception_launch.py` (cameras, sonar) and
+  `logging_launch.py` (the two rosbag2 recorders, `logger` and `sonar_logger`,
+  writing to `/home/field/data/logs/...`) run alongside. The recorders live in
+  `logging_launch.py`, NOT in `perception_launch.py` — they were split out in
+  #458 so recording can be stopped and restarted without taking the perception
+  chain down, and each launch mints a fresh timestamped bag directory. tmux
+  session scripts under `scripts/start_tmux_*.bash` tie these together on the
+  hosts, giving logging its own window.
 - **Sim**: `bizzyboat_sim_core_launch.py` reuses the REAL `bizzyboat.yaml`
   and layers `bizzyboat_sim.yaml` on top (`is_simulator`), excluding hardware
   drivers — sim and field share one config source.
