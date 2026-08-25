@@ -1,6 +1,10 @@
-# 2026-08-24 — gabby log (BizzyBoat deployment #aa3fe8f)
+# 2026-08-24 — gabby log (BizzyBoat deployment #457)
 
-Deployment issue: aa3fe8f — Deployment 2026-08-24: BizzyBoat dock test + shakedown — verify CAMP and nav2 fixes before Shoals
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/457
+<!-- corrected at wrap-up: this header originally read 'deployment #aa3fe8f', the
+     git-bug id gabby resolved the issue under. Same deployment as pandy's #457 —
+     gabby reached it through git-bug and pandy through the GitHub number. Recorded
+     as the GitHub issue so the two host logs agree. -->
 Host: gabby
 Side: field
 Started: 2026-08-24 16:36 -04:00
@@ -66,6 +70,23 @@ Started: 2026-08-24 16:36 -04:00
 **2026-08-24 17:15 -04:00** — Operator reports the boat stalled a bit, then skipped TWO more lines. Live mission state read from /bizzy/marine/status/mission_tasks: current_navigation_task = pattern0000/line9; done flags are line0..line8 = true, line9 = false (current), line10..line14 = false; done_hover and the pattern0000 set node both false.
 
 **2026-08-24 17:15 -04:00** — KEY FINDING on the skipped lines: the mission bookkeeping shows NO GAP. line0 through line8 are all marked done:true in strict sequence with nothing missing, and the boat is now on line9. So the skips are NOT a sequencing gap where the manager jumped over a task - the tasks are being marked done WITHOUT the boat physically surveying them. Spurious completion, not mis-ordering. This is consistent with the 'Goal accepted :) x3 -> navigator done x3 in 4 ms' burst logged earlier: the navigator returns done immediately and mission_manager advances. Physical skips reported by the operator therefore do not show up anywhere in task status - the mission will read as 100 percent complete with lines never run.
+
+> **Wrap-up correction (operator)**: this is a KNOWN defect, not a new discovery —
+> operator: "The survey line being marked done is actually a know defect, but we
+> obviously didn't get to solving it yet." Tracked as
+> rolker/unh_marine_navigation#104 ("Mission consumes survey-line tasks during manual
+> override — skip-and-continue marked two lines done unflown"). No new issue filed;
+> this session's evidence is attached to #104 instead.
+>
+> ONE HALF OF #104's SIGNATURE DOES NOT MATCH HERE, and it is worth a fixer's attention:
+> #104's mechanism requires the operator to be in MANUAL control, so that FollowPath
+> makes no progress and skip-and-continue consumes the task. On 2026-08-24 the boat was
+> AUTONOMOUS across every skip — /bizzy/piloting_mode/manual/helm published nothing at
+> all between 17:01:50 and 17:29 (pandy log 18:23), a 28-minute silence that brackets
+> the skips. Either skip-and-continue has a second trigger that does not involve manual
+> control, or this is a sibling defect. UNTESTED HERE: nobody read status.outcome on the
+> skipped lines, so #104's other signature (outcome=failed) is neither confirmed nor
+> refuted for this session — only the done:true flags were read.
 
 **2026-08-24 17:15 -04:00** — Consequence worth flagging for tomorrow: because skipped lines are marked done, neither mission status nor the task list can be trusted to tell the operator what was actually surveyed. Coverage has to be judged from the live coverage layer or the recorded bathymetry, not from mission completion. Over the horizon at the Shoals that distinction matters - a mission can report success with holes in it.
 
@@ -140,6 +161,17 @@ Started: 2026-08-24 16:36 -04:00
 **2026-08-24 18:27 -04:00** — Recovery timing in the capture matches #71's published figures: cell resumed reporting normal rates at +50 s and vpn at +85 s from capture start, with rx elevated at recovery (cell 7426 B/s against a steady-state 2-3 kB/s) consistent with a backlog draining. HONEST LIMIT on this capture: it began at 18:24:10 and the operator had already started the stop/start, so it cannot be used to prove which phase - down versus post-restart - the drops belong to. What it does establish independently of ordering is the MECHANISM: admission-gate drops with tx_failed zero and effective rate two orders of magnitude below the configured limit.
 
 **2026-08-24 18:27 -04:00** — WITHDRAWN: my earlier 'points at code merged today' reading of this as PR #68 receive-path mutex contention. tx_failed 0 with massive tx_dropped is a send-admission signature, not a receive-path stall, and the operator's recollection that this is long-standing is consistent with udp_bridge#71 which predates today's merge. The #68 contention concern remains valid as a separate unexercised risk, but it is not what happened here.
+
+> **Wrap-up correction (operator)**: this withdrawal went too far. Operator: the RGB
+> dropouts are *not* settled — "it's not clear. It seems to be that RGB dropouts have
+> been occuring before, so it's possible the merge made things worse, but it is not the
+> only cause." So udp_bridge PR #68 is NOT exonerated; it is one candidate contributor
+> among others, against a background of dropouts that predate it. The measurement in
+> this entry (tx_failed 0 with large tx_dropped = a send-admission signature) stands as
+> a measurement; what does not stand is treating it as a clean acquittal of the merge.
+> See also the 2026-08-25 gabby log 07:57, which traces the same class of dropout to
+> udp_bridge#52 (AIMD scaling off measured goodput, merged 2026-08-22) — a different
+> merge again, and consistent with the operator's "not the only cause".
 
 **2026-08-24 18:33 -04:00** — CLEAN PHASED REPRODUCTION - this one answers the ordering question the previous capture could not. Two synchronised captures: /diagnostics continuously, plus a one-per-second census of sea_surface_segmentation processes so the phase boundaries are MEASURED, not recalled. Perception process count: 8 baseline, dropping to 2 at 18:31:00, back to 7 at 18:31:47 - so the DOWN phase is 18:31:00 to 18:31:47, 47 seconds.
 
