@@ -256,7 +256,15 @@ local_costmap:
         # conveys no preference to the planner, which is not the same as being
         # safe. Bounded here so the layer says something usable:
         unknown_speed: 1.0
-        max_envelope: 150.0
+        # 150.0 -> 40.0 IN THE FIELD 2026-08-24, Cod Rock survey, and kept.
+        # A Coast Guard vessel reporting no SOG/COG (MMSI 366999563, the same
+        # contact as the 08-20 pier measurement) grew its envelope until the
+        # painted cost pushed the boat toward the pier. Bounding it to 40 m
+        # resolved that, and the boat then successfully veered away from an AIS
+        # target later in the same run -- so this bounds the envelope without
+        # costing avoidance. contact_cost stays 252: the vessel is still a
+        # strong obstacle, only the reachable-set halo is tighter.
+        max_envelope: 40.0
         #
         # BOTH ARE A STOPGAP. The durable fix is to derive speed from successive
         # fixes rather than assume one — the tracker sees the same MMSI report
@@ -274,6 +282,30 @@ local_costmap:
 global_costmap:
   global_costmap:
     ros__parameters:
+      # Global window widened 2026-08-24 (field) from the base's 4000 m @ 1.0 m
+      # to 8000 m @ 2.0 m, i.e. +/-2 km -> +/-4 km of reach around the boat.
+      # Motivated by the Isles of Shoals survey: the pier-to-Appledore transit
+      # is ~12.3 km, and a goal outside the rolling window is rejected outright
+      # as GoalOutsideMapBounds rather than planned to.
+      #
+      # Cell count is UNCHANGED: 4000 m / 1.0 m = 4000 cells per side, and
+      # 8000 m / 2.0 m = 4000 cells per side. Same 16 M cells, so costmap memory
+      # and per-update cost stay where they are today. The window doubles in
+      # extent by halving linear resolution rather than by growing the grid.
+      #
+      # HONEST LIMIT: 8 km of window still does not cover a 12.3 km leg. This
+      # buys headroom (a leg may now be up to ~4 km out instead of ~2 km), it
+      # does not remove the need to break a long transit into waypoints inside
+      # the window.
+      #
+      # COST: 2.0 m cells under-resolve chart and bathymetry features finer than
+      # 2 m. Watch this against issue #b6708fb (Broadkill: ~60% lethal costmap,
+      # where costmap resolution versus chart scale is an open question) — if
+      # the global costmap paints noticeably more lethal area at the Shoals than
+      # it did today at 1.0 m, resolution is the first thing to suspect.
+      width: 8000
+      height: 8000
+      resolution: 2.0
       # chart_layer re-enabled 2026-08-03 (#276, and independently in the field
       # at Lewes, DE the same day), superseding the 2026-06-12 interim disable
       # (#263) — see the local_costmap plugins comment for the rationale and the
@@ -340,7 +372,8 @@ global_costmap:
         # for the pier measurement that motivated bounding these, and for why
         # they are a stopgap rather than a tuning result.
         unknown_speed: 1.0
-        max_envelope: 150.0
+        # Tracks the local costmap's field-reduced value (2026-08-24).
+        max_envelope: 40.0
       # Match the local costmap's inflation (echoboat_project11/nav2_params.base.yaml:
       # cost_scaling_factor 1.0, inflation_radius 3.0). The base's GLOBAL inflation is
       # still BEN's tuning (150.0 m / 0.05) — an intentional coastline standoff for a
