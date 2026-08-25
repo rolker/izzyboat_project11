@@ -122,6 +122,11 @@ def generate_launch_description():
                         ])}
                     ],
                     emulate_tty=True,
+                    # The logging window is now the operator's only view of
+                    # whether recording is actually running (#458). Default
+                    # 'log' would leave it blank -- including on a failed
+                    # start -- so send rosbag2's output to the screen too.
+                    output='both',
                     # Generous SIGTERM grace so mcap finalization on a large
                     # bag completes after the SIGINT -- same reasoning as
                     # bag_recorder_operator_launch.py on the operator side.
@@ -148,6 +153,7 @@ def generate_launch_description():
                         ])},
                     ],
                     emulate_tty=True,
+                    output='both',
                     sigterm_timeout='15',
                     sigkill_timeout='5',
                     condition=IfCondition(sonar_logger_enabled)

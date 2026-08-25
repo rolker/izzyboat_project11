@@ -127,6 +127,14 @@ def test_keyboard_controls_are_disabled(name):
         'if emulate_tty ever goes away, revisit why this test exists'
 
 
+@pytest.mark.parametrize('name', ['logger', 'sonar_logger'])
+def test_recorder_output_reaches_the_logging_window(name):
+    """The dedicated window is the operator's only view of whether recording
+    started; the launch_ros default ('log') would leave it blank."""
+    entity, context = _recorders()[name]
+    assert _resolve(context, entity._ExecuteLocal__output) == 'both'
+
+
 @pytest.mark.parametrize('name,base,subdir', [
     ('logger', 'log_directory', 'log_subdirectory'),
     ('sonar_logger', 'sonar_log_directory', 'sonar_log_subdirectory'),
