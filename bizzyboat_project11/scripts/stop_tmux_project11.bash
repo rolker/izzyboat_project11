@@ -8,7 +8,13 @@
 #        e.g. stop_tmux_project11.bash camera_test
 
 SESSION="${1:-project11}"
-SHUTDOWN_TIMEOUT=10  # seconds to wait per window after Ctrl-C
+# Seconds to wait per window after Ctrl-C. Must exceed the longest
+# shutdown grace any window's launch file grants a child: the rosbag2
+# recorders in logging_launch.py use sigterm_timeout=15 + sigkill_timeout=5,
+# so a window can legitimately take 20 s to go away. A shorter timeout here
+# would let kill-session SIGHUP a recorder mid-mcap-finalization and truncate
+# the boat's data of record (#458).
+SHUTDOWN_TIMEOUT=25
 
 if ! /usr/bin/tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "No tmux session '$SESSION' is running."

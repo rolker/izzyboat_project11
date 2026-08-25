@@ -159,7 +159,7 @@ detail) plus direct verification against the working tree.
 **Note**: `git fetch origin` failed (host key verification / offline); the diff is against the local `origin/jazzy` ref, which may be stale. No `.agents/review-context.yaml` exists in this repo, so the review used `.agents/README.md` only.
 
 ### Findings
-- [ ] (must-fix) `stop_tmux_project11.bash` SHUTDOWN_TIMEOUT=10 s is now shorter than the recorders' new 15+5 s shutdown grace, so `kill-session` can SIGHUP a finalizing mcap — `bizzyboat_project11/scripts/stop_tmux_project11.bash:11`
+- [x] (must-fix) `stop_tmux_project11.bash` SHUTDOWN_TIMEOUT=10 s is now shorter than the recorders' new 15+5 s shutdown grace, so `kill-session` can SIGHUP a finalizing mcap — `bizzyboat_project11/scripts/stop_tmux_project11.bash:11`
 - [ ] (must-fix) Recorders leave `record.disable_keyboard_controls` false with `emulate_tty=True`, so a stray SPACE in the now operator-facing logging window silently pauses a bag — `bizzyboat_project11/launch/logging_launch.py:116,141`
 - [ ] (must-fix) `.agents/README.md` still describes `perception_launch.py` as doing the logging; the agent-facing bring-up map does not know `logging_launch.py` exists — `.agents/README.md:82-84`
 - [ ] (suggestion) No pytest for `logging_launch.py`, though the package registers `test_core_launch.py` / `test_operator_core_launch.py` for exactly this wiring; the plan's claim that no launch-file test exists in this package is factually wrong — `bizzyboat_project11/CMakeLists.txt:33-52`
