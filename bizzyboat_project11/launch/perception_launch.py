@@ -1,5 +1,3 @@
-import datetime
-
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
@@ -22,42 +20,31 @@ def generate_launch_description():
         'namespace', default_value=TextSubstitution(text='bizzy')
     )
 
-    log_directory = LaunchConfiguration('log_directory')
-    log_directory_arg = DeclareLaunchArgument(
-        'log_directory',
-        default_value=EnvironmentVariable(
-            'P11_LOG_DIR',
-            default_value='/home/field/data/logs/bizzyboat'
-        )
-    )
-
-    sonar_log_directory = LaunchConfiguration('sonar_log_directory')
-    sonar_log_directory_arg = DeclareLaunchArgument(
-        'sonar_log_directory',
-        default_value=EnvironmentVariable(
-            'P11_SONAR_LOG_DIR',
-            default_value='/home/field/data/logs/bizzyboat_sonar'
-        )
-    )
-    datetime_str = datetime.datetime.now(datetime.timezone.utc).isoformat(
-        timespec='seconds').replace(':', '-')
-    log_subdirectory = LaunchConfiguration('log_subdirectory')
-    log_subdirectory_arg = DeclareLaunchArgument(
-        'log_subdirectory',
-        default_value=TextSubstitution(text=datetime_str)
-    )
-    sonar_log_subdirectory = LaunchConfiguration('sonar_log_subdirectory')
-    sonar_log_subdirectory_arg = DeclareLaunchArgument(
-        'sonar_log_subdirectory',
-        default_value=TextSubstitution(text=datetime_str)
+    # Where the M3's raw Kongsberg .all archive writes when it is armed.
+    # Its own argument, not the sonar bag's `sonar_log_directory` (which moved
+    # to logging_launch.py with the recorders, #458): the two are independent
+    # -- the bag is the boat's data of record, the .all is an opt-in debugging
+    # artifact -- and sharing one argument across two launch files would let an
+    # override applied to only one of them silently break the sibling-directory
+    # invariant documented at the bridge below.
+    m3_all_directory = LaunchConfiguration('m3_all_directory')
+    m3_all_directory_arg = DeclareLaunchArgument(
+        'm3_all_directory',
+        default_value=PathJoinSubstitution([
+            EnvironmentVariable(
+                'P11_SONAR_LOG_DIR',
+                default_value='/home/field/data/logs/bizzyboat_sonar'
+            ),
+            'm3_all'
+        ]),
+        description='Directory for the M3 raw Kongsberg .all archive. Only '
+                    'written to once recording is armed via the bridge\'s '
+                    'set_recording service (record_on_start defaults false).'
     )
 
     return LaunchDescription([
         namespace_arg,
-        log_directory_arg,
-        log_subdirectory_arg,
-        sonar_log_directory_arg,
-        sonar_log_subdirectory_arg,
+        m3_all_directory_arg,
 
         GroupAction(
             actions=[
@@ -111,19 +98,26 @@ def generate_launch_description():
                             parameters=[{
                                 'bind_port': 20002,
                                 'frame_id': 'bizzy/m3',
-                                # Archive the M3's raw Kongsberg EM stream as
-                                # genuine .all files (Caris/Qimera/MB-System)
-                                # alongside the sonar bags. Use an `m3_all`
-                                # subdir of the sonar-log base, NOT the bag's
-                                # own `<base>/<sonar_log_subdirectory>` dir:
-                                # the sonar_logger rosbag2 recorder errors if
-                                # its target dir pre-exists, and the bridge
+                                # Where the M3's raw Kongsberg EM stream is
+                                # archived as genuine .all files
+                                # (Caris/Qimera/MB-System) when recording is
+                                # armed. This configures only *where*: the
+                                # bridge's `record_on_start` defaults false
+                                # (marine_tools#54), so the archive is opt-in
+                                # and nothing is written until it is armed via
+                                # the bridge's set_recording service.
+                                #
+                                # Default is an `m3_all` subdir of the
+                                # sonar-log base, NOT the sonar bag's own
+                                # `<base>/<sonar_log_subdirectory>` dir: the
+                                # sonar_logger rosbag2 recorder errors if its
+                                # target dir pre-exists, and the bridge
                                 # makedirs its save dir -- so writing there (or
                                 # to that session parent) would race the bag.
                                 # `<base>/m3_all` is a collision-free sibling.
-                                'save_all_dir': PathJoinSubstitution([
-                                    sonar_log_directory, 'm3_all'
-                                ]),
+                                # Keep any override a sibling of the sonar bag
+                                # directory, never the bag dir or its parent.
+                                'save_all_dir': m3_all_directory,
                                 # Prototype rollover: cap each .all segment at
                                 # 200 MB (about every ~12 min at the M3's
                                 # current rate) so files stay manageable. Set
@@ -242,43 +236,9 @@ def generate_launch_description():
                     ]
                 ),
 
-                # Rosbag logger
-                Node(
-                    package='rosbag2_transport',
-                    executable='recorder',
-                    name='logger',
-                    parameters=[
-                        PathJoinSubstitution([
-                            FindPackageShare('bizzyboat_project11'),
-                            'config',
-                            'bizzyboat.yaml'
-                        ]),
-                        {'storage.uri': PathJoinSubstitution([
-                            log_directory,
-                            log_subdirectory
-                        ])}
-                    ],
-                    emulate_tty=True
-                ),
-
-                # Sonar logger
-                Node(
-                    package='rosbag2_transport',
-                    executable='recorder',
-                    name='sonar_logger',
-                    parameters=[
-                        PathJoinSubstitution([
-                            FindPackageShare('bizzyboat_project11'),
-                            'config',
-                            'bizzyboat.yaml'
-                        ]),
-                        {'storage.uri': PathJoinSubstitution([
-                            sonar_log_directory,
-                            sonar_log_subdirectory
-                        ])},
-                    ],
-                    emulate_tty=True
-                ),
+                # The rosbag2 recorders used to live here; they moved to
+                # logging_launch.py (#458) so recording can be stopped and
+                # restarted without taking this chain down.
             ]
         ),
     ])
