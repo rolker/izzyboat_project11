@@ -1,6 +1,9 @@
-# 2026-08-25 — pandy log (BizzyBoat deployment — issue pending)
+# 2026-08-25 — pandy log (BizzyBoat deployment #459)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/459
+<!-- backfilled at wrap-up 2026-08-25 from a dev host: this deployment was
+     started issue-less per ros2_agent_workspace#533 and the header carried the
+     canonical 'pending' marker. Issue #459 created and linked; marker cleared. -->
 Host: pandy
 Side: field
 Started: 2026-08-25 06:59 -04:00
