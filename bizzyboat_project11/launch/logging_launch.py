@@ -108,6 +108,14 @@ def generate_launch_description():
                             'config',
                             'bizzyboat.yaml'
                         ]),
+                        # emulate_tty below gives rosbag2 a live terminal,
+                        # which arms its SPACE-to-pause keyboard handler. This
+                        # recorder now sits in an operator-facing tmux window
+                        # (#458), where a stray keypress would silently pause
+                        # the boat's data of record -- so disable it, the same
+                        # reasoning as bag_recorder_operator_launch.py's
+                        # --disable-keyboard-controls.
+                        {'record.disable_keyboard_controls': True},
                         {'storage.uri': PathJoinSubstitution([
                             log_directory,
                             log_subdirectory
@@ -133,6 +141,7 @@ def generate_launch_description():
                             'config',
                             'bizzyboat.yaml'
                         ]),
+                        {'record.disable_keyboard_controls': True},
                         {'storage.uri': PathJoinSubstitution([
                             sonar_log_directory,
                             sonar_log_subdirectory
