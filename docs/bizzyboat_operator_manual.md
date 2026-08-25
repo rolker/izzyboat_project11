@@ -319,6 +319,39 @@ appears, the boat side isn't reaching the operator — check the comms link and 
 gabby's stack actually started. See the **CAMP user manual** for the operator-side
 view of this.
 
+### Confirming recording is running
+
+**Check this every deployment, before the boat leaves the dock.** Recording used
+to be part of `perception_launch.py`, so cameras up meant bags recording. It is a
+separate window now (`logging_launch.py`, #458): **perception can be perfectly
+healthy while nothing is being recorded**, and nothing on the operator station
+tells you so. The upside of the split is that you can stop and restart recording
+without taking the boat's perception chain down — the cost is that recording is
+now something you confirm rather than assume.
+
+On **gabby**, in the `project11` tmux session:
+
+1. Look at the **`logging` window** — both recorders print their start-up there
+   (`output='both'`). A recorder that failed to start says so in this window;
+   an empty window is not a good sign.
+2. Confirm both recorder nodes are alive:
+
+   ```bash
+   ros2 node list | grep -E '/bizzy/(sonar_)?logger'
+   ```
+
+   You want **both** `/bizzy/logger` and `/bizzy/sonar_logger`. Only one means
+   the other recorder died or was disabled (`logger:=false` /
+   `sonar_logger:=false`).
+3. Confirm a fresh bag directory is actually growing under
+   `/home/field/data/logs/bizzyboat/` and `/home/field/data/logs/bizzyboat_sonar/` —
+   each start mints a new UTC-timestamped subdirectory.
+
+To restart recording mid-deployment: **Ctrl-C in the `logging` window** (this
+closes the current bags cleanly — wait for it), then re-run
+`ros2 launch bizzyboat_project11 logging_launch.py`. A new timestamped bag
+begins; perception, core, and nav keep running throughout.
+
 ---
 
 ## 4. The operator station displays
