@@ -143,3 +143,28 @@ detail) plus direct verification against the working tree.
 - [ ] (must-fix) `docs/bizzyboat_operator_manual.md:291` ("Perception ... cameras, sonar logging") and its 4-step boat bring-up list go stale; plan asserts the tmux comment is the only invalidated doc — `plan.md:118-123`
 - [ ] (suggestion) `bag_recorder_operator_launch.py` is the closer in-repo precedent than `usb_camera_launch.py` — carries the rosbag2 SIGTTOU / clean-flush lessons (`--disable-keyboard-controls`, `sigterm_timeout=15`) that bear directly on #458's "Ctrl-C leaves a readable bag" goal — `plan.md:28-30`
 - [ ] (suggestion) Close the Open Question now: `core_launch.py:117-130` + `:456,:500` and `bag_recorder_operator_launch.py:98` both use `DeclareLaunchArgument(default_value='true')` + `IfCondition(LaunchConfiguration(...))` — no `PythonExpression` needed — `plan.md:129-136`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-25 23:38 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-458 at `7561482`
+**Mode**: pre-push
+**Depth**: Deep (reason: 289 changed lines in code/docs, 619 including the plan docs — over the 200-line Deep threshold)
+**Must-fix**: 3 | **Suggestions**: 6
+**Round**: 1 | **Ship**: continue — two of the three must-fixes are shutdown-path data-integrity risks on the boat's data of record, both flagged independently by two adversarial passes.
+
+**Note**: `git fetch origin` failed (host key verification / offline); the diff is against the local `origin/jazzy` ref, which may be stale. No `.agents/review-context.yaml` exists in this repo, so the review used `.agents/README.md` only.
+
+### Findings
+- [ ] (must-fix) `stop_tmux_project11.bash` SHUTDOWN_TIMEOUT=10 s is now shorter than the recorders' new 15+5 s shutdown grace, so `kill-session` can SIGHUP a finalizing mcap — `bizzyboat_project11/scripts/stop_tmux_project11.bash:11`
+- [ ] (must-fix) Recorders leave `record.disable_keyboard_controls` false with `emulate_tty=True`, so a stray SPACE in the now operator-facing logging window silently pauses a bag — `bizzyboat_project11/launch/logging_launch.py:116,141`
+- [ ] (must-fix) `.agents/README.md` still describes `perception_launch.py` as doing the logging; the agent-facing bring-up map does not know `logging_launch.py` exists — `.agents/README.md:82-84`
+- [ ] (suggestion) No pytest for `logging_launch.py`, though the package registers `test_core_launch.py` / `test_operator_core_launch.py` for exactly this wiring; the plan's claim that no launch-file test exists in this package is factually wrong — `bizzyboat_project11/CMakeLists.txt:33-52`
+- [ ] (suggestion) Neither recorder sets `output`, so the dedicated logging window shows nothing — not even a failed start — `bizzyboat_project11/launch/logging_launch.py:101,126`
+- [ ] (suggestion) Operator manual gains no "confirm recording is running" step, and the decoupling removes the old "perception up ⇒ bags recording" invariant — `docs/bizzyboat_operator_manual.md:293-297`
+- [ ] (suggestion) Shutdown step still says "Ctrl-C in each window" with no ordering; logging should be stopped last, and `stop_tmux_project11.bash` should be named — `docs/bizzyboat_operator_manual.md:107-109`
+- [ ] (suggestion) A mid-deployment `sonar_log_directory:=` relocation now leaves the M3 `.all` archive at the old root; the two-argument split is documented only in code comments — `bizzyboat_project11/launch/perception_launch.py:22-42`
+- [ ] (suggestion) The four removed perception launch args are now silently ignored if still passed (ros2launch does not validate top-level args), and `m3_all_directory` is undocumented outside the launch file — `bizzyboat_project11/launch/perception_launch.py:22-42`
