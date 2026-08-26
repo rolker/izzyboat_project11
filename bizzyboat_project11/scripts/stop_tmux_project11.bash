@@ -16,11 +16,25 @@ SESSION="${1:-project11}"
 # logging_launch.py use sigterm_timeout=15 + sigkill_timeout=5, so a window can
 # legitimately take 20 s to go away (#458).
 #
-# This is a grace, not a guarantee: if the budget runs out the script warns and
-# kill-sessions anyway, which SIGHUPs whatever is still finalizing. The warning
-# is the signal that a bag may be truncated -- if you see it, check the bag
-# before trusting the run rather than assuming the wait covered it.
+# This is a grace, not a guarantee: if the budget runs out the script warns for
+# each window still running and kill-sessions anyway, which SIGHUPs whatever is
+# still finalizing. The warning is the signal that a bag may be truncated -- if
+# you see it, check the bag before trusting the run rather than assuming the
+# wait covered it.
 SHUTDOWN_TIMEOUT=25
+
+# True (0) when the window's shell still has a child process -- i.e. something
+# is still running in there. A vanished window counts as not running.
+pane_busy() {
+    local target="$1" pane_pid children
+    pane_pid=$(/usr/bin/tmux list-panes -t "$target" -F '#{pane_pid}' 2>/dev/null | head -1)
+    if [ -z "$pane_pid" ]; then
+        return 1  # window gone
+    fi
+    # Count children of the shell -- if only the shell remains, the process exited
+    children=$(pgrep -P "$pane_pid" 2>/dev/null | wc -l)
+    [ "$children" -gt 0 ]
+}
 
 if ! /usr/bin/tmux has-session -t "$SESSION" 2>/dev/null; then
     echo "No tmux session '$SESSION' is running."
@@ -43,20 +57,14 @@ done
 echo "  Waiting for processes to exit (up to ${SHUTDOWN_TIMEOUT}s)..."
 SECONDS=0
 for window in $WINDOWS; do
-    while [ $SECONDS -lt $SHUTDOWN_TIMEOUT ]; do
-        # Check if pane still has a running foreground process (not just a shell prompt)
-        pane_pid=$(/usr/bin/tmux list-panes -t "${SESSION}:${window}" -F '#{pane_pid}' 2>/dev/null | head -1)
-        if [ -z "$pane_pid" ]; then
-            break  # window gone
-        fi
-        # Count children of the shell — if only the shell remains, process exited
-        children=$(pgrep -P "$pane_pid" 2>/dev/null | wc -l)
-        if [ "$children" -eq 0 ]; then
-            break
-        fi
+    while [ $SECONDS -lt $SHUTDOWN_TIMEOUT ] && pane_busy "${SESSION}:${window}"; do
         sleep 1
     done
-    if [ $SECONDS -ge $SHUTDOWN_TIMEOUT ]; then
+    # Warn on the process, not on the clock. With one shared budget a later
+    # window can find the deadline already spent and never be waited on at all;
+    # it is only a truncation risk if it is genuinely still running, so probe
+    # once more and let that -- not $SECONDS -- decide.
+    if pane_busy "${SESSION}:${window}"; then
         echo "    WARNING: $window still running after ${SHUTDOWN_TIMEOUT}s;" \
              "killing the session will truncate anything it is still writing"
     fi
@@ -68,18 +76,10 @@ if /usr/bin/tmux list-windows -t "$SESSION" -F '#{window_name}' | grep -q '^zeno
     /usr/bin/tmux send-keys -t "${SESSION}:zenoh" C-c 2>/dev/null
     # Its own budget: zenoh is Ctrl-C'd only once the rest are down.
     SECONDS=0
-    while [ $SECONDS -lt $SHUTDOWN_TIMEOUT ]; do
-        pane_pid=$(/usr/bin/tmux list-panes -t "${SESSION}:zenoh" -F '#{pane_pid}' 2>/dev/null | head -1)
-        if [ -z "$pane_pid" ]; then
-            break
-        fi
-        children=$(pgrep -P "$pane_pid" 2>/dev/null | wc -l)
-        if [ "$children" -eq 0 ]; then
-            break
-        fi
+    while [ $SECONDS -lt $SHUTDOWN_TIMEOUT ] && pane_busy "${SESSION}:zenoh"; do
         sleep 1
     done
-    if [ $SECONDS -ge $SHUTDOWN_TIMEOUT ]; then
+    if pane_busy "${SESSION}:zenoh"; then
         echo "    WARNING: zenoh did not stop within ${SHUTDOWN_TIMEOUT}s"
     fi
 fi
