@@ -366,6 +366,11 @@ On **gabby**, in the `project11` tmux session:
    `/home/field/data/logs/bizzyboat/` and `/home/field/data/logs/bizzyboat_sonar/` —
    each start mints a new UTC-timestamped subdirectory.
 
+**A recorder that dies stays dead.** Nothing restarts it — rosbag2 will not
+reopen a bag directory it already created, so an automatic respawn would just
+crash-loop. That is why this check is worth repeating during a long
+deployment, not only at the dock.
+
 To restart recording mid-deployment: **Ctrl-C in the `logging` window** (this
 closes the current bags cleanly — wait for it), then re-run
 `ros2 launch bizzyboat_project11 logging_launch.py`. A new timestamped bag

@@ -107,6 +107,15 @@ def reject_colliding_bag_directories(context, *args, **kwargs):
 # default is what makes stop-and-restart produce a new bag rather than a
 # crash. Pass log_subdirectory:=/sonar_log_subdirectory:= to override.
 #
+# Neither recorder sets `respawn`: it would not work here. `storage.uri` is
+# fixed when the launch description is built, and rosbag2 refuses a target
+# directory that already exists -- so a respawned recorder would die on its own
+# previous bag directory, immediately, over and over. Automatic recovery would
+# need a per-respawn subdirectory (and a decision about what a run split across
+# several bag directories means for the data of record); until then a recorder
+# that dies stays dead, which is why "Confirming recording is running" in the
+# operator manual is a per-deployment check rather than an assumption.
+#
 # What each recorder captures is set by the `/**/logger` and
 # `/**/sonar_logger` blocks in config/bizzyboat.yaml, loaded below by explicit
 # path (not via a group-level SetParametersFromFile); the recorded topic names
