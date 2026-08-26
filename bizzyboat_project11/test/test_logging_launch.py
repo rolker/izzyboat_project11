@@ -84,6 +84,10 @@ def _recorders(path=LAUNCH_FILE, **overrides):
                 if entity.condition is not None and \
                         not entity.condition.evaluate(context):
                     continue
+                # Node.node_name (the public property) raises until the node
+                # has actually been executed, so the name before launch is
+                # only reachable through the mangled attribute. Everything
+                # else this file inspects has a usable public property.
                 name = _resolve(context, entity._Node__node_name)
                 running[name] = (entity, context)
 
@@ -170,7 +174,7 @@ def test_keyboard_controls_are_disabled(name):
     pause the boat's data of record with no error anywhere."""
     entry = _recorders()[name]
     assert _params(entry)['record.disable_keyboard_controls'] is True
-    assert entry[0]._ExecuteLocal__emulate_tty is True, \
+    assert entry[0].emulate_tty is True, \
         'if emulate_tty ever goes away, revisit why this test exists'
 
 
@@ -179,7 +183,7 @@ def test_recorder_output_reaches_the_logging_window(name):
     """The dedicated window is the operator's only view of whether recording
     started; the launch_ros default ('log') would leave it blank."""
     entity, context = _recorders()[name]
-    assert _resolve(context, entity._ExecuteLocal__output) == 'both'
+    assert _resolve(context, entity.output) == 'both'
 
 
 @pytest.mark.parametrize('name,base,subdir', [
@@ -326,9 +330,9 @@ def test_the_stop_script_outwaits_the_recorder_shutdown_grace(name):
     Checked per recorder: either one can be the last to finish writing, so
     the budget has to cover whichever grace is longest, not just `logger`'s.
     """
-    entity, _ = _recorders()[name]
-    grace = int(entity._ExecuteLocal__sigterm_timeout[0].text) + \
-        int(entity._ExecuteLocal__sigkill_timeout[0].text)
+    entity, context = _recorders()[name]
+    grace = int(_resolve(context, entity.sigterm_timeout)) + \
+        int(_resolve(context, entity.sigkill_timeout))
     match = re.search(r'^SHUTDOWN_TIMEOUT=(\d+)', STOP_SCRIPT.read_text(),
                       re.MULTILINE)
     assert match, 'stop_tmux_project11.bash no longer sets SHUTDOWN_TIMEOUT'
