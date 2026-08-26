@@ -120,7 +120,8 @@ def reject_colliding_bag_directories(context, *args, **kwargs):
 # Each launch mints a fresh UTC-stamped subdirectory: rosbag2's recorder
 # errors out if its target directory already exists, so a per-invocation
 # default is what makes stop-and-restart produce a new bag rather than a
-# crash. Pass log_subdirectory:=/sonar_log_subdirectory:= to override.
+# crash. Override with `log_subdirectory:=<name>` and, separately,
+# `sonar_log_subdirectory:=<name>` -- two arguments, one per bag.
 #
 # Neither recorder sets `respawn`: it would not work here. `storage.uri` is
 # fixed when the launch description is built, and rosbag2 refuses a target
@@ -138,7 +139,9 @@ def reject_colliding_bag_directories(context, *args, **kwargs):
 def generate_launch_description():
     namespace = LaunchConfiguration('namespace')
     namespace_arg = DeclareLaunchArgument(
-        'namespace', default_value=TextSubstitution(text='bizzy')
+        'namespace', default_value=TextSubstitution(text='bizzy'),
+        description='ROS namespace the recorder nodes come up under; the '
+                    'operator manual greps for /<namespace>/logger.'
     )
 
     # Each recorder can be run without the other -- e.g. stop the sonar bags
@@ -161,7 +164,10 @@ def generate_launch_description():
         default_value=EnvironmentVariable(
             'P11_LOG_DIR',
             default_value='/home/field/data/logs/bizzyboat'
-        )
+        ),
+        description='Base directory for the general bag; each launch writes '
+                    'a fresh log_subdirectory under it. Point it at an '
+                    'external disk to move the data of record.'
     )
 
     sonar_log_directory = LaunchConfiguration('sonar_log_directory')
@@ -170,19 +176,29 @@ def generate_launch_description():
         default_value=EnvironmentVariable(
             'P11_SONAR_LOG_DIR',
             default_value='/home/field/data/logs/bizzyboat_sonar'
-        )
+        ),
+        description='Base directory for the sonar bag. Must not resolve to '
+                    'the same place as log_directory unless the two '
+                    'subdirectories differ; the launch refuses to start if '
+                    "both recorders' paths collide."
     )
     datetime_str = datetime.datetime.now(datetime.timezone.utc).isoformat(
         timespec='seconds').replace(':', '-')
     log_subdirectory = LaunchConfiguration('log_subdirectory')
     log_subdirectory_arg = DeclareLaunchArgument(
         'log_subdirectory',
-        default_value=TextSubstitution(text=datetime_str)
+        default_value=TextSubstitution(text=datetime_str),
+        description='Directory the general bag is written into, under '
+                    'log_directory. Defaults to a fresh UTC stamp per '
+                    'launch; rosbag2 refuses a directory that exists.'
     )
     sonar_log_subdirectory = LaunchConfiguration('sonar_log_subdirectory')
     sonar_log_subdirectory_arg = DeclareLaunchArgument(
         'sonar_log_subdirectory',
-        default_value=TextSubstitution(text=datetime_str)
+        default_value=TextSubstitution(text=datetime_str),
+        description='Directory the sonar bag is written into, under '
+                    'sonar_log_directory. Same UTC-stamp default as '
+                    'log_subdirectory.'
     )
 
     return LaunchDescription([
