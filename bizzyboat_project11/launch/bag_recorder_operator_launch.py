@@ -75,7 +75,14 @@ RECORD_TOPICS = [
     # different sources:
     #   - /ais/nmea is the raw !AIVDM feed, the smallest artifact and the one
     #     everything else is derived from -- if the parser or the tracker
-    #     changes, contacts can be regenerated from it offline.
+    #     changes, contacts can be re-derived from it offline. Not losslessly,
+    #     though: AISContact accumulates, folding in the message-5 static and
+    #     voyage fields (name, callsign, destination, dimensions) that repeat
+    #     only every ~6 min, and AIVDM is multi-part. A re-derivation from a
+    #     mid-stream bag -- or from one 900 s split read on its own -- starts
+    #     empty and holds less static info than the live-recorded contacts,
+    #     which is why /ais/contacts is recorded alongside the raw feed
+    #     rather than instead of it.
     #   - /ais/messages and /ais/atons are re-derivable from those sentences
     #     by re-running the same chain, so recording them buys nothing the
     #     raw feed does not already hold. (/ais/atons is not a Mesobot-only
