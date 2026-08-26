@@ -138,7 +138,7 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
 - The heavy boat runtime deps (mavros, sbg_driver, mru_transform, …) are
   `exec_depend` only — building needs little beyond ament_cmake + xacro.
   First-party exec_depends have no rosdep keys; CI uses `rosdep install -r`.
-- Six pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
+- Seven pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
   - `test/test_retrofit_m3_bag.py` (500+ lines) covering
     `scripts/retrofit_m3_bag.py` — integer-second clock-skew correction
     (windowed-max envelope), `/tf_static` M3-offset rewrite, histogram
@@ -171,6 +171,13 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
     carry opposite signs; it is the line an operator copies. Also the honesty
     gates on the corpus, so a run too short to show drift cannot report 0.0 mm
     of it.
+  - `test/test_logging_launch.py` — recorder wiring in `logging_launch.py`
+    after the #458 split: both bags on by default, each disable-able alone,
+    rosbag2's SPACE-to-pause handler off, `output='both'` so the logging window
+    is not blank, per-recorder bag directories, the M3 `.all` archive still a
+    sibling of the sonar bag dir, the moved-argument guards on both launch
+    files, and `stop_tmux_project11.bash` outwaiting the recorders' mcap
+    shutdown grace. Every one of these fails silently in the field.
 - CI also runs `xacro ... | check_urdf` on both boats' URDFs — a URDF that no
   longer parses means no `/tf_static` on the boat.
 
