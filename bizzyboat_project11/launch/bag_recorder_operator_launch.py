@@ -62,7 +62,11 @@ RECORD_TOPICS = [
     #
     # Two of the chain's four topics, deliberately. The boat-side logger
     # records all four (config/bizzyboat.yaml, /**/logger record list); the
-    # asymmetry here is a choice, not an oversight, so please don't "fix" it:
+    # asymmetry here is a choice, not an oversight, so please don't "fix" it.
+    # Note also that boat and operator each decode the SAME shore receiver's
+    # feed independently, so on a joint replay these bags hold near-duplicate
+    # AIS -- a diff between them shows link/decode differences, not two
+    # different sources:
     #   - /ais/nmea is the raw !AIVDM feed, the smallest artifact and the one
     #     everything else is derived from -- if the parser or the tracker
     #     changes, contacts can be regenerated from it offline.
