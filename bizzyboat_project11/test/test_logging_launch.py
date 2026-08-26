@@ -257,8 +257,13 @@ def test_each_recorder_loads_the_shared_config():
 
 def test_the_m3_all_archive_stays_a_sibling_of_the_sonar_bag():
     """perception_launch.py keeps the raw `.all` archive; it must not default
-    into the sonar bag's directory or that directory's parent, or the bridge's
-    makedirs races the recorder (#458)."""
+    into the sonar bag's own directory, or the bridge's makedirs races the
+    recorder (#458).
+
+    Only that exact directory is a conflict -- rosbag2 objects to its own
+    target pre-existing, not to its parent -- so the sibling assertion below
+    pins the chosen layout rather than a hard constraint.
+    """
     perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)
     context = LaunchContext()
     description = perception.generate_launch_description()
@@ -269,8 +274,8 @@ def test_the_m3_all_archive_stays_a_sibling_of_the_sonar_bag():
 
     sonar_uri = Path(_params(
         _recorders()['sonar_logger'])['storage.uri'])
-    assert all_dir != sonar_uri
-    assert all_dir != sonar_uri.parent
+    assert all_dir != sonar_uri, \
+        'the bridge would makedirs the directory the recorder needs fresh'
     assert all_dir.parent == sonar_uri.parent, \
         'the archive is meant to be a collision-free sibling of the bag dir'
 

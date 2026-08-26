@@ -67,8 +67,9 @@ def reject_moved_recorder_arguments(context, *args, **kwargs):
             '  ros2 launch bizzyboat_project11 logging_launch.py '
             f'{stale[0]}:=<value>\n\n'
             "To relocate the M3's raw .all archive (which does still live "
-            'here), use m3_all_directory:=<value> -- keep it a sibling of the '
-            'sonar bag directory, never the bag directory or its parent.')
+            'here), use m3_all_directory:=<value> -- keep it off the sonar '
+            'bag directory itself; a sibling of it is the default and the '
+            'tidiest place for it.')
     return []
 
 
@@ -171,13 +172,15 @@ def generate_launch_description():
                                 # Default is an `m3_all` subdir of the
                                 # sonar-log base, NOT the sonar bag's own
                                 # `<base>/<sonar_log_subdirectory>` dir: the
-                                # sonar_logger rosbag2 recorder errors if its
-                                # target dir pre-exists, and the bridge
-                                # makedirs its save dir -- so writing there (or
-                                # to that session parent) would race the bag.
-                                # `<base>/m3_all` is a collision-free sibling.
-                                # Keep any override a sibling of the sonar bag
-                                # directory, never the bag dir or its parent.
+                                # sonar_logger rosbag2 recorder errors if that
+                                # exact dir pre-exists, and the bridge makedirs
+                                # its save dir -- so aiming the archive at the
+                                # bag dir itself would race the recorder.
+                                # (The bag's *parent* is fine -- rosbag2 only
+                                # objects to its own target -- but `m3_all` as
+                                # a collision-free sibling also keeps the .all
+                                # files out from among the bag directories.)
+                                # Keep any override off the bag directory.
                                 'save_all_dir': m3_all_directory,
                                 # Prototype rollover: cap each .all segment at
                                 # 200 MB (about every ~12 min at the M3's

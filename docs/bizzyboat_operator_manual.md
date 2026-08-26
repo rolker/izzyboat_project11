@@ -400,10 +400,11 @@ nobody is watching.
 > `perception_launch.py` was started with, because that window is still
 > running. To move both mid-deployment you have to restart perception too.
 >
-> Keep `m3_all_directory` a **sibling** of the sonar bag directory — never the
-> bag directory itself or its parent. The bridge creates its save directory,
-> and the rosbag2 recorder refuses to start if its own target directory
-> already exists, so overlapping the two makes recording fail to start.
+> Keep `m3_all_directory` **off the sonar bag directory itself** — a sibling
+> of it, which is the default, is the tidiest place. The bridge creates its
+> save directory, and the rosbag2 recorder refuses to start if its own target
+> directory already exists, so pointing the archive at the bag directory makes
+> recording fail to start.
 >
 > Sending an argument to the wrong launch file of the two is a hard error in
 > **both** directions, naming the file it belongs to — `log_directory:=` /
