@@ -167,3 +167,23 @@ No must-fix findings. Scope, issue alignment, file targeting, and
 consequences all check out against the tree; the suggestions are
 documentation-accuracy and reader-context items that can be folded into
 the implementation commit.
+
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-26 04:37 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-464 at `01decd9`
+**Mode**: pre-push
+**Depth**: Deep (reason: 301 changed lines across 3 files — 200+ line threshold; plan.md is also a project-repo override trigger. Code delta is 22/-1 in one launch file.)
+**Must-fix**: 1 | **Suggestions**: 4
+**Round**: 1 | **Ship**: continue — one must-fix, mechanical (a wrong factual claim in a new code comment); fix and re-review.
+
+### Findings
+- [ ] (must-fix) `/ais/atons` comment says it fires only for AtoN-flagged beacons "not for charted navigation aids"; the tracker publishes on every AIS message-21 report, which charted AIS aids transmit — `bizzyboat_project11/launch/bag_recorder_operator_launch.py:71-73`
+- [ ] (suggestion) Recording `/ais/contacts` persists identifiable third-party vessel data (MMSI, IMO, callsign, name, destination) to operator bags; no retention/sharing statement exists anywhere in the repo — carry the consequence in the docstring or open a tracking issue — `bag_recorder_operator_launch.py:6-8,59-77`
+- [ ] (suggestion) `/ais/nmea` is unauthenticated wire text (nmea_relay binds INADDR_ANY on UDP 2125, `config/ais.yaml:19-22`) — note that provenance caveat next to the entry that now stores it — `bag_recorder_operator_launch.py:74`
+- [ ] (suggestion) Plan says the pre-change `RECORD_TOPICS` had "12 entries"; it has 11 (verified against `origin/jazzy`) — `.agent/work-plans/issue-464/plan.md:14`
+- [ ] (suggestion) The boat/operator asymmetry comment invites a cross-bag comparison without saying both sides receive the *same* shore feed independently — one clause prevents a confusing near-duplicate diff on joint replay — `bag_recorder_operator_launch.py:63-65`
