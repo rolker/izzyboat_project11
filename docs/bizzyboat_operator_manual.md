@@ -103,9 +103,19 @@ This powers the *hardware* only; the autonomy stacks are started next.
 
 ### 7. Shutdown
 
-1. **Stop the stacks cleanly** — in the **`project11` tmux sessions on both salmon
-   and gabby**, press **Ctrl-C** in **each window**. *This lets the bag recordings
-   finish writing — don't skip it, or you can lose/corrupt the run's data.*
+1. **Stop the stacks cleanly** — on **both salmon and gabby**, run
+   `~/stop_tmux_project11.bash`. It Ctrl-Cs every window at once (zenoh last,
+   so the link outlives the nodes), waits up to 25 s for them to actually
+   exit, then closes the session. *This is what lets the bag recordings finish
+   writing — don't skip it, or you can lose/corrupt the run's data.* Watch for
+   a `WARNING: ... still running` line: that means the session was killed with
+   something still writing, so check that run's bags before trusting them.
+
+   If you stop windows by hand instead, **stop `logging` last**. The recorders
+   need their SIGINT and up to ~20 s to finalize their mcap files; killing the
+   session out from under them truncates the run's bags. Everything else can go
+   first, in any order. (The script doesn't need that ordering — it Ctrl-Cs
+   everything together and then waits for the recorders' finalize.)
 2. **Power off the PCs** — brief press of each PC's power button.
 3. *(Optional)* turn off the **payload switch**.
 4. **Power off the boat.**
@@ -288,9 +298,14 @@ The stack comes up in this order (zenoh-first):
    waits for it.
 2. **Core** (`core_launch.py`) — MAVROS (flight-controller link on `/dev/fcu`),
    the helm, transforms, UDP bridge to the operator, NTRIP, etc.
-3. **Perception** (`perception_launch.py`) — cameras, sonar logging, the
+3. **Perception** (`perception_launch.py`) — cameras, sonar, the
    forward-facing segmentation used by the collision monitor.
-4. **Navigation** (`nav_launch.py`) — the Nav2 stack configured for model **240**.
+4. **Logging** (`logging_launch.py`) — the two rosbag2 recorders (the general
+   bag and the sonar bag). Its own window so recording can be stopped and
+   restarted without taking perception down: Ctrl-C here closes the bags
+   cleanly, and starting the window again begins a fresh timestamped bag.
+   `logger:=false` / `sonar_logger:=false` bring up only one of the two.
+5. **Navigation** (`nav_launch.py`) — the Nav2 stack configured for model **240**.
 
 > For the *physical* power-on (battery switches, etc.) follow the field briefing
 > and [`bizzyboat_project11/docs/bizzyboat_power.md`](../bizzyboat_project11/docs/bizzyboat_power.md);
@@ -313,6 +328,90 @@ auto-creates a tab per platform it hears on `/marine/platforms`). If the tab nev
 appears, the boat side isn't reaching the operator — check the comms link and that
 gabby's stack actually started. See the **CAMP user manual** for the operator-side
 view of this.
+
+### Confirming recording is running
+
+**Check this every deployment, before the boat leaves the dock.** Recording used
+to be part of `perception_launch.py`, so cameras up meant bags recording. It is a
+separate window now (`logging_launch.py`, #458): **perception can be perfectly
+healthy while nothing is being recorded**, and nothing on the operator station
+tells you so. The upside of the split is that you can stop and restart recording
+without taking the boat's perception chain down — the cost is that recording is
+now something you confirm rather than assume.
+
+On **gabby**, in the `project11` tmux session:
+
+1. Look at the **`logging` window** — both recorders print their start-up there
+   (`output='both'`). A recorder that failed to start says so in this window;
+   an empty window is not a good sign.
+2. Confirm both recorder nodes are alive:
+
+   ```bash
+   ros2 node list | grep -E '/bizzy/(sonar_)?logger'
+   ```
+
+   You want **exactly one of each** — `/bizzy/logger` and
+   `/bizzy/sonar_logger`. Only one of the two means the other recorder died or
+   was disabled (`logger:=false` / `sonar_logger:=false`).
+
+   **Two of the same name is just as bad, and easier to do now**: launching
+   `logging_launch.py` a second time (say, after Ctrl-C in the wrong window,
+   or in a second terminal) starts a second pair of recorders in their own
+   fresh bag directories. Nothing errors — both pairs record, ROS delivers
+   each message to all of them, and you end up with two directories that each
+   look plausible while the disk fills twice as fast. Duplicate names show up
+   as repeated lines in the `grep` above. If you see them, stop **both**
+   `logging` instances (Ctrl-C, wait for the finalize) and start one.
+3. Confirm a fresh bag directory is actually growing under
+   `/home/field/data/logs/bizzyboat/` and `/home/field/data/logs/bizzyboat_sonar/` —
+   each start mints a new UTC-timestamped subdirectory.
+
+**A recorder that dies stays dead.** Nothing restarts it — rosbag2 will not
+reopen a bag directory it already created, so an automatic respawn would just
+crash-loop. That is why this check is worth repeating during a long
+deployment, not only at the dock.
+
+To restart recording mid-deployment: **Ctrl-C in the `logging` window** (this
+closes the current bags cleanly — wait for it), then re-run
+`ros2 launch bizzyboat_project11 logging_launch.py`. A new timestamped bag
+begins; perception, core, and nav keep running throughout.
+
+#### Sending the data somewhere else (e.g. an external disk)
+
+The bags and the M3's raw `.all` archive are written by **two different launch
+files**, so relocating the data takes **two** overrides — one on each:
+
+| What | Default | Argument | Launch file |
+| --- | --- | --- | --- |
+| General bag | `/home/field/data/logs/bizzyboat/<UTC stamp>/` | `log_directory:=` (and `log_subdirectory:=`) | `logging_launch.py` |
+| Sonar bag | `/home/field/data/logs/bizzyboat_sonar/<UTC stamp>/` | `sonar_log_directory:=` (and `sonar_log_subdirectory:=`) | `logging_launch.py` |
+| M3 raw `.all` archive | `/home/field/data/logs/bizzyboat_sonar/m3_all/` | `m3_all_directory:=` | `perception_launch.py` |
+
+`P11_LOG_DIR` and `P11_SONAR_LOG_DIR` in the environment move the defaults for
+all three at once, which is usually what you want. Give them **different**
+directories: the two bags' timestamped subdirectory names are identical by
+default, so one shared base directory would aim both recorders at the same
+path. `logging_launch.py` refuses to start in that case and tells you to pass
+`sonar_log_subdirectory:=` — better than one recorder dying alone in a window
+nobody is watching.
+
+> ⚠️ **Restarting `logging` with `sonar_log_directory:=<new disk>` moves the
+> sonar *bag* only.** The `.all` archive keeps writing wherever
+> `perception_launch.py` was started with, because that window is still
+> running. To move both mid-deployment you have to restart perception too.
+>
+> Keep `m3_all_directory` **off the sonar bag directory itself** — a sibling
+> of it, which is the default, is the tidiest place. The bridge creates its
+> save directory, and the rosbag2 recorder refuses to start if its own target
+> directory already exists, so pointing the archive at the bag directory makes
+> recording fail to start.
+>
+> Sending an argument to the wrong launch file of the two is a hard error in
+> **both** directions, naming the file it belongs to — `log_directory:=` /
+> `sonar_log_directory:=` (and their `_subdirectory` forms) passed to
+> `perception_launch.py`, and `m3_all_directory:=` passed to
+> `logging_launch.py`. The launch stops instead of coming up clean and writing
+> the data somewhere you didn't ask for.
 
 ---
 

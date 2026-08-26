@@ -79,9 +79,21 @@ same care as launch files.
   serial bridges, Garmin sidescan (on by default, `sidescan:=false` to
   disable), URDF via `publish_state_launch.py`, NTRIP, SBG INS.
   `nav_launch.py` (Nav2 via shared `echoboat_project11` bringup, model 240 +
-  `config/nav2_overlay.yaml`) and `perception_launch.py` (cameras, sonar,
-  logging to `/home/field/data/logs/...`) run alongside. tmux session
-  scripts under `scripts/start_tmux_*.bash` tie these together on the hosts.
+  `config/nav2_overlay.yaml`), `perception_launch.py` (cameras, sonar) and
+  `logging_launch.py` (the two rosbag2 recorders, `logger` and `sonar_logger`,
+  writing to `/home/field/data/logs/...`) run alongside. The recorders live in
+  `logging_launch.py`, NOT in `perception_launch.py` — they were split out in
+  #458 so recording can be stopped and restarted without taking the perception
+  chain down, and each launch mints a fresh timestamped bag directory.
+  `perception_launch.py` keeps only the M3's raw Kongsberg `.all` archive, under
+  its own `m3_all_directory` argument (default `<P11_SONAR_LOG_DIR>/m3_all`) —
+  deliberately a *sibling* of the sonar bag dir, since the bridge makedirs its
+  save dir and rosbag2 refuses a pre-existing target. The four recorder args
+  that moved are rejected with a hard error if still passed to
+  `perception_launch.py` (`ros2 launch` does not validate top-level args, so
+  the alternative was a silent bring-up recording to the default). tmux
+  session scripts under `scripts/start_tmux_*.bash` tie these together on the
+  hosts, giving logging its own window.
 - **Sim**: `bizzyboat_sim_core_launch.py` reuses the REAL `bizzyboat.yaml`
   and layers `bizzyboat_sim.yaml` on top (`is_simulator`), excluding hardware
   drivers — sim and field share one config source.
@@ -126,7 +138,7 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
 - The heavy boat runtime deps (mavros, sbg_driver, mru_transform, …) are
   `exec_depend` only — building needs little beyond ament_cmake + xacro.
   First-party exec_depends have no rosdep keys; CI uses `rosdep install -r`.
-- Six pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
+- Seven pytest suites, all registered in `bizzyboat_project11/CMakeLists.txt`:
   - `test/test_retrofit_m3_bag.py` (500+ lines) covering
     `scripts/retrofit_m3_bag.py` — integer-second clock-skew correction
     (windowed-max envelope), `/tf_static` M3-offset rewrite, histogram
@@ -159,6 +171,13 @@ source .agent/scripts/setup.bash && cd layers/main/platforms_ws && \
     carry opposite signs; it is the line an operator copies. Also the honesty
     gates on the corpus, so a run too short to show drift cannot report 0.0 mm
     of it.
+  - `test/test_logging_launch.py` — recorder wiring in `logging_launch.py`
+    after the #458 split: both bags on by default, each disable-able alone,
+    rosbag2's SPACE-to-pause handler off, `output='both'` so the logging window
+    is not blank, per-recorder bag directories, the M3 `.all` archive still a
+    sibling of the sonar bag dir, the moved-argument guards on both launch
+    files, and `stop_tmux_project11.bash` outwaiting the recorders' mcap
+    shutdown grace. Every one of these fails silently in the field.
 - CI also runs `xacro ... | check_urdf` on both boats' URDFs — a URDF that no
   longer parses means no `/tf_static` on the boat.
 

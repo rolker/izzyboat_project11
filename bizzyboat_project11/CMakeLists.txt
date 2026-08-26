@@ -50,6 +50,11 @@ if(BUILD_TESTING)
   # are opposite in sign, and it is the line an operator copies.
   ament_add_pytest_test(test_gnss_vertical_calibration
     test/test_gnss_vertical_calibration.py)
+  # Recorder wiring after the #458 split: both bags on by default, keyboard
+  # pause disabled, separate output dirs, the M3 .all archive still a sibling
+  # of the sonar bag, and stop_tmux outwaiting the mcap shutdown grace. Every
+  # one of these fails silently in the field.
+  ament_add_pytest_test(test_logging_launch test/test_logging_launch.py)
 endif()
 
 ament_package()

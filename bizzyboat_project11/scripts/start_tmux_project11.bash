@@ -46,10 +46,18 @@ sleep 2
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp && export ROS_S57_ENC_ROOT=/home/field/data/ENC_ROOT" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 core_launch.py" C-m
 
-# Perception: cameras, sonar, logging
+# Perception: cameras, sonar
 /usr/bin/tmux new-window -t project11 -n perception
 /usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
 /usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 perception_launch.py" C-m
+
+# Logging: the rosbag2 recorders, in their own window so recording can be
+# stopped (Ctrl-C here) and restarted without taking perception down with it.
+# Each start writes a fresh timestamped bag directory. Run with logger:=false
+# or sonar_logger:=false to bring up only one of the two recorders.
+/usr/bin/tmux new-window -t project11 -n logging
+/usr/bin/tmux send-keys "source /opt/ros/jazzy/setup.bash && source /home/field/project11/layers/main/site_ws/install/setup.bash && export RMW_IMPLEMENTATION=rmw_zenoh_cpp" C-m
+/usr/bin/tmux send-keys "ros2 launch bizzyboat_project11 logging_launch.py" C-m
 
 # Nav: autonomy, helm, s57, nav2
 /usr/bin/tmux new-window -t project11 -n nav
