@@ -3,6 +3,7 @@ import datetime
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
+from launch.actions import OpaqueFunction
 from launch.conditions import IfCondition
 from launch.substitutions import EnvironmentVariable
 from launch.substitutions import LaunchConfiguration
@@ -11,6 +12,45 @@ from launch.substitutions import TextSubstitution
 from launch_ros.actions import Node
 from launch_ros.actions import PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
+
+
+# Arguments that live in perception_launch.py, not here (#458). The relocation
+# table in the operator manual lists all three data destinations together, so
+# reaching for the wrong launch file is the natural mistake -- and
+# `ros2 launch` would accept it silently.
+PERCEPTION_ARGUMENTS = (
+    'm3_all_directory',
+)
+
+
+def reject_perception_arguments(context, *args, **kwargs):
+    """Fail loudly on a `name:=value` that belongs to perception_launch.py.
+
+    The mirror image of that file's `reject_moved_recorder_arguments`: an
+    undeclared top-level argument just sets a launch configuration nobody
+    reads, so `m3_all_directory:=/mnt/disk` passed here would start the
+    recorders looking perfectly normal while the M3's raw `.all` archive kept
+    filling the internal disk -- discovered, at the earliest, when someone went
+    looking for the files.
+
+    Nothing includes this launch file, so an inherited configuration cannot
+    trip this by accident; if that ever changes, scope the include.
+    """
+    stale = [name for name in PERCEPTION_ARGUMENTS
+             if name in context.launch_configurations]
+    if stale:
+        raise RuntimeError(
+            'logging_launch.py runs the rosbag2 recorders only; '
+            f"the argument(s) {', '.join(stale)} belong to "
+            'perception_launch.py (#458) and would be ignored here, leaving '
+            "the M3's raw .all archive at its default location.\n\n"
+            'Pass them to the perception launch instead, e.g.:\n'
+            '  ros2 launch bizzyboat_project11 perception_launch.py '
+            f'{stale[0]}:=<value>\n\n'
+            'The bag directories, which do live here, are log_directory:= / '
+            'log_subdirectory:= and sonar_log_directory:= / '
+            'sonar_log_subdirectory:=.')
+    return []
 
 
 # BizzyBoat rosbag2 recorders.
@@ -85,6 +125,9 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        # First, so a perception argument stops the launch here rather than
+        # part-way into a bring-up that would not have honoured it.
+        OpaqueFunction(function=reject_perception_arguments),
         namespace_arg,
         logger_arg,
         sonar_logger_arg,

@@ -240,6 +240,26 @@ def test_perception_rejects_the_recorder_arguments_that_moved(argument):
     assert 'logging_launch.py' in message, 'the error must say where it went'
 
 
+def test_logging_rejects_the_perception_argument():
+    """The relocation table lists all three destinations together, so
+    `m3_all_directory:=` aimed at this launch file is the natural mistake;
+    `ros2 launch` would take it silently and leave the .all archive behind."""
+    logging_launch = _load_launch_module()
+    context = LaunchContext()
+    context.launch_configurations['m3_all_directory'] = '/tmp/somewhere-else'
+    with pytest.raises(RuntimeError) as excinfo:
+        logging_launch.reject_perception_arguments(context)
+    message = str(excinfo.value)
+    assert 'm3_all_directory' in message
+    assert 'perception_launch.py' in message, 'the error must say where it goes'
+
+
+def test_logging_accepts_a_bare_bring_up():
+    """The guard must not fire on the normal case."""
+    logging_launch = _load_launch_module()
+    assert logging_launch.reject_perception_arguments(LaunchContext()) == []
+
+
 def test_perception_accepts_a_bare_bring_up():
     """The guard must not fire on the normal case."""
     perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)

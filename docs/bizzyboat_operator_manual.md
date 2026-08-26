@@ -383,9 +383,12 @@ all three at once, which is usually what you want.
 > and the rosbag2 recorder refuses to start if its own target directory
 > already exists, so overlapping the two makes recording fail to start.
 >
-> Passing `log_directory:=`/`sonar_log_directory:=` to **`perception_launch.py`**
-> (where they used to live) is now a hard error naming `logging_launch.py`, so
-> a stale habit stops the launch instead of quietly recording to the default.
+> Sending an argument to the wrong launch file of the two is a hard error in
+> **both** directions, naming the file it belongs to — `log_directory:=` /
+> `sonar_log_directory:=` (and their `_subdirectory` forms) passed to
+> `perception_launch.py`, and `m3_all_directory:=` passed to
+> `logging_launch.py`. The launch stops instead of coming up clean and writing
+> the data somewhere you didn't ask for.
 
 ---
 
