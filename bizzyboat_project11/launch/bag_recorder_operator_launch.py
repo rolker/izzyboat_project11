@@ -68,9 +68,12 @@ RECORD_TOPICS = [
     #     changes, contacts can be regenerated from it offline.
     #   - /ais/messages and /ais/atons are re-derivable from those sentences
     #     by re-running the same chain, so recording them buys nothing the
-    #     raw feed does not already hold. (/ais/atons is also narrower than
-    #     it sounds: it fires for AtoN-flagged transmitters such as Mesobot,
-    #     not for charted navigation aids.)
+    #     raw feed does not already hold. (/ais/atons is not a Mesobot-only
+    #     feed, despite the tracker comment that introduced it: the tracker
+    #     republishes every AIS message-21 AtoN report it sees, which
+    #     includes AIS-equipped charted aids -- 993672944 was observed on it
+    #     off Portsmouth on 2026-08-25. It is still re-derivable from the
+    #     raw sentences.)
     '/ais/nmea',
     # The tracked, per-MMSI AISContact product -- what CAMP draws and what a
     # replay drives directly, without re-running the decode chain first.
