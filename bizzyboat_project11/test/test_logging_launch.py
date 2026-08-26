@@ -205,14 +205,19 @@ def test_perception_accepts_a_bare_bring_up():
     assert perception.reject_moved_recorder_arguments(LaunchContext()) == []
 
 
-def test_the_stop_script_outwaits_the_recorder_shutdown_grace():
+@pytest.mark.parametrize('name', ['logger', 'sonar_logger'])
+def test_the_stop_script_outwaits_the_recorder_shutdown_grace(name):
     """stop_tmux_project11.bash kill-sessions after its timeout; if that is
-    shorter than sigterm+sigkill, it SIGHUPs a finalizing mcap."""
-    entity, _ = _recorders()['logger']
+    shorter than sigterm+sigkill, it SIGHUPs a finalizing mcap.
+
+    Checked per recorder: either one can be the last to finish writing, so
+    the budget has to cover whichever grace is longest, not just `logger`'s.
+    """
+    entity, _ = _recorders()[name]
     grace = int(entity._ExecuteLocal__sigterm_timeout[0].text) + \
         int(entity._ExecuteLocal__sigkill_timeout[0].text)
     match = re.search(r'^SHUTDOWN_TIMEOUT=(\d+)', STOP_SCRIPT.read_text(),
                       re.MULTILINE)
     assert match, 'stop_tmux_project11.bash no longer sets SHUTDOWN_TIMEOUT'
     assert int(match.group(1)) >= grace, \
-        f'stop script waits {match.group(1)}s but recorders may take {grace}s'
+        f'stop script waits {match.group(1)}s but {name} may take {grace}s'
