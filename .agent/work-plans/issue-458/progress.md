@@ -317,9 +317,50 @@ None — the single Copilot comment is valid.
 `test_logging_launch.py:347-358` only greps `SHUTDOWN_TIMEOUT=` out of the script text; nothing exercises the wait loop's warning logic, which is why 27 green tests did not catch this. A pure-bash behaviour test is out of proportion here — re-check the fix with `bash -n` / `shellcheck` plus a two-window tmux smoke where the first window is slow to exit.
 
 ### Pre-merge (carried forward, not a code finding)
-- [ ] (deferred: no docker in this worktree) ADR-0018 — HEAD still carries no `refs/notes/ci-local` full-scope attestation; the host must run `.agent/scripts/ci_local.sh` before merge.
+- [x] (deferred: no docker in this worktree -- host pre-merge task) ADR-0018 — HEAD still carries no `refs/notes/ci-local` full-scope attestation; the host must run `.agent/scripts/ci_local.sh` before merge.
 
 ### Next step
 `address-findings` — one open must-fix. Hand off to a fresh-context sub-agent:
 
     .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill address-findings
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-26 01:12 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**PR**: #461 at `707beea`
+**Addressed**: `## Integrated Review` (2026-08-25 21:09 -04:00, PR #461 @ `27a7147`)
+**Commits**: `707beea`
+
+### Actions
+- [x] Warn on the process, not on the spent clock — extracted the pane/child probe
+  into a `pane_busy()` helper, made both wait loops `while <budget> && pane_busy ...`,
+  and replaced each post-loop `[ $SECONDS -ge $SHUTDOWN_TIMEOUT ]` test with one
+  final `pane_busy` probe. A window that exited long ago is now silent even when an
+  earlier window spent the shared budget; a window never waited on because the
+  budget was already gone still warns if it is genuinely writing. Applied to the
+  zenoh wait too, which had the same clock-keyed condition —
+  `bizzyboat_project11/scripts/stop_tmux_project11.bash:25-36,58-71,77-82`
+- [x] Header comment `:19-23` reworded — the warning is now per-window-still-running,
+  not "the budget ran out" — `bizzyboat_project11/scripts/stop_tmux_project11.bash:19-23`
+- [x] ADR-0018 `refs/notes/ci-local` attestation — `file:none`
+  (deferred: docker is not installed in this worktree; host pre-merge task, carried
+  forward from the Integrated Review unchanged)
+
+### Verification
+- `bash -n` and `shellcheck` clean on the edited script.
+- `pytest bizzyboat_project11/test/test_logging_launch.py` — 27 passed (the
+  `SHUTDOWN_TIMEOUT` grep assertion still holds; the constant is untouched).
+- Two-window smoke with a stubbed `tmux` (no tmux in this worktree), per the review's
+  test-coverage note: (a) both windows busy → both warn, including the second, which
+  the shared budget never waited on; (b) **the regression case** — first window busy
+  through the whole budget, second already exited → only the first warns. Before this
+  fix (b) warned for both.
+- `docs/bizzyboat_operator_manual.md:110-112` re-read: its "watch for a
+  `WARNING: ... still running` line" guidance is unchanged and now accurate.
+
+### Next step
+Lifecycle: **Implementation** → **review-code** (re-review the fix)
+
+    .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill review-code
