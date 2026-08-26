@@ -107,3 +107,15 @@ deviate from.
 - [ ] Carry per-topic rationale comments into `RECORD_TOPICS`, matching the file's existing convention.
 - [ ] Make the raw-vs-tracked (nmea/messages vs. contacts/atons) inclusion decision explicit in the plan rather than defaulting.
 - [ ] If `/ais/atons` is recorded, note in its comment that it currently only fires for AtoN-flagged beacons (e.g. Mesobot), not charted navigation aids.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-08-26 04:40 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-464/plan.md` at `d5bfb91`
+**Branch**: feature/issue-464 at `d5bfb91`
+**Phases**: single
+
+### Open questions
+- [ ] No open questions — plan is review-plan-ready.
