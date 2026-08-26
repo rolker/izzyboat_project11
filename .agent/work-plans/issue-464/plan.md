@@ -12,7 +12,7 @@ https://github.com/rolker/unh_echoboats_project11/issues/464
 `ais_launch.py` itself pushes only the `ais` sub-namespace — so the running
 chain (`nmea_relay → ais_parser → ais_contact_tracker`) publishes at the
 **global** namespace: `/ais/nmea`, `/ais/messages`, `/ais/contacts`,
-`/ais/atons`. `bag_recorder_operator_launch.py`'s `RECORD_TOPICS` (12
+`/ais/atons`. `bag_recorder_operator_launch.py`'s `RECORD_TOPICS` (11
 entries) records diagnostics, operator commands, udp_bridge stats, rosout,
 TF, and sonar-waterfall contacts — no AIS. An operator session with AIS on
 screen (via CAMP) today leaves nothing on disk to replay.
