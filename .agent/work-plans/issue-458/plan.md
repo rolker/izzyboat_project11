@@ -108,6 +108,10 @@ a working precedent in this same file for exactly this kind of extraction
 | `bizzyboat_project11/launch/perception_launch.py` | Remove the 2 recorder nodes and their 4 log-directory args + `datetime_str`. |
 | `bizzyboat_project11/scripts/start_tmux_project11.bash` | Add `logging` window; update `perception` window's stale comment. |
 | `docs/bizzyboat_operator_manual.md` | Bring-up list (line 291) becomes 5 steps: perception loses "logging", new **Logging** step documents the independent stop/restart and the `logger:=`/`sonar_logger:=` arguments. |
+| `bizzyboat_project11/scripts/stop_tmux_project11.bash` | *(added in review Round 1)* `SHUTDOWN_TIMEOUT` must outwait the recorders' `sigterm_timeout=15` + `sigkill_timeout=5`, or `kill-session` truncates a finalizing mcap. |
+| `bizzyboat_project11/test/test_logging_launch.py` | *(added in review Round 1)* New pytest suite over the recorder wiring and the two cross-file invariants the split creates. |
+| `bizzyboat_project11/CMakeLists.txt` | *(added in review Round 1)* Register the new pytest suite. |
+| `.agents/README.md` | *(added in review Round 1)* Bring-up chain must name `logging_launch.py`; the recorders are no longer where the agent-facing map says they are. Suite list and count follow the new test file. |
 
 ## Principles Self-Check
 
@@ -135,16 +139,31 @@ a working precedent in this same file for exactly this kind of extraction
 
 ## Documentation & Instruction Impact
 
-- **Stale docs** (must land in this PR): `start_tmux_project11.bash`'s
-  `# Perception: cameras, sonar, logging` inline comment (step 3) — this is
-  the only doc the diff itself invalidates. No package README/API doc
-  changes needed: topics, parameters, and node names are unchanged, only
-  file location and process boundary (per Issue Review's Consequences
-  section).
-- **Agent-instruction candidates**: None — this is a mechanical,
-  self-contained launch-file split with a clear in-package precedent
-  (`usb_camera_launch.py`); it doesn't surface a new pattern or pitfall
-  worth generalizing into `.agent/knowledge/` or `.agents/README.md`.
+*Revised after review Rounds 1–2: the original claim that the tmux comment was
+the only invalidated doc was wrong, and so was "no agent-instruction
+candidates". Both are corrected below.*
+
+- **Stale docs** (must land in this PR):
+  - `start_tmux_project11.bash`'s `# Perception: cameras, sonar, logging`
+    inline comment (step 3).
+  - `.agents/README.md`'s bring-up chain — it described `perception_launch.py`
+    as doing the logging, so the agent-facing map did not know
+    `logging_launch.py` exists; its pytest-suite list and count also move with
+    the new test file.
+  - `docs/bizzyboat_operator_manual.md` — beyond the bring-up list, the split
+    removes the "perception up ⇒ bags recording" invariant, so the manual
+    gains a **Confirming recording is running** check, a data-relocation table
+    covering both launch files, and a corrected shutdown step.
+  No package README/API doc changes needed: topics, parameters, and node names
+  are unchanged, only file location and process boundary.
+- **Agent-instruction candidates**: one, raised by the Round-2 review and
+  recorded there rather than applied here (it targets the workspace repo, not
+  this one) — *"moving a launch argument between launch files fails silently"*
+  for `.agent/knowledge/ros2_development_patterns.md`. `ros2 launch` does not
+  validate top-level `name:=value`, so a stale runbook line gives a clean
+  bring-up with the wrong behaviour and no message anywhere; the mitigation
+  this PR ships is a preflight `OpaqueFunction` in each launch file that
+  inspects the command line and raises, naming the file the argument moved to.
 
 ## Open Questions
 
