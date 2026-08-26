@@ -108,8 +108,6 @@ are not all on the boat:
 **These bags contain identifiable third-party vessel data.** Since #464 they
 record the shore AIS feed (`/ais/nmea`, `/ais/contacts` — MMSI, IMO,
 callsign, vessel name, destination for craft that are not ours), and
-`/rosout` has always carried decoded AIS in `ais_parser` warnings. There is
-no project-wide retention policy yet; until there is, keep these bags on
-project hosts, don't attach them to a public issue, PR, or third-party
-service, and re-write a copy (`ros2 bag convert`, dropping `/ais/*` and
-`/rosout`) before it leaves the project.
+`/rosout` has always carried decoded AIS in `ais_parser` warnings. No
+retention or sharing policy covers that data yet — that decision is open,
+and these bags are in scope for it.

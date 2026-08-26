@@ -18,14 +18,13 @@ never wholly absent: /rosout has always been recorded, and ais_parser logs
 the whole decoded message -- MMSI, name, destination -- at WARN when an ETA
 field fails to decode (marine_ais_tools/ais_parser.py:328). So a later
 scrub or retention rule written only against /ais/* would leave that copy
-behind; scope it to the bag, not to the topic list. The repo has no
-project-wide retention policy to point at, so the concrete handling for
-these bags, until one exists, is: keep them on the operator station under
-~/data/logs/operator/ and inside the project's own hosts, do not attach
-them to a public issue, PR, or third-party service, and if a copy has to
-leave the project, re-write it first (ros2 bag convert, dropping /ais/*
-and /rosout) rather than shipping it whole. docs/logs/README.md records
-where they land alongside the boat-side recordings.
+behind; scope it to the bag, not to the topic list.
+
+The project has no retention or sharing policy covering that data, and this
+file is not the place to invent one -- it is an open decision. Recorded here
+so that whoever makes it knows these bags are in scope.
+docs/logs/README.md records where they land alongside the boat-side
+recordings.
 
 The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
