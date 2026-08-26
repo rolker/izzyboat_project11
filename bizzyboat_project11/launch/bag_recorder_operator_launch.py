@@ -3,7 +3,9 @@
 Records the topics needed to debug operator-side wedge events: aggregated
 diagnostics (boat-side forwarded over udp_bridge + salmon-local op-side
 monitor nodes), operator-originated commands, udp_bridge's own stats
-(top-level + per-remote), rosout, and TF.
+(top-level + per-remote), rosout, and TF -- plus the operator station's own
+AIS feed, which is decoded here and displayed in CAMP but, until #464, was
+written nowhere.
 
 The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
@@ -54,6 +56,25 @@ RECORD_TOPICS = [
     # publishes a marine_interfaces/Contact per drawn box, remapped into the
     # operator namespace by operator_ui_launch.py's rqt_sonar node.
     '/operator/sonar_waterfall/contacts',
+    # AIS, decoded on this host (#464). operator_core_launch.py includes
+    # ais_launch.py OUTSIDE its operator-namespace group, and ais_launch.py
+    # pushes only 'ais', so these are global names -- not /operator/ais/...
+    #
+    # Two of the chain's four topics, deliberately. The boat-side logger
+    # records all four (config/bizzyboat.yaml, /**/logger record list); the
+    # asymmetry here is a choice, not an oversight, so please don't "fix" it:
+    #   - /ais/nmea is the raw !AIVDM feed, the smallest artifact and the one
+    #     everything else is derived from -- if the parser or the tracker
+    #     changes, contacts can be regenerated from it offline.
+    #   - /ais/messages and /ais/atons are re-derivable from those sentences
+    #     by re-running the same chain, so recording them buys nothing the
+    #     raw feed does not already hold. (/ais/atons is also narrower than
+    #     it sounds: it fires for AtoN-flagged transmitters such as Mesobot,
+    #     not for charted navigation aids.)
+    '/ais/nmea',
+    # The tracked, per-MMSI AISContact product -- what CAMP draws and what a
+    # replay drives directly, without re-running the decode chain first.
+    '/ais/contacts',
 ]
 
 
