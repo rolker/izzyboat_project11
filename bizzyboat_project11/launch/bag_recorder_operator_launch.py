@@ -78,6 +78,10 @@ RECORD_TOPICS = [
     #     includes AIS-equipped charted aids -- 993672944 was observed on it
     #     off Portsmouth on 2026-08-25. It is still re-derivable from the
     #     raw sentences.)
+    # Provenance caveat: this is unauthenticated wire text. nmea_relay binds
+    # INADDR_ANY on UDP 2125 (config/ais.yaml), so anything that can reach
+    # the host on that port lands in the bag as if it were the shore feed.
+    # Treat recorded sentences as observed-on-the-wire, not attested.
     '/ais/nmea',
     # The tracked, per-MMSI AISContact product -- what CAMP draws and what a
     # replay drives directly, without re-running the decode chain first.
