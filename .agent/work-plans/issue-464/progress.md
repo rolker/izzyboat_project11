@@ -119,3 +119,51 @@ deviate from.
 
 ### Open questions
 - [ ] No open questions — plan is review-plan-ready.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-08-26 04:29 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Plan**: `.agent/work-plans/issue-464/plan.md` at `d5bfb91`
+**PR**: PR-less (dispatched `--issue 464`; no plan PR)
+**Verdict**: approve-with-suggestions
+
+Note: `gh` is unauthenticated in this dispatch, so the issue body and its
+comment thread could not be re-read. Issue-side facts were verified against
+the `## Issue Review` entry above and against the tree directly; the one
+item that could not be checked is finding 2 below.
+
+### Verification performed against the tree
+
+- `bizzyboat_project11/launch/bag_recorder_operator_launch.py:42-57` —
+  `RECORD_TOPICS` is a 12-entry absolute-name list ending in the
+  `/operator/sonar_waterfall/contacts` entry with its inline rationale
+  comment; the plan's cited convention and target file/path are correct.
+- `bag_recorder_operator_launch.py:85` — topics are passed as
+  `--topics *RECORD_TOPICS`, so adding names is the whole change; absent
+  publishers (e.g. `ais:=false`) are simply not recorded, no failure mode.
+- `operator_core_launch.py:203-212` includes `ais_launch.py` outside the
+  `operator_namespace` `GroupAction`, and `ais_launch.py` pushes only
+  `PushRosNamespace('ais')` — confirming the global `/ais/nmea` and
+  `/ais/contacts` names the plan uses.
+- Consequences check: no doc or config outside the launch file enumerates
+  the operator recorder's topic list. `docs/logs/2026/2026-08-20_pandy_link-stalls_logs.md:104`
+  names some recorded topics but is a dated field log (historical record,
+  not a spec to update); `bizzyboat_project11/docs/operator_annunciator_design.md:127`
+  references the file, not its list. The plan's "nothing else" row holds.
+- All three `## Issue Review` action items are addressed by the plan
+  (inline rationale comments; explicit raw-vs-tracked decision; the
+  `/ais/atons` caveat is moot since atons is not recorded).
+
+### Findings
+- [ ] (suggestion) `## Documentation & Instruction Impact` says "Stale docs: None" and then, in the same bullet, describes a required header-docstring update — the docstring update *is* the stale-doc item and should be listed as one, not under "None" — `plan.md:72-78`
+- [ ] (suggestion) The operator's topic-selection decision is cited as an issue comment but the plan also records that `gh issue read` was unavailable in that dispatch; cite the comment URL/id or name the channel it actually arrived on, so the decision's provenance is checkable — `plan.md:6,20-22`
+- [ ] (suggestion) Nearest precedent is unnamed: the boat-side logger already records all four `/bizzy/ais/*` topics with a rationale comment (`bizzyboat_project11/config/bizzyboat.yaml:740-751`, added 2026-08-24). The operator side deliberately records two — name that divergence in the plan and in the inline comment so a later reader doesn't "fix" the asymmetry — `plan.md:54`
+- [ ] (suggestion) `/ais/atons` is excluded only as "not needed for CAMP"; it is equally re-derivable from `/ais/nmea` by re-running the parser + tracker — the same argument already used for `/ais/messages`. Saying so makes the exclusion airtight — `plan.md:54`
+- [ ] (suggestion) ADR row reads "N/A | No", dropping `## Issue Review`'s nuance that ADR-0008 (ROS 2 conventions) is nominally in scope for any launch-file edit and that this change extends, not deviates from, the file's existing conventions — one line restores it — `plan.md:60-62`
+
+No must-fix findings. Scope, issue alignment, file targeting, and
+consequences all check out against the tree; the suggestions are
+documentation-accuracy and reader-context items that can be folded into
+the implementation commit.
