@@ -87,10 +87,13 @@ RECORD_TOPICS = [
     #     by re-running the same chain, so recording them buys nothing the
     #     raw feed does not already hold. (/ais/atons is not a Mesobot-only
     #     feed, despite the tracker comment that introduced it: the tracker
-    #     republishes every AIS message-21 AtoN report it sees, which
-    #     includes AIS-equipped charted aids -- 993672944 was observed on it
-    #     off Portsmouth on 2026-08-25. It is still re-derivable from the
-    #     raw sentences.)
+    #     republishes every AIS message-21 AtoN report it sees, with no
+    #     transmitter-class filter. MMSI 993672944 was observed on it off
+    #     Portsmouth on 2026-08-25; see
+    #     docs/logs/2026/2026-08-25_gabby_logs.md:122. The 99x MMSI range
+    #     that marks it as an aid to navigation covers physical and virtual
+    #     aids alike, so that sighting establishes "not Mesobot-only", not
+    #     "charted". It is still re-derivable from the raw sentences.)
     # Provenance caveat: this is unauthenticated wire text. nmea_relay binds
     # INADDR_ANY on UDP 2125 (config/ais.yaml), so anything that can reach
     # the host on that port lands in the bag as if it were the shore feed.
