@@ -29,6 +29,25 @@ PERCEPTION_LAUNCH_FILE = PACKAGE_DIR / 'launch' / 'perception_launch.py'
 STOP_SCRIPT = PACKAGE_DIR / 'scripts' / 'stop_tmux_project11.bash'
 
 
+# Variables that would otherwise reach these tests from whatever shell ran
+# them: the two P11_* defaults feed the bag directories, and launch honours
+# OVERRIDE_LAUNCH_PROCESS_OUTPUT ahead of a node's own `output=`. A developer
+# with any of them exported would see different results from CI, in both
+# directions -- a real regression passing, or a green branch failing.
+AMBIENT_VARIABLES = (
+    'P11_LOG_DIR',
+    'P11_SONAR_LOG_DIR',
+    'OVERRIDE_LAUNCH_PROCESS_OUTPUT',
+)
+
+
+@pytest.fixture(autouse=True)
+def _clean_environment(monkeypatch):
+    """Resolve every launch default from the launch files, not the shell."""
+    for name in AMBIENT_VARIABLES:
+        monkeypatch.delenv(name, raising=False)
+
+
 def _load_launch_module(path=LAUNCH_FILE):
     spec = importlib.util.spec_from_file_location(path.stem, path)
     module = importlib.util.module_from_spec(spec)
