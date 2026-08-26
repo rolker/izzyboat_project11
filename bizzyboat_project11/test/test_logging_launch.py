@@ -194,6 +194,38 @@ def test_the_namespace_argument_moves_the_recorders():
     assert _pushed_namespaces(namespace='otherboat') == ['otherboat']
 
 
+def test_pointing_both_recorders_at_one_directory_is_an_error():
+    """Both subdirectory defaults are the same UTC stamp, so one shared base
+    directory (P11_LOG_DIR == P11_SONAR_LOG_DIR, which relocating to an
+    external disk invites) gives both recorders one `storage.uri` and kills
+    whichever starts second."""
+    logging_launch = _load_launch_module()
+    context = LaunchContext()
+    context.launch_configurations.update({
+        'log_directory': '/mnt/disk',
+        'sonar_log_directory': '/mnt/disk',
+        'log_subdirectory': 'stamp',
+        'sonar_log_subdirectory': 'stamp',
+    })
+    with pytest.raises(RuntimeError) as excinfo:
+        logging_launch.reject_colliding_bag_directories(context)
+    assert 'sonar_log_subdirectory' in str(excinfo.value), \
+        'the error must name a way out'
+
+
+def test_one_shared_base_directory_is_fine_with_distinct_subdirectories():
+    """Separate subdirectories under one disk is a legitimate layout."""
+    logging_launch = _load_launch_module()
+    context = LaunchContext()
+    context.launch_configurations.update({
+        'log_directory': '/mnt/disk',
+        'sonar_log_directory': '/mnt/disk',
+        'log_subdirectory': 'stamp',
+        'sonar_log_subdirectory': 'stamp_sonar',
+    })
+    assert logging_launch.reject_colliding_bag_directories(context) == []
+
+
 def test_each_recorder_loads_the_shared_config():
     """The recorded topic lists live in bizzyboat.yaml, not here."""
     for name, entry in _recorders().items():
@@ -251,7 +283,8 @@ def test_logging_rejects_the_perception_argument():
         logging_launch.reject_perception_arguments(context)
     message = str(excinfo.value)
     assert 'm3_all_directory' in message
-    assert 'perception_launch.py' in message, 'the error must say where it goes'
+    assert 'perception_launch.py' in message, \
+        'the error must say where it goes'
 
 
 def test_logging_accepts_a_bare_bring_up():

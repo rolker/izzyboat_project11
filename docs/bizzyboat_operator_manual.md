@@ -371,7 +371,12 @@ files**, so relocating the data takes **two** overrides — one on each:
 | M3 raw `.all` archive | `/home/field/data/logs/bizzyboat_sonar/m3_all/` | `m3_all_directory:=` | `perception_launch.py` |
 
 `P11_LOG_DIR` and `P11_SONAR_LOG_DIR` in the environment move the defaults for
-all three at once, which is usually what you want.
+all three at once, which is usually what you want. Give them **different**
+directories: the two bags' timestamped subdirectory names are identical by
+default, so one shared base directory would aim both recorders at the same
+path. `logging_launch.py` refuses to start in that case and tells you to pass
+`sonar_log_subdirectory:=` — better than one recorder dying alone in a window
+nobody is watching.
 
 > ⚠️ **Restarting `logging` with `sonar_log_directory:=<new disk>` moves the
 > sonar *bag* only.** The `.all` archive keeps writing wherever

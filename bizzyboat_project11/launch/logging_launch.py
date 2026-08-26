@@ -53,6 +53,43 @@ def reject_perception_arguments(context, *args, **kwargs):
     return []
 
 
+def reject_colliding_bag_directories(context, *args, **kwargs):
+    """Fail loudly if both recorders would write to the same directory.
+
+    The two subdirectory defaults are one and the same UTC stamp, so what
+    keeps the bags apart is only their *base* directories. Point P11_LOG_DIR
+    and P11_SONAR_LOG_DIR at one disk -- which relocating the data to an
+    external drive invites -- and both recorders resolve to an identical
+    `storage.uri`. rosbag2 refuses a target directory that already exists, so
+    the second one to start just dies, in a window the operator has no reason
+    to be reading yet, leaving half the run recorded.
+
+    Better to not come up at all, naming the argument that separates them.
+    """
+    uri = PathJoinSubstitution([
+        LaunchConfiguration('log_directory'),
+        LaunchConfiguration('log_subdirectory')
+    ]).perform(context)
+    sonar_uri = PathJoinSubstitution([
+        LaunchConfiguration('sonar_log_directory'),
+        LaunchConfiguration('sonar_log_subdirectory')
+    ]).perform(context)
+    if uri == sonar_uri:
+        raise RuntimeError(
+            'both recorders would write to the same bag directory '
+            f'({uri}), so whichever starts second would die on an existing '
+            'target and half the run would go unrecorded.\n\n'
+            'The two subdirectory defaults share one UTC stamp, so only the '
+            'base directories tell the bags apart -- P11_LOG_DIR and '
+            'P11_SONAR_LOG_DIR (or log_directory:= / sonar_log_directory:=) '
+            'currently resolve to the same place.\n\n'
+            'Either give them separate directories, or separate the bags '
+            'within one, e.g.:\n'
+            '  ros2 launch bizzyboat_project11 logging_launch.py '
+            'sonar_log_subdirectory:=<stamp>_sonar')
+    return []
+
+
 # BizzyBoat rosbag2 recorders.
 #
 # Extracted from perception_launch.py (#458) so recording is its own process
@@ -135,6 +172,8 @@ def generate_launch_description():
         log_subdirectory_arg,
         sonar_log_directory_arg,
         sonar_log_subdirectory_arg,
+        # After the declarations, so it sees the resolved destinations.
+        OpaqueFunction(function=reject_colliding_bag_directories),
 
         GroupAction(
             actions=[
