@@ -293,3 +293,33 @@ Unchanged from the previous pass: on-boat behaviour still needs the hardware (th
 `review-code` (re-review) — hand off to a fresh-context sub-agent:
 
     .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill review-code
+
+## Integrated Review
+**Status**: complete
+**When**: 2026-08-25 21:09 -04:00
+**By**: Claude Code Agent (Claude Opus)
+
+**PR**: #461 at `27a7147`
+**Sources**: 3 (Copilot R1 @ `27a7147`, Local Review (Pre-Push) R2 @ `93daa76`, CI rollup)
+**Cross-source confirmations**: 0
+**CI**: all-pass (`build-and-test` success, `copilot-pull-request-reviewer` success)
+
+### Findings
+- [ ] (must-fix, Copilot @ `27a7147`) The shared-deadline shutdown wait warns on the clock alone: once the budget is consumed by an earlier window, each later window's `while [ $SECONDS -lt $SHUTDOWN_TIMEOUT ]` is false on entry so the window is never probed, and the post-loop `if [ $SECONDS -ge $SHUTDOWN_TIMEOUT ]` prints `WARNING: <window> still running` for windows that exited long ago. This PR deliberately made that warning the operator's data-integrity signal (`docs/bizzyboat_operator_manual.md:110-112` and the script's own comment at :19-22 tell the operator to distrust a run's bags when they see it), so a warning that cries wolf trains the operator to ignore the one line that flags a truncated mcap. Fix: track whether each window's loop exited by `break`, and after the loop do one final `pane_pid` / `pgrep -P` probe, warning only when a child is still running — which also correctly reports a window that was never waited on because the budget was already gone but is genuinely still writing — `bizzyboat_project11/scripts/stop_tmux_project11.bash:41-63`
+
+### Lineage (not a same-SHA cross-confirmation)
+- This is a regression introduced by the Round-2 fix `124c4ff`, which converted the per-window budget into one shared deadline in answer to Local Review R2 finding #8 (3-way confirmed that round). The shared deadline is correct; only the warning's condition was left keyed to the clock. Copilot reviewed the current head (`commit_id` == `head_sha`), so the finding is fresh.
+
+### False positives
+None — the single Copilot comment is valid.
+
+### Test coverage note (not a finding)
+`test_logging_launch.py:347-358` only greps `SHUTDOWN_TIMEOUT=` out of the script text; nothing exercises the wait loop's warning logic, which is why 27 green tests did not catch this. A pure-bash behaviour test is out of proportion here — re-check the fix with `bash -n` / `shellcheck` plus a two-window tmux smoke where the first window is slow to exit.
+
+### Pre-merge (carried forward, not a code finding)
+- [ ] (deferred: no docker in this worktree) ADR-0018 — HEAD still carries no `refs/notes/ci-local` full-scope attestation; the host must run `.agent/scripts/ci_local.sh` before merge.
+
+### Next step
+`address-findings` — one open must-fix. Hand off to a fresh-context sub-agent:
+
+    .agent/scripts/dispatch_subagent.sh --mode in-process --issue 458 --skill address-findings
