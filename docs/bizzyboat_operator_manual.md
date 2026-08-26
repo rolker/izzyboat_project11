@@ -104,15 +104,18 @@ This powers the *hardware* only; the autonomy stacks are started next.
 ### 7. Shutdown
 
 1. **Stop the stacks cleanly** — on **both salmon and gabby**, run
-   `~/stop_tmux_project11.bash`. It Ctrl-Cs every window in order, waits for
-   each to actually exit, then closes the session. *This is what lets the bag
-   recordings finish writing — don't skip it, or you can lose/corrupt the run's
-   data.*
+   `~/stop_tmux_project11.bash`. It Ctrl-Cs every window at once (zenoh last,
+   so the link outlives the nodes), waits up to 25 s for them to actually
+   exit, then closes the session. *This is what lets the bag recordings finish
+   writing — don't skip it, or you can lose/corrupt the run's data.* Watch for
+   a `WARNING: ... still running` line: that means the session was killed with
+   something still writing, so check that run's bags before trusting them.
 
    If you stop windows by hand instead, **stop `logging` last**. The recorders
    need their SIGINT and up to ~20 s to finalize their mcap files; killing the
    session out from under them truncates the run's bags. Everything else can go
-   first, in any order.
+   first, in any order. (The script doesn't need that ordering — it Ctrl-Cs
+   everything together and then waits for the recorders' finalize.)
 2. **Power off the PCs** — brief press of each PC's power button.
 3. *(Optional)* turn off the **payload switch**.
 4. **Power off the boat.**
