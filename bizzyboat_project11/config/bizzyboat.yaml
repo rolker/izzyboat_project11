@@ -397,18 +397,30 @@
             # CUBE coverage tiles for CAMP live-tile view (set up live 2026-06-29
             # via udp_bridge remote_advertise, confirmed working; persisted here).
             # STOOD DOWN 2026-08-25 (field, gabby) to keep the vpn connection
-            # inside its budget. Measured per-topic on the water; see
-            # docs/logs/2026/2026-08-25_gabby_logs.md for the numbers. The vpn
-            # admission controller collapses to its floor when offered load
-            # exceeds what the link delivers, and recovery is a ~30-40 s ramp,
-            # so each collapse is a multi-second blackout at the operator.
-            # coverage_* are the CUBE live-tile view: a single tile message is
-            # 960x960 cells x 4 bytes = ~3.7 MB, more than twice the whole
-            # 1.5 MB/s connection budget, and sub-window patching is not yet
-            # implemented on the producer. RESTORE once tiles are patched or
-            # the link budget grows.
-            # - coverage_catalog
-            # - coverage_tiles
+            # inside its budget: a whole tile was 960x960 cells x 4 bytes =
+            # ~3.7 MB, more than twice the whole 1.5 MB/s connection budget,
+            # and sub-window patching was not yet implemented on the producer.
+            # The vpn admission controller collapses to its floor when offered
+            # load exceeds what the link delivers, and recovery is a ~30-40 s
+            # ramp, so each collapse was a multi-second blackout at the
+            # operator. See docs/logs/2026/2026-08-25_gabby_logs.md.
+            #
+            # RESTORED 2026-08-26 (field, gabby): the stand-down condition is
+            # met. cube_bathymetry#112 landed the sub-window patching, so the
+            # producer now bounds message size. Measured on station at
+            # Appledore after the cube restart: the node's own instrumentation
+            # put the sub-window push at 14.4/16.8/0.1/16.7 percent of what
+            # whole-tile mode would have sent over four consecutive 30 s
+            # windows, and udp_bridge topic_statistics measured coverage_tiles
+            # at 926.2 B/s send success and coverage_catalog at 318.2 B/s
+            # against the 1.5 MB/s cap, zero dropped. See
+            # docs/logs/2026/2026-08-26_gabby_logs.md.
+            #
+            # manda_coverage_swath stays stood down: it was grouped into the
+            # same 2026-08-25 stand-down for budget, but #112 does not shrink
+            # it, so restoring it is a separate and so far unmeasured call.
+            - coverage_catalog
+            - coverage_tiles
             # - manda_coverage_swath
             - battery
             - command_response
