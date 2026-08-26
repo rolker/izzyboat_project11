@@ -7,6 +7,12 @@ monitor nodes), operator-originated commands, udp_bridge's own stats
 AIS feed, which is decoded here and displayed in CAMP but, until #464, was
 written nowhere.
 
+Consequence of that last one: AIS carries identifiable third-party vessel
+data (MMSI, IMO, callsign, vessel name, destination) for craft that are not
+ours, so operator bags now persist it. The repo has no retention or sharing
+policy covering that; until it does, treat these bags as containing
+third-party data and share them with the same care as imagery.
+
 The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
 the same way every other operator subsystem is. Layout:
