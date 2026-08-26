@@ -3,9 +3,13 @@
 Records the topics needed to debug operator-side wedge events: aggregated
 diagnostics (boat-side forwarded over udp_bridge + salmon-local op-side
 monitor nodes), operator-originated commands, udp_bridge's own stats
-(top-level + per-remote), rosout, and TF -- plus the operator station's own
-AIS feed, which is decoded here and displayed in CAMP but, until #464, was
-written nowhere.
+(top-level + per-remote), rosout, and TF -- plus the AIS this station
+decodes for itself, which CAMP displays but, until #464, was written
+nowhere. "For itself" is the operative word: it is the same shore
+receiver's feed the boat also decodes (see the RECORD_TOPICS note below),
+independently ingested here whenever operator_core_launch.py runs with its
+default ais:=true. At a station launched with ais:=false there is no
+decode chain and the two AIS entries simply record nothing.
 
 Consequence of that last one: AIS carries identifiable third-party vessel
 data (MMSI, IMO, callsign, vessel name, destination) for craft that are not
