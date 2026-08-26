@@ -214,3 +214,23 @@ the implementation commit.
 
 ### Next step
 Re-review the fixes: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 464 --skill review-code`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-26 04:47 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-464 at `9e608ed`
+**Mode**: pre-push
+**Depth**: Deep (reason: 365 changed lines across 3 files — 200+ line threshold; plan.md is a project-repo override trigger. Code delta is 39/-1 in one launch file, almost all comment prose.)
+**Must-fix**: 0 | **Suggestions**: 6
+**Round**: 2 | **Ship**: recommended — round-1's must-fix is verified fixed against source and no new must-fix surfaced from either adversarial lens; the six remaining items are comment-accuracy and follow-up-scope suggestions.
+
+### Findings
+- [ ] (suggestion) Nothing ties `RECORD_TOPICS` to the resolved global `/ais/*` names; `test_operator_core_launch.py` already carries four AIS guards, so a fifth asserting the recorder's names match the namespace arrangement is a few lines — move the `ais_launch.py` include inside the operator group and the recorder silently records two empty topics — `bizzyboat_project11/test/test_operator_core_launch.py:296-319`
+- [ ] (suggestion) "contacts can be regenerated from it offline" overstates what the raw feed alone supports: `AISContact` is accumulative (message-5 static/voyage merges in, repeating only every ~6 min) and AIVDM is multi-part, so a regeneration from a mid-stream bag or a single 900 s split holds less static info than the live-recorded contacts — `bag_recorder_operator_launch.py:76-78`
+- [ ] (suggestion) The third-party-data note points at a standard that does not exist ("the same care as imagery" — no imagery retention/sharing rule anywhere in the repo) and lives only in a launch docstring; `docs/logs/README.md`'s data-location table has no operator-bag row and the operator manual carries nothing — state the concrete handling or name a tracking issue — `bag_recorder_operator_launch.py:10-14`
+- [ ] (suggestion) Identifiable AIS already reaches operator bags via `/rosout` (`ais_parser.py:328-329` warns `str(m)` — MMSI, name, destination — on ETA-decode failure), so "operator bags now persist it" is not strictly new and a future scrub rule scoped to `/ais/*` would miss it — `bag_recorder_operator_launch.py:6-12`
+- [ ] (suggestion) "includes AIS-equipped charted aids -- 993672944 was observed": the field log establishes a 99x-MMSI AtoN on `/bizzy/ais/atons`, not that it is a *charted* aid (the 99x range covers virtual AtoNs too) — cite `docs/logs/2026/2026-08-25_gabby_logs.md:122` or drop the adjective; the load-bearing claim (every message-21, no class filter) is verified — `bag_recorder_operator_launch.py:83-86`
+- [ ] (suggestion) Docstring calls it "the operator station's *own* AIS feed" and says unconditionally that it "is decoded here", which the same file qualifies at line 72 ("the SAME shore receiver's feed") and `operator_core_launch.py:110-115` gates on `ais:=true` — one qualifier reconciles both — `bag_recorder_operator_launch.py:6-7`
