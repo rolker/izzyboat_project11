@@ -1,0 +1,266 @@
+---
+issue: 464
+---
+
+# Issue #464 — Record operator-side AIS on salmon
+
+## Issue Review
+**Status**: complete
+**When**: 2026-08-26 04:23 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Issue**: #464
+**Comment**: (best-effort post follows this entry; not recorded inline)
+**Scope verdict**: well-scoped
+
+### Verification of issue claims
+
+Checked against the current tree (`platforms_ws/src/unh_echoboats_project11`,
+branch `feature/issue-464`):
+
+- `bag_recorder_operator_launch.py`'s `RECORD_TOPICS` (lines 42-57 exactly,
+  as cited) lists 12 topics, none AIS-related. Confirmed.
+- `operator_core_launch.py` includes `ais_launch.py` (arg `ais`, default
+  `'true'`) at lines 203-211, **outside** the `GroupAction` that pushes
+  `operator_namespace` (lines 157-178). `ais_launch.py` itself pushes only
+  the `'ais'` sub-namespace (not `operator/ais`), per its own header comment
+  explaining that double-pushing broke `ais_layer`'s subscription in the
+  past. So the resulting topics are global `/ais/nmea`, `/ais/messages`,
+  `/ais/contacts`, not `/operator/ais/...` — the issue's namespace claim is
+  correct, and matters because `RECORD_TOPICS` takes absolute names.
+- All four candidate topics exist and are correctly attributed:
+  `nmea_relay` publishes relative `nmea` → `/ais/nmea` (raw `!AIVDM`);
+  `ais_parser` publishes `messages` → `/ais/messages`; `ais_contact_tracker`
+  publishes both `contacts` → `/ais/contacts` (`marine_ais_msgs/AISContact`)
+  and `atons` → `/ais/atons` (`GeoPointStamped`), per
+  `marine_ais_tools/marine_ais_tools/ais_contact_tracker.py:141,145`. The
+  issue's claim that `/ais/contacts` is what `ais_layer`/CAMP consume matches
+  `ais_launch.py`'s own docstring.
+- The ~1.2 datagrams/s rate is documented in
+  `bizzyboat_project11/config/ais.yaml`'s header comment, confirming the
+  issue's "cheap to record both raw and tracked" framing.
+- No boat-side conflict: `bag_recorder_operator_launch.py` is
+  operator-only (salmon); the boat's own AIS bag is a separate receiver
+  instance per the issue's stated non-goal, not touched by this change.
+- Precedent for how `RECORD_TOPICS` entries pick up inline rationale
+  comments: the file's own header attributes the existing list to
+  `PLAN_ISSUE-97.md`, and `bag_recorder_operator_launch.py`'s current
+  `/operator/sonar_waterfall/contacts` entry (lines 53-56) carries a
+  same-shape "why this topic, why here" comment — the pattern this issue's
+  AIS entries should follow.
+
+### Scope Assessment
+
+**Well-scoped?** Yes — a single `RECORD_TOPICS` list edit in one existing
+launch file, no new nodes, no launch-graph changes. Fits one PR easily.
+
+**Right repo?** Yes — `unh_echoboats_project11` owns both the recorder and
+the AIS launch chain; this is project-specific bizzyboat/operator content,
+not workspace infra.
+
+**Dependencies**: None identified. The linked issue (unh_marine_autonomy#357,
+the public web AIS layer) is informational context only — it consumes the
+same live feed but has no code dependency on this recording change, and
+this issue doesn't block or get blocked by it.
+
+### Principle Alignment
+
+| Principle | Status | Notes |
+|---|---|---|
+| Human control and transparency | OK | Adds visibility (a recorded feed that was previously silently unrecorded); no hidden behavior change to the AIS chain itself. |
+| A change includes its consequences | Watch | The issue's "Scope" section already reasons through the one real decision (which of 4 topics) with each candidate's tradeoffs named — good. Implementation should carry that same per-topic rationale into inline comments in `RECORD_TOPICS`, matching the existing file's convention (see `/operator/sonar_waterfall/contacts`'s comment) and `PLAN_ISSUE-97.md`'s per-topic rationale for the current list. |
+| Only what's needed | OK | Explicitly scoped to the recorder edit; issue calls out both non-goals (no AIS-chain change, no boat-side change). |
+| Test what breaks | Watch | No test currently asserts on `RECORD_TOPICS` contents (confirmed by grep — nothing references the recorder's topic list). Not a blocker; this launch file has no existing test infra to extend, consistent with `perception_launch.py`'s recorders (see issue #458 review). |
+| Workspace vs. project separation | OK | Contained entirely within the project repo. |
+
+### ADR Applicability
+
+No workspace ADRs are triggered by this change. It's a data-recording
+scope change (topic list) in a project repo's launch file, not a new ROS 2
+package, launch-graph restructuring, or a change to workspace scripts/CI.
+ADR-0008 (ROS 2 conventions) is nominally in scope for any launch-file edit
+but the existing file's conventions (absolute-topic `RECORD_TOPICS`,
+per-entry rationale comments) are what this issue asks to extend, not
+deviate from.
+
+### Consequences
+
+- None beyond the recorder file itself. The topics being added already
+  exist and are already documented elsewhere (`ais_launch.py`'s docstring,
+  `config/ais.yaml`'s header) — no README/API doc update needed since no
+  interface is being introduced, only what's captured on disk.
+
+### Recommendations
+
+- Decide the raw-vs-tracked question explicitly in the plan (the issue
+  frames it as "cheap to do both, so do it deliberately") rather than
+  defaulting to just `/ais/contacts` — worth a one-line decision in the
+  plan doc so a future reader sees it was considered, not overlooked.
+- If `/ais/atons` is included, note in the topic's inline comment that
+  it's currently only exercised by non-standard AtoN-flagged beacons (per
+  `ais_contact_tracker.py`'s comment: "added to track Mesobot, which uses
+  an AIS beacon that transmits as an AtoN") rather than charted
+  navigation aids — avoids a future reader assuming it captures real
+  buoys/lighthouses.
+
+### Actions
+- [ ] Carry per-topic rationale comments into `RECORD_TOPICS`, matching the file's existing convention.
+- [ ] Make the raw-vs-tracked (nmea/messages vs. contacts/atons) inclusion decision explicit in the plan rather than defaulting.
+- [ ] If `/ais/atons` is recorded, note in its comment that it currently only fires for AtoN-flagged beacons (e.g. Mesobot), not charted navigation aids.
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-08-26 04:40 +00:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-464/plan.md` at `d5bfb91`
+**Branch**: feature/issue-464 at `d5bfb91`
+**Phases**: single
+
+### Open questions
+- [ ] No open questions — plan is review-plan-ready.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-08-26 04:29 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Plan**: `.agent/work-plans/issue-464/plan.md` at `d5bfb91`
+**PR**: PR-less (dispatched `--issue 464`; no plan PR)
+**Verdict**: approve-with-suggestions
+
+Note: `gh` is unauthenticated in this dispatch, so the issue body and its
+comment thread could not be re-read. Issue-side facts were verified against
+the `## Issue Review` entry above and against the tree directly; the one
+item that could not be checked is finding 2 below.
+
+### Verification performed against the tree
+
+- `bizzyboat_project11/launch/bag_recorder_operator_launch.py:42-57` —
+  `RECORD_TOPICS` is a 12-entry absolute-name list ending in the
+  `/operator/sonar_waterfall/contacts` entry with its inline rationale
+  comment; the plan's cited convention and target file/path are correct.
+- `bag_recorder_operator_launch.py:85` — topics are passed as
+  `--topics *RECORD_TOPICS`, so adding names is the whole change; absent
+  publishers (e.g. `ais:=false`) are simply not recorded, no failure mode.
+- `operator_core_launch.py:203-212` includes `ais_launch.py` outside the
+  `operator_namespace` `GroupAction`, and `ais_launch.py` pushes only
+  `PushRosNamespace('ais')` — confirming the global `/ais/nmea` and
+  `/ais/contacts` names the plan uses.
+- Consequences check: no doc or config outside the launch file enumerates
+  the operator recorder's topic list. `docs/logs/2026/2026-08-20_pandy_link-stalls_logs.md:104`
+  names some recorded topics but is a dated field log (historical record,
+  not a spec to update); `bizzyboat_project11/docs/operator_annunciator_design.md:127`
+  references the file, not its list. The plan's "nothing else" row holds.
+- All three `## Issue Review` action items are addressed by the plan
+  (inline rationale comments; explicit raw-vs-tracked decision; the
+  `/ais/atons` caveat is moot since atons is not recorded).
+
+### Findings
+- [ ] (suggestion) `## Documentation & Instruction Impact` says "Stale docs: None" and then, in the same bullet, describes a required header-docstring update — the docstring update *is* the stale-doc item and should be listed as one, not under "None" — `plan.md:72-78`
+- [ ] (suggestion) The operator's topic-selection decision is cited as an issue comment but the plan also records that `gh issue read` was unavailable in that dispatch; cite the comment URL/id or name the channel it actually arrived on, so the decision's provenance is checkable — `plan.md:6,20-22`
+- [ ] (suggestion) Nearest precedent is unnamed: the boat-side logger already records all four `/bizzy/ais/*` topics with a rationale comment (`bizzyboat_project11/config/bizzyboat.yaml:740-751`, added 2026-08-24). The operator side deliberately records two — name that divergence in the plan and in the inline comment so a later reader doesn't "fix" the asymmetry — `plan.md:54`
+- [ ] (suggestion) `/ais/atons` is excluded only as "not needed for CAMP"; it is equally re-derivable from `/ais/nmea` by re-running the parser + tracker — the same argument already used for `/ais/messages`. Saying so makes the exclusion airtight — `plan.md:54`
+- [ ] (suggestion) ADR row reads "N/A | No", dropping `## Issue Review`'s nuance that ADR-0008 (ROS 2 conventions) is nominally in scope for any launch-file edit and that this change extends, not deviates from, the file's existing conventions — one line restores it — `plan.md:60-62`
+
+No must-fix findings. Scope, issue alignment, file targeting, and
+consequences all check out against the tree; the suggestions are
+documentation-accuracy and reader-context items that can be folded into
+the implementation commit.
+
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-26 04:37 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: changes-requested
+
+**Branch**: feature/issue-464 at `01decd9`
+**Mode**: pre-push
+**Depth**: Deep (reason: 301 changed lines across 3 files — 200+ line threshold; plan.md is also a project-repo override trigger. Code delta is 22/-1 in one launch file.)
+**Must-fix**: 1 | **Suggestions**: 4
+**Round**: 1 | **Ship**: continue — one must-fix, mechanical (a wrong factual claim in a new code comment); fix and re-review.
+
+### Findings
+- [x] (must-fix) `/ais/atons` comment says it fires only for AtoN-flagged beacons "not for charted navigation aids"; the tracker publishes on every AIS message-21 report, which charted AIS aids transmit — `bizzyboat_project11/launch/bag_recorder_operator_launch.py:71-73`
+- [x] (suggestion) Recording `/ais/contacts` persists identifiable third-party vessel data (MMSI, IMO, callsign, name, destination) to operator bags; no retention/sharing statement exists anywhere in the repo — carry the consequence in the docstring or open a tracking issue — `bag_recorder_operator_launch.py:6-8,59-77`
+- [x] (suggestion) `/ais/nmea` is unauthenticated wire text (nmea_relay binds INADDR_ANY on UDP 2125, `config/ais.yaml:19-22`) — note that provenance caveat next to the entry that now stores it — `bag_recorder_operator_launch.py:74`
+- [x] (suggestion) Plan says the pre-change `RECORD_TOPICS` had "12 entries"; it has 11 (verified against `origin/jazzy`) — `.agent/work-plans/issue-464/plan.md:14`
+- [x] (suggestion) The boat/operator asymmetry comment invites a cross-bag comparison without saying both sides receive the *same* shore feed independently — one clause prevents a confusing near-duplicate diff on joint replay — `bag_recorder_operator_launch.py:63-65`
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-26 04:40 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-464 at `cf7b1b5`
+**Addressed**: `## Local Review (Pre-Push)` (2026-08-26 04:37 +00:00, branch `feature/issue-464` at `01decd9`) — 1 must-fix, 4 suggestions
+**Commits**: 66821ae, c7b86e5, 89fe91d, 23bfd48, cf7b1b5
+
+### Actions
+- [x] (must-fix) Corrected the `/ais/atons` scope claim — the parenthetical now says the tracker republishes *every* AIS message-21 AtoN report (including AIS-equipped charted aids; 993672944 observed 2026-08-25), not just Mesobot-style beacons, while keeping the re-derivability rationale for the exclusion — `bizzyboat_project11/launch/bag_recorder_operator_launch.py:74-79` (66821ae)
+- [x] (suggestion) Added the third-party-data consequence to the module docstring: AIS carries identifiable non-ours vessel data (MMSI, IMO, callsign, name, destination), the repo has no retention/sharing policy, so treat these bags accordingly — `bag_recorder_operator_launch.py:9-15` (23bfd48)
+- [x] (suggestion) Added the `/ais/nmea` provenance caveat next to the entry: unauthenticated wire text, nmea_relay binds INADDR_ANY on UDP 2125, so recorded sentences are observed-on-the-wire, not attested — `bag_recorder_operator_launch.py:80-83` (89fe91d)
+- [x] (suggestion) Corrected the plan's pre-change `RECORD_TOPICS` count from 12 to 11 (verified against `origin/jazzy`) — `.agent/work-plans/issue-464/plan.md:15` (cf7b1b5)
+- [x] (suggestion) Added the clause that boat and operator each decode the *same* shore receiver's feed independently, so a joint replay holds near-duplicate AIS and a cross-bag diff shows link/decode differences, not two sources — `bag_recorder_operator_launch.py:63-69` (c7b86e5)
+
+### Deferred actions
+- None — all five findings were verified against the current tree and actioned.
+
+### Verification
+- `RECORD_TOPICS` still imports and resolves to 13 entries ending `/ais/nmea`, `/ais/contacts`; module parses and executes clean.
+- Verified the must-fix against source: `marine_ais_tools/ais_contact_tracker.py:284-290` publishes to `atons` on `msg.message_id == 21` with no transmitter-class filter.
+- pre-commit hooks passed on every commit (no `--no-verify`).
+
+### Next step
+Re-review the fixes: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 464 --skill review-code`
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-08-26 04:47 +00:00
+**By**: Claude Code Agent (Claude Opus)
+**Verdict**: approved
+
+**Branch**: feature/issue-464 at `9e608ed`
+**Mode**: pre-push
+**Depth**: Deep (reason: 365 changed lines across 3 files — 200+ line threshold; plan.md is a project-repo override trigger. Code delta is 39/-1 in one launch file, almost all comment prose.)
+**Must-fix**: 0 | **Suggestions**: 6
+**Round**: 2 | **Ship**: recommended — round-1's must-fix is verified fixed against source and no new must-fix surfaced from either adversarial lens; the six remaining items are comment-accuracy and follow-up-scope suggestions.
+
+### Findings
+- [x] (suggestion) Nothing ties `RECORD_TOPICS` to the resolved global `/ais/*` names; `test_operator_core_launch.py` already carries four AIS guards, so a fifth asserting the recorder's names match the namespace arrangement is a few lines — move the `ais_launch.py` include inside the operator group and the recorder silently records two empty topics — `bizzyboat_project11/test/test_operator_core_launch.py:296-319`
+- [x] (suggestion) "contacts can be regenerated from it offline" overstates what the raw feed alone supports: `AISContact` is accumulative (message-5 static/voyage merges in, repeating only every ~6 min) and AIVDM is multi-part, so a regeneration from a mid-stream bag or a single 900 s split holds less static info than the live-recorded contacts — `bag_recorder_operator_launch.py:76-78`
+- [x] (suggestion) The third-party-data note points at a standard that does not exist ("the same care as imagery" — no imagery retention/sharing rule anywhere in the repo) and lives only in a launch docstring; `docs/logs/README.md`'s data-location table has no operator-bag row and the operator manual carries nothing — state the concrete handling or name a tracking issue — `bag_recorder_operator_launch.py:10-14`
+- [x] (suggestion) Identifiable AIS already reaches operator bags via `/rosout` (`ais_parser.py:328-329` warns `str(m)` — MMSI, name, destination — on ETA-decode failure), so "operator bags now persist it" is not strictly new and a future scrub rule scoped to `/ais/*` would miss it — `bag_recorder_operator_launch.py:6-12`
+- [x] (suggestion) "includes AIS-equipped charted aids -- 993672944 was observed": the field log establishes a 99x-MMSI AtoN on `/bizzy/ais/atons`, not that it is a *charted* aid (the 99x range covers virtual AtoNs too) — cite `docs/logs/2026/2026-08-25_gabby_logs.md:122` or drop the adjective; the load-bearing claim (every message-21, no class filter) is verified — `bag_recorder_operator_launch.py:83-86`
+- [x] (suggestion) Docstring calls it "the operator station's *own* AIS feed" and says unconditionally that it "is decoded here", which the same file qualifies at line 72 ("the SAME shore receiver's feed") and `operator_core_launch.py:110-115` gates on `ais:=true` — one qualifier reconciles both — `bag_recorder_operator_launch.py:6-7`
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-26 04:53 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-464 at `24f5ad9`
+**Addressed**: `## Local Review (Pre-Push)` (2026-08-26 04:47 +00:00, branch `feature/issue-464` at `9e608ed`) — 0 must-fix, 6 suggestions
+**Commits**: 89ab769, f338dd8, a85582c, 3debe78, a40f93c, 24f5ad9
+
+### Actions
+- [x] (suggestion) Added a fifth AIS guard tying `RECORD_TOPICS` to the namespace arrangement: it asserts no `ais_launch.py` include sits inside a namespace-pushing `GroupAction` in `operator_core_launch.py`, and that the recorder's AIS entries are exactly the global `/ais/nmea`, `/ais/contacts`. Non-vacuous — the grouped-include walk currently returns `udp_bridge_launch.py`, so the guard would fire on a move — `bizzyboat_project11/test/test_operator_core_launch.py:322-359` (89ab769)
+- [x] (suggestion) Qualified the re-derivation claim: `AISContact` accumulates (message-5 static/voyage merges in, `ais_contact_tracker.py:236-272`, repeating only every ~6 min) and AIVDM is multi-part, so a re-derivation from a mid-stream bag or a single 900 s split starts empty and holds less static info — which is why `/ais/contacts` is recorded alongside the raw feed, not instead of it — `bag_recorder_operator_launch.py:82-91` (f338dd8)
+- [x] (suggestion) Replaced "the same care as imagery" (a standard that does not exist in this repo) with concrete handling — keep the bags on project hosts under `~/data/logs/operator/`, never attach to a public issue/PR/third-party service, re-write with `ros2 bag convert` dropping `/ais/*` and `/rosout` before a copy leaves the project — and gave `docs/logs/README.md` the missing operator-bag location row plus the same handling note — `bag_recorder_operator_launch.py:21-28`, `docs/logs/README.md:101-119` (24f5ad9)
+- [x] (suggestion) Recorded that identifiable AIS already reached operator bags via `/rosout` (`ais_parser.py:328` WARNs `str(m)` — MMSI, name, destination — on ETA-decode failure), so the new entries persist it *in structured form* rather than newly, and a future scrub scoped to `/ais/*` would miss that copy — scope it to the bag, not the topic list — `bag_recorder_operator_launch.py:14-21` (a40f93c)
+- [x] (suggestion) Dropped the unsupported "charted" adjective and cited the sighting: the tracker republishes every message-21 report with no transmitter-class filter, MMSI 993672944 observed off Portsmouth 2026-08-25 (`docs/logs/2026/2026-08-25_gabby_logs.md:122`), and the 99x range covers physical and virtual aids alike — so the sighting establishes "not Mesobot-only", not "charted" — `bag_recorder_operator_launch.py:92-98` (a85582c)
+- [x] (suggestion) Reconciled the docstring's AIS-feed claim with the rest of the file: it is now "the AIS this station decodes for itself", explicitly the same shore receiver's feed the boat also decodes, ingested here only under `operator_core_launch.py`'s default `ais:=true` (`operator_core_launch.py:110-115`); at a station launched `ais:=false` the two entries record nothing — `bag_recorder_operator_launch.py:6-12` (3debe78)
+
+### Deferred actions
+- None — all six suggestions were verified against the current tree and actioned.
+
+### Verification
+- All six findings checked against source before acting: `ais_contact_tracker.py:232-279` (accumulation), `ais_parser.py:328` (the `/rosout` leak), `docs/logs/2026/2026-08-25_gabby_logs.md:122` (the AtoN sighting), `docs/logs/README.md` (no operator-bag row), `operator_core_launch.py:189-221` (the `ais_launch.py` include sits outside the namespace group).
+- `pytest bizzyboat_project11/test/test_operator_core_launch.py -k ais` — 5 passed (was 4; the new guard is the fifth).
+- `RECORD_TOPICS` still imports clean and resolves to 13 entries ending `/ais/nmea`, `/ais/contacts`.
+- Pre-existing, unrelated to this change: 8 tests in that file fail without a built `bizzyboat_project11` package share (`PackageNotFoundError`) — they resolve `FindPackageShare` substitutions; this worktree is unbuilt. The AIS tests do not.
+- pre-commit hooks passed on every commit (no `--no-verify`).
+
+### Next step
+Re-review the fixes: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 464 --skill review-code`

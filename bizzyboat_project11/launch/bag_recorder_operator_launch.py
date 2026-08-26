@@ -3,7 +3,28 @@
 Records the topics needed to debug operator-side wedge events: aggregated
 diagnostics (boat-side forwarded over udp_bridge + salmon-local op-side
 monitor nodes), operator-originated commands, udp_bridge's own stats
-(top-level + per-remote), rosout, and TF.
+(top-level + per-remote), rosout, and TF -- plus the AIS this station
+decodes for itself, which CAMP displays but, until #464, was written
+nowhere. "For itself" is the operative word: it is the same shore
+receiver's feed the boat also decodes (see the RECORD_TOPICS note below),
+independently ingested here whenever operator_core_launch.py runs with its
+default ais:=true. At a station launched with ais:=false there is no
+decode chain and the two AIS entries simply record nothing.
+
+Consequence of that last one: AIS carries identifiable third-party vessel
+data (MMSI, IMO, callsign, vessel name, destination) for craft that are not
+ours, so operator bags now persist it in structured form. Note that it was
+never wholly absent: /rosout has always been recorded, and ais_parser logs
+the whole decoded message -- MMSI, name, destination -- at WARN when an ETA
+field fails to decode (marine_ais_tools/ais_parser.py:328). So a later
+scrub or retention rule written only against /ais/* would leave that copy
+behind; scope it to the bag, not to the topic list.
+
+The project has no retention or sharing policy covering that data, and this
+file is not the place to invent one -- it is an open decision. Recorded here
+so that whoever makes it knows these bags are in scope.
+docs/logs/README.md records where they land alongside the boat-side
+recordings.
 
 The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
@@ -54,6 +75,46 @@ RECORD_TOPICS = [
     # publishes a marine_interfaces/Contact per drawn box, remapped into the
     # operator namespace by operator_ui_launch.py's rqt_sonar node.
     '/operator/sonar_waterfall/contacts',
+    # AIS, decoded on this host (#464). operator_core_launch.py includes
+    # ais_launch.py OUTSIDE its operator-namespace group, and ais_launch.py
+    # pushes only 'ais', so these are global names -- not /operator/ais/...
+    #
+    # Two of the chain's four topics, deliberately. The boat-side logger
+    # records all four (config/bizzyboat.yaml, /**/logger record list); the
+    # asymmetry here is a choice, not an oversight, so please don't "fix" it.
+    # Note also that boat and operator each decode the SAME shore receiver's
+    # feed independently, so on a joint replay these bags hold near-duplicate
+    # AIS -- a diff between them shows link/decode differences, not two
+    # different sources:
+    #   - /ais/nmea is the raw !AIVDM feed, the smallest artifact and the one
+    #     everything else is derived from -- if the parser or the tracker
+    #     changes, contacts can be re-derived from it offline. Not losslessly,
+    #     though: AISContact accumulates, folding in the message-5 static and
+    #     voyage fields (name, callsign, destination, dimensions) that repeat
+    #     only every ~6 min, and AIVDM is multi-part. A re-derivation from a
+    #     mid-stream bag -- or from one 900 s split read on its own -- starts
+    #     empty and holds less static info than the live-recorded contacts,
+    #     which is why /ais/contacts is recorded alongside the raw feed
+    #     rather than instead of it.
+    #   - /ais/messages and /ais/atons are re-derivable from those sentences
+    #     by re-running the same chain, so recording them buys nothing the
+    #     raw feed does not already hold. (/ais/atons is not a Mesobot-only
+    #     feed, despite the tracker comment that introduced it: the tracker
+    #     republishes every AIS message-21 AtoN report it sees, with no
+    #     transmitter-class filter. MMSI 993672944 was observed on it off
+    #     Portsmouth on 2026-08-25; see
+    #     docs/logs/2026/2026-08-25_gabby_logs.md:122. The 99x MMSI range
+    #     that marks it as an aid to navigation covers physical and virtual
+    #     aids alike, so that sighting establishes "not Mesobot-only", not
+    #     "charted". It is still re-derivable from the raw sentences.)
+    # Provenance caveat: this is unauthenticated wire text. nmea_relay binds
+    # INADDR_ANY on UDP 2125 (config/ais.yaml), so anything that can reach
+    # the host on that port lands in the bag as if it were the shore feed.
+    # Treat recorded sentences as observed-on-the-wire, not attested.
+    '/ais/nmea',
+    # The tracked, per-MMSI AISContact product -- what CAMP draws and what a
+    # replay drives directly, without re-running the decode chain first.
+    '/ais/contacts',
 ]
 
 

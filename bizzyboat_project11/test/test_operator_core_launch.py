@@ -317,3 +317,42 @@ def test_ais_nodes_push_only_the_ais_sub_namespace():
     walk(description.entities)
     assert pushed == ['ais'], \
         'only the ais sub-namespace may be pushed; the caller supplies the rest'
+
+
+def test_recorder_ais_topics_match_the_ais_namespace_arrangement():
+    """bag_recorder_operator_launch.py names the AIS topics globally
+    (/ais/nmea, /ais/contacts). That only resolves because this launch
+    includes ais_launch.py OUTSIDE its operator-namespace group and
+    ais_launch.py pushes only 'ais'. Move the include inside the group and
+    the nodes land at /operator/ais/..., while the recorder goes on
+    subscribing to the global names and silently records two empty topics."""
+    module = _load_launch_module()
+    context = LaunchContext()
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+
+    def includes(entities):
+        found = []
+        for entity in entities:
+            if isinstance(entity, GroupAction):
+                found.extend(includes(entity._GroupAction__actions))
+            elif isinstance(entity, IncludeLaunchDescription):
+                found.append(str(entity.launch_description_source.location))
+        return found
+
+    grouped = [
+        included
+        for entity in description.entities
+        if isinstance(entity, GroupAction)
+        for included in includes(entity._GroupAction__actions)
+    ]
+    assert not any('ais_launch.py' in i for i in grouped), \
+        'ais_launch.py must stay outside the namespace-pushing group; the ' \
+        'operator recorder subscribes to the global /ais/... names'
+
+    recorder = _load_launch_module(
+        PACKAGE_DIR / 'launch' / 'bag_recorder_operator_launch.py')
+    assert [t for t in recorder.RECORD_TOPICS if '/ais/' in t] == \
+        ['/ais/nmea', '/ais/contacts']

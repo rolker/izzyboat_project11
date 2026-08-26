@@ -95,3 +95,19 @@ Camera index order in the imagery recordings: **0 = port, 1 = forward,
 Recording is selective by design (e.g. no DeltaT, image streams chosen per
 deployment) — absence of a topic from the nav bag is not evidence it wasn't
 recorded elsewhere, and vice versa.
+
+## And on the operator station
+
+`operator_core_launch.py` records its own bag, so a deployment's recordings
+are not all on the boat:
+
+| Data | Location | Naming |
+|---|---|---|
+| Operator diagnostics / commands / bridge stats / AIS | `~/data/logs/operator/<YYYY-MM-DD>/bags/operator_<timestamp>/` | local time |
+
+**These bags contain identifiable third-party vessel data.** Since #464 they
+record the shore AIS feed (`/ais/nmea`, `/ais/contacts` — MMSI, IMO,
+callsign, vessel name, destination for craft that are not ours), and
+`/rosout` has always carried decoded AIS in `ais_parser` warnings. No
+retention or sharing policy covers that data yet — that decision is open,
+and these bags are in scope for it.
