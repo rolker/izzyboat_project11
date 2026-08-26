@@ -187,3 +187,30 @@ the implementation commit.
 - [x] (suggestion) `/ais/nmea` is unauthenticated wire text (nmea_relay binds INADDR_ANY on UDP 2125, `config/ais.yaml:19-22`) — note that provenance caveat next to the entry that now stores it — `bag_recorder_operator_launch.py:74`
 - [x] (suggestion) Plan says the pre-change `RECORD_TOPICS` had "12 entries"; it has 11 (verified against `origin/jazzy`) — `.agent/work-plans/issue-464/plan.md:14`
 - [x] (suggestion) The boat/operator asymmetry comment invites a cross-bag comparison without saying both sides receive the *same* shore feed independently — one clause prevents a confusing near-duplicate diff on joint replay — `bag_recorder_operator_launch.py:63-65`
+
+## Implementation
+**Status**: complete
+**When**: 2026-08-26 04:40 +00:00
+**By**: Claude Code Agent (Claude Opus)
+
+**Branch**: feature/issue-464 at `cf7b1b5`
+**Addressed**: `## Local Review (Pre-Push)` (2026-08-26 04:37 +00:00, branch `feature/issue-464` at `01decd9`) — 1 must-fix, 4 suggestions
+**Commits**: 66821ae, c7b86e5, 89fe91d, 23bfd48, cf7b1b5
+
+### Actions
+- [x] (must-fix) Corrected the `/ais/atons` scope claim — the parenthetical now says the tracker republishes *every* AIS message-21 AtoN report (including AIS-equipped charted aids; 993672944 observed 2026-08-25), not just Mesobot-style beacons, while keeping the re-derivability rationale for the exclusion — `bizzyboat_project11/launch/bag_recorder_operator_launch.py:74-79` (66821ae)
+- [x] (suggestion) Added the third-party-data consequence to the module docstring: AIS carries identifiable non-ours vessel data (MMSI, IMO, callsign, name, destination), the repo has no retention/sharing policy, so treat these bags accordingly — `bag_recorder_operator_launch.py:9-15` (23bfd48)
+- [x] (suggestion) Added the `/ais/nmea` provenance caveat next to the entry: unauthenticated wire text, nmea_relay binds INADDR_ANY on UDP 2125, so recorded sentences are observed-on-the-wire, not attested — `bag_recorder_operator_launch.py:80-83` (89fe91d)
+- [x] (suggestion) Corrected the plan's pre-change `RECORD_TOPICS` count from 12 to 11 (verified against `origin/jazzy`) — `.agent/work-plans/issue-464/plan.md:15` (cf7b1b5)
+- [x] (suggestion) Added the clause that boat and operator each decode the *same* shore receiver's feed independently, so a joint replay holds near-duplicate AIS and a cross-bag diff shows link/decode differences, not two sources — `bag_recorder_operator_launch.py:63-69` (c7b86e5)
+
+### Deferred actions
+- None — all five findings were verified against the current tree and actioned.
+
+### Verification
+- `RECORD_TOPICS` still imports and resolves to 13 entries ending `/ais/nmea`, `/ais/contacts`; module parses and executes clean.
+- Verified the must-fix against source: `marine_ais_tools/ais_contact_tracker.py:284-290` publishes to `atons` on `msg.message_id == 21` with no transmitter-class filter.
+- pre-commit hooks passed on every commit (no `--no-verify`).
+
+### Next step
+Re-review the fixes: `.agent/scripts/dispatch_subagent.sh --mode in-process --issue 464 --skill review-code`
