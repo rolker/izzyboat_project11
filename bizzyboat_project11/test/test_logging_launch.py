@@ -21,6 +21,7 @@ from launch.actions import DeclareLaunchArgument
 from launch.actions import GroupAction
 from launch.utilities import perform_substitutions
 from launch_ros.actions import Node
+from launch_ros.actions import PushRosNamespace
 
 PACKAGE_DIR = Path(__file__).resolve().parent.parent
 LAUNCH_FILE = PACKAGE_DIR / 'launch' / 'logging_launch.py'
@@ -69,6 +70,33 @@ def _recorders(path=LAUNCH_FILE, **overrides):
 
     walk(description.entities)
     return running
+
+
+def _pushed_namespaces(path=LAUNCH_FILE, **overrides):
+    """Return the namespaces pushed around the recorders, resolved."""
+    module = _load_launch_module(path)
+    context = LaunchContext()
+    context.launch_configurations.update(overrides)
+    description = module.generate_launch_description()
+    for entity in description.entities:
+        if isinstance(entity, DeclareLaunchArgument):
+            entity.visit(context)
+
+    pushed = []
+
+    def walk(entities):
+        for entity in entities:
+            if isinstance(entity, GroupAction):
+                actions = entity._GroupAction__actions
+                if any(isinstance(action, Node) for action in actions):
+                    pushed.extend(
+                        _resolve(context, action.namespace)
+                        for action in actions
+                        if isinstance(action, PushRosNamespace))
+                walk(actions)
+
+    walk(description.entities)
+    return pushed
 
 
 def _params(entry):
@@ -151,6 +179,19 @@ def test_the_two_bags_never_share_a_directory():
     uris = {name: _params(entry)['storage.uri']
             for name, entry in recorders.items()}
     assert len(set(uris.values())) == len(uris), uris
+
+
+def test_the_recorders_run_under_the_boat_namespace():
+    """The manual's own check is `ros2 node list | grep /bizzy/...logger`, and
+    the operator has no other way to see the bags are running. Without the
+    namespace push the recorders come up as `/logger` / `/sonar_logger` and
+    that grep silently finds nothing."""
+    assert _pushed_namespaces() == ['bizzy']
+
+
+def test_the_namespace_argument_moves_the_recorders():
+    """`namespace:=` has to reach the push, not just be declared."""
+    assert _pushed_namespaces(namespace='otherboat') == ['otherboat']
 
 
 def test_each_recorder_loads_the_shared_config():
