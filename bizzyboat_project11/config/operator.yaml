@@ -20,7 +20,16 @@
         connections_list:
           - wifi
           - vpn
-          - cell
+          # cell STOOD DOWN 2026-08-25 to match the boat side (bizzyboat.yaml
+          # commented `- cell` out of the boat's connections_list on the water,
+          # 2026-08-25 at Appledore). There is no SIM card in the modem, so cell
+          # and vpn resolve to the same physical uplink and cell was pure
+          # duplicate load. See the fuller note in operator_no_wifi.yaml.
+          #
+          # RESTORE THIS LINE when a SIM is fitted, together with `- cell` in
+          # bizzyboat.yaml and operator_no_wifi.yaml. The cell connection block
+          # below is left intact.
+          # - cell
         connections:
           wifi:
             host: gabby.bizzy.p11.lan

@@ -20,4 +20,19 @@
       bizzy:
         connections_list:
           - vpn
-          - cell
+          # cell STOOD DOWN 2026-08-25 to match the boat side. There is no SIM
+          # card in the boat's modem, so this connection never had an
+          # independent path. Measured at Appledore: cell and vpn both resolve
+          # to the same physical uplink (ip route get shows 192.168.24.144 and
+          # 192.168.22.144 BOTH via 192.168.20.1 dev enp7s0), so cell traffic
+          # was pure duplicate load competing with vpn on one pipe.
+          #
+          # bizzyboat.yaml commented `- cell` out of the BOAT's connections_list
+          # on the water; leaving it listed here would have left the operator
+          # station opening a connection the boat no longer advertises.
+          #
+          # RESTORE THIS LINE when a SIM is fitted and the cell path is
+          # genuinely separate — together with `- cell` in bizzyboat.yaml and in
+          # operator.yaml. The cell connection block in operator.yaml is left
+          # intact, so nothing else needs changing.
+          # - cell
