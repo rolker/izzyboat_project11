@@ -347,9 +347,18 @@ On **gabby**, in the `project11` tmux session:
    ros2 node list | grep -E '/bizzy/(sonar_)?logger'
    ```
 
-   You want **both** `/bizzy/logger` and `/bizzy/sonar_logger`. Only one means
-   the other recorder died or was disabled (`logger:=false` /
-   `sonar_logger:=false`).
+   You want **exactly one of each** — `/bizzy/logger` and
+   `/bizzy/sonar_logger`. Only one of the two means the other recorder died or
+   was disabled (`logger:=false` / `sonar_logger:=false`).
+
+   **Two of the same name is just as bad, and easier to do now**: launching
+   `logging_launch.py` a second time (say, after Ctrl-C in the wrong window,
+   or in a second terminal) starts a second pair of recorders in their own
+   fresh bag directories. Nothing errors — both pairs record, ROS delivers
+   each message to all of them, and you end up with two directories that each
+   look plausible while the disk fills twice as fast. Duplicate names show up
+   as repeated lines in the `grep` above. If you see them, stop **both**
+   `logging` instances (Ctrl-C, wait for the finalize) and start one.
 3. Confirm a fresh bag directory is actually growing under
    `/home/field/data/logs/bizzyboat/` and `/home/field/data/logs/bizzyboat_sonar/` —
    each start mints a new UTC-timestamped subdirectory.
