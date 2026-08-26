@@ -286,8 +286,7 @@ def test_perception_rejects_the_recorder_arguments_that_moved(argument):
     to perception_launch.py would bring the boat up clean with the bags at the
     default location and nothing saying so. It has to be a hard error."""
     perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)
-    context = LaunchContext()
-    context.launch_configurations[argument] = '/tmp/somewhere-else'
+    context = LaunchContext(argv=[f'{argument}:=/tmp/somewhere-else'])
     with pytest.raises(RuntimeError) as excinfo:
         perception.reject_moved_recorder_arguments(context)
     message = str(excinfo.value)
@@ -300,8 +299,7 @@ def test_logging_rejects_the_perception_argument():
     `m3_all_directory:=` aimed at this launch file is the natural mistake;
     `ros2 launch` would take it silently and leave the .all archive behind."""
     logging_launch = _load_launch_module()
-    context = LaunchContext()
-    context.launch_configurations['m3_all_directory'] = '/tmp/somewhere-else'
+    context = LaunchContext(argv=['m3_all_directory:=/tmp/somewhere-else'])
     with pytest.raises(RuntimeError) as excinfo:
         logging_launch.reject_perception_arguments(context)
     message = str(excinfo.value)
@@ -320,6 +318,23 @@ def test_perception_accepts_a_bare_bring_up():
     """The guard must not fire on the normal case."""
     perception = _load_launch_module(PERCEPTION_LAUNCH_FILE)
     assert perception.reject_moved_recorder_arguments(LaunchContext()) == []
+
+
+@pytest.mark.parametrize('module_path,guard,argument', [
+    (PERCEPTION_LAUNCH_FILE, 'reject_moved_recorder_arguments',
+     'log_directory'),
+    (LAUNCH_FILE, 'reject_perception_arguments', 'm3_all_directory'),
+])
+def test_the_guards_ignore_an_inherited_configuration(
+        module_path, guard, argument):
+    """The guards are for a command-line mistake. A larger bring-up that
+    includes one of these files and declares the same name for its own
+    purposes leaks it in through `launch_configurations` — aborting the whole
+    boat over that would be a worse failure than the one being prevented."""
+    module = _load_launch_module(module_path)
+    context = LaunchContext()
+    context.launch_configurations[argument] = '/tmp/inherited'
+    assert getattr(module, guard)(context) == []
 
 
 @pytest.mark.parametrize('name', ['logger', 'sonar_logger'])

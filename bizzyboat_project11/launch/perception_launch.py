@@ -25,6 +25,20 @@ MOVED_RECORDER_ARGUMENTS = (
 )
 
 
+def command_line_argument_names(context):
+    """Return the `name:=value` names this launch was invoked with.
+
+    `context.launch_configurations` is the wrong thing to test a stale
+    argument against: it also holds whatever an *including* launch file
+    declared, so a larger bring-up that legitimately has its own
+    `log_directory` would trip a guard keyed on it and take the whole boat
+    down. `ros2 launch` seeds `context.argv` with exactly the command-line
+    `name:=value` pairs, which is the mistake these guards are for.
+    """
+    return {entry.split(':=', 1)[0]
+            for entry in context.argv if ':=' in entry}
+
+
 def reject_moved_recorder_arguments(context, *args, **kwargs):
     """Fail loudly on a `name:=value` this file no longer honours.
 
@@ -37,11 +51,12 @@ def reject_moved_recorder_arguments(context, *args, **kwargs):
     of silent field failure this package tries not to ship, so it is a hard
     error naming where the argument went.
 
-    Nothing includes this launch file, so an inherited configuration cannot
-    trip this by accident; if that ever changes, scope the include.
+    Keyed on the command line only (see `command_line_argument_names`), so a
+    bring-up that includes this file and declares one of these names for its
+    own purposes is not what gets stopped.
     """
-    stale = [name for name in MOVED_RECORDER_ARGUMENTS
-             if name in context.launch_configurations]
+    supplied = command_line_argument_names(context)
+    stale = [name for name in MOVED_RECORDER_ARGUMENTS if name in supplied]
     if stale:
         raise RuntimeError(
             'perception_launch.py no longer runs the rosbag2 recorders; '
