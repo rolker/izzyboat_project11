@@ -13,9 +13,15 @@ decode chain and the two AIS entries simply record nothing.
 
 Consequence of that last one: AIS carries identifiable third-party vessel
 data (MMSI, IMO, callsign, vessel name, destination) for craft that are not
-ours, so operator bags now persist it. The repo has no retention or sharing
-policy covering that; until it does, treat these bags as containing
-third-party data and share them with the same care as imagery.
+ours, so operator bags now persist it in structured form. Note that it was
+never wholly absent: /rosout has always been recorded, and ais_parser logs
+the whole decoded message -- MMSI, name, destination -- at WARN when an ETA
+field fails to decode (marine_ais_tools/ais_parser.py:328). So a later
+scrub or retention rule written only against /ais/* would leave that copy
+behind; scope it to the bag, not to the topic list. The repo has no
+retention or sharing policy covering that; until it does, treat these bags
+as containing third-party data and share them with the same care as
+imagery.
 
 The output directory is computed in this launch file (not a shell wrapper)
 so the recorder can be auto-launched as part of operator_core_launch.py
