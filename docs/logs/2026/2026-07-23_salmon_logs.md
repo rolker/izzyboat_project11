@@ -1,6 +1,6 @@
-# 2026-07-23 — salmon log (bizzyboat deployment — issue pending)
+# 2026-07-23 — salmon log (bizzyboat deployment)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/386
 Host: salmon
 Side: field
 Started: 2026-07-23 (retrospective — this log written 2026-07-24 07:10 -04:00 from post-run investigation)

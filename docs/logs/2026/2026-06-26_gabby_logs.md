@@ -1,6 +1,6 @@
-# 2026-06-26 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-06-26 — gabby log (BizzyBoat deployment)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: none — no deployment issue was ever created for this day and no wrap-up ran. The day's tracked outcome is #337 (RCA: FCU 3D-gyro health failure on 2026-06-26). Marker cleared 2026-08-31 under #477 so this is not re-read as an unwrapped deployment.
 Host: gabby
 Side: field
 Started: 2026-06-26 10:11 -04:00
