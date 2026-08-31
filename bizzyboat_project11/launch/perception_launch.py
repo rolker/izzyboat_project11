@@ -132,15 +132,21 @@ def generate_launch_description():
                                 ])
                             )
                         ),
-                        IncludeLaunchDescription(
-                            PythonLaunchDescriptionSource(
-                                PathJoinSubstitution([
-                                    FindPackageShare('cube_bathymetry'),
-                                    'launch',
-                                    'cube_bathymetry_launch.py'
-                                ])
-                            )
-                        ),
+                        # DISABLED 2026-08-26: the DeltaT/Imagenex 837 is not in
+                        # use on BizzyBoat, but this include was still starting a
+                        # second cube_bathymetry node under sensors/deltat -- it
+                        # measured active [3] during the 2026-08-26 Appledore
+                        # survey, gridding nothing. Re-enable together with the
+                        # deltat_launch.py include above if the 837 comes back.
+#                        IncludeLaunchDescription(
+#                            PythonLaunchDescriptionSource(
+#                                PathJoinSubstitution([
+#                                    FindPackageShare('cube_bathymetry'),
+#                                    'launch',
+#                                    'cube_bathymetry_launch.py'
+#                                ])
+#                            )
+#                        ),
                     ]
                 ),
 
