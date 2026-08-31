@@ -1,6 +1,6 @@
-# 2026-08-26 — pandy log (BizzyBoat deployment — issue pending)
+# 2026-08-26 — pandy log (BizzyBoat deployment #467)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/467
 Host: pandy
 Side: field
 Started: 2026-08-26 08:43 -04:00
