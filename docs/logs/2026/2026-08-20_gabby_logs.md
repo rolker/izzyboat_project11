@@ -1,6 +1,7 @@
 # 2026-08-20 — gabby log (BizzyBoat, Isles of Shoals deployment prep)
 
-Deployment issue: pending (backfill from a dev host) — no open deployment issue exists for the Isles of Shoals campaign; `git bug bug` on a refreshed cache shows the most recent deployment issue as 6270cd1 "Deployment 2026-08-06" (closed). Dev side to create + link.
+Deployment issue: none — this was Isles of Shoals deployment *prep*, reconciled through the field-import path rather than the deployment path: see #449 (field import, merged) and #451 (log triage). Marker cleared 2026-08-31 under #477.
+Field agent's note at the time, preserved: "no open deployment issue exists for the Isles of Shoals campaign; `git bug bug` on a refreshed cache shows the most recent deployment issue as 6270cd1 'Deployment 2026-08-06' (closed). Dev side to create + link." The dev-side decision recorded under #477 was **not** to backfill an issue for a prep day already reconciled by field import.
 Host: gabby
 Side: field
 Started: 2026-08-20 09:56 -04:00

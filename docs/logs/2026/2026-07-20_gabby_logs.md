@@ -1,6 +1,6 @@
-# 2026-07-20 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-07-20 — gabby log (BizzyBoat deployment)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: none — no deployment issue was ever created for this day and no wrap-up ran. The day's tracked outcome is #380 (camera-mast URDF correction from the 2026-07-20 recorded data). Marker cleared 2026-08-31 under #477 so this is not re-read as an unwrapped deployment.
 Host: gabby
 Side: field
 Started: 2026-07-20 12:25 -04:00

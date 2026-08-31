@@ -1,6 +1,7 @@
 # 2026-08-21 — gabby log (BizzyBoat, Isles of Shoals deployment prep)
 
-Deployment issue: pending (backfill from a dev host) — carried forward from the 2026-08-20 gabby log.
+Deployment issue: none — Isles of Shoals deployment *prep*, as for 2026-08-20; reconciled via field import #452. Marker cleared 2026-08-31 under #477.
+Field agent's note at the time, preserved: "carried forward from the 2026-08-20 gabby log."
 Host: gabby
 Side: field
 Started: 2026-08-21 10:39 -04:00

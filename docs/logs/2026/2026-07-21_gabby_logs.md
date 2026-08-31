@@ -1,6 +1,6 @@
-# 2026-07-21 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-07-21 — gabby log (BizzyBoat deployment)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: none — no deployment issue was ever created for this day and no wrap-up ran. The day's tracked outcome is #381 (RCA: path-following failure during the 2026-07-21 deployment). Marker cleared 2026-08-31 under #477 so this is not re-read as an unwrapped deployment.
 Host: gabby
 Side: field
 Started: 2026-07-21 13:30 -04:00
