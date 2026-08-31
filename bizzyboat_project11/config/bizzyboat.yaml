@@ -416,12 +416,14 @@
             # against the 1.5 MB/s cap, zero dropped. See
             # docs/logs/2026/2026-08-26_gabby_logs.md.
             #
-            # manda_coverage_swath stays stood down: it was grouped into the
-            # same 2026-08-25 stand-down for budget, but #112 does not shrink
-            # it, so restoring it is a separate and so far unmeasured call.
+            # manda_coverage_swath RESTORED 2026-08-31 at operator direction during
+            # the #467 wrap-up. It was grouped into the same 2026-08-25 budget
+            # stand-down; #112 does not shrink it, so its own cost is still
+            # unmeasured -- measure it on the next outing. The operator was
+            # unaware it had stayed stood down, which is the reason it is back.
             - coverage_catalog
             - coverage_tiles
-            # - manda_coverage_swath
+            - manda_coverage_swath
             - battery
             - command_response
             - diagnostics
