@@ -12,3 +12,5 @@ Started: 2026-09-02 10:08 -04:00
 **2026-09-02 10:36 -04:00** — make sync + make build at operator request (CAMP outdated): sync pulled new camp commits (crash handler, sonar-live tests) among others; build green, 17 packages / 4m18s (stderr-only noise from camp + rqt_marine_radar). CAMP restart pending to pick up new build.
 
 **2026-09-02 16:58 -04:00** — Deployment over, boat on trailer (operator report). Operator skipped the screenshooter Ctrl-C encode; running encode_day from screenshooter.bash now for 2026-09-02 (594 frames, 13:33-18:45 UTC) and 2026-09-01 (328 frames, rollover encode never fired) -> ~/data/logs/operator/<date>/screenshots/operator_<date>.mp4.
+
+**2026-09-02 17:02 -04:00** — Screenshooter encodes done: operator_2026-09-02.mp4 (524M, 594 frames) + operator_2026-09-01.mp4 (236M, 328 frames), each with CSV sidecar, under ~/data/logs/operator/<date>/screenshots/.
