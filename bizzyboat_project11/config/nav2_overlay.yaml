@@ -47,8 +47,16 @@ local_costmap:
       # it can only raise cost and can never un-write a charted hazard or a
       # depth keepout — its position in the order is therefore about being
       # inflated, not about arbitration.
+      # chart_layer DISABLED AGAIN 2026-09-01 (field, gabby, per operator) — back
+      # at Lake Massabesic and the costmap came up all lethal. This is the
+      # 2026-06-12 no-ENC condition (#263 / 61937ab) recurring. NOTE it
+      # contradicts the 2026-08-03 re-enable rationale directly above: that
+      # reasoned no-ENC sites resolve uncharted-complete and allow_uncharted
+      # leaves the grid untouched, but the observed behaviour at this site today
+      # is all-lethal, so that reasoning does not hold here. Root-cause deferred
+      # to wrap-up. RESTORE at ENC-covered sites (Lewes, the Shoals).
       plugins:
-        - "chart_layer"
+        # - "chart_layer"
         - "sea_surface_layer"
         - "bathymetry_layer"
         - "ais_layer"
@@ -313,8 +321,11 @@ global_costmap:
       # (echoboat_project11/config/nav2_params.base.yaml) lists the global plugins as
       # ["chart_layer", "sea_surface_relay", "inflation_layer"]; deep-merge replaces
       # lists wholesale, so this restates that list plus bathymetry_layer after it.
+      # chart_layer DISABLED AGAIN 2026-09-01 (field, gabby, per operator) — see
+      # the local_costmap plugins comment. Same no-ENC Massabesic condition;
+      # both lists must be changed together, as in 61937ab.
       plugins:
-        - "chart_layer"
+        # - "chart_layer"
         - "sea_surface_relay"
         - "bathymetry_layer"
         - "ais_layer"
