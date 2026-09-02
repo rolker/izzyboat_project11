@@ -215,7 +215,32 @@ local_costmap:
         #
         # REVERT to True for a closed-basin site (Massabesic) — there no-data
         # really is land and the lethal shore keepout is the intended behavior.
-        unsurveyed_is_lethal: False
+        #
+        # *** TRUE again 2026-09-02 (gabby, Massabesic) — the revert condition
+        # above is met. *** The lake reference prior (NH GRANIT contours, 47
+        # tiles, sigma 1.524 m) was moved into this store's reference/ layer the
+        # same day; before that the store had NO Massabesic coverage at all
+        # (chart/ is Portsmouth/Isles of Shoals, ~37 km east) and True would have
+        # made the entire site lethal. MEASURED basis for trusting no-data=land:
+        # the prior is a filled, lake-masked raster — interior tiles 90-100%
+        # valid, edge tiles 0.1-2% as they clip the shore — 17.3 M valid pixels,
+        # depths 1.524-13.716 m, and 23.91% of valid pixels sit exactly at the
+        # 1.524 m (5 ft) shallowest-contour plateau. The mapping therefore
+        # already reaches into the shallows, so a no-data cell inside the lake is
+        # land rather than unmapped water. The Lewes failure mode does not
+        # transfer: charted DEPARE polygons do not tile an open coast, but a lake
+        # outline does tile a closed basin.
+        #
+        # KNOWN COSTS, accepted by the operator: (1) water inshore of the mapped
+        # edge is LETHAL, so survey lines tighter to the beach than the prior
+        # reaches cannot be planned — and CUBE cannot fill that gap later, having
+        # no way to plan in and survey it; (2) the reference footprint stops just
+        # short of the lake polygon on the N and W edges (union lon -71.3984 vs
+        # polygon -71.4029, lat 43.0156 vs 43.0178), and that sliver goes lethal;
+        # (3) True makes store presence load-bearing: if reference/ is absent or
+        # fails to load, the whole area goes lethal at once — the pre-launch
+        # store check above is no longer a soft degradation.
+        unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide
         # Ellipsoid-referenced world frame (REP-105 'map'): the layer reads the
         # water-surface ellipsoidal height as map_tide's z in this frame. MUST be
@@ -357,11 +382,12 @@ global_costmap:
         maximum_caution_depth: 2.5
         confidence_gate: 0.5
         max_age: 0.0
-        # FALSE at Lewes (open coast), set in the field 2026-08-05 — see the
-        # local_costmap block for the measured rationale and the revert
-        # condition. Must track the local value: a split would give the planner
-        # and the controller different navigable extents.
-        unsurveyed_is_lethal: False
+        # FALSE at Lewes (open coast), set in the field 2026-08-05; TRUE again
+        # 2026-09-02 (gabby, Massabesic) once the lake reference prior was moved
+        # into the store — see the local_costmap block for the measured rationale
+        # and the accepted costs. Must track the local value: a split would give
+        # the planner and the controller different navigable extents.
+        unsurveyed_is_lethal: True
         map_tide_frame: <tf_prefix>/map_tide
         # Ellipsoid-referenced world frame (REP-105 'map'): the layer reads the
         # water-surface ellipsoidal height as map_tide's z in this frame. MUST be
