@@ -1,6 +1,6 @@
-# 2026-08-26 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-08-26 — gabby log (BizzyBoat deployment #467)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/467
 Host: gabby
 Side: field
 Started: 2026-08-26 08:35 -04:00
@@ -49,6 +49,32 @@ Started: 2026-08-26 08:35 -04:00
 
 **2026-08-26 10:13 -04:00** — OPERATOR WAS RIGHT - the cube restart silently de-advertised its topics from udp_bridge, and they needed re-advertising by hand. Found after the 10:06:41 cube restart: /bizzy/sensors/m3/cube_bathymetry/coverage_tiles and coverage_catalog each had Publisher count 1 but SUBSCRIPTION COUNT 0, i.e. the bridge was no longer subscribed, and neither topic appeared anywhere in bridge_info. Tiles were being published and going nowhere. Re-advertised both over the operator/vpn connection with the values already persisted in bizzyboat.yaml (coverage_tiles queue_size 2 period 1.0; coverage_catalog queue_size 2 unthrottled) via the remote_advertise service, type udp_bridge_interfaces/srv/Subscribe. VERIFIED RATHER THAN TRUSTING THE RESPONSE - both subscription counts went 0 -> 1, and topic_statistics now shows real send traffic to destination_node operator on connection vpn: coverage_tiles 0.264 msg/s, send success 926.2 B/s with failed 0.0 and dropped 0.0, average_fragment_count 4.0; coverage_catalog send success 318.2 B/s. SYSTEMIC POINT FOR WRAP-UP: the advertisement is persisted in bizzyboat.yaml, yet it did not survive the PUBLISHER restarting - only the bridge restarting would re-read that config. So any node restart silently drops its outbound topics from the bridge with no warning anywhere, and the operator only finds out when a panel goes stale. Worth an issue against udp_bridge. ODDITY, UNEXPLAINED: even now, with both topics advertised and demonstrably sending, neither appears in the bridge_info topics list (still 501 lines, no cube or m3 entries) while topic_statistics shows them fine. So bridge_info is not a reliable place to check what is advertised - use topic_statistics.
 
+> **Wrap-up correction (2026-08-31, operator-directed)**: the causal claim in this entry — that
+> the cube restart de-advertised the topics, and the systemic generalisation that "any node restart
+> silently drops its outbound topics from the bridge" — is **withdrawn**. Operator: "My understanding
+> is that a node which is subscribed to a topic doesn't need to re-subscribe to it when publishers
+> come and go." That is the ROS 2 model, and udp_bridge's source confirms it holds here:
+> `removeSubscriberConnection()` is reached from exactly two places — a remote `OPERATION_UNSUBSCRIBE`
+> (`udp_bridge.cpp:1982`) and the `remove_advertise` service (`:2441`) — and from nothing that observes
+> publisher loss. A publisher restart therefore does not tear down the bridge's subscription.
+>
+> The observation itself (subscription count 0) stands; the attribution does not. The topics were
+> **stood down on 2026-08-25** — commented out of the vpn connection's `topics_list` at
+> `bizzyboat.yaml:410-411` with the note "RESTORE once tiles are patched" — and that stand-down was
+> still in force all morning. This entry's own 10:17 sibling found exactly that. The 08:51 entry also
+> refers to coverage_tiles "flowing **again**", and the operator-side pandy log records live coverage
+> as absent until after the 10:13 re-advertise. So the tiles were never reaching the operator on
+> 2026-08-26 before 10:13; the 10:06 cube restart is coincident, not causal.
+>
+> Note the separate config location that made this confusing: the advertisement *was* persisted at
+> `bizzyboat.yaml:524-525`, untouched by the stand-down — a different list from the `topics_list` at
+> `410-411`. Reading only the former supports this entry's claim; both together do not.
+>
+> What remains unexplained, and carries to RCA: why the subscription was **absent** rather than merely
+> idle. Subscription creation requires a live publisher (`get_publishers_info_by_topic()`; `info.empty()
+> → continue`, retried each `subscription_update_timer_` tick), so an entry with a null subscription
+> should self-heal once the publisher returns.
+
 **2026-08-26 10:17 -04:00** — Re-enabled coverage_catalog and coverage_tiles in the udp_bridge vpn topics_list, at operator request - this is the DURABLE half of the runtime remote_advertise done at 10:13. Root cause of the missing advertisement is now clear and it was not the cube restart alone: both topics were commented OUT of the vpn connection's topics_list in bizzyboat_project11/config/bizzyboat.yaml, stood down on the water 2026-08-25 with the note 'RESTORE once tiles are patched or the link budget grows'. cube_bathymetry#112 landed exactly that patching today, so the stand-down condition is met. Uncommented lines 410-411 and rewrote the comment block to record the stand-down, the restore, and the measured numbers behind it. manda_coverage_swath DELIBERATELY LEFT stood down - it was grouped into the same budget stand-down but #112 does not shrink it, so restoring it is a separate unmeasured decision for the operator, and the config now says so. YAML re-validated after the edit; installed copy under platforms_ws/install is a symlink to source, so the change is live for the next bridge restart with no rebuild. Current session already carries the topics via the runtime advertise, so no restart is needed to see tiles now.
 
 **2026-08-26 10:17 -04:00** — MY ERROR, CAUGHT AND REVERTED, recorded because it touched a live config. My first attempt at the topics_list edit deleted 229 lines of bizzyboat.yaml. Cause: I located the edit region by searching for the string 'STOOD DOWN 2026-08-25', assuming it was unique. It is not - it also appears at line 180 on the CELL connection (no SIM card fitted), so the search matched the cell block and the replacement wiped everything from there down to the vpn RESTORE line. Caught immediately because the post-edit YAML validation failed at line 179 with a block-collection error, and git diff --stat showed 229 deletions against an expected handful. Reverted with git checkout -- on the file, confirmed it parses again and that git status shows it clean, then redid the edit against explicit line indices with an assert on the exact content of every line touched before writing. Final diff is 24 insertions / 12 deletions confined to the one region, YAML valid, and topics_list parses with both coverage entries present. No other file was affected and the running stack was never touched by the bad edit - it only ever existed on disk in the source tree.
@@ -94,6 +120,17 @@ Started: 2026-08-26 08:35 -04:00
 **2026-08-26 16:11 -04:00** — GARMIN FULLY RECOVERED. Operator enabled transmit; read-back confirms transmit True (verifying the set rather than trusting it, per the zenoh silent-drop trap). All four topics publishing: sonar_image_down 7.361 Hz, sonar_image_port 7.357, sonar_image_starboard 7.407, nadir_depth 7.387. End-to-end path GCV-20 -> mercat proxy -> gabby driver -> bridge is working again after the mercat disk-full outage. LINK STATE with sidescan restored: effective_rate_limit back at the full 1500000 - the 1461537 dip seen at 15:44 has recovered, so that was AIMD probing rather than a persistent backoff. Message success 464964 B/s, dropped 0.0 in all three categories. resend_giveup_count 123143, up from 121354, about 72/min and steady against the 74/min measured earlier - the acceleration flagged at 12:03 has not returned. NOTE ON THE SIDESCAN'S OWN RATE: sonar_image_down measures 29126 B/s on the bridge against 75902 B/s before the failure. The topic only resumed moments ago so the statistics window is still filling; not treating the lower figure as meaningful yet. Worth a re-read later in the session to confirm it returns to its former cost.
 
 **2026-08-26 16:20 -04:00** — OPERATOR OBSERVATION, reported retrospectively: earlier, surveying close to the shoreline where waves were washing ashore, the back-and-forth currents from the waves made the controller struggle when trying to survey PARALLEL to the shoreline. Recorded as described by the operator; no mechanism inferred here beyond what was said. Two points of factual context worth attaching for wrap-up, neither of them a claim that they are connected. FIRST: the line-parallel geometry is the aggravating factor in the operator's account - a surge that reverses along-track is being met broadside to the survey direction, so the disturbance acts largely across the line rather than along it. SECOND, AND AN OPEN QUESTION RATHER THAN A LINK: the three veer-off-and-rejoin events at 13:57-13:59 on trackline0027 have not been explained, and the mission layer and localisation were both ruled out at the time. Whether those occurred in or near this same nearshore stretch is not something this session established, and it should NOT be assumed - but if they did, wave-driven cross-track disturbance is a candidate that was not on the list when they were being diagnosed. Worth checking the boat's position at 13:57-13:59 against the shoreline during wrap-up; the 13:07:54 and earlier bags plus the mission poses should settle it.
+
+> **Wrap-up addition (2026-08-31, operator-reported)**: this entry substantially understates what
+> happened. Operator at wrap-up: "Much of the near shore driving had to be done using manual control.
+> The control system is not designed for an environment where we are close to shore and waves are
+> pushing us back and forth."
+>
+> The live entry records only that the controller "struggled"; it does not record that autonomy was
+> abandoned for a substantial part of the near-shore work and the boat was driven by hand. No agent
+> was watching those periods, so they appear nowhere else in the 2026-08-26 record, and any reading of
+> the day's autonomy performance that ignores this is wrong. Carried to the follow-up backlog as a
+> control-system capability gap in wave-driven near-shore conditions, not as a tuning complaint.
 
 **2026-08-26 16:24 -04:00** — OPERATOR HYPOTHESIS on the 13:57-13:59 veer-and-rejoin events: the acute angle between two segments caused the boat to decide to go back to the previous segment, because the two segments were close together. Mechanically plausible and consistent with the operator's own earlier observation that the boat rejoined at the FIRST segment - nav2 path handlers generally locate the closest point on the remaining path, so where a path doubles back within the search window the closest point can land BEHIND the boat and the controller follows it back. Note this is a path-geometry mechanism, independent of the wave-driven cross-track disturbance reported separately, though the two could compound. MEASURED, but on the WRONG LINE and so not a test of the hypothesis: trackline0027 is gone from the mission, so the geometry measured was the current trackline0010 - p0 (117.64,552.88) through p4 (95.19,390.24), four segments of 32.94/139.78/74.20/281.77 m. Interior angles 152.24, 93.49 and 93.84 deg, so NONE acute on this line, and the closest approach between non-adjacent segments is 74.20 m (seg1<->seg3), with seg0<->seg3 at 91.87 m. Worth noting anyway that seg0 is only 32.94 m - a short lead-in segment, which is the same shape the operator removed as mitigation. EVIDENCE FOR THE REAL TEST EXISTS AND IS SAFE: /bizzy/marine/mission_plan reads empty live, so trackline0027's geometry cannot be recovered from the running system - but the main bag at ~/data/logs/bizzyboat/2026-08-26T12-49-50+00-00 (started 08:49:50 local, still recording, so it spans 13:57) was probed and DOES contain marine/status/mission_tasks, marine/mission_plan AND collision_monitor_state. So wrap-up can recover trackline0027's exact geometry and settle the acute-angle hypothesis, and can also close the CA question left open at 13:59, which live sampling could not.
 

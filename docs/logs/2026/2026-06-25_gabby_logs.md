@@ -1,6 +1,6 @@
-# 2026-06-25 — gabby log (BizzyBoat deployment — issue pending)
+# 2026-06-25 — gabby log (BizzyBoat deployment)
 
-Deployment issue: pending (backfill from a dev host)
+Deployment issue: https://github.com/rolker/unh_echoboats_project11/issues/331
 Host: gabby
 Side: field
 Started: 2026-06-25 10:33 -04:00 (deployment-mode activated late; boat already on the water this session)
