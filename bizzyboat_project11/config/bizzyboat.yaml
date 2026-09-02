@@ -175,8 +175,8 @@
           # RESTORE THIS LINE when operating with an operator station in wifi
           # range (a boat-side or dockside laptop rather than the ROC). Nothing
           # else needs changing: the wifi connection block below is left intact.
-          - wifi
-          #- vpn
+          #- wifi
+          - vpn
           # cell STOOD DOWN 2026-08-25 (field, gabby) — there is no SIM card in
           # the boat's modem, so this connection never had an independent path.
           # Measured on the water: cell and vpn both resolve to the same physical
