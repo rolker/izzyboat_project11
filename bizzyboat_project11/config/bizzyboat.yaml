@@ -281,7 +281,13 @@
               collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon}
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
-              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
+              # transient_local (#484): cube_bathymetry latches the catalog for late
+              # joiners, but the bridge does NOT auto-mirror source durability -- an
+              # unset key takes the documented VOLATILE default, and a TRANSIENT_LOCAL
+              # subscriber cannot match a VOLATILE publisher. Left unset, every correct
+              # consumer silently received no catalog at all. Per-CONNECTION, so it must
+              # be set on wifi and vpn alike. Typos fall back to VOLATILE with no error.
+              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2, durability: transient_local}
               coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 1.0}
               odom: {source: odom}
               # Bridge subscription queue depths sized for fail-fresh under link
@@ -539,7 +545,13 @@
               # udp_bridge config only advertises OUTBOUND topics, so the sender
               # configures it: operator.yaml advertises coverage_requests -> bizzy
               # over vpn. These two files are a pair; edit them together.
-              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
+              # transient_local (#484): cube_bathymetry latches the catalog for late
+              # joiners, but the bridge does NOT auto-mirror source durability -- an
+              # unset key takes the documented VOLATILE default, and a TRANSIENT_LOCAL
+              # subscriber cannot match a VOLATILE publisher. Left unset, every correct
+              # consumer silently received no catalog at all. Per-CONNECTION, so it must
+              # be set on wifi and vpn alike. Typos fall back to VOLATILE with no error.
+              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2, durability: transient_local}
               coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 1.0}
               # manda coverage-swath viz marker -> CAMP (enabled via display_topic in
               # nav2_overlay.yaml). Published per survey_area goal; rate-limited (the
