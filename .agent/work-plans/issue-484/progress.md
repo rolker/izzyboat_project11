@@ -148,3 +148,41 @@ mechanism needs no change).
 
 ### Open questions
 - [ ] No open questions — plan is review-plan-ready.
+
+## Plan Review
+**Status**: complete
+**When**: 2026-09-03 13:32 -04:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-484/plan.md` at `06ee6d1`
+**PR**: PR-less (--issue mode)
+**Verdict**: approve-with-suggestions
+
+### Evaluation
+
+| Dimension | Verdict | Notes |
+|---|---|---|
+| Scope | Good | Two-key config diff at two verified call sites; appropriately sized for a single PR |
+| Issue alignment | Good | Addresses the exact bug (unset durability defaults to VOLATILE, breaking transient_local relay) and folds in all three review-issue action items |
+| File targeting | Good | Independently re-counted: `coverage_catalog` appears in the `topics:` dict at exactly two connections — wifi (line 284) and vpn (line 542). A third connection (`cell`, line 622) also relays other topics but does **not** carry `coverage_catalog` (verified by grep over its full topics_list/topics block) — the plan's "two call sites" claim is correct, not an undercount. `operator.yaml` (the reverse-direction config) does not retransmit `coverage_catalog` either. |
+| Consequences | Good | Coupled reverts (autonomy#363, camp#220) correctly cross-linked rather than folded in; udp_bridge#79 correctly left out of scope |
+| Documentation & instruction impact | Good | Non-silent; correctly frames the "receiving bridge caches QoS, must restart" note as a candidate, not an applied edit |
+| Principle alignment | Needs work (minor) | See findings 1-2 below — "Enforcement over documentation" and "Human control and transparency" are both touched by gaps that are cheap to close |
+| ADR compliance | Good | 0008 correctly assessed not triggered — value-only config edit |
+| ROS conventions | Good | `durability: transient_local` mechanically verified end-to-end against `udp_bridge/include/udp_bridge/qos_resolution.h` and `udp_bridge.cpp` (`addSubscriberConnection`/`updateLocalSubscriptions`): setting it on either connection also flips the boat-side *source* subscription to transient_local (`sub.durability` takes the strongest per-topic setting across remotes, `udp_bridge.cpp:1875-1880`), so the fix correctly reaches both the source subscription and the destination publisher from a single per-connection key. Config-only is genuinely sufficient — no code change needed. |
+
+### Findings
+
+1. **(suggestion) [Principle alignment — Enforcement over documentation]** The plan's only protection against the exact silent-fallback bug this issue is about (`durability: transient-local` or any other typo silently resolves to VOLATILE, per `qos_resolution.h`'s `else` branch) is a manual post-edit `grep` by the implementer. There is no lasting, automated check in this repo or `udp_bridge` that a `durability` value is one of the recognized strings — a future edit to these same two lines (or a new topic needing the same treatment) can reintroduce this exact bug with no signal. This doesn't need to block the plan (it's a two-line diff, and `udp_bridge#79` already tracks the matching/latch-delivery test gap at the mechanism level), but the plan should at least name this as a residual gap rather than treating the one-time grep as sufficient closure — a one-line note that "no automated durability-string validation exists; a future edit to this file carries the same silent-fallback risk" would be enough to keep it visible rather than quietly resolved.
+2. **(suggestion) [Principle alignment — Human control and transparency]** The plan states the rollout requirement (operator-station bridge restart) explicitly but never states a rollback step. Given this is safety-relevant boat config and the review prompt specifically asked "what if this makes things worse on the water" — the answer is almost certainly "revert the two config lines and restart the operator-station bridge again," and it costs one sentence in the PR body to say so rather than leaving it implicit. Risk here is low (a low-rate, small, queue_size-2 catalog message; transient_local is not expected to change bandwidth materially), but stating it costs nothing and matches the plan's own standard of being explicit about the restart requirement.
+
+Neither finding is must-fix — both are cheap, low-risk additions to the PR body/plan that close a genuinely open (if minor) transparency/enforcement gap. Implementation should not be blocked on them, but they're worth folding into the PR description when it's written.
+
+### Summary
+
+The plan is well-scoped, source-verified (independently re-checked, not just trusted), and correctly limits itself to the two config sites that actually carry `coverage_catalog`. The mechanism trace confirms config-only is sufficient — durability set on either connection also fixes the boat-side source subscription, not just the destination publisher. Two small transparency/enforcement gaps (residual silent-typo risk, no stated rollback) are worth a sentence each in the PR body but do not block implementation.
+
+### Recommended Actions
+
+- [ ] When writing the PR body, add one sentence acknowledging the residual silent-fallback-typo risk (no automated durability-string validation exists in this repo or `udp_bridge`)
+- [ ] When writing the PR body, add one sentence stating the rollback step (revert the two config lines, restart the operator-station bridge)
