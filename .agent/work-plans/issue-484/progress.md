@@ -135,3 +135,16 @@ mechanism needs no change).
 - [ ] Note in the PR/rollout that the operator-station udp_bridge process
       (not the boat-side one) needs restarting for the QoS change to take
       effect
+
+
+## Plan Authored
+**Status**: complete
+**When**: 2026-09-03 13:27 -04:00
+**By**: Claude Code Agent (Claude Sonnet)
+
+**Plan**: `.agent/work-plans/issue-484/plan.md` at `06ee6d1`
+**Branch**: feature/issue-484 at `06ee6d1`
+**Phases**: single
+
+### Open questions
+- [ ] No open questions — plan is review-plan-ready.
