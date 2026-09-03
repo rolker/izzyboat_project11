@@ -186,3 +186,118 @@ The plan is well-scoped, source-verified (independently re-checked, not just tru
 
 - [ ] When writing the PR body, add one sentence acknowledging the residual silent-fallback-typo risk (no automated durability-string validation exists in this repo or `udp_bridge`)
 - [ ] When writing the PR body, add one sentence stating the rollback step (revert the two config lines, restart the operator-station bridge)
+
+## Local Review (Pre-Push)
+**Status**: complete
+**When**: 2026-09-03 13:38 -04:00
+**By**: Claude Code Agent (Claude Sonnet)
+**Verdict**: approved
+
+**Branch**: feature/issue-484 at `bf5c7c7`
+**Mode**: pre-push
+**Depth**: Standard (reason: project-repo override-trigger file present — `.agent/work-plans/issue-484/plan.md` is in the diff; also treated as safety-relevant boat config per dispatch handoff, not as a trivial two-key edit)
+**Must-fix**: 0 | **Suggestions**: 0
+**Round**: 1 | **Ship**: recommended — no must-fix findings; diff mechanically verified end-to-end against `udp_bridge` source
+
+### Verification performed (source-checked, not taken on faith)
+
+- Diff is exactly `bizzyboat_project11/config/bizzyboat.yaml` (+14/-2, two
+  sites: wifi line ~284, vpn line ~549) plus the already-reviewed
+  `plan.md`/`progress.md` process artifacts from prior phases. No code
+  changes.
+- `python3 -c "yaml.safe_load(...)"` — file parses without error.
+- `grep -n coverage_catalog` over the full file confirms exactly two
+  `topics:` dict entries carry `source:`/QoS keys (the two edited sites);
+  the two other `coverage_catalog` hits are plain strings in
+  `topics_list:` allowlists (cell/wifi budget-accounting lists), which
+  take no per-topic QoS keys and don't need `durability` — the plan's
+  "two call sites" count re-confirmed independently.
+- `bizzyboat_project11/config/operator.yaml` and
+  `izzyboat_project11/config/operator.yaml` — grepped for
+  `coverage_catalog`/`durability`: operator.yaml only comments on the
+  pairing for a different topic (`coverage_requests`), doesn't relay
+  `coverage_catalog` itself. No consequential edit missed there.
+- `udp_bridge/include/udp_bridge/qos_resolution.h` (both
+  `resolveDestinationPublisherQos` and `resolveSourceSubscriptionQos`) —
+  confirmed the literal string comparison is exactly `"transient_local"`
+  (underscore), any other string falls to the `else` →
+  `durability_volatile()` branch with no error. The new config value
+  matches the literal exactly. The comment's "typos fall back to
+  VOLATILE with no error" claim is accurate.
+- `udp_bridge.cpp::addSubscriberConnection` (~line 1849-1880) — confirmed
+  the source-side subscription durability takes the strongest per-topic
+  setting across remotes (`if(durability=="transient_local") sub.durability
+  = "transient_local"`), consistent with the plan review's prior trace.
+  The new comment's "Per-CONNECTION, so it must be set on wifi and vpn
+  alike" describes the **destination**-publisher scope correctly (each
+  connection creates its own cached destination publisher); it doesn't
+  contradict the source-subscription strongest-wins behavior, since both
+  connections are set here anyway.
+- yamllint: ran with the repo's actual pre-commit config
+  (`-d '{extends: default, rules: {line-length: {max: 120}, document-start:
+  disable, truthy: disable}}'`) against the full file — 0 new warnings.
+  The two new lines are 129 chars, which would normally trip
+  `line-length`, but the file carries a pre-existing, documented
+  file-wide `# yamllint disable rule:colons rule:indentation
+  rule:line-length` (line 6, predates this diff, tracked under #376) —
+  confirmed this is an existing exemption, not a gap introduced here.
+- `grep -rl coverage_catalog -- '*.md'` — no hits in `.agents/README.md`
+  or any doc other than deployment logs (historical, not documentation of
+  current behavior) and this issue's own plan/progress files. No stale
+  doc introduced or left behind.
+- Read full surrounding context at both edit sites (lines ~260-296 and
+  ~535-560): comment placement is correct, doesn't collide with or
+  duplicate adjacent per-entry comments, and follows the file's
+  established one-comment-per-exceptional-entry convention exactly (the
+  `local_costmap_windowed` throttle comment and `coverage_tiles`
+  link-budget comment are the file's own precedent for this style).
+
+### Must-Fix
+
+None.
+
+### Suggestions
+
+None — the diff is a source-verified, minimal, correctly-scoped fix with
+no code changes and no consequential doc/config gaps found.
+
+### Governance
+
+| Principle | Verdict | Notes |
+|---|---|---|
+| Human control and transparency | Pass | Two-key diff, self-documenting inline comment at both sites |
+| A change includes its consequences | Pass | Coupled reverts (autonomy#363, camp#220) correctly left out of this PR's diff — cross-linking them is a PR-body action, not a diff gap; verified no other file in this repo needed a paired edit |
+| Only what's needed | Pass | Config-value-only change, no scope creep |
+| Test what breaks | Watch | Latch-delivery verification is inherently a field/bench step per the plan (Approach step 5), not exercisable from a static diff review; correctly deferred to the PR's test plan / operator step rather than skipped |
+| Workspace vs. project separation | Pass | Correctly scoped to the project repo |
+
+| ADR | Triggered | Compliant | Notes |
+|---|---|---|---|
+| 0008 — ROS 2 conventions | No | N/A | Value-only config edit to an already-documented `udp_bridge` parameter |
+
+| Changed | Required update | Status |
+|---|---|---|
+| `coverage_catalog` durability (wifi + vpn) | Rollout note (operator-station bridge restart) in PR body | Not yet written — PR body still to be drafted; not a diff gap |
+| `coverage_catalog` durability (wifi + vpn) | Cross-link autonomy#363, camp#220 in PR body | Not yet written — same as above |
+
+### Plan Adherence
+
+Diff matches the plan's Approach steps 1-2 exactly: `durability:
+transient_local` added at both call sites with a short rationale comment
+following the file's convention, referencing #484. Approach steps 3-5
+(rollout note, cross-links, verification) are PR-body/operator actions,
+not diff content, and are correctly not present in the diff itself — no
+drift.
+
+### Summary
+
+Clean, minimal, source-verified config fix. Both edit sites independently
+re-confirmed as the only two `coverage_catalog` relay entries needing the
+key; the `durability: transient_local` value and comment claims were
+checked directly against `udp_bridge`'s QoS-resolution source rather than
+trusted. No must-fix or suggestion findings. Ready to push; remember to
+carry the plan's PR-body items (rollout/restart note, coupled-repo
+cross-links, rollback sentence) into the PR description when it's opened.
+
+### Findings
+- [ ] No issues found. LGTM.
