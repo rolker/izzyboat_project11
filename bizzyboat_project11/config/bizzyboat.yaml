@@ -175,7 +175,7 @@
           # RESTORE THIS LINE when operating with an operator station in wifi
           # range (a boat-side or dockside laptop rather than the ROC). Nothing
           # else needs changing: the wifi connection block below is left intact.
-          # - wifi
+          #- wifi
           - vpn
           # cell STOOD DOWN 2026-08-25 (field, gabby) — there is no SIM card in
           # the boat's modem, so this connection never had an independent path.
@@ -185,7 +185,7 @@
           # duplicate load competing with the vpn on one pipe. RESTORE THIS LINE
           # when a SIM is fitted and the cell path is genuinely separate; the cell
           # connection block below is left intact.
-          # - cell
+          - cell
         connections:
           wifi:
             maximum_bytes_per_second: 1500000
@@ -205,7 +205,9 @@
             - collision_slowdown_polygon
             - collision_stop_polygon
             - collision_monitor_state
-            # OAK ffmpeg video removed from the WiFi path (2026-08-03 field
+            - coverage_catalog
+            - coverage_tiles
+             # OAK ffmpeg video removed from the WiFi path (2026-08-03 field
             # tune, gabby) to free link budget. Segmentation overlays stay.
             # RESTORED 2026-08-05 (Lewes, operator decision): the 08-03 removal
             # was made when each stream cost ~100 KB/s at 800 kbps; at the
@@ -279,6 +281,8 @@
               collision_slowdown_polygon: {source: collision_monitor/slowdown_polygon}
               collision_stop_polygon: {source: collision_monitor/stop_polygon}
               collision_monitor_state: {source: collision_monitor_state}
+              coverage_catalog: {source: sensors/m3/cube_bathymetry/coverage_catalog, queue_size: 2}
+              coverage_tiles: {source: sensors/m3/cube_bathymetry/coverage_tiles, queue_size: 2, period: 1.0}
               odom: {source: odom}
               # Bridge subscription queue depths sized for fail-fresh under link
               # saturation (#287): bulk best-effort streams kept shallow so a stalled
